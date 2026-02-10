@@ -19,6 +19,7 @@ import {
 import { useLanguage } from '@/i18n/LanguageContext';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import { getUserPackage } from '@/hooks/usePackageLimits';
 import { toast } from 'sonner';
 
 interface PlanFeature {
@@ -159,7 +160,8 @@ export default function Pricing() {
   const { language } = useLanguage();
   const isEn = language === 'en';
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [currentPlan] = useState('rookie');
+  const userPkg = getUserPackage();
+  const currentPlan = userPkg === 'agent' ? 'agent' : userPkg === 'elite' ? 'elite' : 'rookie';
 
   const handleSelectPlan = (planId: string) => {
     if (planId === currentPlan) {

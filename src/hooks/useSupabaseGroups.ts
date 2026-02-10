@@ -45,29 +45,36 @@ export function useSupabaseGroups() {
   const fetchGroups = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const { data: { user } } = await supabase.auth.getUser();
+      
+      console.log('[Groups] Auth user:', user?.id || 'NOT LOGGED IN');
       
       if (!user) {
         // Fallback to localStorage if not logged in
         const stored = localStorage.getItem('facebookGroups');
         if (stored) {
-          setGroups(JSON.parse(stored));
+          const parsed = JSON.parse(stored);
+          console.log('[Groups] localStorage fallback:', parsed.length, 'groups');
+          setGroups(parsed);
         }
         return;
       }
 
-      const { data, error } = await supabase
+      const { data, error: fetchError } = await supabase
         .from('facebook_groups')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      console.log('[Groups] Supabase fetch:', { data: data?.length || 0, error: fetchError?.message || null });
+
+      if (fetchError) throw fetchError;
 
       setGroups((data || []).map(dbToGroup));
     } catch (err: any) {
       setError(err.message);
-      console.error('Error fetching groups:', err);
+      console.error('[Groups] Fetch error:', err.message, err.code, err.details);
     } finally {
       setLoading(false);
     }

@@ -55,7 +55,7 @@ import { apiFetch } from '@/lib/config';
 
 export default function Groups() {
   const { t } = useLanguage();
-  const { groups, activeGroups, inactiveGroups, addGroup, updateGroup, deleteGroup, deleteAllGroups, toggleGroupActive, updateAllActiveGroups } = useSupabaseGroups();
+  const { groups, activeGroups, inactiveGroups, loading: groupsLoading, error: groupsError, addGroup, updateGroup, deleteGroup, deleteAllGroups, toggleGroupActive, updateAllActiveGroups } = useSupabaseGroups();
   
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -421,8 +421,28 @@ export default function Groups() {
           </div>
         )}
 
+        {/* Supabase Error Banner */}
+        {groupsError && (
+          <Card className="border-red-300 bg-red-50 dark:bg-red-950/30 dark:border-red-800">
+            <CardContent className="py-4">
+              <p className="text-sm text-red-700 dark:text-red-400 font-medium">⚠️ Supabase Error: {groupsError}</p>
+              <p className="text-xs text-muted-foreground mt-1">ตรวจสอบว่าตาราง facebook_groups มีอยู่ใน Supabase และ RLS policies ถูกต้อง</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Loading State */}
+        {groupsLoading && groups.length === 0 && !groupsError && (
+          <Card className="card-elevated">
+            <CardContent className="py-12 text-center">
+              <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-muted-foreground" />
+              <p className="text-muted-foreground">กำลังโหลดกลุ่ม...</p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Empty State */}
-        {groups.length === 0 && (
+        {!groupsLoading && groups.length === 0 && !groupsError && (
           <Card className="card-elevated">
             <CardContent className="py-12 text-center">
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">

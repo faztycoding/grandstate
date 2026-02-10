@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { API_BASE } from '@/lib/config';
+import { apiFetch } from '@/lib/config';
 
 interface FacebookUser {
   name: string;
@@ -29,7 +29,7 @@ export function useFacebookConnection() {
     setState(prev => ({ ...prev, isChecking: true, error: null }));
     
     try {
-      const response = await fetch(`${API_BASE}/api/facebook/status`);
+      const response = await apiFetch('/api/facebook/status');
       const data = await response.json();
       
       if (data.success && data.connected) {
@@ -69,7 +69,7 @@ export function useFacebookConnection() {
     setState(prev => ({ ...prev, isConnecting: true, error: null }));
     
     try {
-      const response = await fetch(`${API_BASE}/api/facebook/connect`, {
+      const response = await apiFetch('/api/facebook/connect', {
         method: 'POST',
       });
       const data = await response.json();
@@ -91,7 +91,7 @@ export function useFacebookConnection() {
   // Confirm login (after user logs in manually)
   const confirmLogin = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/facebook/confirm-login`, {
+      const response = await apiFetch('/api/facebook/confirm-login', {
         method: 'POST',
       });
       const data = await response.json();
@@ -116,7 +116,7 @@ export function useFacebookConnection() {
   // Disconnect from Facebook
   const disconnect = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/facebook/disconnect`, {
+      const response = await apiFetch('/api/facebook/disconnect', {
         method: 'POST',
       });
       const data = await response.json();

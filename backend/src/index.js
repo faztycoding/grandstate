@@ -1,317 +1,106 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { FacebookMarketplaceAutomation } from './services/facebookAutomation.js';
-import { PostingTracker } from './services/postingTracker.js';
-import { getWorkerInstance } from './services/groupPostingWorker.js';
-import { getMarketplaceWorkerInstance } from './services/marketplaceWorker.js';
-import { getSchedulerInstance } from './services/scheduler.js';
+import rateLimit from 'express-rate-limit';
+import { authMiddleware } from './middleware/auth.js';
+import { sessionManager } from './services/userSessionManager.js';
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
-app.use(cors());
+// CORS — lock to allowed origins
+const ALLOWED_ORIGINS = (process.env.FRONTEND_URL || 'http://localhost:8080')
+  .split(',')
+  .map(s => s.trim());
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+}));
+
 app.use(express.json({ limit: '50mb' }));
 
-// Initialize services
-const postingTracker = new PostingTracker();
-let automationInstance = null;
-const groupWorker = getWorkerInstance();
-const marketplaceWorker = getMarketplaceWorkerInstance();
-const scheduler = getSchedulerInstance();
-
-// Wire postingTracker into groupWorker — records every post result for analytics
-groupWorker.setPostResultCallback((propertyId, groupId, groupName, success) => {
-  postingTracker.recordPosting(propertyId || 'unknown', groupId, groupName, success);
+// Rate limiting
+const apiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 60, // 60 requests per minute per IP
+  message: { success: false, error: 'Too many requests, please try again later' },
 });
+app.use('/api/', apiLimiter);
 
-// Start scheduler — triggers automation when scheduled time arrives
-scheduler.start(async (job) => {
-  console.log(`⏰ Scheduler triggering: ${job.mode} mode for ${job.groups?.length} groups`);
-  if (job.mode === 'marketplace') {
-    return await marketplaceWorker.startMarketplaceAutomation({
-      property: job.property,
-      groups: job.groups,
-      caption: job.caption,
-      images: job.images || [],
-      delaySeconds: job.delaySeconds,
-      captionStyle: job.captionStyle,
-      browser: job.browser,
-      userPackage: job.userPackage,
-    });
-  } else {
-    return await groupWorker.startAutomation({
-      property: job.property,
-      groups: job.groups,
-      caption: job.caption,
-      images: job.images || [],
-      delaySeconds: job.delaySeconds,
-      captionStyle: job.captionStyle,
-      browser: job.browser,
-      userPackage: job.userPackage,
-    });
-  }
+// Session middleware — runs after auth, attaches per-user session to req
+function attachSession(req, res, next) {
+  const session = sessionManager.getSession(req.userId);
+  req.session = session;
+  req.groupWorker = session.groupWorker;
+  req.marketplaceWorker = session.marketplaceWorker;
+  req.postingTracker = session.postingTracker;
+  req.scheduler = session.scheduler;
+  next();
+}
+
+// Combine auth + session into one middleware array
+const auth = [authMiddleware, attachSession];
+
+// Health endpoint (no auth required)
+app.get('/api/ping', (req, res) => {
+  res.json({ success: true, message: 'Grand$tate API is running', sessions: sessionManager.getStats() });
 });
 
 // API Endpoints
-
-// Start automation session (opens browser)
-app.post('/api/automation/start', async (req, res) => {
-  try {
-    if (automationInstance) {
-      return res.json({ success: true, message: 'Automation already running' });
-    }
-    
-    automationInstance = new FacebookMarketplaceAutomation();
-    await automationInstance.initialize();
-    
-    res.json({ success: true, message: 'Automation started - Browser opened' });
-  } catch (error) {
-    console.error('Start automation error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Stop automation session
-app.post('/api/automation/stop', async (req, res) => {
-  try {
-    if (automationInstance) {
-      await automationInstance.close();
-      automationInstance = null;
-    }
-    res.json({ success: true, message: 'Automation stopped' });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Navigate to Facebook Marketplace
-app.post('/api/automation/navigate-marketplace', async (req, res) => {
-  try {
-    if (!automationInstance) {
-      return res.status(400).json({ success: false, error: 'Automation not started' });
-    }
-    
-    await automationInstance.navigateToMarketplace();
-    res.json({ success: true, message: 'Navigated to Marketplace' });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Create new listing - Select "House for Sale/Rent"
-app.post('/api/automation/create-property-listing', async (req, res) => {
-  try {
-    if (!automationInstance) {
-      return res.status(400).json({ success: false, error: 'Automation not started' });
-    }
-    
-    await automationInstance.createPropertyListing();
-    res.json({ success: true, message: 'Selected property listing type' });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Fill property form
-app.post('/api/automation/fill-form', async (req, res) => {
-  try {
-    if (!automationInstance) {
-      return res.status(400).json({ success: false, error: 'Automation not started' });
-    }
-    
-    const { property, images } = req.body;
-    await automationInstance.fillPropertyForm(property, images);
-    res.json({ success: true, message: 'Form filled successfully' });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Click Next button
-app.post('/api/automation/click-next', async (req, res) => {
-  try {
-    if (!automationInstance) {
-      return res.status(400).json({ success: false, error: 'Automation not started' });
-    }
-    
-    await automationInstance.clickNext();
-    res.json({ success: true, message: 'Clicked next' });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Get available groups for posting
-app.post('/api/automation/get-groups', async (req, res) => {
-  try {
-    if (!automationInstance) {
-      return res.status(400).json({ success: false, error: 'Automation not started' });
-    }
-    
-    const groups = await automationInstance.getAvailableGroups();
-    res.json({ success: true, groups });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Select groups for posting (with duplicate prevention)
-app.post('/api/automation/select-groups', async (req, res) => {
-  try {
-    if (!automationInstance) {
-      return res.status(400).json({ success: false, error: 'Automation not started' });
-    }
-    
-    const { propertyId, groupIds, excludeRecentlyPosted } = req.body;
-    
-    let groupsToSelect = groupIds;
-    
-    // Filter out recently posted groups if requested
-    if (excludeRecentlyPosted) {
-      groupsToSelect = postingTracker.filterAvailableGroups(propertyId, groupIds);
-    }
-    
-    await automationInstance.selectGroups(groupsToSelect);
-    res.json({ 
-      success: true, 
-      message: `Selected ${groupsToSelect.length} groups`,
-      selectedGroups: groupsToSelect 
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Post to selected groups
-app.post('/api/automation/post', async (req, res) => {
-  try {
-    if (!automationInstance) {
-      return res.status(400).json({ success: false, error: 'Automation not started' });
-    }
-    
-    const { propertyId, groupIds } = req.body;
-    
-    await automationInstance.submitPost();
-    
-    // Track the posting
-    groupIds.forEach(groupId => {
-      postingTracker.recordPosting(propertyId, groupId);
-    });
-    
-    res.json({ success: true, message: 'Posted successfully' });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Full automation flow - do everything in sequence
-app.post('/api/automation/full-flow', async (req, res) => {
-  try {
-    if (!automationInstance) {
-      automationInstance = new FacebookMarketplaceAutomation();
-      await automationInstance.initialize();
-    }
-    
-    const { property, images, groupSelection } = req.body;
-    
-    // Step 1: Navigate to Marketplace
-    await automationInstance.navigateToMarketplace();
-    
-    // Step 2: Create property listing
-    await automationInstance.createPropertyListing();
-    
-    // Step 3: Fill form
-    await automationInstance.fillPropertyForm(property, images);
-    
-    // Step 4: Click Next
-    await automationInstance.clickNext();
-    
-    // Step 5: Select groups (with duplicate prevention)
-    let groupsToPost = groupSelection.groupIds;
-    if (groupSelection.preventDuplicates) {
-      groupsToPost = postingTracker.filterAvailableGroups(
-        property.id, 
-        groupSelection.groupIds,
-        groupSelection.cooldownHours || 24
-      );
-    }
-    
-    if (groupsToPost.length === 0) {
-      return res.json({ 
-        success: false, 
-        message: 'No available groups (all recently posted)',
-        skippedGroups: groupSelection.groupIds 
-      });
-    }
-    
-    await automationInstance.selectGroups(groupsToPost);
-    
-    // Step 6: Submit
-    await automationInstance.submitPost();
-    
-    // Record postings
-    groupsToPost.forEach(groupId => {
-      postingTracker.recordPosting(property.id, groupId);
-    });
-    
-    res.json({ 
-      success: true, 
-      message: 'Full automation completed',
-      postedToGroups: groupsToPost 
-    });
-  } catch (error) {
-    console.error('Full flow error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
 
 // ============================================
 // POSTING TRACKER ENDPOINTS
 // ============================================
 
 // Today's stats (daily usage, limit, next reset)
-app.get('/api/posting/today', (req, res) => {
+app.get('/api/posting/today', ...auth, (req, res) => {
   const { userPackage } = req.query;
-  res.json({ success: true, ...postingTracker.getTodayStats(userPackage || 'free') });
+  res.json({ success: true, ...req.postingTracker.getTodayStats(userPackage || 'free') });
 });
 
 // Pre-flight check before starting automation
-app.post('/api/posting/preflight', (req, res) => {
+app.post('/api/posting/preflight', ...auth, (req, res) => {
   const { propertyId, groupIds, userPackage } = req.body;
   if (!propertyId || !groupIds) {
     return res.status(400).json({ success: false, error: 'propertyId and groupIds required' });
   }
-  const result = postingTracker.preflightCheck(propertyId, groupIds, userPackage || 'free');
+  const result = req.postingTracker.preflightCheck(propertyId, groupIds, userPackage || 'free');
   res.json({ success: true, ...result });
 });
 
 // Daily history (last N days)
-app.get('/api/posting/history', (req, res) => {
+app.get('/api/posting/history', ...auth, (req, res) => {
   const { days } = req.query;
-  res.json({ success: true, days: postingTracker.getDailyHistory(parseInt(days) || 7) });
+  res.json({ success: true, days: req.postingTracker.getDailyHistory(parseInt(days) || 7) });
 });
 
 // Full posting history
-app.get('/api/posting-history', (req, res) => {
-  res.json({ success: true, history: postingTracker.getHistory() });
+app.get('/api/posting-history', ...auth, (req, res) => {
+  res.json({ success: true, history: req.postingTracker.getHistory() });
 });
 
 // Property-specific posting history
-app.get('/api/posting-history/:propertyId', (req, res) => {
+app.get('/api/posting-history/:propertyId', ...auth, (req, res) => {
   const { propertyId } = req.params;
   res.json({ 
     success: true, 
-    history: postingTracker.getPropertyHistory(propertyId) 
+    history: req.postingTracker.getPropertyHistory(propertyId) 
   });
 });
 
 // Available groups (not yet posted today)
-app.get('/api/available-groups/:propertyId', (req, res) => {
+app.get('/api/available-groups/:propertyId', ...auth, (req, res) => {
   const { propertyId } = req.params;
   const { groupIds, cooldownHours } = req.query;
   
   const allGroupIds = groupIds ? groupIds.split(',') : [];
-  const available = postingTracker.filterAvailableGroups(
+  const available = req.postingTracker.filterAvailableGroups(
     propertyId, 
     allGroupIds, 
     parseInt(cooldownHours) || 24
@@ -321,7 +110,7 @@ app.get('/api/available-groups/:propertyId', (req, res) => {
 });
 
 // Fetch Facebook Group Info (name, member count)
-app.post('/api/groups/fetch-info', async (req, res) => {
+app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
   try {
     const { url } = req.body;
     
@@ -329,17 +118,18 @@ app.post('/api/groups/fetch-info', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Invalid Facebook group URL' });
     }
 
-    // Use existing automation instance or create temporary one
-    let tempAutomation = null;
-    let useTemp = !automationInstance;
-    
-    if (useTemp) {
-      tempAutomation = new FacebookMarketplaceAutomation();
-      await tempAutomation.initialize();
+    const groupWorker = req.groupWorker;
+
+    // Initialize browser if needed
+    if (!req.groupWorker.browser || !req.groupWorker.browser.isConnected()) {
+      if (!sessionManager.canStartBrowser()) {
+        return res.status(429).json({ success: false, error: 'Server busy — too many active browsers. Please try again later.' });
+      }
+      await req.groupWorker.initialize();
+      sessionManager.registerBrowserStart();
     }
-    
-    const automation = automationInstance || tempAutomation;
-    const page = automation.page;
+
+    const page = req.groupWorker.page;
     
     // Navigate to the group's ABOUT page to get activity info
     // Convert URL to /about page: https://www.facebook.com/groups/XXX -> https://www.facebook.com/groups/XXX/about
@@ -605,10 +395,7 @@ app.post('/api/groups/fetch-info', async (req, res) => {
     }
     console.log(`📊 Scraped: ${groupInfo.name?.substring(0, 40)} | Members: ${groupInfo.memberCount} | Today: ${groupInfo.postsToday} | Month: ${groupInfo.postsLastMonth}`);
     
-    // Clean up temp automation if we created it
-    if (useTemp && tempAutomation) {
-      await tempAutomation.close();
-    }
+    // Browser stays open for reuse by this user's session
     
     res.json({ 
       success: true, 
@@ -633,7 +420,7 @@ app.post('/api/groups/fetch-info', async (req, res) => {
 
 // Start group posting automation
 // Captions are auto-generated on backend based on group count
-app.post('/api/group-automation/start', async (req, res) => {
+app.post('/api/group-automation/start', ...auth, async (req, res) => {
   try {
     const { property, groups, images, delayMinutes, delaySeconds, claudeApiKey, browser, userPackage } = req.body;
 
@@ -657,7 +444,7 @@ app.post('/api/group-automation/start', async (req, res) => {
 
     // Initialize Claude API if key provided
     if (claudeApiKey) {
-      groupWorker.initAnthropicClient(claudeApiKey);
+      req.groupWorker.initAnthropicClient(claudeApiKey);
     }
 
     // Auto-generate captions based on group count
@@ -674,7 +461,7 @@ app.post('/api/group-automation/start', async (req, res) => {
     const captionStyle = 'friendly';
     for (let i = 0; i < requiredCaptions; i++) {
       try {
-        const cap = await groupWorker.generateCaption(property, captionStyle, userPackage || 'free');
+        const cap = await req.groupWorker.generateCaption(property, captionStyle, userPackage || 'free');
         generatedCaptions.push(cap);
       } catch (err) {
         console.error(`Caption gen ${i + 1} failed:`, err.message);
@@ -696,7 +483,7 @@ app.post('/api/group-automation/start', async (req, res) => {
     });
 
     // Start automation in background
-    const result = await groupWorker.startAutomation({
+    const result = await req.groupWorker.startAutomation({
       property,
       groups,
       caption: generatedCaptions[0],
@@ -721,9 +508,9 @@ app.post('/api/group-automation/start', async (req, res) => {
 });
 
 // Get automation status
-app.get('/api/group-automation/status', (req, res) => {
+app.get('/api/group-automation/status', ...auth, (req, res) => {
   try {
-    const status = groupWorker.getStatus();
+    const status = req.groupWorker.getStatus();
     res.json({ success: true, ...status });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -731,9 +518,9 @@ app.get('/api/group-automation/status', (req, res) => {
 });
 
 // Pause automation
-app.post('/api/group-automation/pause', (req, res) => {
+app.post('/api/group-automation/pause', ...auth, (req, res) => {
   try {
-    groupWorker.pause();
+    req.groupWorker.pause();
     res.json({ success: true, message: 'Automation paused' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -741,9 +528,9 @@ app.post('/api/group-automation/pause', (req, res) => {
 });
 
 // Resume automation
-app.post('/api/group-automation/resume', (req, res) => {
+app.post('/api/group-automation/resume', ...auth, (req, res) => {
   try {
-    groupWorker.resume();
+    req.groupWorker.resume();
     res.json({ success: true, message: 'Automation resumed' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -751,9 +538,9 @@ app.post('/api/group-automation/resume', (req, res) => {
 });
 
 // Stop automation
-app.post('/api/group-automation/stop', async (req, res) => {
+app.post('/api/group-automation/stop', ...auth, async (req, res) => {
   try {
-    await groupWorker.stop();
+    await req.groupWorker.stop();
     res.json({ success: true, message: 'Automation stopped' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -761,9 +548,9 @@ app.post('/api/group-automation/stop', async (req, res) => {
 });
 
 // Close browser
-app.post('/api/group-automation/close', async (req, res) => {
+app.post('/api/group-automation/close', ...auth, async (req, res) => {
   try {
-    await groupWorker.close();
+    await req.groupWorker.close();
     res.json({ success: true, message: 'Browser closed' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -771,9 +558,9 @@ app.post('/api/group-automation/close', async (req, res) => {
 });
 
 // Initialize browser (for pre-login)
-app.post('/api/group-automation/init', async (req, res) => {
+app.post('/api/group-automation/init', ...auth, async (req, res) => {
   try {
-    await groupWorker.initialize();
+    await req.groupWorker.initialize();
     res.json({ success: true, message: 'Browser initialized - Please login to Facebook' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -781,12 +568,12 @@ app.post('/api/group-automation/init', async (req, res) => {
 });
 
 // Check login status
-app.get('/api/group-automation/check-login', async (req, res) => {
+app.get('/api/group-automation/check-login', ...auth, async (req, res) => {
   try {
-    if (!groupWorker.browser) {
-      await groupWorker.initialize();
+    if (!req.groupWorker.browser) {
+      await req.groupWorker.initialize();
     }
-    const isLoggedIn = await groupWorker.checkLogin();
+    const isLoggedIn = await req.groupWorker.checkLogin();
     res.json({ success: true, isLoggedIn });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -795,12 +582,12 @@ app.get('/api/group-automation/check-login', async (req, res) => {
 
 // Generate caption using Claude API
 // Supports package-based prompts and required caption count
-app.post('/api/group-automation/generate-caption', async (req, res) => {
+app.post('/api/group-automation/generate-caption', ...auth, async (req, res) => {
   try {
     const { property, style, claudeApiKey, userPackage = 'free', requiredCaptions = 1 } = req.body;
 
     if (claudeApiKey) {
-      groupWorker.initAnthropicClient(claudeApiKey);
+      req.groupWorker.initAnthropicClient(claudeApiKey);
     }
 
     console.log(`📝 Generate caption request - Package: ${userPackage}, Required: ${requiredCaptions}`);
@@ -809,7 +596,7 @@ app.post('/api/group-automation/generate-caption', async (req, res) => {
     const allCaptions = [];
     
     for (let i = 0; i < requiredCaptions; i++) {
-      const caption = await groupWorker.generateCaption(property, style || 'friendly', userPackage);
+      const caption = await req.groupWorker.generateCaption(property, style || 'friendly', userPackage);
       allCaptions.push(caption);
     }
     
@@ -834,13 +621,13 @@ app.post('/api/group-automation/generate-caption', async (req, res) => {
 // ====================================
 
 // Connect to Facebook (opens browser for login)
-app.post('/api/facebook/connect', async (req, res) => {
+app.post('/api/facebook/connect', ...auth, async (req, res) => {
   try {
     // Initialize browser
-    await groupWorker.initialize('chrome');
+    await req.groupWorker.initialize('chrome');
     
     // Navigate to Facebook
-    await groupWorker.page.goto('https://www.facebook.com', {
+    await req.groupWorker.page.goto('https://www.facebook.com', {
       waitUntil: 'networkidle2',
       timeout: 30000,
     });
@@ -856,10 +643,10 @@ app.post('/api/facebook/connect', async (req, res) => {
 });
 
 // Check Facebook connection status
-app.get('/api/facebook/status', async (req, res) => {
+app.get('/api/facebook/status', ...auth, async (req, res) => {
   try {
     // Check if browser exists and is logged in
-    if (!groupWorker.browser) {
+    if (!req.groupWorker.browser) {
       return res.json({ 
         success: true, 
         connected: false, 
@@ -868,11 +655,11 @@ app.get('/api/facebook/status', async (req, res) => {
     }
     
     // Check if logged in
-    const isLoggedIn = await groupWorker.checkLogin();
+    const isLoggedIn = await req.groupWorker.checkLogin();
     
     if (isLoggedIn) {
       // Get user info - scrape real name & profile pic from Facebook nav
-      const userInfo = await groupWorker.page.evaluate(() => {
+      const userInfo = await req.groupWorker.page.evaluate(() => {
         let name = '';
         let profilePic = '';
         
@@ -951,9 +738,9 @@ app.get('/api/facebook/status', async (req, res) => {
 });
 
 // Disconnect Facebook
-app.post('/api/facebook/disconnect', async (req, res) => {
+app.post('/api/facebook/disconnect', ...auth, async (req, res) => {
   try {
-    await groupWorker.close();
+    await req.groupWorker.close();
     res.json({ success: true, message: 'ยกเลิกการเชื่อมต่อ Facebook แล้ว' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -961,17 +748,17 @@ app.post('/api/facebook/disconnect', async (req, res) => {
 });
 
 // Confirm Facebook login (after user logs in manually)
-app.post('/api/facebook/confirm-login', async (req, res) => {
+app.post('/api/facebook/confirm-login', ...auth, async (req, res) => {
   try {
-    if (!groupWorker.browser) {
+    if (!req.groupWorker.browser) {
       return res.status(400).json({ success: false, error: 'Browser not open' });
     }
     
-    const isLoggedIn = await groupWorker.checkLogin();
+    const isLoggedIn = await req.groupWorker.checkLogin();
     
     if (isLoggedIn) {
       // Get user name + profile pic from Facebook page
-      const userInfo = await groupWorker.page.evaluate(() => {
+      const userInfo = await req.groupWorker.page.evaluate(() => {
         let name = '';
         let profilePic = '';
         
@@ -1048,7 +835,7 @@ app.post('/api/facebook/confirm-login', async (req, res) => {
 // ====================================
 
 // Start marketplace automation (Marketplace + tick groups in batches of 20)
-app.post('/api/marketplace-automation/start', async (req, res) => {
+app.post('/api/marketplace-automation/start', ...auth, async (req, res) => {
   try {
     const { property, groups, caption, images, delayMinutes, delaySeconds, captionStyle, claudeApiKey, browser, userPackage } = req.body;
 
@@ -1071,13 +858,13 @@ app.post('/api/marketplace-automation/start', async (req, res) => {
     }
 
     // If groupWorker has an active browser, let marketplace borrow it
-    if (groupWorker.browser && groupWorker.browser.isConnected()) {
-      console.log('🔗 Marketplace borrowing browser from groupWorker...');
-      marketplaceWorker.borrowBrowser(groupWorker.browser, groupWorker.page);
+    if (req.groupWorker.browser && req.groupWorker.browser.isConnected()) {
+      console.log('🔗 Marketplace borrowing browser from req.groupWorker...');
+      req.marketplaceWorker.borrowBrowser(req.groupWorker.browser, req.groupWorker.page);
     }
 
     // Run pre-flight check SYNCHRONOUSLY to return limit errors immediately
-    const tracker = marketplaceWorker.tracker;
+    const tracker = req.marketplaceWorker.tracker;
     const preflight = tracker.preflightCheck(
       property.id,
       groups.map(g => g.id),
@@ -1099,7 +886,7 @@ app.post('/api/marketplace-automation/start', async (req, res) => {
 
     // Start automation in BACKGROUND — don't await!
     // This lets the HTTP response return immediately so frontend can start polling
-    marketplaceWorker.startMarketplaceAutomation({
+    req.marketplaceWorker.startMarketplaceAutomation({
       property,
       groups,
       caption,
@@ -1131,9 +918,9 @@ app.post('/api/marketplace-automation/start', async (req, res) => {
 });
 
 // Get marketplace automation status
-app.get('/api/marketplace-automation/status', (req, res) => {
+app.get('/api/marketplace-automation/status', ...auth, (req, res) => {
   try {
-    const status = marketplaceWorker.getStatus();
+    const status = req.marketplaceWorker.getStatus();
     res.json({ success: true, ...status });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1141,9 +928,9 @@ app.get('/api/marketplace-automation/status', (req, res) => {
 });
 
 // Pause marketplace automation
-app.post('/api/marketplace-automation/pause', (req, res) => {
+app.post('/api/marketplace-automation/pause', ...auth, (req, res) => {
   try {
-    marketplaceWorker.pause();
+    req.marketplaceWorker.pause();
     res.json({ success: true, message: 'Marketplace automation paused' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1151,9 +938,9 @@ app.post('/api/marketplace-automation/pause', (req, res) => {
 });
 
 // Resume marketplace automation
-app.post('/api/marketplace-automation/resume', (req, res) => {
+app.post('/api/marketplace-automation/resume', ...auth, (req, res) => {
   try {
-    marketplaceWorker.resume();
+    req.marketplaceWorker.resume();
     res.json({ success: true, message: 'Marketplace automation resumed' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1161,9 +948,9 @@ app.post('/api/marketplace-automation/resume', (req, res) => {
 });
 
 // Stop marketplace automation
-app.post('/api/marketplace-automation/stop', async (req, res) => {
+app.post('/api/marketplace-automation/stop', ...auth, async (req, res) => {
   try {
-    await marketplaceWorker.stop();
+    await req.marketplaceWorker.stop();
     res.json({ success: true, message: 'Marketplace automation stopped' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1175,18 +962,18 @@ app.post('/api/marketplace-automation/stop', async (req, res) => {
 // ============================================
 
 // Get all schedules
-app.get('/api/schedules', (req, res) => {
-  res.json({ success: true, schedules: scheduler.getSchedules() });
+app.get('/api/schedules', ...auth, (req, res) => {
+  res.json({ success: true, schedules: req.scheduler.getSchedules() });
 });
 
 // Create a new scheduled post
-app.post('/api/schedules', (req, res) => {
+app.post('/api/schedules', ...auth, (req, res) => {
   try {
     const { scheduledAt, mode, property, groups, caption, images, delaySeconds, captionStyle, userPackage, browser } = req.body;
     if (!scheduledAt || !mode || !property || !groups?.length) {
       return res.status(400).json({ success: false, error: 'Missing required fields' });
     }
-    const schedule = scheduler.addSchedule({ scheduledAt, mode, property, groups, caption, images, delaySeconds, captionStyle, userPackage, browser });
+    const schedule = req.scheduler.addSchedule({ scheduledAt, mode, property, groups, caption, images, delaySeconds, captionStyle, userPackage, browser });
     res.json({ success: true, schedule });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1194,14 +981,14 @@ app.post('/api/schedules', (req, res) => {
 });
 
 // Cancel a scheduled post
-app.post('/api/schedules/:id/cancel', (req, res) => {
-  const ok = scheduler.cancelSchedule(req.params.id);
+app.post('/api/schedules/:id/cancel', ...auth, (req, res) => {
+  const ok = req.scheduler.cancelSchedule(req.params.id);
   res.json({ success: ok, message: ok ? 'Cancelled' : 'Not found or already running' });
 });
 
 // Delete a scheduled post
-app.delete('/api/schedules/:id', (req, res) => {
-  const ok = scheduler.deleteSchedule(req.params.id);
+app.delete('/api/schedules/:id', ...auth, (req, res) => {
+  const ok = req.scheduler.deleteSchedule(req.params.id);
   res.json({ success: ok });
 });
 
@@ -1210,10 +997,10 @@ app.delete('/api/schedules/:id', (req, res) => {
 // ============================================
 
 // Get posting analytics (aggregated from postingTracker)
-app.get('/api/analytics', (req, res) => {
+app.get('/api/analytics', ...auth, (req, res) => {
   try {
     const { userPackage, days } = req.query;
-    const tracker = postingTracker;
+    const tracker = req.postingTracker;
     const todayStats = tracker.getTodayStats(userPackage || 'free');
     const history = tracker.history || {};
     const archive = history.dailyArchive || {};
@@ -1301,9 +1088,9 @@ app.get('/api/analytics', (req, res) => {
 // ============================================
 // HEALTH CHECK — Real-time risk scoring from actual posting data
 // ============================================
-app.get('/api/health-check', (req, res) => {
+app.get('/api/health-check', ...auth, (req, res) => {
   try {
-    const tracker = postingTracker;
+    const tracker = req.postingTracker;
     tracker.checkDailyReset();
     const history = tracker.history || {};
     const postings = history.postings || [];
@@ -1409,9 +1196,9 @@ app.get('/api/health-check', (req, res) => {
 });
 
 // Reset all posting analytics data
-app.post('/api/analytics/reset', (req, res) => {
+app.post('/api/analytics/reset', ...auth, (req, res) => {
   try {
-    postingTracker.resetAll();
+    req.postingTracker.resetAll();
     console.log('✅ Analytics data reset via API');
     res.json({ success: true, message: 'All analytics data reset' });
   } catch (error) {
@@ -1421,27 +1208,9 @@ app.post('/api/analytics/reset', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 HomePost Automation Server running on http://localhost:${PORT}`);
-  console.log('📋 Available endpoints:');
-  console.log('');
-  console.log('   Marketplace Batch Automation (NEW):');
-  console.log('   POST /api/marketplace-automation/start');
-  console.log('   GET  /api/marketplace-automation/status');
-  console.log('   POST /api/marketplace-automation/pause');
-  console.log('   POST /api/marketplace-automation/resume');
-  console.log('   POST /api/marketplace-automation/stop');
-  console.log('');
-  console.log('   Group Posting Automation:');
-  console.log('   POST /api/group-automation/init');
-  console.log('   POST /api/group-automation/start');
-  console.log('   GET  /api/group-automation/status');
-  console.log('   POST /api/group-automation/pause');
-  console.log('   POST /api/group-automation/resume');
-  console.log('   POST /api/group-automation/stop');
-  console.log('   POST /api/group-automation/close');
-  console.log('   GET  /api/group-automation/check-login');
-  console.log('   POST /api/group-automation/generate-caption');
-  console.log('');
-  console.log('   Utilities:');
-  console.log('   POST /api/groups/fetch-info');
+  console.log(`🚀 Grand$tate API running on http://localhost:${PORT}`);
+  console.log(`� CORS: ${ALLOWED_ORIGINS.join(', ')}`);
+  console.log(`🌐 Multi-user: max ${10} concurrent browsers`);
+  console.log(`📋 Auth: Supabase JWT required on all /api/* routes`);
+  console.log(`💡 Health: GET /api/ping (no auth)`);
 });

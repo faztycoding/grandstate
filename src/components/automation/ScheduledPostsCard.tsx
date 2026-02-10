@@ -10,7 +10,7 @@ import {
 import { useLanguage } from '@/i18n/LanguageContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
-import { API_BASE } from '@/lib/config';
+import { apiFetch } from '@/lib/config';
 
 const STATUS_CONFIG: Record<string, { color: string; gradient: string; icon: any; label: string; labelEn: string }> = {
   pending: { color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300', gradient: 'from-amber-500 to-orange-500', icon: Clock, label: 'รอดำเนินการ', labelEn: 'Pending' },
@@ -39,7 +39,7 @@ export function ScheduledPostsCard() {
   const fetchSchedules = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/schedules`);
+      const res = await apiFetch('/api/schedules');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (json.success) setSchedules(json.schedules || []);
@@ -52,13 +52,13 @@ export function ScheduledPostsCard() {
   useEffect(() => { fetchSchedules(); }, []);
 
   const handleCancel = async (id: string) => {
-    try { await fetch(`${API_BASE}/api/schedules/${id}/cancel`, { method: 'POST' }); } catch {}
+    try { await apiFetch(`/api/schedules/${id}/cancel`, { method: 'POST' }); } catch {}
     setSelectedSchedule(null);
     fetchSchedules();
   };
 
   const handleDelete = async (id: string) => {
-    try { await fetch(`${API_BASE}/api/schedules/${id}`, { method: 'DELETE' }); } catch {}
+    try { await apiFetch(`/api/schedules/${id}`, { method: 'DELETE' }); } catch {}
     setSelectedSchedule(null);
     fetchSchedules();
   };

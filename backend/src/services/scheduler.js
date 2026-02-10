@@ -8,38 +8,37 @@
 import fs from 'fs';
 import path from 'path';
 
-const SCHEDULE_FILE = path.join(process.cwd(), 'data', 'scheduled-posts.json');
-
-function ensureDataDir() {
-  const dir = path.dirname(SCHEDULE_FILE);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-}
-
-function loadSchedules() {
-  ensureDataDir();
-  try {
-    if (fs.existsSync(SCHEDULE_FILE)) {
-      const data = fs.readFileSync(SCHEDULE_FILE, 'utf-8');
-      const parsed = JSON.parse(data);
-      // Validate that it's an array
-      return Array.isArray(parsed) ? parsed : [];
-    }
-  } catch (err) {
-    console.error('❌ Error loading schedules:', err.message);
-  }
-  return [];
-}
-
-function saveSchedules(schedules) {
-  ensureDataDir();
-  fs.writeFileSync(SCHEDULE_FILE, JSON.stringify(schedules, null, 2), 'utf-8');
-}
-
 export class PostScheduler {
-  constructor() {
-    this.schedules = loadSchedules();
+  constructor(userId = 'default') {
+    this.userId = userId;
+    this.scheduleFile = path.join(process.cwd(), 'data', userId, 'scheduled-posts.json');
+    this.schedules = this._loadSchedules();
     this.timer = null;
     this.onTrigger = null; // callback set by index.js
+  }
+
+  _ensureDataDir() {
+    const dir = path.dirname(this.scheduleFile);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  }
+
+  _loadSchedules() {
+    this._ensureDataDir();
+    try {
+      if (fs.existsSync(this.scheduleFile)) {
+        const data = fs.readFileSync(this.scheduleFile, 'utf-8');
+        const parsed = JSON.parse(data);
+        return Array.isArray(parsed) ? parsed : [];
+      }
+    } catch (err) {
+      console.error('❌ Error loading schedules:', err.message);
+    }
+    return [];
+  }
+
+  _saveSchedules() {
+    this._ensureDataDir();
+    fs.writeFileSync(this.scheduleFile, JSON.stringify(this.schedules, null, 2), 'utf-8');
   }
 
   start(onTrigger) {
@@ -72,7 +71,7 @@ export class PostScheduler {
       result: null,
     };
     this.schedules.push(schedule);
-    saveSchedules(this.schedules);
+    this._saveSchedules();
     console.log(`⏰ Scheduled: ${id} at ${config.scheduledAt} (${config.mode}, ${config.groups?.length} groups)`);
     return schedule;
   }
@@ -82,7 +81,7 @@ export class PostScheduler {
     if (idx === -1) return false;
     if (this.schedules[idx].status !== 'pending') return false;
     this.schedules[idx].status = 'cancelled';
-    saveSchedules(this.schedules);
+    this._saveSchedules();
     return true;
   }
 
@@ -90,7 +89,7 @@ export class PostScheduler {
     const idx = this.schedules.findIndex(s => s.id === id);
     if (idx === -1) return false;
     this.schedules.splice(idx, 1);
-    saveSchedules(this.schedules);
+    this._saveSchedules();
     return true;
   }
 
@@ -111,7 +110,7 @@ export class PostScheduler {
       if (scheduledTime <= now) {
         console.log(`⏰ TRIGGER: ${job.id} — ${job.mode} mode, ${job.groups?.length} groups`);
         job.status = 'running';
-        saveSchedules(this.schedules);
+        this._saveSchedules();
 
         try {
           if (this.onTrigger) {
@@ -127,14 +126,8 @@ export class PostScheduler {
           job.result = { error: err.message };
         }
 
-        saveSchedules(this.schedules);
+        this._saveSchedules();
       }
     }
   }
-}
-
-let instance = null;
-export function getSchedulerInstance() {
-  if (!instance) instance = new PostScheduler();
-  return instance;
 }

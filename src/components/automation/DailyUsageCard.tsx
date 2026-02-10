@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { API_BASE } from '@/lib/config';
+import { apiFetch } from '@/lib/config';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -44,7 +44,7 @@ export function DailyUsageCard({ userPackage = 'free', className }: DailyUsageCa
 
   const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/posting/today?userPackage=${userPackage}`);
+      const res = await apiFetch(`/api/posting/today?userPackage=${userPackage}`);
       const data = await res.json();
       if (data.success) {
         setStats(data);

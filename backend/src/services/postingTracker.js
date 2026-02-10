@@ -16,8 +16,9 @@ const DAILY_RESET_HOUR = 5; // 05:00 AM
 const PACKAGE_LIMITS = { free: 10, agent: 300, elite: 750 };
 
 export class PostingTracker {
-  constructor() {
-    this.dataPath = path.join(process.cwd(), 'data', 'posting-history.json');
+  constructor(userId = 'default') {
+    this.userId = userId;
+    this.dataPath = path.join(process.cwd(), 'data', userId, 'posting-history.json');
     this.history = this.loadHistory();
     this.checkDailyReset();
   }

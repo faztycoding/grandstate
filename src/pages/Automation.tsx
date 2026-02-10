@@ -55,7 +55,7 @@ import { TaskProgressPopup } from '@/components/automation/TaskProgressPopup';
 import { BulkAddGroupDialog } from '@/components/automation/BulkAddGroupDialog';
 import { DailyUsageCard } from '@/components/automation/DailyUsageCard';
 import { ScheduledPostsCard } from '@/components/automation/ScheduledPostsCard';
-import { API_BASE } from '@/lib/config';
+import { apiFetch } from '@/lib/config';
 
 interface TaskStatus {
   id: string;
@@ -261,14 +261,13 @@ export default function Automation() {
 
     // Call backend to start automation (group or marketplace mode)
     // Backend will auto-generate captions based on group count
-    const apiEndpoint = postingMode === 'marketplace'
-      ? `${API_BASE}/api/marketplace-automation/start`
-      : `${API_BASE}/api/group-automation/start`;
+    const apiPath = postingMode === 'marketplace'
+      ? '/api/marketplace-automation/start'
+      : '/api/group-automation/start';
 
     try {
-      const response = await fetch(apiEndpoint, {
+      const response = await apiFetch(apiPath, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           property: selectedProperty,
           groups: groupsData,
@@ -344,13 +343,13 @@ export default function Automation() {
     // Clear any existing interval first
     if (pollingRef.current) clearInterval(pollingRef.current);
 
-    const statusEndpoint = postingMode === 'marketplace'
-      ? `${API_BASE}/api/marketplace-automation/status`
-      : `${API_BASE}/api/group-automation/status`;
+    const statusPath = postingMode === 'marketplace'
+      ? '/api/marketplace-automation/status'
+      : '/api/group-automation/status';
 
     pollingRef.current = setInterval(async () => {
       try {
-        const response = await fetch(statusEndpoint);
+        const response = await apiFetch(statusPath);
         const data = await response.json();
 
         if (data.success) {
@@ -404,11 +403,11 @@ export default function Automation() {
       pollingRef.current = null;
     }
 
-    const stopEndpoint = postingMode === 'marketplace'
-      ? `${API_BASE}/api/marketplace-automation/stop`
-      : `${API_BASE}/api/group-automation/stop`;
+    const stopPath = postingMode === 'marketplace'
+      ? '/api/marketplace-automation/stop'
+      : '/api/group-automation/stop';
     try {
-      await fetch(stopEndpoint, { method: 'POST' });
+      await apiFetch(stopPath, { method: 'POST' });
       setAutomation(prev => ({ ...prev, isRunning: false, isPaused: false }));
       toast.info(t.automation.automationStopped);
     } catch (error) {
@@ -418,12 +417,12 @@ export default function Automation() {
 
   // Pause/Resume Automation
   const pauseAutomation = async () => {
-    const baseEndpoint = postingMode === 'marketplace'
-      ? `${API_BASE}/api/marketplace-automation`
-      : `${API_BASE}/api/group-automation`;
+    const basePath = postingMode === 'marketplace'
+      ? '/api/marketplace-automation'
+      : '/api/group-automation';
     try {
       const action = automation.isPaused ? 'resume' : 'pause';
-      await fetch(`${baseEndpoint}/${action}`, { method: 'POST' });
+      await apiFetch(`${basePath}/${action}`, { method: 'POST' });
       setAutomation(prev => ({ ...prev, isPaused: !prev.isPaused }));
       toast.info(automation.isPaused ? t.automation.resumed : t.automation.paused);
     } catch (error) {
@@ -1131,9 +1130,8 @@ export default function Automation() {
                 onClick={async () => {
                   try {
                     const selectedGroupObjects = groups.filter(g => selectedGroups.includes(g.id));
-                    const res = await fetch(`${API_BASE}/api/schedules`, {
+                    const res = await apiFetch('/api/schedules', {
                       method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
                         scheduledAt: new Date(scheduleDateTime).toISOString(),
                         mode: postingMode,

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { API_BASE } from '@/lib/config';
+import { apiFetch } from '@/lib/config';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -104,9 +104,8 @@ export function BulkAddGroupDialog({
 
   const fetchGroupInfo = async (url: string): Promise<{ name: string; memberCount: number; postsToday: number; postsLastMonth: number } | null> => {
     try {
-      const response = await fetch(`${API_BASE}/api/groups/fetch-info`, {
+      const response = await apiFetch('/api/groups/fetch-info', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
       });
       const data = await response.json();

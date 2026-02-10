@@ -23,6 +23,8 @@ backend/homepost-browser-profile/
 backend/homepost-marketplace-profile/
 backend/homepost-chrome-profile/
 backend/*-profile/
+backend/profiles/
+backend/data/
 backend/temp/
 backend/screenshots/
 

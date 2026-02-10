@@ -1,8 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Property } from '@/types/property';
-import { API_BASE as BASE } from '@/lib/config';
-
-const API_BASE = `${BASE}/api`;
+import { apiFetch } from '@/lib/config';
 
 export interface PostingHistoryItem {
   propertyId: string;
@@ -29,9 +27,8 @@ export function useAutomation() {
 
   const apiCall = async (endpoint: string, method: string = 'POST', body?: any) => {
     try {
-      const response = await fetch(`${API_BASE}${endpoint}`, {
+      const response = await apiFetch(`/api${endpoint}`, {
         method,
-        headers: { 'Content-Type': 'application/json' },
         body: body ? JSON.stringify(body) : undefined,
       });
       const data = await response.json();

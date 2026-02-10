@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase, DbFacebookGroup } from '@/lib/supabase';
 import { FacebookGroup } from '@/types/property';
-import { API_BASE } from '@/lib/config';
+import { apiFetch } from '@/lib/config';
 
 // Convert DB format to App format
 function dbToGroup(db: DbFacebookGroup): FacebookGroup {
@@ -266,9 +266,8 @@ export function useSupabaseGroups() {
       onProgress?.(i + 1, activeGroupsList.length, group.name);
 
       try {
-        const response = await fetch(`${API_BASE}/api/groups/fetch-info`, {
+        const response = await apiFetch('/api/groups/fetch-info', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url: group.url }),
         });
 

@@ -50,11 +50,12 @@ function findBrowserPath(browser) {
 }
 
 export class GroupPostingWorker {
-  constructor() {
+  constructor(userId = 'default') {
+    this.userId = userId;
     this.browser = null;
     this.page = null;
     this.selectedBrowser = 'chrome';
-    this.userDataDir = path.join(process.cwd(), 'chrome-data');
+    this.userDataDir = path.join(process.cwd(), 'profiles', userId, 'browser-profile');
     this.isRunning = false;
     this.isPaused = false;
     this.currentTask = null;
@@ -941,27 +942,19 @@ export class GroupPostingWorker {
     }
 
     this.selectedBrowser = browserType;
-    
-    // Find browser executable
-    const executablePath = findBrowserPath(browserType);
-    if (!executablePath) {
-      throw new Error(`ไม่พบ ${browserType} ในเครื่อง กรุณาติดตั้งก่อน`);
-    }
 
-    // Always use app-specific profile to avoid conflicts
-    const appProfileDir = path.join(process.cwd(), 'homepost-browser-profile');
+    const isVPS = process.platform === 'linux';
+    const isHeadless = process.env.HEADLESS === 'true' || isVPS;
+
+    // Per-user profile directory
+    const appProfileDir = this.userDataDir;
     if (!fs.existsSync(appProfileDir)) {
       fs.mkdirSync(appProfileDir, { recursive: true });
     }
 
-    console.log(`� Launching ${browserType}...`);
-    console.log(`📁 Browser: ${executablePath}`);
-    console.log(`📁 Profile: ${appProfileDir}`);
-    
-    this.browser = await puppeteer.launch({
-      headless: false,
-      defaultViewport: null,
-      executablePath: executablePath,
+    const launchOptions = {
+      headless: isHeadless ? 'new' : false,
+      defaultViewport: isHeadless ? { width: 1920, height: 1080 } : null,
       userDataDir: appProfileDir,
       args: [
         '--start-maximized',
@@ -969,8 +962,26 @@ export class GroupPostingWorker {
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-infobars',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
       ],
-    });
+    };
+
+    // On Windows: use local browser; On VPS: use puppeteer's bundled Chromium
+    if (!isVPS) {
+      const executablePath = findBrowserPath(browserType);
+      if (!executablePath) {
+        throw new Error(`ไม่พบ ${browserType} ในเครื่อง กรุณาติดตั้งก่อน`);
+      }
+      launchOptions.executablePath = executablePath;
+    }
+
+    const shortId = this.userId.substring(0, 8);
+    console.log(`🚀 [${shortId}] Launching ${isVPS ? 'Chromium (VPS)' : browserType}...`);
+    console.log(`📁 Profile: ${appProfileDir}`);
+    console.log(`👁️ Headless: ${isHeadless}`);
+
+    this.browser = await puppeteer.launch(launchOptions);
 
     // Listen for browser disconnect (user closes browser)
     this.browser.on('disconnected', () => {
@@ -2528,12 +2539,7 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
   }
 }
 
-// Singleton instance
-let workerInstance = null;
-
-export function getWorkerInstance() {
-  if (!workerInstance) {
-    workerInstance = new GroupPostingWorker();
-  }
-  return workerInstance;
+// Factory function — creates a new worker per userId (no more singleton)
+export function createWorkerForUser(userId) {
+  return new GroupPostingWorker(userId);
 }

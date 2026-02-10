@@ -32,7 +32,7 @@ import { useLanguage } from '@/i18n/LanguageContext';
 import { BulkAddGroupDialog } from '@/components/automation/BulkAddGroupDialog';
 import { canAddGroup, getUserPackage, getPackageLimits } from '@/hooks/usePackageLimits';
 
-import { API_BASE } from '@/lib/config';
+import { apiFetch } from '@/lib/config';
 
 /**
  * =====================================================
@@ -109,9 +109,8 @@ export default function Groups() {
     
     setIsFetching(true);
     try {
-      const response = await fetch(`${API_BASE}/api/groups/fetch-info`, {
+      const response = await apiFetch('/api/groups/fetch-info', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
       });
       

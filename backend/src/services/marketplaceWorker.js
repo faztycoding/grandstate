@@ -37,7 +37,8 @@ function findBrowserPath(browser) {
 }
 
 export class MarketplaceWorker {
-  constructor() {
+  constructor(userId = 'default') {
+    this.userId = userId;
     this.browser = null;
     this.page = null;
     this.isRunning = false;
@@ -50,7 +51,7 @@ export class MarketplaceWorker {
     this.currentBatch = 0;
     this.totalBatches = 0;
     this.anthropic = null;
-    this.tracker = new PostingTracker();
+    this.tracker = new PostingTracker(userId);
   }
 
   initAnthropicClient(apiKey) {
@@ -137,24 +138,18 @@ export class MarketplaceWorker {
     this.page = null;
     this.borrowedBrowser = false;
 
-    const executablePath = findBrowserPath(browserType);
-    if (!executablePath) {
-      throw new Error(`ไม่พบ ${browserType} ในเครื่อง กรุณาติดตั้งก่อน`);
-    }
+    const isVPS = process.platform === 'linux';
+    const isHeadless = process.env.HEADLESS === 'true' || isVPS;
 
-    // Use SEPARATE profile to avoid lock conflict with groupWorker
-    const appProfileDir = path.join(process.cwd(), 'homepost-marketplace-profile');
+    // Per-user marketplace profile directory
+    const appProfileDir = path.join(process.cwd(), 'profiles', this.userId, 'marketplace-profile');
     if (!fs.existsSync(appProfileDir)) {
       fs.mkdirSync(appProfileDir, { recursive: true });
     }
 
-    console.log(`🚀 Launching ${browserType} for Marketplace mode...`);
-    console.log(`📁 Profile: ${appProfileDir}`);
-
-    this.browser = await puppeteer.launch({
-      headless: false,
-      defaultViewport: null,
-      executablePath,
+    const launchOptions = {
+      headless: isHeadless ? 'new' : false,
+      defaultViewport: isHeadless ? { width: 1920, height: 1080 } : null,
       userDataDir: appProfileDir,
       ignoreDefaultArgs: ['--enable-automation'],
       args: [
@@ -163,8 +158,26 @@ export class MarketplaceWorker {
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-infobars',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
       ],
-    });
+    };
+
+    // On Windows: use local browser; On VPS: use puppeteer's bundled Chromium
+    if (!isVPS) {
+      const executablePath = findBrowserPath(browserType);
+      if (!executablePath) {
+        throw new Error(`ไม่พบ ${browserType} ในเครื่อง กรุณาติดตั้งก่อน`);
+      }
+      launchOptions.executablePath = executablePath;
+    }
+
+    const shortId = this.userId.substring(0, 8);
+    console.log(`🚀 [${shortId}] Launching ${isVPS ? 'Chromium (VPS)' : browserType} for Marketplace...`);
+    console.log(`📁 Profile: ${appProfileDir}`);
+    console.log(`👁️ Headless: ${isHeadless}`);
+
+    this.browser = await puppeteer.launch(launchOptions);
 
     this.borrowedBrowser = false;
 
@@ -2757,12 +2770,7 @@ export class MarketplaceWorker {
   }
 }
 
-// Singleton
-let marketplaceInstance = null;
-
-export function getMarketplaceWorkerInstance() {
-  if (!marketplaceInstance) {
-    marketplaceInstance = new MarketplaceWorker();
-  }
-  return marketplaceInstance;
+// Factory function — creates a new worker per userId (no more singleton)
+export function createMarketplaceWorkerForUser(userId) {
+  return new MarketplaceWorker(userId);
 }

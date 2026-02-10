@@ -32,7 +32,7 @@ import { useLanguage } from '@/i18n/LanguageContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { motion } from 'framer-motion';
 
-import { API_BASE } from '@/lib/config';
+import { apiFetch } from '@/lib/config';
 
 interface DailyData {
   date: string;
@@ -85,7 +85,7 @@ export default function Analytics() {
     setLoading(true);
     try {
       const pkg = localStorage.getItem('userPackage') || 'elite';
-      const res = await fetch(`${API_BASE}/api/analytics?days=${days}&userPackage=${pkg}`);
+      const res = await apiFetch(`/api/analytics?days=${days}&userPackage=${pkg}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (json.success) {
@@ -109,7 +109,7 @@ export default function Analytics() {
   const handleReset = async () => {
     if (!confirm(isEn ? 'Reset all analytics data? This cannot be undone.' : 'ล้างข้อมูลวิเคราะห์ทั้งหมด? ไม่สามารถย้อนกลับได้')) return;
     try {
-      const res = await fetch(`${API_BASE}/api/analytics/reset`, { method: 'POST' });
+      const res = await apiFetch('/api/analytics/reset', { method: 'POST' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (json.success) {

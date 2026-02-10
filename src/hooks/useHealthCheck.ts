@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { API_BASE } from '@/lib/config';
+import { apiFetch } from '@/lib/config';
 
 // ============================================================
 // Facebook Ban Risk Health Check System v2
@@ -248,7 +248,7 @@ export function useHealthCheck() {
 
   const fetchHealthCheck = useCallback(async () => {
     try {
-      const resp = await fetch(`${API_BASE}/api/health-check`);
+      const resp = await apiFetch('/api/health-check');
       if (!resp.ok) throw new Error('Health check API failed');
       const json = await resp.json();
       if (json.success && json.data) {
@@ -269,7 +269,7 @@ export function useHealthCheck() {
   // Clear history via backend reset
   const clearHistory = useCallback(async () => {
     try {
-      await fetch(`${API_BASE}/api/analytics/reset`, { method: 'POST' });
+      await apiFetch('/api/analytics/reset', { method: 'POST' });
       setResult(DEFAULT_RESULT);
     } catch {
       // ignore

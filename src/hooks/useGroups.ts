@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { FacebookGroup } from '@/types/property';
-import { API_BASE } from '@/lib/config';
+import { apiFetch } from '@/lib/config';
 
 const STORAGE_KEY = 'facebookGroups';
 
@@ -191,9 +191,8 @@ export function useGroups() {
     if (!group) return false;
 
     try {
-      const response = await fetch(`${API_BASE}/api/groups/fetch-info`, {
+      const response = await apiFetch('/api/groups/fetch-info', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: group.url }),
       });
       

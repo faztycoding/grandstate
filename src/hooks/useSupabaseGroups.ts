@@ -21,18 +21,18 @@ function dbToGroup(db: DbFacebookGroup): FacebookGroup {
 }
 
 // Convert App format to DB format
-function groupToDb(group: Partial<FacebookGroup>, userId: string): Partial<DbFacebookGroup> {
+function groupToDb(group: Partial<FacebookGroup>, userId: string): Record<string, any> {
   return {
     user_id: userId,
-    name: group.name,
-    url: group.url,
-    group_id: group.groupId,
-    member_count: group.memberCount || null,
-    posts_today: group.postsToday || null,
-    posts_last_month: group.postsLastMonth || null,
+    name: group.name || '',
+    url: group.url || '',
+    group_id: group.groupId || '',
+    member_count: group.memberCount ?? 0,
+    posts_today: group.postsToday ?? 0,
+    posts_last_month: group.postsLastMonth ?? 0,
     is_active: group.isActive ?? true,
-    last_posted: group.lastPosted?.toISOString() || null,
-    last_updated: group.lastUpdated?.toISOString() || null,
+    last_posted: group.lastPosted?.toISOString() ?? null,
+    last_updated: group.lastUpdated?.toISOString() ?? null,
   };
 }
 

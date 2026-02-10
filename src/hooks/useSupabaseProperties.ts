@@ -28,20 +28,20 @@ function dbToProperty(db: DbProperty): Property {
 }
 
 // Convert App format to DB format
-function propertyToDb(property: Partial<Property>, userId: string): Partial<DbProperty> {
+function propertyToDb(property: Partial<Property>, userId: string): Record<string, any> {
   return {
     user_id: userId,
-    title: property.title,
-    listing_type: property.listingType,
-    property_type: property.type,
-    price: property.price,
-    area_size: property.size || null,
-    bedrooms: property.bedrooms || null,
-    bathrooms: property.bathrooms || null,
-    location: property.location,
-    province: property.province || null,
-    district: property.district || null,
-    description: property.description || null,
+    title: property.title || '',
+    listing_type: property.listingType || 'sale',
+    property_type: property.type || 'condo',
+    price: property.price ?? 0,
+    area_size: property.size ?? null,
+    bedrooms: property.bedrooms ?? null,
+    bathrooms: property.bathrooms ?? null,
+    location: property.location || '',
+    province: property.province ?? null,
+    district: property.district ?? null,
+    description: property.description ?? null,
     features: property.amenities || [],
     images: property.images || [],
     status: 'active',

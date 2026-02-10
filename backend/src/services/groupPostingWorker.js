@@ -1775,63 +1775,70 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
     console.log(`📋 Task expects group: "${taskGroupName}"`);
 
     try {
-      // ── Step 1: ALWAYS navigate to the group URL (don't skip) ──
-      // Previous "already on group" detection was unreliable — page could be on
-      // Notifications or another FB page while URL looks similar
-      const badPageNames = ['notifications', 'การแจ้งเตือน', 'chat', 'แชท', 'messenger', 'facebook', 'home', 'หน้าหลัก', 'watch', 'marketplace'];
-      
+      // ── Step 1: ALWAYS navigate to the group URL ──
       console.log(`🔄 Navigating to group: ${groupUrl}`);
       await page.goto(groupUrl, { waitUntil: 'networkidle2', timeout: 60000 });
       await this.delay(2000);
 
-      // ── Step 1.5: READ actual group name from the page ──
+      // ── Step 1.2: Dismiss any overlays (Notifications panel, popups) ──
+      console.log('🔕 Dismissing overlays...');
+      try {
+        // Press Escape to close any popup/overlay
+        await page.keyboard.press('Escape');
+        await this.delay(500);
+        // Click on the main content area to deselect any sidebar
+        await page.evaluate(() => {
+          const main = document.querySelector('[role="main"]');
+          if (main) main.click();
+        });
+        await this.delay(500);
+        // Close notification panel if open (click the close button or click away)
+        await page.evaluate(() => {
+          // Try closing notification popover
+          const closeButtons = document.querySelectorAll('[aria-label="Close"], [aria-label="ปิด"]');
+          for (const btn of closeButtons) {
+            const rect = btn.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+              btn.click();
+              break;
+            }
+          }
+        });
+        await this.delay(500);
+      } catch (e) {
+        // Ignore dismiss errors
+      }
+
+      // ── Step 1.5: READ group name — use document.title (more reliable than h1) ──
       console.log('📖 Reading actual group name from page...');
       const actualGroupName = await page.evaluate(() => {
-        // Method 1: <h1> tag — Facebook puts group name in the main h1
-        const h1 = document.querySelector('h1');
-        if (h1 && h1.textContent?.trim().length > 2) {
-          return h1.textContent.trim();
-        }
-        // Method 2: head > title — "GroupName | Facebook"
+        // Priority 1: document.title — "GroupName | Facebook" (never polluted by overlays)
         const title = document.title || '';
-        if (title && !title.startsWith('Facebook')) {
+        if (title && !title.startsWith('Facebook') && !title.toLowerCase().includes('notification')) {
           return title.replace(/\s*[|–-]\s*Facebook.*$/i, '').trim();
         }
-        // Method 3: og:title meta
+        // Priority 2: og:title meta tag
         const ogTitle = document.querySelector('meta[property="og:title"]');
         if (ogTitle) {
           return ogTitle.getAttribute('content')?.trim() || '';
         }
-        // Method 4: Largest heading-like span in main content
-        const spans = document.querySelectorAll('[role="main"] span');
-        let best = '';
-        for (const s of spans) {
-          const t = s.textContent?.trim() || '';
-          if (t.length > best.length && t.length < 200 && t.length > 5) {
-            const rect = s.getBoundingClientRect();
-            if (rect.y > 0 && rect.y < 300 && rect.height > 15) {
-              best = t;
-            }
-          }
+        // Priority 3: h1 in [role="main"] only (skip overlay h1s)
+        const mainH1 = document.querySelector('[role="main"] h1');
+        if (mainH1 && mainH1.textContent?.trim().length > 2) {
+          return mainH1.textContent.trim();
         }
-        return best;
+        // Priority 4: any h1
+        const h1 = document.querySelector('h1');
+        if (h1 && h1.textContent?.trim().length > 2) {
+          return h1.textContent.trim();
+        }
+        return '';
       });
 
+      const currentUrl = await page.url();
       console.log(`📖 ชื่อกลุ่มจริงจากหน้าเว็บ: "${actualGroupName}"`);
+      console.log(`📖 Current URL: ${currentUrl}`);
       console.log(`📋 ชื่อกลุ่มใน Task Progress: "${taskGroupName}"`);
-
-      // ── If page landed on wrong page (Notifications etc), force retry ──
-      if (actualGroupName && badPageNames.includes(actualGroupName.toLowerCase())) {
-        console.log(`⚠️ ตรวจพบหน้า "${actualGroupName}" ไม่ใช่หน้ากลุ่ม — กำลัง retry...`);
-        await page.goto(groupUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
-        await this.delay(3000);
-        // Re-read name after retry
-        const retryName = await page.evaluate(() => {
-          const h1 = document.querySelector('h1');
-          return h1?.textContent?.trim() || document.title?.replace(/\s*[|–-]\s*Facebook.*$/i, '').trim() || '';
-        });
-        console.log(`📖 Retry — ชื่อกลุ่ม: "${retryName}"`);
-      }
 
       // ── Verify name matches task progress ──
       if (taskGroupName && actualGroupName) {
@@ -1845,7 +1852,7 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
 
         if (isMatch) {
           console.log(`✅ ชื่อตรงกัน — ยืนยันกลุ่มถูกต้อง`);
-        } else if (!badPageNames.includes(normActual)) {
+        } else {
           console.log(`⚠️ ชื่อไม่ตรง! Task="${taskGroupName}" vs Page="${actualGroupName}"`);
           console.log(`   → ดำเนินการโพสต์ต่อ (URL ถูกต้อง)`);
         }

@@ -333,6 +333,7 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
             /([\d,]+)\s*โพสต์ต่อเดือน/,
             /([\d,]+)\s*โพสต์.*?เดือน/,
             /([\d,]+)\s*posts? in the last month/i,
+            /([\d,]+)\s*in the last month/i,
             /([\d,]+)\s*posts? last month/i,
             /([\d,]+)\s*posts?\/month/i,
             /([\d,]+)\s*total posts? last month/i,
@@ -370,6 +371,7 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
             /([\d,]+)\s*โพสต์ต่อเดือน/,
             /([\d,]+)\s*โพสต์.*?เดือน/,
             /([\d,]+)\s*posts?\s*in\s*the\s*last\s*month/i,
+            /([\d,]+)\s*in\s*the\s*last\s*month/i,
             /([\d,]+)\s*posts?\s*last\s*month/i,
           ];
           for (const pat of monthBodyPatterns) {

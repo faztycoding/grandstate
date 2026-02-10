@@ -418,6 +418,81 @@ export function PropertyForm({ initialData, onSubmit, onCancel }: PropertyFormPr
               rows={4}
             />
           </div>
+
+          {/* Contact Info — embedded */}
+          <div className="md:col-span-2 pt-4 border-t space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="flex items-center gap-2 text-base font-semibold">
+                <Phone className="w-4 h-4 text-accent" />
+                {f.contactInfo}
+              </Label>
+              <Button type="button" variant="outline" size="sm" onClick={addContact}>
+                <Plus className="w-4 h-4 mr-1" />
+                {f.addContact}
+              </Button>
+            </div>
+            <AnimatePresence>
+              {contacts.map((contact, index) => (
+                <motion.div
+                  key={contact.id}
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="grid grid-cols-12 gap-3 items-end p-3 bg-muted/50 rounded-lg"
+                >
+                  <div className="col-span-4 space-y-1">
+                    <Label className="text-xs">{f.contactName} {index + 1}</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        value={contact.name}
+                        onChange={(e) => updateContact(contact.id, 'name', e.target.value)}
+                        placeholder={f.contactNamePlaceholder}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  <div className="col-span-3 space-y-1">
+                    <Label className="text-xs">{f.phone}</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        value={contact.phone}
+                        onChange={(e) => updateContact(contact.id, 'phone', e.target.value)}
+                        placeholder="081-234-5678"
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  <div className="col-span-4 space-y-1">
+                    <Label className="text-xs">{f.lineId}</Label>
+                    <div className="relative">
+                      <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        value={contact.lineId}
+                        onChange={(e) => updateContact(contact.id, 'lineId', e.target.value)}
+                        placeholder="@yourlineid"
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  <div className="col-span-1">
+                    {contacts.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeContact(contact.id)}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
         </CardContent>
       </Card>
 
@@ -633,85 +708,6 @@ export function PropertyForm({ initialData, onSubmit, onCancel }: PropertyFormPr
               </button>
             ))}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Contact Info */}
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Phone className="w-5 h-5 text-accent" />
-              {f.contactInfo}
-            </CardTitle>
-            <Button type="button" variant="outline" size="sm" onClick={addContact}>
-              <Plus className="w-4 h-4 mr-1" />
-              {f.addContact}
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <AnimatePresence>
-            {contacts.map((contact, index) => (
-              <motion.div
-                key={contact.id}
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="grid grid-cols-12 gap-3 items-end p-3 bg-muted/50 rounded-lg"
-              >
-                <div className="col-span-4 space-y-1">
-                  <Label className="text-xs">{f.contactName} {index + 1}</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      value={contact.name}
-                      onChange={(e) => updateContact(contact.id, 'name', e.target.value)}
-                      placeholder={f.contactNamePlaceholder}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-                <div className="col-span-3 space-y-1">
-                  <Label className="text-xs">{f.phone}</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      value={contact.phone}
-                      onChange={(e) => updateContact(contact.id, 'phone', e.target.value)}
-                      placeholder="081-234-5678"
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-                <div className="col-span-4 space-y-1">
-                  <Label className="text-xs">{f.lineId}</Label>
-                  <div className="relative">
-                    <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      value={contact.lineId}
-                      onChange={(e) => updateContact(contact.id, 'lineId', e.target.value)}
-                      placeholder="@yourlineid"
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-                <div className="col-span-1">
-                  {contacts.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeContact(contact.id)}
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
         </CardContent>
       </Card>
 

@@ -479,35 +479,35 @@ export default function AdminDashboard() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-6">
+        <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-4 md:p-6">
             <div className="max-w-7xl mx-auto space-y-6">
                 {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold flex items-center gap-2">
-                            <Shield className="w-8 h-8 text-accent" />
+                        <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
+                            <Shield className="w-6 h-6 md:w-8 md:h-8 text-accent" />
                             Admin Dashboard
                         </h1>
-                        <p className="text-muted-foreground">จัดการ License Keys และผู้ใช้งาน</p>
+                        <p className="text-sm text-muted-foreground">จัดการ License Keys และผู้ใช้งาน</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Button variant="outline" onClick={exportToCSV}>
-                            <Download className="w-4 h-4 mr-2" />
-                            Export CSV
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <Button variant="outline" size="sm" onClick={exportToCSV}>
+                            <Download className="w-4 h-4 sm:mr-2" />
+                            <span className="hidden sm:inline">Export CSV</span>
                         </Button>
-                        <Button onClick={() => setShowCreateModal(true)}>
-                            <Plus className="w-4 h-4 mr-2" />
-                            สร้าง License ใหม่
+                        <Button size="sm" onClick={() => setShowCreateModal(true)}>
+                            <Plus className="w-4 h-4 sm:mr-2" />
+                            <span className="hidden sm:inline">สร้าง License ใหม่</span>
                         </Button>
-                        <Button variant="destructive" onClick={handleLogout}>
-                            <LogOut className="w-4 h-4 mr-2" />
-                            ออกจากระบบ
+                        <Button variant="destructive" size="sm" onClick={handleLogout}>
+                            <LogOut className="w-4 h-4 sm:mr-2" />
+                            <span className="hidden sm:inline">ออกจากระบบ</span>
                         </Button>
                     </div>
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                     <Card>
                         <CardContent className="pt-6">
                             <div className="flex items-center gap-4">
@@ -961,7 +961,8 @@ export default function AdminDashboard() {
                     </CardHeader>
                     <CardContent>
                         <ScrollArea className="h-[500px]">
-                            <Table>
+                          <div className="overflow-x-auto">
+                            <Table className="min-w-[700px]">
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>License Key</TableHead>
@@ -1052,6 +1053,7 @@ export default function AdminDashboard() {
                                     )}
                                 </TableBody>
                             </Table>
+                          </div>
                         </ScrollArea>
                     </CardContent>
                 </Card>

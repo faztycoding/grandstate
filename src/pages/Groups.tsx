@@ -291,7 +291,7 @@ export default function Groups() {
             </Card>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -299,25 +299,26 @@ export default function Groups() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t.groups.searchGroups}
-                className="pl-10 w-[200px]"
+                className="pl-10 w-full sm:w-[200px]"
               />
             </div>
             
             {/* Update All Groups Button */}
             <Button 
-              variant="outline" 
+              variant="outline"
+              size="sm"
               onClick={handleUpdateAllGroups}
               disabled={isUpdatingAll || activeGroups.length === 0}
             >
               {isUpdatingAll ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  {updateProgress.current}/{updateProgress.total}
+                  <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" />
+                  <span className="hidden sm:inline">{updateProgress.current}/{updateProgress.total}</span>
                 </>
               ) : (
                 <>
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  {t.groups.updateInfo}
+                  <RefreshCw className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">{t.groups.updateInfo}</span>
                 </>
               )}
             </Button>
@@ -325,12 +326,13 @@ export default function Groups() {
             {/* Delete All Groups Button */}
             {groups.length > 0 && (
               <Button 
-                variant="outline" 
+                variant="outline"
+                size="sm"
                 className="text-destructive border-destructive/30 hover:bg-destructive/10"
                 onClick={() => setIsDeleteAllOpen(true)}
               >
-                <Trash2 className="w-4 h-4 mr-2" />
-                {t.settingsPage.deleteAll}
+                <Trash2 className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">{t.settingsPage.deleteAll}</span>
               </Button>
             )}
             
@@ -341,6 +343,7 @@ export default function Groups() {
               </span>
               <Button
                 variant="accent"
+                size="sm"
                 disabled={!groupCheck.allowed}
                 onClick={() => {
                   if (!groupCheck.allowed) {

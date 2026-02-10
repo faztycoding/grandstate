@@ -115,21 +115,22 @@ export default function Landing() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b">
-        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-              <Building2 className="w-5 h-5 text-primary-foreground" />
+        <div className="container mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2 md:gap-3">
+            <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-primary flex items-center justify-center">
+              <Building2 className="w-4 h-4 md:w-5 md:h-5 text-primary-foreground" />
             </div>
-            <span className="font-bold text-xl">Grand$tate</span>
+            <span className="font-bold text-lg md:text-xl">Grand$tate</span>
           </Link>
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" asChild>
+          <div className="flex items-center gap-2 md:gap-4">
+            <Button variant="ghost" size="sm" asChild className="hidden sm:inline-flex">
               <Link to="/auth">เข้าสู่ระบบ</Link>
             </Button>
-            <Button variant="accent" asChild>
+            <Button variant="accent" size="sm" asChild>
               <Link to="/auth">
-                เริ่มต้นใช้งาน
-                <ArrowRight className="w-4 h-4 ml-2" />
+                <span className="sm:hidden">เข้าสู่ระบบ</span>
+                <span className="hidden sm:inline">เริ่มต้นใช้งาน</span>
+                <ArrowRight className="w-4 h-4 ml-1 md:ml-2" />
               </Link>
             </Button>
           </div>

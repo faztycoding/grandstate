@@ -123,8 +123,8 @@ export default function Properties() {
       <div className="space-y-6">
         {/* Header Actions */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
-          <div className="flex flex-1 gap-3">
-            <div className="relative flex-1 max-w-md">
+          <div className="flex flex-1 gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[180px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder={t.common.searchProperties}
@@ -134,7 +134,7 @@ export default function Properties() {
               />
             </div>
             <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[140px] hidden sm:flex">
                 <SlidersHorizontal className="w-4 h-4 mr-2" />
                 <SelectValue placeholder={t.properties.propertyType} />
               </SelectTrigger>
@@ -149,7 +149,7 @@ export default function Properties() {
               </SelectContent>
             </Select>
             <Select value={filterListing} onValueChange={setFilterListing}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[140px] hidden sm:flex">
                 <SelectValue placeholder={t.properties.listingType} />
               </SelectTrigger>
               <SelectContent>

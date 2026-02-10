@@ -442,9 +442,9 @@ export default function Analytics() {
                       </div>
 
                       {/* Stats Chips */}
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {/* Properties */}
-                        <div className="text-center px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/30" title={isEn ? 'Properties posted' : 'สินทรัพย์ที่โพสต์'}>
+                      <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                        {/* Properties - hidden on mobile */}
+                        <div className="text-center px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/30 hidden sm:block" title={isEn ? 'Properties posted' : 'สินทรัพย์ที่โพสต์'}>
                           <p className="text-xs font-bold text-blue-600">{g.propertiesCount || 0}</p>
                           <p className="text-[9px] text-blue-500">{isEn ? 'Props' : 'สินทรัพย์'}</p>
                         </div>
@@ -453,13 +453,13 @@ export default function Analytics() {
                           <p className="text-xs font-bold">{g.totalPosts}</p>
                           <p className="text-[9px] text-muted-foreground">{isEn ? 'Posts' : 'โพสต์'}</p>
                         </div>
-                        {/* Success */}
-                        <div className="text-center px-2 py-1 rounded-lg bg-green-50 dark:bg-green-950/30" title={isEn ? 'Successful' : 'สำเร็จ'}>
+                        {/* Success - hidden on mobile */}
+                        <div className="text-center px-2 py-1 rounded-lg bg-green-50 dark:bg-green-950/30 hidden sm:block" title={isEn ? 'Successful' : 'สำเร็จ'}>
                           <p className="text-xs font-bold text-green-600">{g.successCount}</p>
                           <p className="text-[9px] text-green-500">{isEn ? 'OK' : 'สำเร็จ'}</p>
                         </div>
-                        {/* Failed */}
-                        <div className="text-center px-2 py-1 rounded-lg bg-red-50 dark:bg-red-950/30" title={isEn ? 'Failed' : 'ล้มเหลว'}>
+                        {/* Failed - hidden on mobile */}
+                        <div className="text-center px-2 py-1 rounded-lg bg-red-50 dark:bg-red-950/30 hidden sm:block" title={isEn ? 'Failed' : 'ล้มเหลว'}>
                           <p className="text-xs font-bold text-red-600">{g.failedCount}</p>
                           <p className="text-[9px] text-red-500">{isEn ? 'Fail' : 'ล้มเหลว'}</p>
                         </div>

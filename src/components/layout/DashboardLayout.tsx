@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { Sidebar } from './Sidebar';
+import { Sidebar, MobileSidebarProvider } from './Sidebar';
 import { Header } from './Header';
 
 interface DashboardLayoutProps {
@@ -10,14 +10,16 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children, title, subtitle }: DashboardLayoutProps) {
   return (
-    <div className="min-h-screen bg-background">
-      <Sidebar />
-      <div className="pl-[280px] transition-all duration-200">
-        <Header title={title} subtitle={subtitle} />
-        <main className="p-6">
-          {children}
-        </main>
+    <MobileSidebarProvider>
+      <div className="min-h-screen bg-background">
+        <Sidebar />
+        <div className="md:pl-[280px] transition-all duration-200">
+          <Header title={title} subtitle={subtitle} />
+          <main className="p-4 md:p-6">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </MobileSidebarProvider>
   );
 }

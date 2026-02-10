@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, User, HelpCircle, Settings, LogOut, ChevronDown, Shield, BarChart3, Crown, Rocket, Star } from 'lucide-react';
+import { Search, User, HelpCircle, Settings, LogOut, ChevronDown, Shield, BarChart3, Crown, Rocket, Star, Menu } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,7 @@ import { useFacebookConnection } from '@/hooks/useFacebookConnection';
 import { getUserPackage } from '@/hooks/usePackageLimits';
 import { cn } from '@/lib/utils';
 import { ProfileDialog } from '@/components/profile/ProfileDialog';
+import { useMobileSidebar } from '@/components/layout/Sidebar';
 
 const PKG_THEME = {
   free: {
@@ -42,6 +43,15 @@ const PKG_THEME = {
     icon: Crown,
   },
 } as const;
+
+function MobileMenuButton() {
+  const { setOpen } = useMobileSidebar();
+  return (
+    <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setOpen(true)}>
+      <Menu className="w-5 h-5" />
+    </Button>
+  );
+}
 
 interface HeaderProps {
   title: string;
@@ -89,12 +99,15 @@ export function Header({ title, subtitle }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg border-b border-border">
-      <div className="flex items-center justify-between h-16 px-6">
-        <div>
-          <h1 className="text-xl font-bold text-foreground">{title}</h1>
-          {subtitle && (
-            <p className="text-sm text-muted-foreground">{subtitle}</p>
-          )}
+      <div className="flex items-center justify-between h-16 px-4 md:px-6">
+        <div className="flex items-center gap-3">
+          <MobileMenuButton />
+          <div>
+            <h1 className="text-lg md:text-xl font-bold text-foreground">{title}</h1>
+            {subtitle && (
+              <p className="text-sm text-muted-foreground hidden md:block">{subtitle}</p>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-3">

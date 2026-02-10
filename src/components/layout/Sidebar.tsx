@@ -13,13 +13,29 @@ import {
   BarChart3,
   Shield,
   User,
+  Menu,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { useState, createContext, useContext } from 'react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { useLicenseAuth } from '@/hooks/useLicenseAuth';
+import { useIsMobile } from '@/hooks/use-mobile';
+
+// Context for mobile sidebar toggle
+interface MobileSidebarContextType {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+}
+const MobileSidebarContext = createContext<MobileSidebarContextType>({ open: false, setOpen: () => {} });
+export const useMobileSidebar = () => useContext(MobileSidebarContext);
+export function MobileSidebarProvider({ children }: { children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return <MobileSidebarContext.Provider value={{ open, setOpen }}>{children}</MobileSidebarContext.Provider>;
+}
 
 const navigationItems = [
   { key: 'properties' as const, href: '/properties', icon: Building2 },
@@ -31,47 +47,14 @@ const navigationItems = [
   { key: 'settings' as const, href: '/settings', icon: Settings },
 ];
 
-export function Sidebar() {
+function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const [collapsed, setCollapsed] = useState(false);
   const { t } = useLanguage();
-  const { license, user, signOut } = useLicenseAuth();
+  const { user, signOut } = useLicenseAuth();
 
   return (
-    <motion.aside
-      initial={false}
-      animate={{ width: collapsed ? 80 : 280 }}
-      transition={{ duration: 0.2, ease: 'easeInOut' }}
-      className="fixed left-0 top-0 z-40 h-screen bg-sidebar border-r border-sidebar-border flex flex-col"
-    >
-      {/* Logo */}
-      <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
-        <Link to="/automation" className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-sidebar-primary flex items-center justify-center shadow-glow">
-            <Building2 className="w-5 h-5 text-sidebar-primary-foreground" />
-          </div>
-          {!collapsed && (
-            <motion.span
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="font-bold text-lg text-sidebar-foreground"
-            >
-              Grand$tate
-            </motion.span>
-          )}
-        </Link>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => setCollapsed(!collapsed)}
-          className="text-sidebar-foreground hover:bg-sidebar-accent"
-        >
-          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-        </Button>
-      </div>
-
+    <>
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {navigationItems.map((item) => {
@@ -81,6 +64,7 @@ export function Sidebar() {
             <Link
               key={item.key}
               to={item.href}
+              onClick={onNavigate}
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative',
                 isActive
@@ -147,6 +131,75 @@ export function Sidebar() {
           {!collapsed && <span>{t.common.logout}</span>}
         </Button>
       </div>
+    </>
+  );
+}
+
+export function Sidebar() {
+  const [collapsed, setCollapsed] = useState(false);
+  const isMobile = useIsMobile();
+  const { open, setOpen } = useMobileSidebar();
+
+  // Mobile: Sheet drawer
+  if (isMobile) {
+    return (
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent side="left" className="w-[280px] p-0 bg-sidebar text-sidebar-foreground border-sidebar-border [&>button]:hidden">
+          <div className="flex flex-col h-full">
+            {/* Logo */}
+            <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
+              <Link to="/automation" className="flex items-center gap-3" onClick={() => setOpen(false)}>
+                <div className="w-10 h-10 rounded-xl bg-sidebar-primary flex items-center justify-center shadow-glow">
+                  <Building2 className="w-5 h-5 text-sidebar-primary-foreground" />
+                </div>
+                <span className="font-bold text-lg text-sidebar-foreground">Grand$tate</span>
+              </Link>
+              <Button variant="ghost" size="icon-sm" onClick={() => setOpen(false)} className="text-sidebar-foreground">
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            <SidebarContent collapsed={false} onNavigate={() => setOpen(false)} />
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  // Desktop: Fixed sidebar
+  return (
+    <motion.aside
+      initial={false}
+      animate={{ width: collapsed ? 80 : 280 }}
+      transition={{ duration: 0.2, ease: 'easeInOut' }}
+      className="fixed left-0 top-0 z-40 h-screen bg-sidebar border-r border-sidebar-border flex-col hidden md:flex"
+    >
+      {/* Logo */}
+      <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
+        <Link to="/automation" className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-sidebar-primary flex items-center justify-center shadow-glow">
+            <Building2 className="w-5 h-5 text-sidebar-primary-foreground" />
+          </div>
+          {!collapsed && (
+            <motion.span
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="font-bold text-lg text-sidebar-foreground"
+            >
+              Grand$tate
+            </motion.span>
+          )}
+        </Link>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => setCollapsed(!collapsed)}
+          className="text-sidebar-foreground hover:bg-sidebar-accent"
+        >
+          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+        </Button>
+      </div>
+      <SidebarContent collapsed={collapsed} />
     </motion.aside>
   );
 }

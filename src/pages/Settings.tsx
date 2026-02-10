@@ -255,32 +255,32 @@ export default function Settings() {
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Package Banner */}
         <div className={cn('relative overflow-hidden rounded-2xl bg-gradient-to-r p-5', pkgTheme.gradient)}>
-          <div className="relative z-10 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                <PkgIcon className="w-7 h-7 text-white" />
+          <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                <PkgIcon className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
               </div>
               <div>
                 <p className="text-white/70 text-xs font-medium uppercase tracking-wider">{s.currentPackage}</p>
-                <p className="text-white text-xl font-bold">{pkgTheme.label}</p>
-                <p className="text-white/70 text-sm">{pkgTheme.desc}</p>
+                <p className="text-white text-lg sm:text-xl font-bold">{pkgTheme.label}</p>
+                <p className="text-white/70 text-xs sm:text-sm">{pkgTheme.desc}</p>
               </div>
             </div>
-            <div className="flex flex-col items-end gap-2">
+            <div className="flex flex-col items-start sm:items-end gap-2 w-full sm:w-auto">
               <div className="flex items-center gap-3">
-                <div className="text-right">
+                <div className="text-left sm:text-right">
                   <p className="text-white/60 text-[10px] uppercase">{s.postsPerDay}</p>
-                  <p className="text-white font-bold text-lg">{pkgLimits.postsPerDay}</p>
+                  <p className="text-white font-bold text-base sm:text-lg">{pkgLimits.postsPerDay}</p>
                 </div>
                 <div className="w-px h-8 bg-white/20" />
-                <div className="text-right">
+                <div className="text-left sm:text-right">
                   <p className="text-white/60 text-[10px] uppercase">{s.groupsLabel}</p>
-                  <p className="text-white font-bold text-lg">{pkgLimits.maxGroups}</p>
+                  <p className="text-white font-bold text-base sm:text-lg">{pkgLimits.maxGroups}</p>
                 </div>
                 <div className="w-px h-8 bg-white/20" />
-                <div className="text-right">
+                <div className="text-left sm:text-right">
                   <p className="text-white/60 text-[10px] uppercase">{s.propertiesLabel}</p>
-                  <p className="text-white font-bold text-lg">{pkgLimits.maxProperties === Infinity ? '∞' : pkgLimits.maxProperties}</p>
+                  <p className="text-white font-bold text-base sm:text-lg">{pkgLimits.maxProperties === Infinity ? '∞' : pkgLimits.maxProperties}</p>
                 </div>
               </div>
               {pkg !== 'elite' && (

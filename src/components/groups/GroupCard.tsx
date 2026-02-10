@@ -73,7 +73,7 @@ export function GroupCard({
         group.isActive ? "bg-green-500" : "bg-gray-300"
       )} />
 
-      <div className="flex items-center gap-4 p-4 pl-5">
+      <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 pl-4 sm:pl-5">
         {/* Icon */}
         <div className={cn(
           "flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center",
@@ -138,11 +138,11 @@ export function GroupCard({
         {/* Actions — data-actions prevents card click from navigating */}
         {!selectable && (
           <div className="flex items-center gap-1 flex-shrink-0" data-actions>
-            {/* Status Badge */}
+            {/* Status Badge - hidden on mobile */}
             <Badge 
               variant={group.isActive ? 'default' : 'secondary'}
               className={cn(
-                "mr-2",
+                "mr-1 sm:mr-2 hidden sm:inline-flex",
                 group.isActive && "bg-green-500 hover:bg-green-600"
               )}
             >
@@ -156,24 +156,24 @@ export function GroupCard({
               className="data-[state=checked]:bg-green-500"
             />
             
-            {/* Open group URL */}
+            {/* Open group URL - hidden on mobile */}
             <a
               href={group.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center h-9 w-9 rounded-md text-muted-foreground hover:text-primary hover:bg-accent"
+              className="hidden sm:inline-flex items-center justify-center h-9 w-9 rounded-md text-muted-foreground hover:text-primary hover:bg-accent"
               onClick={(e) => e.stopPropagation()}
               title="เปิดกลุ่ม"
             >
               <ExternalLink className="w-4 h-4" />
             </a>
 
-            {/* Edit */}
+            {/* Edit - hidden on mobile */}
             {onEdit && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 text-muted-foreground hover:text-primary"
+                className="h-9 w-9 text-muted-foreground hover:text-primary hidden sm:inline-flex"
                 onClick={(e) => {
                   e.stopPropagation();
                   onEdit(group);
@@ -188,7 +188,7 @@ export function GroupCard({
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9 text-muted-foreground hover:text-destructive"
+              className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-destructive"
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete?.(group);

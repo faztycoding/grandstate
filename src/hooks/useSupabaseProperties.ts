@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase, DbProperty } from '@/lib/supabase';
+import { supabase, DbProperty, directInsert, directUpdate } from '@/lib/supabase';
 import { Property, PropertyType } from '@/types/property';
 
 // Convert DB format to App format
@@ -124,11 +124,7 @@ export function useSupabaseProperties() {
 
       const dbData = propertyToDb(propertyData, user.id);
       
-      const { error } = await supabase
-        .from('properties')
-        .insert([dbData]);
-
-      if (error) throw error;
+      await directInsert('properties', dbData);
 
       await fetchProperties();
       return { id: 'new' } as unknown as Property;
@@ -179,13 +175,7 @@ export function useSupabaseProperties() {
       if (updates.amenities !== undefined) dbUpdates.features = updates.amenities;
       if (updates.images !== undefined) dbUpdates.images = updates.images;
 
-      const { error } = await supabase
-        .from('properties')
-        .update(dbUpdates)
-        .eq('id', id)
-        .eq('user_id', user.id);
-
-      if (error) throw error;
+      await directUpdate('properties', dbUpdates, { id, user_id: user.id });
 
       await fetchProperties();
       return null;

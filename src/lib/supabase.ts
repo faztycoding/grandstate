@@ -9,6 +9,56 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+/**
+ * Direct REST insert — bypasses Supabase JS client's buggy column quoting
+ * that causes PostgREST 400 errors on insert/update
+ */
+export async function directInsert(table: string, data: Record<string, any>) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  
+  const res = await fetch(`${supabaseUrl}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': supabaseAnonKey,
+      'Authorization': `Bearer ${token}`,
+      'Prefer': 'return=minimal',
+    },
+    body: JSON.stringify(data),
+  });
+  
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: res.statusText }));
+    throw { message: err.message || err.error || res.statusText, code: err.code, details: err.details };
+  }
+  return true;
+}
+
+export async function directUpdate(table: string, data: Record<string, any>, filters: Record<string, string>) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  
+  const params = Object.entries(filters).map(([k, v]) => `${k}=eq.${v}`).join('&');
+  
+  const res = await fetch(`${supabaseUrl}/rest/v1/${table}?${params}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': supabaseAnonKey,
+      'Authorization': `Bearer ${token}`,
+      'Prefer': 'return=minimal',
+    },
+    body: JSON.stringify(data),
+  });
+  
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: res.statusText }));
+    throw { message: err.message || err.error || res.statusText, code: err.code, details: err.details };
+  }
+  return true;
+}
+
 // Database types
 export interface DbProperty {
   id: string;

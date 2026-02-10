@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase, DbFacebookGroup } from '@/lib/supabase';
+import { supabase, DbFacebookGroup, directInsert, directUpdate } from '@/lib/supabase';
 import { FacebookGroup } from '@/types/property';
 import { apiFetch } from '@/lib/config';
 
@@ -111,18 +111,13 @@ export function useSupabaseGroups() {
 
       const dbData = groupToDb(groupData, user.id);
       
-      const { error } = await supabase
-        .from('facebook_groups')
-        .insert([dbData]);
-
-      if (error) {
-        if (error.code === '23505') {
-          return null;
-        }
-        throw error;
+      try {
+        await directInsert('facebook_groups', dbData);
+      } catch (err: any) {
+        if (err.code === '23505') return null;
+        throw err;
       }
 
-      // Refetch to get the new data with proper types
       await fetchGroups();
       return { id: 'new' } as FacebookGroup;
     } catch (err: any) {
@@ -162,13 +157,7 @@ export function useSupabaseGroups() {
       if (updates.lastPosted) dbUpdates.last_posted = updates.lastPosted.toISOString();
       if (updates.lastUpdated) dbUpdates.last_updated = updates.lastUpdated.toISOString();
 
-      const { error } = await supabase
-        .from('facebook_groups')
-        .update(dbUpdates)
-        .eq('id', id)
-        .eq('user_id', user.id);
-
-      if (error) throw error;
+      await directUpdate('facebook_groups', dbUpdates, { id, user_id: user.id });
 
       await fetchGroups();
     } catch (err: any) {

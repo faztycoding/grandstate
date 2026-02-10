@@ -688,46 +688,115 @@ app.post('/api/facebook/auto-login', ...auth, async (req, res) => {
 
     const page = req.groupWorker.page;
 
-    // Navigate to Facebook login page
-    await page.goto('https://www.facebook.com/login', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    // Use mobile Facebook — simpler page, fewer anti-bot checks
+    console.log('🔑 Auto-login: navigating to m.facebook.com...');
+    await page.goto('https://m.facebook.com/', { waitUntil: 'networkidle2', timeout: 30000 });
     await new Promise(r => setTimeout(r, 2000));
 
-    // Type email
-    const emailInput = await page.$('#email');
-    if (emailInput) {
-      await emailInput.click({ clickCount: 3 });
-      await emailInput.type(email, { delay: 50 });
+    const preLoginUrl = page.url();
+    console.log('📍 Pre-login URL:', preLoginUrl);
+
+    // Handle cookie consent dialog if present
+    try {
+      const cookieBtn = await page.$('button[data-cookiebanner="accept_button"]') || 
+                         await page.$('button[title="Allow all cookies"]') ||
+                         await page.$('button[value="1"][name="accept"]');
+      if (cookieBtn) {
+        await cookieBtn.click();
+        await new Promise(r => setTimeout(r, 1000));
+        console.log('🍪 Cookie consent accepted');
+      }
+    } catch(e) {}
+
+    // Try multiple selectors for email input
+    const emailSelectors = ['#m_login_email', '#email', 'input[name="email"]', 'input[type="email"]', 'input[type="text"]'];
+    let emailInput = null;
+    for (const sel of emailSelectors) {
+      emailInput = await page.$(sel);
+      if (emailInput) { console.log('📧 Found email input:', sel); break; }
     }
 
-    // Type password
-    const passInput = await page.$('#pass');
-    if (passInput) {
-      await passInput.click({ clickCount: 3 });
-      await passInput.type(password, { delay: 50 });
+    if (!emailInput) {
+      const pageContent = await page.content();
+      console.log('❌ No email input found. Page title:', await page.title());
+      console.log('❌ Page snippet:', pageContent.substring(0, 500));
+      return res.json({ success: false, error: 'ไม่พบช่องกรอก Email — Facebook อาจ block หน้า Login' });
     }
 
-    // Click login button
-    const loginBtn = await page.$('button[name="login"]') || await page.$('#loginbutton');
+    // Clear and type email
+    await emailInput.click({ clickCount: 3 });
+    await emailInput.type(email, { delay: 30 });
+
+    // Try multiple selectors for password input
+    const passSelectors = ['#m_login_password', '#pass', 'input[name="pass"]', 'input[type="password"]'];
+    let passInput = null;
+    for (const sel of passSelectors) {
+      passInput = await page.$(sel);
+      if (passInput) { console.log('🔒 Found password input:', sel); break; }
+    }
+
+    if (!passInput) {
+      return res.json({ success: false, error: 'ไม่พบช่องกรอก Password' });
+    }
+
+    await passInput.click({ clickCount: 3 });
+    await passInput.type(password, { delay: 30 });
+
+    // Try multiple selectors for login button
+    const btnSelectors = ['button[name="login"]', '#loginbutton', 'input[name="login"]', 'button[type="submit"]', 'input[type="submit"]'];
+    let loginBtn = null;
+    for (const sel of btnSelectors) {
+      loginBtn = await page.$(sel);
+      if (loginBtn) { console.log('🖱️ Found login button:', sel); break; }
+    }
+
     if (loginBtn) {
       await loginBtn.click();
+      console.log('🖱️ Login button clicked, waiting...');
+    } else {
+      // Try pressing Enter instead
+      await passInput.press('Enter');
+      console.log('⌨️ Pressed Enter to submit');
     }
 
-    // Wait for navigation
-    await new Promise(r => setTimeout(r, 5000));
+    // Wait for navigation/redirect
+    await new Promise(r => setTimeout(r, 6000));
 
-    // Check if login succeeded
-    const currentUrl = page.url();
+    const postLoginUrl = page.url();
+    console.log('📍 Post-login URL:', postLoginUrl);
+
+    // Check various outcomes
     const isLoggedIn = await req.groupWorker.checkLogin();
 
     if (isLoggedIn) {
-      console.log('✅ Facebook auto-login successful');
+      console.log('✅ Facebook auto-login successful!');
+      // Navigate to desktop version for future operations
+      await page.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded', timeout: 30000 });
       res.json({ success: true, message: 'Login สำเร็จ!' });
-    } else if (currentUrl.includes('checkpoint') || currentUrl.includes('two_step_verification')) {
-      console.log('⚠️ Facebook requires 2FA');
-      res.json({ success: false, error: 'Facebook ต้องการยืนยันตัวตน 2FA — กรุณาตรวจสอบ SMS/App แล้วลองใหม่' });
+    } else if (postLoginUrl.includes('checkpoint') || postLoginUrl.includes('two_step_verification') || postLoginUrl.includes('approve')) {
+      console.log('⚠️ Facebook requires verification');
+      res.json({ success: false, error: 'Facebook ต้องการยืนยันตัวตน — เช็ค Email/SMS แล้วลองใหม่' });
+    } else if (postLoginUrl.includes('login') || postLoginUrl === preLoginUrl) {
+      // Still on login page — check for error message
+      const errorMsg = await page.evaluate(() => {
+        const errEl = document.querySelector('#login_error, .login_error_box, [data-sigil="m_login_notice"]');
+        return errEl ? errEl.textContent?.trim() : '';
+      });
+      console.log('❌ Login failed. Error:', errorMsg || 'unknown');
+      res.json({ success: false, error: errorMsg || 'Email หรือ Password ไม่ถูกต้อง' });
     } else {
-      console.log('❌ Facebook login failed, URL:', currentUrl);
-      res.json({ success: false, error: 'Email หรือ Password ไม่ถูกต้อง' });
+      // Unknown state — might be logged in on a different page
+      console.log('🔍 Unknown state, URL:', postLoginUrl);
+      // Try navigating to Facebook home to verify
+      await page.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await new Promise(r => setTimeout(r, 2000));
+      const finalCheck = await req.groupWorker.checkLogin();
+      if (finalCheck) {
+        console.log('✅ Facebook login confirmed on second check');
+        res.json({ success: true, message: 'Login สำเร็จ!' });
+      } else {
+        res.json({ success: false, error: 'Login ไม่สำเร็จ — ลองอีกครั้ง' });
+      }
     }
   } catch (error) {
     console.error('Auto-login error:', error.message);

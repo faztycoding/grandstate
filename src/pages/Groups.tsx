@@ -154,7 +154,7 @@ export default function Groups() {
     }
   };
 
-  const handleAddGroup = () => {
+  const handleAddGroup = async () => {
     if (!formUrl || !formName) {
       toast.error(t.groups.fillRequired);
       return;
@@ -166,25 +166,31 @@ export default function Groups() {
       return;
     }
 
-    const result = addGroup({
-      name: formName,
-      url: formUrl,
-      memberCount: formMemberCount,
-      postsToday: formPostsToday,
-      postsLastMonth: formPostsLastMonth,
-      lastUpdated: formMemberCount ? new Date() : undefined,
-    });
+    try {
+      const result = await addGroup({
+        name: formName,
+        url: formUrl,
+        groupId: groupId,
+        memberCount: formMemberCount,
+        postsToday: formPostsToday,
+        postsLastMonth: formPostsLastMonth,
+        lastUpdated: formMemberCount ? new Date() : undefined,
+      });
 
-    if (result === null) {
-      toast.error(t.groups.alreadyExists);
-      return;
+      if (result === null) {
+        toast.error(t.groups.alreadyExists);
+        return;
+      }
+
+      resetForm();
+      setIsAddOpen(false);
+      toast.success(t.groups.addSuccess, {
+        description: formName,
+      });
+    } catch (err: any) {
+      console.error('Add group error:', err);
+      toast.error('เพิ่มกลุ่มไม่สำเร็จ: ' + (err.message || 'Unknown error'));
     }
-
-    resetForm();
-    setIsAddOpen(false);
-    toast.success(t.groups.addSuccess, {
-      description: formName,
-    });
   };
 
   const handleEditGroup = () => {

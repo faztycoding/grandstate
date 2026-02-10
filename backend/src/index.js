@@ -814,8 +814,11 @@ app.get('/api/facebook/status', ...auth, async (req, res) => {
       });
     }
     
-    // Check if logged in
-    const isLoggedIn = await req.groupWorker.checkLogin();
+    // Check if logged in (with 10s timeout to prevent hanging)
+    const isLoggedIn = await Promise.race([
+      req.groupWorker.checkLogin(),
+      new Promise(resolve => setTimeout(() => resolve(false), 10000)),
+    ]);
     
     if (isLoggedIn) {
       // Get user info - scrape real name & profile pic from Facebook nav

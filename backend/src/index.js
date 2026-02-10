@@ -9,9 +9,13 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // CORS — lock to allowed origins
-const ALLOWED_ORIGINS = (process.env.FRONTEND_URL || 'http://localhost:8080')
-  .split(',')
-  .map(s => s.trim());
+const ALLOWED_ORIGINS = [
+  ...(process.env.FRONTEND_URL || 'http://localhost:8080').split(',').map(s => s.trim()),
+  'https://grandstate.io',
+  'https://www.grandstate.io',
+  'http://localhost:8080',
+  'http://localhost:5173',
+];
 
 app.use(cors({
   origin: (origin, callback) => {

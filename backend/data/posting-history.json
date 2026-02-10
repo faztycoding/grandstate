@@ -1,0 +1,63 @@
+{
+  "postings": [
+    {
+      "propertyId": "1770668496950",
+      "groupId": "1770668524629",
+      "groupName": "ซื้อ ขาย ที่ดินพังงา ภูเก็ต โคกกลอย บางทอง ท้ายเหมือง ตะกั่วป่า",
+      "timestamp": "2026-02-09T20:28:36.576Z",
+      "success": false,
+      "day": "2026-02-09"
+    }
+  ],
+  "groupStats": {
+    "1770668524629": {
+      "lastPosted": "2026-02-09T20:28:36.576Z",
+      "totalPosts": 1,
+      "successCount": 0,
+      "failedCount": 1,
+      "name": "ซื้อ ขาย ที่ดินพังงา ภูเก็ต โคกกลอย บางทอง ท้ายเหมือง ตะกั่วป่า",
+      "properties": [
+        "1770668496950"
+      ]
+    }
+  },
+  "propertyStats": {
+    "1770668496950": {
+      "groups": [
+        "1770668524629"
+      ],
+      "lastPosted": "2026-02-09T20:28:36.576Z"
+    }
+  },
+  "currentDay": "2026-02-10",
+  "todayStats": {
+    "postsCount": 0,
+    "successCount": 0,
+    "failedCount": 0,
+    "skippedDuplicate": 0,
+    "groupsPosted": [],
+    "propertiesPosted": [],
+    "automationRuns": 0,
+    "firstPostAt": null,
+    "lastPostAt": null,
+    "batches": []
+  },
+  "dailyArchive": {
+    "2026-02-09": {
+      "postsCount": 1,
+      "successCount": 0,
+      "failedCount": 1,
+      "skippedDuplicate": 0,
+      "groupsPosted": [
+        "1770668524629"
+      ],
+      "propertiesPosted": [
+        "1770668496950"
+      ],
+      "automationRuns": 0,
+      "firstPostAt": "2026-02-09T20:28:36.576Z",
+      "lastPostAt": "2026-02-09T20:28:36.576Z",
+      "batches": []
+    }
+  }
+}

@@ -1,0 +1,38 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Environment variables (contains API keys!)
+.env
+.env.local
+.env.production
+
+# Backend - Chrome browser profiles & temp files
+backend/chrome-data/
+backend/homepost-browser-profile/
+backend/homepost-marketplace-profile/
+backend/homepost-chrome-profile/
+backend/*-profile/
+backend/temp/
+backend/screenshots/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

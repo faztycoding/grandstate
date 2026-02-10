@@ -674,6 +674,67 @@ app.post('/api/facebook/connect', ...auth, async (req, res) => {
   }
 });
 
+// Auto-login to Facebook (for VPS headless mode)
+app.post('/api/facebook/auto-login', ...auth, async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ success: false, error: 'กรุณากรอก Email และ Password' });
+    }
+
+    if (!req.groupWorker.browser || !req.groupWorker.page) {
+      return res.status(400).json({ success: false, error: 'Browser ยังไม่เปิด กรุณากด "เชื่อมต่อ" ก่อน' });
+    }
+
+    const page = req.groupWorker.page;
+
+    // Navigate to Facebook login page
+    await page.goto('https://www.facebook.com/login', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await new Promise(r => setTimeout(r, 2000));
+
+    // Type email
+    const emailInput = await page.$('#email');
+    if (emailInput) {
+      await emailInput.click({ clickCount: 3 });
+      await emailInput.type(email, { delay: 50 });
+    }
+
+    // Type password
+    const passInput = await page.$('#pass');
+    if (passInput) {
+      await passInput.click({ clickCount: 3 });
+      await passInput.type(password, { delay: 50 });
+    }
+
+    // Click login button
+    const loginBtn = await page.$('button[name="login"]') || await page.$('#loginbutton');
+    if (loginBtn) {
+      await loginBtn.click();
+    }
+
+    // Wait for navigation
+    await new Promise(r => setTimeout(r, 5000));
+
+    // Check if login succeeded
+    const currentUrl = page.url();
+    const isLoggedIn = await req.groupWorker.checkLogin();
+
+    if (isLoggedIn) {
+      console.log('✅ Facebook auto-login successful');
+      res.json({ success: true, message: 'Login สำเร็จ!' });
+    } else if (currentUrl.includes('checkpoint') || currentUrl.includes('two_step_verification')) {
+      console.log('⚠️ Facebook requires 2FA');
+      res.json({ success: false, error: 'Facebook ต้องการยืนยันตัวตน 2FA — กรุณาตรวจสอบ SMS/App แล้วลองใหม่' });
+    } else {
+      console.log('❌ Facebook login failed, URL:', currentUrl);
+      res.json({ success: false, error: 'Email หรือ Password ไม่ถูกต้อง' });
+    }
+  } catch (error) {
+    console.error('Auto-login error:', error.message);
+    res.status(500).json({ success: false, error: `Login ผิดพลาด: ${error.message}` });
+  }
+});
+
 // Check Facebook connection status
 app.get('/api/facebook/status', ...auth, async (req, res) => {
   try {

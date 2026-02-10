@@ -113,6 +113,27 @@ export function useFacebookConnection() {
     }
   }, []);
 
+  // Auto-login to Facebook (VPS headless mode)
+  const autoLogin = useCallback(async (email: string, password: string) => {
+    try {
+      const response = await apiFetch('/api/facebook/auto-login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        // Login succeeded, check status to get user info
+        await checkStatus();
+        return { success: true, message: data.message };
+      } else {
+        return { success: false, message: data.error };
+      }
+    } catch (error: any) {
+      return { success: false, message: error.message };
+    }
+  }, [checkStatus]);
+
   // Disconnect from Facebook
   const disconnect = useCallback(async () => {
     try {
@@ -142,6 +163,7 @@ export function useFacebookConnection() {
     ...state,
     connect,
     confirmLogin,
+    autoLogin,
     disconnect,
     checkStatus,
   };

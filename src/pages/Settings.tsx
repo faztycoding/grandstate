@@ -80,6 +80,7 @@ export default function Settings() {
     user,
     connect,
     confirmLogin,
+    autoLogin,
     disconnect,
     checkStatus
   } = useFacebookConnection();
@@ -135,12 +136,17 @@ export default function Settings() {
   }, [showLoginPopup, loginStep, confirmLogin]);
 
   const [loginError, setLoginError] = useState('');
+  const [fbEmail, setFbEmail] = useState('');
+  const [fbPassword, setFbPassword] = useState('');
+  const [isAutoLogging, setIsAutoLogging] = useState(false);
 
   const handleConnectFacebook = async () => {
     setLoginStep('opening');
     setShowLoginPopup(true);
     setLoginUserName('');
     setLoginError('');
+    setFbEmail('');
+    setFbPassword('');
 
     const result = await connect();
     if (result.success) {
@@ -148,6 +154,21 @@ export default function Settings() {
     } else {
       setLoginError(result.message || 'ไม่สามารถเชื่อมต่อได้');
       setLoginStep('error');
+    }
+  };
+
+  const handleAutoLogin = async () => {
+    if (!fbEmail || !fbPassword) return;
+    setIsAutoLogging(true);
+    setLoginError('');
+    const result = await autoLogin(fbEmail, fbPassword);
+    setIsAutoLogging(false);
+    if (result.success) {
+      setLoginStep('success');
+      setFbPassword('');
+      await checkStatus();
+    } else {
+      setLoginError(result.message || 'Login ไม่สำเร็จ');
     }
   };
 
@@ -797,6 +818,43 @@ export default function Settings() {
               </div>
             </div>
 
+            {/* Auto-login form (VPS headless) */}
+            {(loginStep === 'waiting' || loginStep === 'checking') && (
+              <div className="space-y-3 p-3 rounded-lg border border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-800">
+                <p className="text-xs font-medium text-blue-700 dark:text-blue-400">🔑 กรอก Facebook เพื่อ Login อัตโนมัติ</p>
+                <Input
+                  type="email"
+                  placeholder="Email หรือเบอร์โทร Facebook"
+                  value={fbEmail}
+                  onChange={(e) => setFbEmail(e.target.value)}
+                  disabled={isAutoLogging}
+                />
+                <Input
+                  type="password"
+                  placeholder="Password Facebook"
+                  value={fbPassword}
+                  onChange={(e) => setFbPassword(e.target.value)}
+                  disabled={isAutoLogging}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAutoLogin()}
+                />
+                {loginError && (
+                  <p className="text-xs text-red-600">{loginError}</p>
+                )}
+                <Button
+                  onClick={handleAutoLogin}
+                  disabled={!fbEmail || !fbPassword || isAutoLogging}
+                  className="w-full bg-[#1877F2] hover:bg-[#166FE5]"
+                >
+                  {isAutoLogging ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> กำลัง Login...</>
+                  ) : (
+                    <><LogIn className="w-4 h-4 mr-2" /> Login Facebook</>
+                  )}
+                </Button>
+                <p className="text-[10px] text-muted-foreground text-center">🔒 ข้อมูลจะไม่ถูกจัดเก็บ ใช้เพื่อ Login ครั้งเดียวเท่านั้น</p>
+              </div>
+            )}
+
             {/* Error state */}
             {loginStep === 'error' && (
               <div className="flex items-center gap-3 p-3 rounded-lg bg-red-50 border border-red-200 dark:bg-red-950/30 dark:border-red-800">
@@ -805,13 +863,6 @@ export default function Settings() {
                   <p className="font-medium text-sm text-red-700 dark:text-red-400">เกิดข้อผิดพลาด</p>
                   <p className="text-xs text-muted-foreground">{loginError || 'ไม่สามารถเปิด Browser ได้ ลองใหม่อีกครั้ง'}</p>
                 </div>
-              </div>
-            )}
-
-            {/* Tip */}
-            {(loginStep === 'waiting' || loginStep === 'checking') && (
-              <div className="text-center text-xs text-muted-foreground p-2 bg-muted/30 rounded-lg">
-                💡 Login ในหน้าต่าง Browser ที่เปิดขึ้น — ระบบจะตรวจจับอัตโนมัติ
               </div>
             )}
           </div>

@@ -52,11 +52,18 @@ export class MarketplaceWorker {
     this.totalBatches = 0;
     this.anthropic = null;
     this.tracker = new PostingTracker(userId);
+
+    // Auto-init from env var if available
+    const envKey = process.env.ANTHROPIC_API_KEY;
+    if (envKey && Anthropic) {
+      this.anthropic = new Anthropic({ apiKey: envKey });
+    }
   }
 
   initAnthropicClient(apiKey) {
-    if (apiKey && Anthropic) {
-      this.anthropic = new Anthropic({ apiKey });
+    const key = apiKey || process.env.ANTHROPIC_API_KEY;
+    if (key && Anthropic) {
+      this.anthropic = new Anthropic({ apiKey: key });
     }
   }
 

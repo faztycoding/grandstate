@@ -64,6 +64,12 @@ export class GroupPostingWorker {
     this.totalSteps = 0;
     this.anthropic = null;
     this.onPostResult = null; // callback: (propertyId, groupId, groupName, success) => void
+
+    // Auto-init from env var if available
+    const envKey = process.env.ANTHROPIC_API_KEY;
+    if (envKey && Anthropic) {
+      this.anthropic = new Anthropic({ apiKey: envKey });
+    }
   }
 
   setPostResultCallback(cb) {
@@ -72,8 +78,9 @@ export class GroupPostingWorker {
 
   // Initialize Anthropic client for caption generation
   initAnthropicClient(apiKey) {
-    if (apiKey && Anthropic) {
-      this.anthropic = new Anthropic({ apiKey });
+    const key = apiKey || process.env.ANTHROPIC_API_KEY;
+    if (key && Anthropic) {
+      this.anthropic = new Anthropic({ apiKey: key });
     }
   }
 

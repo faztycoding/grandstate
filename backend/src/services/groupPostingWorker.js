@@ -976,7 +976,7 @@ export class GroupPostingWorker {
         '--disable-extensions',
         '--no-first-run',
         '--no-zygote',
-        ...(isVPS ? ['--single-process'] : []),
+        ...(isVPS ? ['--disable-features=VizDisplayCompositor'] : []),
       ],
     };
 

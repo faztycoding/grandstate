@@ -8,6 +8,9 @@ import { sessionManager } from './services/userSessionManager.js';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust proxy (behind Nginx reverse proxy)
+app.set('trust proxy', 1);
+
 // CORS — lock to allowed origins
 const ALLOWED_ORIGINS = [
   ...(process.env.FRONTEND_URL || 'http://localhost:8080').split(',').map(s => s.trim()),

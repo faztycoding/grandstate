@@ -193,20 +193,23 @@ export default function Groups() {
     }
   };
 
-  const handleEditGroup = () => {
+  const handleEditGroup = async () => {
     if (!selectedGroup || !formName) {
       toast.error(t.groups.fillRequired);
       return;
     }
 
-    updateGroup(selectedGroup.id, {
-      name: formName,
-      url: formUrl || selectedGroup.url,
-    });
-
-    resetForm();
-    setIsEditOpen(false);
-    toast.success(t.groups.editSuccess);
+    try {
+      await updateGroup(selectedGroup.id, {
+        name: formName,
+        url: formUrl || selectedGroup.url,
+      });
+      resetForm();
+      setIsEditOpen(false);
+      toast.success(t.groups.editSuccess);
+    } catch (err: any) {
+      toast.error('แก้ไขไม่สำเร็จ: ' + (err.message || 'Unknown error'));
+    }
   };
 
   const openEditDialog = (group: FacebookGroup) => {
@@ -216,15 +219,23 @@ export default function Groups() {
     setIsEditOpen(true);
   };
 
-  const handleToggleActive = (group: FacebookGroup) => {
-    toggleGroupActive(group.id);
-    toast.success(group.isActive ? t.groups.postDisabled : t.groups.postEnabled);
+  const handleToggleActive = async (group: FacebookGroup) => {
+    try {
+      await toggleGroupActive(group.id);
+      toast.success(group.isActive ? t.groups.postDisabled : t.groups.postEnabled);
+    } catch (err: any) {
+      toast.error('เปลี่ยนสถานะไม่สำเร็จ');
+    }
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (selectedGroup) {
-      deleteGroup(selectedGroup.id);
-      toast.success(t.groups.deleteSuccess);
+      try {
+        await deleteGroup(selectedGroup.id);
+        toast.success(t.groups.deleteSuccess);
+      } catch (err: any) {
+        toast.error('ลบไม่สำเร็จ: ' + (err.message || 'Unknown error'));
+      }
       setIsDeleteOpen(false);
       setSelectedGroup(null);
     }

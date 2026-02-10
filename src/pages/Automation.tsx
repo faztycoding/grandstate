@@ -160,7 +160,7 @@ export default function Automation() {
     );
   };
 
-  const handleAddGroup = () => {
+  const handleAddGroup = async () => {
     if (!newGroupName.trim()) {
       toast.error(t.automation.fillGroupName);
       return;
@@ -170,32 +170,34 @@ export default function Automation() {
       return;
     }
 
-    addGroup({
-      name: newGroupName,
-      url: newGroupUrl,
-      memberCount: 0,
-    });
-
-    toast.success(t.automation.groupAdded);
-    setNewGroupName('');
-    setNewGroupUrl('');
-    setIsAddGroupOpen(false);
-  };
-
-  const handleDeleteGroup = (groupId: string, groupName: string) => {
-    deleteGroup(groupId);
-    setSelectedGroups(prev => prev.filter(id => id !== groupId));
-    toast.success(`${t.automation.groupDeleted}: "${groupName}"`);
-  };
-
-  // Get daily post limit based on package
-  const getDailyPostLimit = (pkg: string): number => {
-    switch (pkg) {
-      case 'free': return 10;
-      case 'agent': return 300;
-      case 'elite': return 750;
-      default: return 10;
+    try {
+      await addGroup({
+        name: newGroupName,
+        url: newGroupUrl,
+        memberCount: 0,
+      });
+      toast.success(t.automation.groupAdded);
+      setNewGroupName('');
+      setNewGroupUrl('');
+      setIsAddGroupOpen(false);
+    } catch (err: any) {
+      toast.error('เพิ่มกลุ่มไม่สำเร็จ: ' + (err.message || ''));
     }
+  };
+
+  const handleDeleteGroup = async (groupId: string, groupName: string) => {
+    try {
+      await deleteGroup(groupId);
+      setSelectedGroups(prev => prev.filter(id => id !== groupId));
+      toast.success(`${t.automation.groupDeleted}: "${groupName}"`);
+    } catch (err: any) {
+      toast.error('ลบกลุ่มไม่สำเร็จ');
+    }
+  };
+
+  // Get daily post limit based on package (from centralized config)
+  const getDailyPostLimit = (pkg: string): number => {
+    return getPackageLimits(pkg).postsPerDay;
   };
 
   // Validate post limit

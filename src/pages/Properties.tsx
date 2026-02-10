@@ -66,10 +66,14 @@ export default function Properties() {
     setIsDeleteOpen(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (deletingProperty) {
-      deleteProperty(deletingProperty.id);
-      toast.success(t.properties.deleteSuccess);
+      try {
+        await deleteProperty(deletingProperty.id);
+        toast.success(t.properties.deleteSuccess);
+      } catch (err: any) {
+        toast.error('ลบไม่สำเร็จ: ' + (err.message || 'Unknown error'));
+      }
       setIsDeleteOpen(false);
       setDeletingProperty(null);
     }
@@ -79,16 +83,20 @@ export default function Properties() {
     navigate('/automation', { state: { propertyId: property.id } });
   };
 
-  const handleFormSubmit = (data: Partial<Property>) => {
-    if (editingProperty) {
-      updateProperty(editingProperty.id, data);
-      toast.success(t.properties.updateSuccess);
-    } else {
-      addProperty(data);
-      toast.success(t.properties.addSuccess);
+  const handleFormSubmit = async (data: Partial<Property>) => {
+    try {
+      if (editingProperty) {
+        await updateProperty(editingProperty.id, data);
+        toast.success(t.properties.updateSuccess);
+      } else {
+        await addProperty(data);
+        toast.success(t.properties.addSuccess);
+      }
+      setIsFormOpen(false);
+      setEditingProperty(null);
+    } catch (err: any) {
+      toast.error('บันทึกไม่สำเร็จ: ' + (err.message || 'Unknown error'));
     }
-    setIsFormOpen(false);
-    setEditingProperty(null);
   };
 
   const clearFilters = () => {

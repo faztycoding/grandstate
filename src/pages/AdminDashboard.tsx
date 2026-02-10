@@ -271,9 +271,9 @@ export default function AdminDashboard() {
                 note: '',
             });
             fetchLicenses();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Create error:', error);
-            toast.error('สร้าง License ไม่สำเร็จ');
+            toast.error(`สร้าง License ไม่สำเร็จ: ${error?.message || error?.code || JSON.stringify(error)}`);
         }
     };
 

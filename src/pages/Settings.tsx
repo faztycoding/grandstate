@@ -134,15 +134,19 @@ export default function Settings() {
     };
   }, [showLoginPopup, loginStep, confirmLogin]);
 
+  const [loginError, setLoginError] = useState('');
+
   const handleConnectFacebook = async () => {
     setLoginStep('opening');
     setShowLoginPopup(true);
     setLoginUserName('');
+    setLoginError('');
 
     const result = await connect();
     if (result.success) {
       setLoginStep('waiting');
     } else {
+      setLoginError(result.message || 'ไม่สามารถเชื่อมต่อได้');
       setLoginStep('error');
     }
   };
@@ -799,7 +803,7 @@ export default function Settings() {
                 <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
                 <div>
                   <p className="font-medium text-sm text-red-700 dark:text-red-400">เกิดข้อผิดพลาด</p>
-                  <p className="text-xs text-muted-foreground">ไม่สามารถเปิด Browser ได้ ลองใหม่อีกครั้ง</p>
+                  <p className="text-xs text-muted-foreground">{loginError || 'ไม่สามารถเปิด Browser ได้ ลองใหม่อีกครั้ง'}</p>
                 </div>
               </div>
             )}

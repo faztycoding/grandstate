@@ -623,12 +623,32 @@ app.post('/api/group-automation/generate-caption', ...auth, async (req, res) => 
 // Connect to Facebook (opens browser for login)
 app.post('/api/facebook/connect', ...auth, async (req, res) => {
   try {
-    // Initialize browser
-    await req.groupWorker.initialize('chrome');
+    // Initialize browser with retry
+    let retries = 2;
+    let lastError = null;
+    while (retries > 0) {
+      try {
+        await req.groupWorker.initialize('chrome');
+        break;
+      } catch (initErr) {
+        lastError = initErr;
+        retries--;
+        console.error(`Browser init failed (${retries} retries left):`, initErr.message);
+        // Clean up before retry
+        try { if (req.groupWorker.browser) await req.groupWorker.browser.close(); } catch(e) {}
+        req.groupWorker.browser = null;
+        req.groupWorker.page = null;
+        if (retries > 0) await new Promise(r => setTimeout(r, 2000));
+      }
+    }
+    
+    if (!req.groupWorker.browser || !req.groupWorker.page) {
+      throw lastError || new Error('Browser initialization failed');
+    }
     
     // Navigate to Facebook
     await req.groupWorker.page.goto('https://www.facebook.com', {
-      waitUntil: 'networkidle2',
+      waitUntil: 'domcontentloaded',
       timeout: 30000,
     });
     
@@ -638,7 +658,12 @@ app.post('/api/facebook/connect', ...auth, async (req, res) => {
       status: 'pending_login'
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Facebook connect error:', error.message);
+    // Clean up on failure
+    try { if (req.groupWorker.browser) await req.groupWorker.browser.close(); } catch(e) {}
+    req.groupWorker.browser = null;
+    req.groupWorker.page = null;
+    res.status(500).json({ success: false, error: `เชื่อมต่อไม่ได้: ${error.message}` });
   }
 });
 

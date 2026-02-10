@@ -963,6 +963,7 @@ export class GroupPostingWorker {
       headless: isHeadless ? 'new' : false,
       defaultViewport: isHeadless ? { width: 1920, height: 1080 } : null,
       userDataDir: appProfileDir,
+      protocolTimeout: 60000,
       args: [
         '--start-maximized',
         '--disable-blink-features=AutomationControlled',
@@ -971,6 +972,11 @@ export class GroupPostingWorker {
         '--disable-infobars',
         '--disable-dev-shm-usage',
         '--disable-gpu',
+        '--disable-software-rasterizer',
+        '--disable-extensions',
+        '--no-first-run',
+        '--no-zygote',
+        ...(isVPS ? ['--single-process'] : []),
       ],
     };
 

@@ -1860,32 +1860,77 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
 
       // ── Check if this is a Buy/Sell group (ซื้อและขาย) ──
       // These groups only have "ขายสินค้า" button, no normal post composer
-      const isBuySellGroup = await page.evaluate(() => {
-        // Check 1: "ขายสินค้า" button exists
+      let isBuySellGroup = await page.evaluate(() => {
         const allBtns = document.querySelectorAll('[role="button"]');
         let hasSellBtn = false;
         let hasWriteBtn = false;
         for (const b of allBtns) {
-          const t = b.textContent?.trim() || '';
-          if (t.includes('ขายสินค้า') || t.includes('Sell something')) hasSellBtn = true;
-          if (t.includes('เขียนอะไรสักหน่อย') || t.includes('Write something') ||
-              t.includes('สร้างโพสต์') || t.includes('Create post')) hasWriteBtn = true;
+          const t = b.textContent?.trim()?.toLowerCase() || '';
+          if (t.includes('ขายสินค้า') || t.includes('sell something') || t.includes('sell') ||
+              t.includes('create listing') || t.includes('สร้างรายการ') || t.includes('list item')) hasSellBtn = true;
+          if (t.includes('เขียนอะไรสักหน่อย') || t.includes('write something') ||
+              t.includes('สร้างโพสต์') || t.includes('create post')) hasWriteBtn = true;
         }
-        // Check 2: "ซื้อและขาย" tab is active
         const tabs = document.querySelectorAll('[role="tab"], a[role="link"]');
         let hasBuySellTab = false;
         for (const tab of tabs) {
-          const t = tab.textContent?.trim() || '';
-          if (t.includes('ซื้อและขาย') || t.includes('Buy and sell')) hasBuySellTab = true;
+          const t = tab.textContent?.trim()?.toLowerCase() || '';
+          if (t.includes('ซื้อและขาย') || t.includes('buy and sell') || t.includes('marketplace')) hasBuySellTab = true;
         }
         return { hasSellBtn, hasWriteBtn, hasBuySellTab };
       });
 
       console.log(`   🔍 Group type: sellBtn=${isBuySellGroup.hasSellBtn}, writeBtn=${isBuySellGroup.hasWriteBtn}, buySellTab=${isBuySellGroup.hasBuySellTab}`);
 
+      // Debug: dump all button texts on page to find the right one
+      if (!isBuySellGroup.hasSellBtn && !isBuySellGroup.hasWriteBtn) {
+        const allBtnTexts = await page.evaluate(() => {
+          const btns = document.querySelectorAll('[role="button"]');
+          const texts = [];
+          for (const b of btns) {
+            const t = b.textContent?.trim() || '';
+            if (t.length > 1 && t.length < 50) texts.push(t);
+          }
+          return [...new Set(texts)].slice(0, 20);
+        });
+        console.log(`   🔍 All buttons on page:`, JSON.stringify(allBtnTexts));
+      }
+
+      // If buy/sell tab exists but sell button not found, click the tab first
+      if (isBuySellGroup.hasBuySellTab && !isBuySellGroup.hasSellBtn && !isBuySellGroup.hasWriteBtn) {
+        console.log('🛒 พบ tab ซื้อขาย แต่ไม่เจอปุ่ม — กำลังกดเข้า tab...');
+        await page.evaluate(() => {
+          const tabs = document.querySelectorAll('[role="tab"], a[role="link"]');
+          for (const tab of tabs) {
+            const t = tab.textContent?.trim()?.toLowerCase() || '';
+            if (t.includes('ซื้อและขาย') || t.includes('buy and sell')) {
+              tab.click();
+              return true;
+            }
+          }
+          return false;
+        });
+        await this.delay(3000);
+
+        // Re-check for sell/write buttons after clicking tab
+        isBuySellGroup = await page.evaluate(() => {
+          const allBtns = document.querySelectorAll('[role="button"]');
+          let hasSellBtn = false;
+          let hasWriteBtn = false;
+          for (const b of allBtns) {
+            const t = b.textContent?.trim()?.toLowerCase() || '';
+            if (t.includes('ขายสินค้า') || t.includes('sell something') || t.includes('sell') ||
+                t.includes('create listing') || t.includes('สร้างรายการ') || t.includes('list item')) hasSellBtn = true;
+            if (t.includes('เขียนอะไรสักหน่อย') || t.includes('write something') ||
+                t.includes('สร้างโพสต์') || t.includes('create post')) hasWriteBtn = true;
+          }
+          return { hasSellBtn, hasWriteBtn, hasBuySellTab: true };
+        });
+        console.log(`   🔍 After tab click: sellBtn=${isBuySellGroup.hasSellBtn}, writeBtn=${isBuySellGroup.hasWriteBtn}`);
+      }
+
       if (isBuySellGroup.hasSellBtn && !isBuySellGroup.hasWriteBtn) {
         console.log(`🛒 กลุ่มซื้อขาย — ใช้ flow ขายสินค้า: ${actualGroupName || groupUrl}`);
-        // Use buy/sell listing flow instead of normal post
         const buySellResult = await this.postBuySellListing(page, property, caption, preparedFilePaths, task);
         buySellResult.actualGroupName = actualGroupName;
         return buySellResult;

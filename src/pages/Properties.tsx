@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/dialog';
 import { useSupabaseProperties } from '@/hooks/useSupabaseProperties';
 import { Property } from '@/types/property';
-import { Plus, Search, SlidersHorizontal, Building2, LayoutGrid, Lock } from 'lucide-react';
+import { Plus, Search, SlidersHorizontal, Building2, LayoutGrid, Lock, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -32,7 +32,7 @@ import { canAddProperty, getUserPackage, getPackageLimits } from '@/hooks/usePac
 export default function Properties() {
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const { properties, addProperty, updateProperty, deleteProperty } = useSupabaseProperties();
+  const { properties, loading, addProperty, updateProperty, deleteProperty } = useSupabaseProperties();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterListing, setFilterListing] = useState<string>('all');
@@ -181,6 +181,14 @@ export default function Properties() {
         </div>
 
         {/* Properties Grid */}
+        {/* Loading State */}
+        {loading && properties.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16">
+            <Loader2 className="w-10 h-10 animate-spin text-accent mb-4" />
+            <p className="text-muted-foreground">กำลังโหลดสินทรัพย์...</p>
+          </div>
+        )}
+
         {filteredProperties.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredProperties.map((property, index) => (

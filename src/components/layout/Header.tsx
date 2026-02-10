@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useFacebookConnection } from '@/hooks/useFacebookConnection';
+import { useLicenseAuth } from '@/hooks/useLicenseAuth';
 import { getUserPackage } from '@/hooks/usePackageLimits';
 import { cn } from '@/lib/utils';
 import { ProfileDialog } from '@/components/profile/ProfileDialog';
@@ -62,6 +63,7 @@ export function Header({ title, subtitle }: HeaderProps) {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
   const { isConnected, user: fbUser } = useFacebookConnection();
+  const { license, user: authUser } = useLicenseAuth();
 
   const [profileName, setProfileName] = useState('');
   const [profileAvatar, setProfileAvatar] = useState('');
@@ -88,8 +90,8 @@ export function Header({ title, subtitle }: HeaderProps) {
     };
   }, []);
 
-  // Use real profile data, fallback to FB user, then default
-  const displayName = profileName || fbUser?.name || 'User';
+  // Use real profile data, fallback to license owner, FB user, auth email, then default
+  const displayName = profileName || license?.ownerName || fbUser?.name || authUser?.user_metadata?.full_name || authUser?.email?.split('@')[0] || 'User';
   const displayAvatar = profileAvatar || fbUser?.profilePic || '';
   const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 

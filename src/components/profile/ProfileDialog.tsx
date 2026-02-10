@@ -73,7 +73,7 @@ interface ProfileDialogProps {
 
 export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
     const navigate = useNavigate();
-    const { license, logout, currentPackage } = useLicenseAuth();
+    const { license, logout, currentPackage, user: authUser } = useLicenseAuth();
     const { user: fbUser, isConnected: isFbConnected } = useFacebookConnection();
 
     // Profile State
@@ -193,7 +193,7 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
     };
 
     // --- Display Logic ---
-    const displayName = profileName || license?.ownerName || fbUser?.name || 'User';
+    const displayName = profileName || license?.ownerName || fbUser?.name || authUser?.user_metadata?.full_name || authUser?.email?.split('@')[0] || 'User';
     const displayAvatar = profileAvatar || fbUser?.profilePic || '';
     const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
@@ -214,37 +214,37 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
                 />
 
                 {/* Header Banner */}
-                <div className={cn('h-36 bg-gradient-to-r p-6 relative', pkg.gradient)}>
-                    <div className="absolute -bottom-10 left-6 flex items-end gap-5">
+                <div className={cn('bg-gradient-to-r p-4 sm:p-6 relative', pkg.gradient)}>
+                    <div className="flex items-center gap-4">
                         {/* Avatar with Camera Overlay */}
                         <div className={cn(
-                            'w-28 h-28 rounded-full flex items-center justify-center shadow-xl border-4 border-white dark:border-zinc-900 overflow-hidden bg-white relative group cursor-pointer',
+                            'w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center shadow-xl border-3 border-white dark:border-zinc-900 overflow-hidden bg-white relative group cursor-pointer flex-shrink-0',
                             pkg.bgColor
                         )} onClick={triggerFileInput}>
                             {displayAvatar ? (
                                 <img src={displayAvatar} alt="Profile" className="w-full h-full object-cover" />
                             ) : (
-                                <div className="flex items-center justify-center w-full h-full text-3xl font-bold opacity-50 text-slate-500">
+                                <div className="flex items-center justify-center w-full h-full text-xl sm:text-2xl font-bold opacity-50 text-slate-500">
                                     {initials}
                                 </div>
                             )}
 
                             {/* Edit Overlay (Hover + Click) */}
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                <Camera className="w-8 h-8 text-white drop-shadow-md" />
+                                <Camera className="w-5 h-5 text-white drop-shadow-md" />
                             </div>
                         </div>
 
                         {/* Name & Package Info */}
-                        <div className="pb-2 w-full max-w-[300px]">
-                            <div className="flex items-center gap-2 mb-1 min-h-[32px]">
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1 min-h-[28px]">
                                 {isEditingName ? (
                                     <div className="flex items-center gap-2 w-full animate-in fade-in zoom-in-95 duration-200">
                                         <Input
                                             value={tempName}
                                             onChange={(e) => setTempName(e.target.value)}
                                             onKeyDown={handleKeyDown}
-                                            className="h-8 text-lg font-bold bg-white/90 backdrop-blur shadow-sm"
+                                            className="h-8 text-sm sm:text-lg font-bold bg-white/90 backdrop-blur shadow-sm"
                                             autoFocus
                                             placeholder="ชื่อของคุณ..."
                                         />
@@ -253,38 +253,36 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
                                         </Button>
                                     </div>
                                 ) : (
-                                    <div className="flex items-center gap-2 group cursor-pointer py-1" onClick={() => {
+                                    <div className="flex items-center gap-2 group cursor-pointer" onClick={() => {
                                         setTempName(displayName);
                                         setIsEditingName(true);
                                     }}>
-                                        <h2 className="text-2xl font-bold truncate max-w-[200px] text-white drop-shadow-md">{displayName}</h2>
-                                        <Edit className="w-4 h-4 text-white/80 group-hover:text-white transition-colors opacity-0 group-hover:opacity-100" />
+                                        <h2 className="text-lg sm:text-xl font-bold truncate text-white drop-shadow-md">{displayName}</h2>
+                                        <Edit className="w-4 h-4 text-white/80 group-hover:text-white transition-colors flex-shrink-0" />
                                     </div>
                                 )}
                             </div>
 
-                            <div className="flex items-center gap-2">
-                                <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 border-none backdrop-blur-md shadow-sm">
-                                    <PkgIcon className="w-3 h-3 mr-1" />
-                                    {pkg.name} | {currentPackage.toUpperCase()}
-                                </Badge>
-                            </div>
+                            <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 border-none backdrop-blur-md shadow-sm text-xs">
+                                <PkgIcon className="w-3 h-3 mr-1" />
+                                {pkg.name} | {currentPackage.toUpperCase()}
+                            </Badge>
                         </div>
-                    </div>
 
-                    {/* Logout Button (Top Right) */}
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute top-4 right-4 text-white hover:bg-white/20"
-                        onClick={handleLogout}
-                        title="ออกจากระบบ"
-                    >
-                        <LogOut className="w-5 h-5" />
-                    </Button>
+                        {/* Logout Button */}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-white hover:bg-white/20 flex-shrink-0"
+                            onClick={handleLogout}
+                            title="ออกจากระบบ"
+                        >
+                            <LogOut className="w-5 h-5" />
+                        </Button>
+                    </div>
                 </div>
 
-                <ScrollArea className="h-full max-h-[calc(90vh-140px)] pt-14 bg-zinc-50/50 dark:bg-zinc-900/50">
+                <ScrollArea className="h-full max-h-[calc(90vh-120px)] bg-zinc-50/50 dark:bg-zinc-900/50">
                     <div className="p-6 space-y-6">
 
                         {/* Usage Stats Section */}

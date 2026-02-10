@@ -980,8 +980,10 @@ export class GroupPostingWorker {
       ],
     };
 
-    // On Windows: use local browser; On VPS: use puppeteer's bundled Chromium
-    if (!isVPS) {
+    // On Windows: use local browser; On VPS: use system Google Chrome
+    if (isVPS) {
+      launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome-stable';
+    } else {
       const executablePath = findBrowserPath(browserType);
       if (!executablePath) {
         throw new Error(`ไม่พบ ${browserType} ในเครื่อง กรุณาติดตั้งก่อน`);

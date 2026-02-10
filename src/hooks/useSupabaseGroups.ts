@@ -111,23 +111,20 @@ export function useSupabaseGroups() {
 
       const dbData = groupToDb(groupData, user.id);
       
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('facebook_groups')
-        .insert([dbData])
-        .select()
-        .single();
+        .insert([dbData]);
 
       if (error) {
         if (error.code === '23505') {
-          // Duplicate key - group already exists
           return null;
         }
         throw error;
       }
 
-      const newGroup = dbToGroup(data);
-      setGroups(prev => [newGroup, ...prev]);
-      return newGroup;
+      // Refetch to get the new data with proper types
+      await fetchGroups();
+      return { id: 'new' } as FacebookGroup;
     } catch (err: any) {
       console.error('Error adding group:', err);
       throw err;
@@ -165,19 +162,15 @@ export function useSupabaseGroups() {
       if (updates.lastPosted) dbUpdates.last_posted = updates.lastPosted.toISOString();
       if (updates.lastUpdated) dbUpdates.last_updated = updates.lastUpdated.toISOString();
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('facebook_groups')
         .update(dbUpdates)
         .eq('id', id)
-        .eq('user_id', user.id)
-        .select()
-        .single();
+        .eq('user_id', user.id);
 
       if (error) throw error;
 
-      const updatedGroup = dbToGroup(data);
-      setGroups(prev => prev.map(g => g.id === id ? updatedGroup : g));
-      return updatedGroup;
+      await fetchGroups();
     } catch (err: any) {
       console.error('Error updating group:', err);
       throw err;

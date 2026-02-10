@@ -124,17 +124,14 @@ export function useSupabaseProperties() {
 
       const dbData = propertyToDb(propertyData, user.id);
       
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('properties')
-        .insert([dbData])
-        .select()
-        .single();
+        .insert([dbData]);
 
       if (error) throw error;
 
-      const newProperty = dbToProperty(data);
-      setProperties(prev => [newProperty, ...prev]);
-      return newProperty;
+      await fetchProperties();
+      return { id: 'new' } as unknown as Property;
     } catch (err: any) {
       console.error('Error adding property:', err);
       throw err;
@@ -182,19 +179,16 @@ export function useSupabaseProperties() {
       if (updates.amenities !== undefined) dbUpdates.features = updates.amenities;
       if (updates.images !== undefined) dbUpdates.images = updates.images;
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('properties')
         .update(dbUpdates)
         .eq('id', id)
-        .eq('user_id', user.id)
-        .select()
-        .single();
+        .eq('user_id', user.id);
 
       if (error) throw error;
 
-      const updatedProperty = dbToProperty(data);
-      setProperties(prev => prev.map(p => p.id === id ? updatedProperty : p));
-      return updatedProperty;
+      await fetchProperties();
+      return null;
     } catch (err: any) {
       console.error('Error updating property:', err);
       throw err;

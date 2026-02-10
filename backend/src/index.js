@@ -306,42 +306,40 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
       allSpans.forEach(span => {
         const text = span.textContent?.trim() || '';
         
-        // Collect texts that look like post counts for debugging
-        if (text.match(/\d+/) && (text.includes('โพสต์') || text.includes('post'))) {
+        // Collect ALL texts with numbers near post/โพสต์/เดือน/month for debugging
+        if (text.match(/\d+/) && (text.includes('โพสต์') || text.includes('post') || text.includes('เดือน') || text.includes('month'))) {
           debugTexts.push(text);
         }
         
-        // Match: "XXX โพสต์ใหม่ในวันนี้" (supports comma in numbers like 1,234)
-        // RELAXED: removed ^ and $ to allow extra whitespace
+        // ===== POSTS TODAY =====
         if (!postsToday) {
-          const todayMatch = text.match(/([\d,]+)\s*โพสต์ใหม่ในวันนี้/);
-          if (todayMatch) {
-            postsToday = parseInt(todayMatch[1].replace(/,/g, ''));
+          const todayPatterns = [
+            /([\d,]+)\s*โพสต์ใหม่ในวันนี้/,
+            /([\d,]+)\s*new posts? today/i,
+            /([\d,]+)\s*โพสต์ใหม่วันนี้/,
+            /([\d,]+)\s*โพสต์.*?วันนี้/,
+          ];
+          for (const pat of todayPatterns) {
+            const m = text.match(pat);
+            if (m) { postsToday = parseInt(m[1].replace(/,/g, '')); break; }
           }
         }
         
-        // Match: "X,XXX โพสต์ในเดือนที่ผ่านมา"
-        // RELAXED: removed ^ and $ to allow extra whitespace
+        // ===== POSTS LAST MONTH =====
         if (!postsLastMonth) {
-          const monthMatch = text.match(/([\d,]+)\s*โพสต์ในเดือนที่ผ่านมา/);
-          if (monthMatch) {
-            postsLastMonth = parseInt(monthMatch[1].replace(/,/g, ''));
-          }
-        }
-        
-        // English: "XXX new posts today" (RELAXED)
-        if (!postsToday) {
-          const todayEnMatch = text.match(/([\d,]+)\s*new posts? today/i);
-          if (todayEnMatch) {
-            postsToday = parseInt(todayEnMatch[1].replace(/,/g, ''));
-          }
-        }
-        
-        // English: "X,XXX posts in the last month" (RELAXED)
-        if (!postsLastMonth) {
-          const monthEnMatch = text.match(/([\d,]+)\s*posts? in the last month/i);
-          if (monthEnMatch) {
-            postsLastMonth = parseInt(monthEnMatch[1].replace(/,/g, ''));
+          const monthPatterns = [
+            /([\d,]+)\s*โพสต์ในเดือนที่ผ่านมา/,
+            /([\d,]+)\s*โพสต์เมื่อเดือนที่แล้ว/,
+            /([\d,]+)\s*โพสต์ต่อเดือน/,
+            /([\d,]+)\s*โพสต์.*?เดือน/,
+            /([\d,]+)\s*posts? in the last month/i,
+            /([\d,]+)\s*posts? last month/i,
+            /([\d,]+)\s*posts?\/month/i,
+            /([\d,]+)\s*total posts? last month/i,
+          ];
+          for (const pat of monthPatterns) {
+            const m = text.match(pat);
+            if (m) { postsLastMonth = parseInt(m[1].replace(/,/g, '')); break; }
           }
         }
       });
@@ -366,17 +364,17 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
         }
         
         if (!postsLastMonth) {
-          const monthBodyMatch = postsBodyText.match(/([\d,]+)\s*โพสต์ในเดือนที่ผ่านมา/);
-          if (monthBodyMatch) {
-            postsLastMonth = parseInt(monthBodyMatch[1].replace(/,/g, ''));
-          }
-        }
-        
-        // English fallback for posts last month (RELAXED)
-        if (!postsLastMonth) {
-          const monthEnBody = postsBodyText.match(/([\d,]+)\s*posts?\s*in\s*the\s*last\s*month/i);
-          if (monthEnBody) {
-            postsLastMonth = parseInt(monthEnBody[1].replace(/,/g, ''));
+          const monthBodyPatterns = [
+            /([\d,]+)\s*โพสต์ในเดือนที่ผ่านมา/,
+            /([\d,]+)\s*โพสต์เมื่อเดือนที่แล้ว/,
+            /([\d,]+)\s*โพสต์ต่อเดือน/,
+            /([\d,]+)\s*โพสต์.*?เดือน/,
+            /([\d,]+)\s*posts?\s*in\s*the\s*last\s*month/i,
+            /([\d,]+)\s*posts?\s*last\s*month/i,
+          ];
+          for (const pat of monthBodyPatterns) {
+            const m = postsBodyText.match(pat);
+            if (m) { postsLastMonth = parseInt(m[1].replace(/,/g, '')); break; }
           }
         }
         

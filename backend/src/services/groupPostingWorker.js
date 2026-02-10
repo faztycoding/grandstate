@@ -1775,20 +1775,17 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
     console.log(`📋 Task expects group: "${taskGroupName}"`);
 
     try {
-      // ── Step 1: Ensure page is on group and FULLY RENDERED ──
-      const currentUrl = await page.url();
-      const alreadyOnGroup = currentUrl.includes('/groups/') && currentUrl.includes(groupUrl.split('/groups/')[1]?.split('/')[0] || '___');
+      // ── Step 1: ALWAYS navigate to the group URL (don't skip) ──
+      // Previous "already on group" detection was unreliable — page could be on
+      // Notifications or another FB page while URL looks similar
+      const badPageNames = ['notifications', 'การแจ้งเตือน', 'chat', 'แชท', 'messenger', 'facebook', 'home', 'หน้าหลัก', 'watch', 'marketplace'];
       
-      if (!alreadyOnGroup) {
-        console.log(`🔄 Navigating to group: ${groupUrl}`);
-        await page.goto(groupUrl, { waitUntil: 'networkidle2', timeout: 60000 });
-      } else {
-        console.log(`✅ Already on group page — waiting for render`);
-      }
+      console.log(`🔄 Navigating to group: ${groupUrl}`);
+      await page.goto(groupUrl, { waitUntil: 'networkidle2', timeout: 60000 });
+      await this.delay(2000);
 
       // ── Step 1.5: READ actual group name from the page ──
       console.log('📖 Reading actual group name from page...');
-      await this.delay(1500);
       const actualGroupName = await page.evaluate(() => {
         // Method 1: <h1> tag — Facebook puts group name in the main h1
         const h1 = document.querySelector('h1');
@@ -1823,6 +1820,19 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
       console.log(`📖 ชื่อกลุ่มจริงจากหน้าเว็บ: "${actualGroupName}"`);
       console.log(`📋 ชื่อกลุ่มใน Task Progress: "${taskGroupName}"`);
 
+      // ── If page landed on wrong page (Notifications etc), force retry ──
+      if (actualGroupName && badPageNames.includes(actualGroupName.toLowerCase())) {
+        console.log(`⚠️ ตรวจพบหน้า "${actualGroupName}" ไม่ใช่หน้ากลุ่ม — กำลัง retry...`);
+        await page.goto(groupUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await this.delay(3000);
+        // Re-read name after retry
+        const retryName = await page.evaluate(() => {
+          const h1 = document.querySelector('h1');
+          return h1?.textContent?.trim() || document.title?.replace(/\s*[|–-]\s*Facebook.*$/i, '').trim() || '';
+        });
+        console.log(`📖 Retry — ชื่อกลุ่ม: "${retryName}"`);
+      }
+
       // ── Verify name matches task progress ──
       if (taskGroupName && actualGroupName) {
         const normActual = (actualGroupName || '').replace(/\s+/g, ' ').trim().toLowerCase();
@@ -1835,7 +1845,7 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
 
         if (isMatch) {
           console.log(`✅ ชื่อตรงกัน — ยืนยันกลุ่มถูกต้อง`);
-        } else {
+        } else if (!badPageNames.includes(normActual)) {
           console.log(`⚠️ ชื่อไม่ตรง! Task="${taskGroupName}" vs Page="${actualGroupName}"`);
           console.log(`   → ดำเนินการโพสต์ต่อ (URL ถูกต้อง)`);
         }

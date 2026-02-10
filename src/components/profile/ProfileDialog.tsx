@@ -38,14 +38,6 @@ import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-interface DeviceInfo {
-    id: string;
-    device_id: string;
-    device_name: string;
-    activated_at: string;
-    last_seen: string;
-    is_current: boolean;
-}
 
 const packageInfo = {
     free: {
@@ -83,8 +75,6 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
     const navigate = useNavigate();
     const { license, logout, currentPackage } = useLicenseAuth();
     const { user: fbUser, isConnected: isFbConnected } = useFacebookConnection();
-    const [devices, setDevices] = useState<DeviceInfo[]>([]);
-    const [isLoadingDevices, setIsLoadingDevices] = useState(true);
 
     // Profile State
     const [profileName, setProfileName] = useState('');
@@ -117,10 +107,6 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
                 setTempName(savedName);
             }
 
-            if (license) {
-                fetchDevices();
-            }
-
             // Fetch usage stats (or mock for now if API not ready, but we should try API)
             fetchUsageStats();
         }
@@ -140,49 +126,6 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
         }
     };
 
-    const fetchDevices = async () => {
-        if (!license) return;
-        setIsLoadingDevices(true);
-        try {
-            const { data, error } = await supabase
-                .from('device_activations')
-                .select('*')
-                .eq('license_key_id', license.id)
-                .order('activated_at', { ascending: false });
-
-            if (error) throw error;
-
-            const currentDeviceId = localStorage.getItem('gstate_device_id');
-            const devicesWithCurrent = (data || []).map(d => ({
-                ...d,
-                is_current: d.device_id === currentDeviceId,
-            }));
-            setDevices(devicesWithCurrent);
-        } catch (error) {
-            console.error('Error fetching devices:', error);
-        } finally {
-            setIsLoadingDevices(false);
-        }
-    };
-
-    const removeDevice = async (deviceId: string) => {
-        if (!license) return;
-        if (!confirm('ต้องการลบอุปกรณ์นี้หรือไม่?')) return;
-
-        try {
-            const { error } = await supabase
-                .from('device_activations')
-                .delete()
-                .eq('license_key_id', license.id)
-                .eq('device_id', deviceId);
-
-            if (error) throw error;
-            toast.success('ลบอุปกรณ์แล้ว');
-            fetchDevices();
-        } catch (error) {
-            toast.error('ไม่สามารถลบอุปกรณ์ได้');
-        }
-    };
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('th-TH', {
@@ -417,32 +360,16 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
                             </div>
                         </div>
 
-                        {/* Devices List */}
+                        {/* FB Session Limit */}
                         <div className="space-y-3 pt-2">
                             <h3 className="font-semibold flex items-center gap-2 text-sm text-foreground/80">
-                                <Monitor className="w-4 h-4" />
-                                อุปกรณ์ ({devices.length}/{license.maxDevices})
+                                <Facebook className="w-4 h-4" />
+                                Facebook Sessions (สูงสุด {license.maxFbSessions} บัญชี)
                             </h3>
-                            <div className="space-y-2">
-                                {devices.map((device) => (
-                                    <div key={device.id} className="flex items-center justify-between p-3 rounded-lg border bg-card/50 hover:bg-card transition-colors">
-                                        <div className="flex items-center gap-3">
-                                            <div className={cn('p-2 rounded-md', device.is_current ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground')}>
-                                                <Monitor className="w-4 h-4" />
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-medium">{device.device_name} {device.is_current && <span className="text-xs text-primary font-bold">(เครื่องนี้)</span>}</p>
-                                                <p className="text-xs text-muted-foreground">ล่าสุด: {new Date(device.last_seen).toLocaleDateString()}</p>
-                                            </div>
-                                        </div>
-                                        {!device.is_current && (
-                                            <Button variant="ghost" size="icon-sm" onClick={() => removeDevice(device.device_id)} className="text-red-500 hover:text-red-600 hover:bg-red-50">
-                                                <Trash2 className="w-4 h-4" />
-                                            </Button>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                แพ็คเกจของคุณรองรับ Facebook ได้ {license.maxFbSessions} บัญชีพร้อมกัน
+                                — login จากเครื่องไหนก็ได้ไม่จำกัด
+                            </p>
                         </div>
                     </div>
                 </ScrollArea>

@@ -6,24 +6,22 @@ import { User } from '@supabase/supabase-js';
 const LICENSE_KEY_REGEX = /^GS[A-Z0-9]{3}-[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{5}$/;
 const STORAGE_KEY = 'gstate_license';
 const LICENSE_CACHE_KEY = 'gstate_license_cache';
-const DEVICE_ID_KEY = 'gstate_device_id';
 
 // ── Types ──
 export interface LicenseInfo {
     id: string;
     licenseKey: string;
     package: 'free' | 'agent' | 'elite';
-    maxDevices: number;
+    maxFbSessions: number;
     expiresAt: Date;
     isActive: boolean;
     ownerName?: string;
-    currentDevices: number;
 }
 
 export interface LicenseValidationResult {
     valid: boolean;
     error?: string;
-    errorCode?: 'INVALID_FORMAT' | 'NOT_FOUND' | 'EXPIRED' | 'INACTIVE' | 'DEVICE_LIMIT' | 'UNKNOWN';
+    errorCode?: 'INVALID_FORMAT' | 'NOT_FOUND' | 'EXPIRED' | 'INACTIVE' | 'UNKNOWN';
     license?: LicenseInfo;
 }
 
@@ -33,45 +31,6 @@ export interface AuthResult {
 }
 
 // ── Helpers ──
-function getDeviceId(): string {
-    let deviceId = localStorage.getItem(DEVICE_ID_KEY);
-    if (!deviceId) {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-            ctx.textBaseline = 'top';
-            ctx.font = '14px Arial';
-            ctx.fillText('Grand$tate', 2, 2);
-        }
-        const canvasHash = canvas.toDataURL().slice(-50);
-        const fingerprint = [
-            navigator.userAgent, navigator.language,
-            screen.width + 'x' + screen.height,
-            new Date().getTimezoneOffset(), canvasHash,
-        ].join('|');
-        let hash = 0;
-        for (let i = 0; i < fingerprint.length; i++) {
-            const char = fingerprint.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash;
-        }
-        deviceId = `dev_${Math.abs(hash).toString(36)}_${Date.now().toString(36)}`;
-        localStorage.setItem(DEVICE_ID_KEY, deviceId);
-    }
-    return deviceId;
-}
-
-function getDeviceName(): string {
-    const ua = navigator.userAgent;
-    if (ua.includes('Windows')) return 'Windows PC';
-    if (ua.includes('Mac')) return 'Mac';
-    if (ua.includes('Linux')) return 'Linux PC';
-    if (ua.includes('iPhone')) return 'iPhone';
-    if (ua.includes('iPad')) return 'iPad';
-    if (ua.includes('Android')) return 'Android';
-    return 'Unknown Device';
-}
-
 function getCachedLicense(): LicenseInfo | null {
     try {
         const cached = localStorage.getItem(LICENSE_CACHE_KEY);
@@ -222,7 +181,6 @@ export function useLicenseAuth() {
         localStorage.removeItem(STORAGE_KEY);
         localStorage.removeItem(LICENSE_CACHE_KEY);
         localStorage.removeItem('userPackage');
-        localStorage.removeItem(DEVICE_ID_KEY);
         setLicense(null);
         setUser(null);
         await supabase.auth.signOut();
@@ -293,39 +251,6 @@ export function useLicenseAuth() {
                 return { valid: false, error: 'License Key หมดอายุแล้ว', errorCode: 'EXPIRED' };
             }
 
-            // Device activation tracking
-            const { data: activations } = await supabase
-                .from('device_activations')
-                .select('*')
-                .eq('license_key_id', licenseData.id);
-
-            const deviceId = getDeviceId();
-            const currentActivations = activations || [];
-            const isDeviceRegistered = currentActivations.some((a: any) => a.device_id === deviceId);
-            const activeDeviceCount = currentActivations.length;
-
-            if (!isDeviceRegistered && activeDeviceCount >= licenseData.max_devices) {
-                return {
-                    valid: false,
-                    error: `ใช้งานครบ ${licenseData.max_devices} เครื่องแล้ว กรุณายกเลิกเครื่องอื่นก่อน`,
-                    errorCode: 'DEVICE_LIMIT'
-                };
-            }
-
-            if (!isDeviceRegistered) {
-                await supabase.from('device_activations').insert({
-                    license_key_id: licenseData.id,
-                    device_id: deviceId,
-                    device_name: getDeviceName(),
-                });
-            } else {
-                await supabase
-                    .from('device_activations')
-                    .update({ last_seen: new Date().toISOString() })
-                    .eq('license_key_id', licenseData.id)
-                    .eq('device_id', deviceId);
-            }
-
             // Bind license to current user (if not already bound)
             const { data: { user: currentUser } } = await supabase.auth.getUser();
             if (currentUser && !licenseData.bound_user_id) {
@@ -339,11 +264,10 @@ export function useLicenseAuth() {
                 id: licenseData.id,
                 licenseKey: normalizedKey,
                 package: licenseData.package,
-                maxDevices: licenseData.max_devices,
+                maxFbSessions: licenseData.max_devices || 1,
                 expiresAt,
                 isActive: licenseData.is_active,
                 ownerName: licenseData.owner_name,
-                currentDevices: isDeviceRegistered ? activeDeviceCount : activeDeviceCount + 1,
             };
 
             localStorage.setItem(STORAGE_KEY, normalizedKey);

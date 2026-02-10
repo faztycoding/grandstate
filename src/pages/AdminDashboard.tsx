@@ -70,14 +70,13 @@ interface LicenseKey {
     id: string;
     license_key: string;
     package: 'free' | 'agent' | 'elite';
-    max_devices: number;
+    max_fb_sessions: number;
     expires_at: string;
     is_active: boolean;
     created_at: string;
     owner_name?: string;
     owner_contact?: string;
     note?: string;
-    device_count?: number;
 }
 
 const packageLabels = {
@@ -86,9 +85,9 @@ const packageLabels = {
     elite: 'Elite (฿2,990)',
 };
 
-const packageLimits = {
+const fbSessionLimits = {
     free: 1,
-    agent: 1,
+    agent: 3,
     elite: 5,
 };
 
@@ -187,16 +186,13 @@ export default function AdminDashboard() {
             // Get licenses
             const { data: licensesData, error } = await supabase
                 .from('license_keys')
-                .select('*, device_activations(count)')
+                .select('*')
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
 
             // Process data
-            const processedLicenses = (licensesData || []).map((l: any) => ({
-                ...l,
-                device_count: l.device_activations?.[0]?.count || 0
-            }));
+            const processedLicenses = (licensesData || []);
 
             setLicenses(processedLicenses);
 
@@ -255,7 +251,7 @@ export default function AdminDashboard() {
             const { error } = await supabase.from('license_keys').insert({
                 license_key: licenseKey,
                 package: newLicense.package,
-                max_devices: packageLimits[newLicense.package as keyof typeof packageLimits],
+                max_devices: fbSessionLimits[newLicense.package as keyof typeof fbSessionLimits],
                 expires_at: expiresAt.toISOString(),
                 is_active: true,
                 owner_name: newLicense.ownerName,
@@ -365,7 +361,7 @@ export default function AdminDashboard() {
                 packageLabels[license.package],
                 license.owner_name || '',
                 license.owner_contact || '',
-                `${license.device_count || 0}/${license.max_devices}`,
+                `${license.max_fb_sessions} FB sessions`,
                 formatDate(license.expires_at),
                 status,
                 formatDate(license.created_at)
@@ -968,7 +964,7 @@ export default function AdminDashboard() {
                                         <TableHead>License Key</TableHead>
                                         <TableHead>แพ็คเกจ</TableHead>
                                         <TableHead>เจ้าของ</TableHead>
-                                        <TableHead>อุปกรณ์</TableHead>
+                                        <TableHead>FB Sessions</TableHead>
                                         <TableHead>วันหมดอายุ</TableHead>
                                         <TableHead>สถานะ</TableHead>
                                         <TableHead className="text-right">จัดการ</TableHead>
@@ -1002,7 +998,7 @@ export default function AdminDashboard() {
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
-                                                        {license.device_count || 0}/{license.max_devices}
+                                                        {license.max_fb_sessions} sessions
                                                     </TableCell>
                                                     <TableCell>
                                                         <div className={cn(

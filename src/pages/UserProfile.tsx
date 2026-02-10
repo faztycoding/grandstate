@@ -33,15 +33,6 @@ import { PACKAGE_LIMITS } from '@/hooks/usePackageLimits';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 
-interface DeviceInfo {
-    id: string;
-    device_id: string;
-    device_name: string;
-    activated_at: string;
-    last_seen: string;
-    is_current: boolean;
-}
-
 interface SubscriptionHistoryItem {
     id: string;
     action: string;
@@ -77,8 +68,6 @@ const packageInfo = {
 export default function UserProfile() {
     const navigate = useNavigate();
     const { license, logout, currentPackage, limits } = useLicenseAuth();
-    const [devices, setDevices] = useState<DeviceInfo[]>([]);
-    const [isLoadingDevices, setIsLoadingDevices] = useState(true);
     const [subscriptionHistory, setSubscriptionHistory] = useState<SubscriptionHistoryItem[]>([]);
 
     // Usage stats (mock - would come from actual usage tracking)
@@ -94,37 +83,9 @@ export default function UserProfile() {
 
     useEffect(() => {
         if (license) {
-            fetchDevices();
             fetchUsageStats();
         }
     }, [license]);
-
-    const fetchDevices = async () => {
-        if (!license) return;
-
-        setIsLoadingDevices(true);
-        try {
-            const { data, error } = await supabase
-                .from('device_activations')
-                .select('*')
-                .eq('license_key_id', license.id)
-                .order('activated_at', { ascending: false });
-
-            if (error) throw error;
-
-            const currentDeviceId = localStorage.getItem('gstate_device_id');
-            const devicesWithCurrent = (data || []).map(d => ({
-                ...d,
-                is_current: d.device_id === currentDeviceId,
-            }));
-
-            setDevices(devicesWithCurrent);
-        } catch (error) {
-            console.error('Error fetching devices:', error);
-        } finally {
-            setIsLoadingDevices(false);
-        }
-    };
 
     const fetchUsageStats = async () => {
         // In a real app, this would fetch from a usage tracking table
@@ -134,26 +95,6 @@ export default function UserProfile() {
             groupsUsed: Math.floor(Math.random() * (pkgLimits.maxGroups * 0.8)),
             propertiesUsed: Math.floor(Math.random() * 10),
         });
-    };
-
-    const removeDevice = async (deviceId: string) => {
-        if (!license) return;
-        if (!confirm('ต้องการลบอุปกรณ์นี้หรือไม่?')) return;
-
-        try {
-            const { error } = await supabase
-                .from('device_activations')
-                .delete()
-                .eq('license_key_id', license.id)
-                .eq('device_id', deviceId);
-
-            if (error) throw error;
-
-            toast.success('ลบอุปกรณ์แล้ว');
-            fetchDevices();
-        } catch (error) {
-            toast.error('ไม่สามารถลบอุปกรณ์ได้');
-        }
     };
 
     const formatDate = (dateString: string) => {
@@ -387,7 +328,7 @@ export default function UserProfile() {
                     </Card>
                 </motion.div>
 
-                {/* Device Management */}
+                {/* FB Session Info */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -397,65 +338,24 @@ export default function UserProfile() {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Monitor className="w-5 h-5" />
-                                อุปกรณ์ที่เชื่อมต่อ ({devices.length}/{license.maxDevices})
+                                Facebook Sessions (สูงสุด {license.maxFbSessions} บัญชี)
                             </CardTitle>
                             <CardDescription>
-                                จัดการอุปกรณ์ที่ใช้งาน License นี้
+                                แพ็คเกจของคุณรองรับ Facebook ได้ {license.maxFbSessions} บัญชีพร้อมกัน — login จากเครื่องไหนก็ได้ไม่จำกัด
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            {isLoadingDevices ? (
-                                <p className="text-center text-muted-foreground py-4">กำลังโหลด...</p>
-                            ) : devices.length === 0 ? (
-                                <p className="text-center text-muted-foreground py-4">ไม่มีอุปกรณ์ที่เชื่อมต่อ</p>
-                            ) : (
-                                <div className="space-y-3">
-                                    {devices.map((device) => (
-                                        <div
-                                            key={device.id}
-                                            className={cn(
-                                                'flex items-center justify-between p-4 rounded-lg border',
-                                                device.is_current && 'border-accent bg-accent/5'
-                                            )}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className={cn(
-                                                    'p-2 rounded-lg',
-                                                    device.is_current ? 'bg-accent/20' : 'bg-muted'
-                                                )}>
-                                                    <Monitor className={cn(
-                                                        'w-5 h-5',
-                                                        device.is_current ? 'text-accent' : 'text-muted-foreground'
-                                                    )} />
-                                                </div>
-                                                <div>
-                                                    <div className="flex items-center gap-2">
-                                                        <p className="font-medium">{device.device_name}</p>
-                                                        {device.is_current && (
-                                                            <Badge variant="secondary" className="text-xs">
-                                                                เครื่องนี้
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        ใช้งานล่าสุด: {formatRelativeTime(device.last_seen)}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            {!device.is_current && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="text-red-500 hover:text-red-700"
-                                                    onClick={() => removeDevice(device.device_id)}
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </Button>
-                                            )}
-                                        </div>
-                                    ))}
+                            <div className="flex items-center gap-3 p-4 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                                <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900">
+                                    <Monitor className="w-5 h-5 text-blue-600" />
                                 </div>
-                            )}
+                                <div>
+                                    <p className="font-medium text-sm">เข้าใช้งานจากเครื่องไหนก็ได้</p>
+                                    <p className="text-xs text-muted-foreground">
+                                        ไม่จำกัดจำนวนอุปกรณ์ — จำกัดเฉพาะ Facebook session ({license.maxFbSessions} บัญชี)
+                                    </p>
+                                </div>
+                            </div>
                         </CardContent>
                     </Card>
                 </motion.div>

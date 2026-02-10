@@ -44,8 +44,8 @@ const pendingCharges = new Map();
 
 // Package configurations
 const PACKAGES = {
-    agent: { name: 'Top Agent', durationDays: 30, maxDevices: 1 },
-    elite: { name: 'Elite', durationDays: 30, maxDevices: 1 },
+    agent: { name: 'Top Agent', durationDays: 30, maxFbSessions: 3 },
+    elite: { name: 'Elite', durationDays: 30, maxFbSessions: 5 },
 };
 
 // ===========================================
@@ -88,7 +88,7 @@ async function createLicenseForPayment(chargeId, packageId, customerEmail) {
             .insert({
                 license_key: licenseKey,
                 package: packageId,
-                max_devices: pkg.maxDevices,
+                max_devices: pkg.maxFbSessions,
                 expires_at: expiresAt.toISOString(),
                 is_active: true,
                 owner_contact: customerEmail || null,

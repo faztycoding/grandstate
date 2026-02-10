@@ -959,25 +959,32 @@ export class GroupPostingWorker {
       fs.mkdirSync(appProfileDir, { recursive: true });
     }
 
+    const vpsArgs = [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--no-first-run',
+      '--disable-extensions',
+    ];
+    const localArgs = [
+      '--start-maximized',
+      '--disable-blink-features=AutomationControlled',
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-infobars',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--disable-software-rasterizer',
+      '--disable-extensions',
+      '--no-first-run',
+    ];
     const launchOptions = {
       headless: isHeadless ? 'new' : false,
       defaultViewport: isHeadless ? { width: 1920, height: 1080 } : null,
       userDataDir: appProfileDir,
-      protocolTimeout: 60000,
-      args: [
-        '--start-maximized',
-        '--disable-blink-features=AutomationControlled',
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-infobars',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--disable-software-rasterizer',
-        '--disable-extensions',
-        '--no-first-run',
-        '--no-zygote',
-        ...(isVPS ? ['--disable-features=VizDisplayCompositor'] : []),
-      ],
+      protocolTimeout: 120000,
+      args: isVPS ? vpsArgs : localArgs,
     };
 
     // On Windows: use local browser; On VPS: use system Google Chrome

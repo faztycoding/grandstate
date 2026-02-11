@@ -114,12 +114,12 @@ export class GroupPostingWorker {
     // Return [Thai, English] — English must match Facebook's EXACT dropdown options:
     // Facebook EN options: "House", "Townhouse", "Flat/apartment", "Room only"
     const typeMap = {
-      'condo': ['อพาร์ทเมนท์', 'Flat/apartment'],
+      'condo': ['อพาร์ทเมนท์', 'Flat', 'Flat/apartment', 'Apartment'],
       'house': ['บ้าน', 'House'],
       'townhouse': ['ทาวน์เฮาส์', 'Townhouse'],
-      'apartment': ['อพาร์ทเมนท์', 'Flat/apartment'],
+      'apartment': ['อพาร์ทเมนท์', 'Flat', 'Flat/apartment', 'Apartment'],
       'land': ['บ้าน', 'House'],
-      'commercial': ['อพาร์ทเมนท์', 'Flat/apartment'],
+      'commercial': ['อพาร์ทเมนท์', 'Flat', 'Flat/apartment', 'Apartment'],
     };
     return typeMap[type] || ['บ้าน', 'House'];
   }
@@ -277,83 +277,94 @@ export class GroupPostingWorker {
       return true;
     }
 
-    // Strategy 5: Find the FIRST empty combobox in the dialog → it's the listing type
-    console.log(`    🔍 Trying to find empty combobox for listing type...`);
-    const emptyComboBox = await page.evaluate(() => {
+    // Strategy 5: Listing type might be an unlabeled combobox.
+    // We don't guess by text (FB often shows label text even when unselected). Instead:
+    // - iterate visible comboboxes
+    // - open dropdown
+    // - detect the correct one by option signature containing BOTH sale + rent options
+    console.log(`    🔍 Scanning comboboxes to locate listing type dropdown...`);
+
+    const comboCandidates = await page.evaluate(() => {
       const _ds = document.querySelectorAll('[role="dialog"]');
       let _fd = null;
       for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
-      if (!_fd) return { found: false };
+      if (!_fd) return [];
+      const out = [];
       const combos = _fd.querySelectorAll('[role="combobox"]');
       for (const cb of combos) {
-        const txt = (cb.textContent || '').trim();
-        // Skip comboboxes that already have a value (like "Property typeFlat", "Washing machine/dryer" etc)
-        if (txt.length > 2) continue;
-        cb.scrollIntoView({ block: 'center' });
         const rect = cb.getBoundingClientRect();
-        if (rect.width > 20 && rect.height > 0) {
-          return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true };
-        }
+        if (rect.width < 20 || rect.height < 10) continue;
+        const text = (cb.textContent || '').trim().slice(0, 60);
+        out.push({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, yTop: rect.y, text });
       }
-      return { found: false };
+      out.sort((a, b) => a.yTop - b.yTop);
+      return out.slice(0, 12);
     });
 
-    if (emptyComboBox.found) {
-      console.log(`    📍 Found empty combobox — clicking to open dropdown...`);
-      await page.mouse.click(emptyComboBox.x, emptyComboBox.y);
-      await this.delay(1500);
+    const saleMarkers = ['for sale', 'sale', 'สำหรับขาย'];
+    const rentMarkers = ['for rent', 'rent', 'ให้เช่า'];
 
-      // Now look for the option in the dropdown
+    for (const cand of comboCandidates) {
+      console.log(`    📍 Combobox candidate y=${Math.round(cand.yTop)} text="${cand.text}"`);
+      await page.mouse.click(cand.x, cand.y);
+      await this.delay(1200);
+
+      const dropdownDebug = await page.evaluate(() => {
+        const nodes = document.querySelectorAll('[role="option"], [role="menuitem"], [role="listbox"] [role="option"], [role="menu"] [role="menuitem"]');
+        const texts = [];
+        for (const n of nodes) {
+          const t = (n.textContent || '').trim();
+          if (t.length > 1 && t.length < 50) texts.push(t);
+        }
+        return [...new Set(texts)].slice(0, 25);
+      });
+
+      const signature = dropdownDebug.map(t => t.toLowerCase());
+      const hasSale = signature.some(t => saleMarkers.some(m => t.includes(m)));
+      const hasRent = signature.some(t => rentMarkers.some(m => t.includes(m)));
+
+      if (!(hasSale && hasRent)) {
+        // Not the listing type dropdown
+        await page.keyboard.press('Escape');
+        await this.delay(400);
+        continue;
+      }
+
+      console.log(`    ✅ Listing type dropdown detected via option signature`);
+
+      // Click the desired option
+      let clicked = false;
       for (const opt of dropdownOptions) {
         const optResult = await page.evaluate((optText) => {
-          // Search for options in any dropdown/listbox that appeared
-          const selectors = '[role="option"], [role="listbox"] [role="option"], [role="listbox"] div, [role="menu"] [role="menuitem"]';
+          const optLower = optText.toLowerCase();
+          const selectors = '[role="option"], [role="listbox"] [role="option"], [role="menu"] [role="menuitem"], [role="menuitem"]';
           const options = document.querySelectorAll(selectors);
           for (const o of options) {
             const t = (o.textContent || '').trim();
-            if (t.toLowerCase() === optText.toLowerCase() || t.toLowerCase().includes(optText.toLowerCase())) {
+            const tl = t.toLowerCase();
+            if (tl === optLower || tl.includes(optLower) || optLower.includes(tl)) {
               const rect = o.getBoundingClientRect();
               if (rect.width > 0 && rect.height > 0) return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, text: t };
-            }
-          }
-          // Also check for plain spans/divs in any popup that appeared
-          const popups = document.querySelectorAll('[role="listbox"], [role="menu"], [data-visualcompletion="ignore-dynamic"]');
-          for (const popup of popups) {
-            for (const el of popup.querySelectorAll('span, div')) {
-              const t = (el.textContent || '').trim();
-              if (t.length > 30 || t.length < 2) continue;
-              if (t.toLowerCase() === optText.toLowerCase()) {
-                const clickable = el.closest('[role="option"], [role="menuitem"], [role="button"]') || el;
-                const rect = clickable.getBoundingClientRect();
-                if (rect.width > 0 && rect.height > 0) return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, text: t };
-              }
             }
           }
           return { found: false };
         }, opt);
 
         if (optResult.found) {
-          console.log(`    📍 Found option "${optResult.text}" — clicking...`);
+          console.log(`    📍 Selecting option "${optResult.text}"...`);
           await page.mouse.click(optResult.x, optResult.y);
-          await this.delay(1500);
-          console.log(`    ✅ Listing type set via empty combobox`);
-          return true;
+          await this.delay(1800);
+          console.log(`    ✅ Listing type selected`);
+          clicked = true;
+          break;
         }
       }
 
-      // Debug: dump what options are available
-      const availOpts = await page.evaluate(() => {
-        const opts = [];
-        document.querySelectorAll('[role="option"], [role="listbox"] div, [role="menu"] [role="menuitem"]').forEach(o => {
-          const t = (o.textContent || '').trim();
-          if (t.length > 1 && t.length < 40) opts.push(t);
-        });
-        return [...new Set(opts)].slice(0, 15);
-      });
-      console.log(`    🔍 Available options: ${JSON.stringify(availOpts)}`);
-      // Close the dropdown by pressing Escape
+      if (clicked) return true;
+
+      console.log(`    ⚠️ Could not click listing type option. Options: ${JSON.stringify(dropdownDebug.slice(0, 15))}`);
       await page.keyboard.press('Escape');
-      await this.delay(500);
+      await this.delay(400);
     }
 
     return false;
@@ -404,12 +415,12 @@ export class GroupPostingWorker {
       }, label);
       if (found) {
         for (const opt of opts) {
-          await this.nativeSelectDropdownOnPage(page, label, opt);
+          const ok = await this.nativeSelectDropdownOnPage(page, label, opt);
+          if (ok) return true;
         }
-        return true;
       }
     }
-    console.log(`    ⚠️ None of dropdown labels found: ${JSON.stringify(labels)}`);
+    console.log(`    ⚠️ None of dropdown labels found or could not select: ${JSON.stringify(labels)}`);
     return false;
   }
 
@@ -556,7 +567,7 @@ export class GroupPostingWorker {
   }
 
   async nativeSelectDropdownOnPage(page, labelText, optionValue) {
-    if (!optionValue) return;
+    if (!optionValue) return false;
     console.log(`  🔽 Selecting "${optionValue}" in dropdown "${labelText}"...`);
     await this.scrollToLabelOnPage(page, labelText);
 
@@ -618,7 +629,7 @@ export class GroupPostingWorker {
 
     if (!dropdownBox.found) {
       console.log(`    ⚠️ Dropdown "${labelText}" not found — skipping safely`);
-      return;
+      return false;
     }
     console.log(`    📍 Found dropdown via ${dropdownBox.method} at (${Math.round(dropdownBox.x)}, ${Math.round(dropdownBox.y)})`);
     await page.mouse.click(dropdownBox.x, dropdownBox.y);
@@ -663,6 +674,32 @@ export class GroupPostingWorker {
     if (optionBox.found) {
       await page.mouse.click(optionBox.x, optionBox.y);
       console.log(`    ✅ Selected "${optionValue}"`);
+      await this.delay(800);
+
+      const verify = await page.evaluate((label, val) => {
+        const _ds = document.querySelectorAll('[role="dialog"]');
+        let _fd = null;
+        for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+        if (!_fd) return { ok: false };
+        const spans = _fd.querySelectorAll('span');
+        let targetSpan = null;
+        for (const span of spans) {
+          const t = (span.textContent || '').trim();
+          if (t === label || t.includes(label)) { targetSpan = span; break; }
+        }
+        if (!targetSpan) return { ok: true };
+        const combo = targetSpan.closest('[role="combobox"]') || targetSpan.parentElement?.querySelector?.('[role="combobox"]') || targetSpan.closest('label')?.querySelector?.('[role="combobox"], select');
+        if (!combo) return { ok: true };
+        const comboText = (combo.textContent || '').trim().toLowerCase();
+        const v = String(val || '').trim().toLowerCase();
+        return { ok: v ? comboText.includes(v) : true, comboText: comboText.slice(0, 60) };
+      }, labelText, optionValue);
+
+      if (!verify.ok) {
+        console.log(`    ⚠️ Dropdown verify failed (comboText="${verify.comboText || ''}")`);
+        return false;
+      }
+      return true;
     } else {
       // Debug: show what options ARE available
       const availableOpts = await page.evaluate(() => {
@@ -676,6 +713,7 @@ export class GroupPostingWorker {
       await page.keyboard.press('Escape');
       await this.delay(300);
       await this.scrollDownInDialog(page, 50);
+      return false;
     }
     await this.delay(500);
   }

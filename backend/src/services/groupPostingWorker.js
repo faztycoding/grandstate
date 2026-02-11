@@ -264,6 +264,98 @@ export class GroupPostingWorker {
       return true;
     }
     console.log(`    ⚠️ Listing type tab not found. Top elements: ${JSON.stringify(tabResult.debug)}`);
+
+    // Strategy 4: Listing type might be a COMBOBOX (dropdown), not tabs
+    // Try standard dropdown approach with common labels first
+    const dropdownLabels = ['Choose listing type', 'Listing type', 'เลือกประเภทรายการ', 'ประเภทรายการ'];
+    const dropdownOptions = isSale
+      ? ['For sale', 'For Sale', 'สำหรับขาย', 'Sale']
+      : ['For rent', 'For Rent', 'ให้เช่า', 'Rent'];
+    const labelDropdown = await this.trySelectOnPage(page, dropdownLabels, dropdownOptions);
+    if (labelDropdown) {
+      console.log(`    ✅ Listing type set via labeled dropdown`);
+      return true;
+    }
+
+    // Strategy 5: Find the FIRST empty combobox in the dialog → it's the listing type
+    console.log(`    🔍 Trying to find empty combobox for listing type...`);
+    const emptyComboBox = await page.evaluate(() => {
+      const _ds = document.querySelectorAll('[role="dialog"]');
+      let _fd = null;
+      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+      if (!_fd) return { found: false };
+      const combos = _fd.querySelectorAll('[role="combobox"]');
+      for (const cb of combos) {
+        const txt = (cb.textContent || '').trim();
+        // Skip comboboxes that already have a value (like "Property typeFlat", "Washing machine/dryer" etc)
+        if (txt.length > 2) continue;
+        cb.scrollIntoView({ block: 'center' });
+        const rect = cb.getBoundingClientRect();
+        if (rect.width > 20 && rect.height > 0) {
+          return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true };
+        }
+      }
+      return { found: false };
+    });
+
+    if (emptyComboBox.found) {
+      console.log(`    📍 Found empty combobox — clicking to open dropdown...`);
+      await page.mouse.click(emptyComboBox.x, emptyComboBox.y);
+      await this.delay(1500);
+
+      // Now look for the option in the dropdown
+      for (const opt of dropdownOptions) {
+        const optResult = await page.evaluate((optText) => {
+          // Search for options in any dropdown/listbox that appeared
+          const selectors = '[role="option"], [role="listbox"] [role="option"], [role="listbox"] div, [role="menu"] [role="menuitem"]';
+          const options = document.querySelectorAll(selectors);
+          for (const o of options) {
+            const t = (o.textContent || '').trim();
+            if (t.toLowerCase() === optText.toLowerCase() || t.toLowerCase().includes(optText.toLowerCase())) {
+              const rect = o.getBoundingClientRect();
+              if (rect.width > 0 && rect.height > 0) return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, text: t };
+            }
+          }
+          // Also check for plain spans/divs in any popup that appeared
+          const popups = document.querySelectorAll('[role="listbox"], [role="menu"], [data-visualcompletion="ignore-dynamic"]');
+          for (const popup of popups) {
+            for (const el of popup.querySelectorAll('span, div')) {
+              const t = (el.textContent || '').trim();
+              if (t.length > 30 || t.length < 2) continue;
+              if (t.toLowerCase() === optText.toLowerCase()) {
+                const clickable = el.closest('[role="option"], [role="menuitem"], [role="button"]') || el;
+                const rect = clickable.getBoundingClientRect();
+                if (rect.width > 0 && rect.height > 0) return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, text: t };
+              }
+            }
+          }
+          return { found: false };
+        }, opt);
+
+        if (optResult.found) {
+          console.log(`    📍 Found option "${optResult.text}" — clicking...`);
+          await page.mouse.click(optResult.x, optResult.y);
+          await this.delay(1500);
+          console.log(`    ✅ Listing type set via empty combobox`);
+          return true;
+        }
+      }
+
+      // Debug: dump what options are available
+      const availOpts = await page.evaluate(() => {
+        const opts = [];
+        document.querySelectorAll('[role="option"], [role="listbox"] div, [role="menu"] [role="menuitem"]').forEach(o => {
+          const t = (o.textContent || '').trim();
+          if (t.length > 1 && t.length < 40) opts.push(t);
+        });
+        return [...new Set(opts)].slice(0, 15);
+      });
+      console.log(`    🔍 Available options: ${JSON.stringify(availOpts)}`);
+      // Close the dropdown by pressing Escape
+      await page.keyboard.press('Escape');
+      await this.delay(500);
+    }
+
     return false;
   }
 

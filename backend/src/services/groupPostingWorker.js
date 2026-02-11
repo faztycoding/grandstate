@@ -142,6 +142,35 @@ export class GroupPostingWorker {
       }, label);
       if (found) { await this.nativeTypeOnPage(page, label, value); return true; }
     }
+    // Fallback: search by placeholder/aria-label in the form dialog
+    const fallbackResult = await page.evaluate((lbls) => {
+      const _ds = document.querySelectorAll('[role="dialog"]');
+      let _fd = null;
+      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+      if (!_fd) return { found: false };
+      const allInputs = _fd.querySelectorAll('input');
+      for (const input of allInputs) {
+        const ph = (input.placeholder || '').toLowerCase();
+        const al = (input.getAttribute('aria-label') || '').toLowerCase();
+        const combined = ph + ' ' + al;
+        if (lbls.some(l => combined.includes(l.toLowerCase()))) {
+          input.scrollIntoView({ block: 'center' });
+          const r = input.getBoundingClientRect();
+          if (r.width > 30 && r.height > 0) return { x: r.x + r.width / 2, y: r.y + r.height / 2, found: true, matchedBy: combined.trim() };
+        }
+      }
+      return { found: false };
+    }, labels);
+    if (fallbackResult.found) {
+      console.log(`  ⌨️ Typing "${value}" via placeholder/aria-label: "${fallbackResult.matchedBy}"...`);
+      await page.mouse.click(fallbackResult.x, fallbackResult.y);
+      await this.delay(300);
+      await page.keyboard.down('Control'); await page.keyboard.press('KeyA'); await page.keyboard.up('Control');
+      await page.keyboard.press('Backspace'); await this.delay(200);
+      await page.keyboard.type(String(value), { delay: 30 + Math.random() * 20 });
+      console.log(`    ✅ Done (placeholder fallback)`);
+      return true;
+    }
     console.log(`    ⚠️ None of labels found: ${JSON.stringify(labels)}`);
     return false;
   }
@@ -182,7 +211,10 @@ export class GroupPostingWorker {
       }, label);
       if (found) { await this.nativeTypeTextareaOnPage(page, label, value); return true; }
     }
-    console.log(`    ⚠️ None of textarea labels found: ${JSON.stringify(labels)}`);
+    // Fallback: no span label found, but nativeTypeTextareaOnPage has its own
+    // textarea/textbox finder — always try it
+    console.log(`    ⚠️ None of textarea labels found: ${JSON.stringify(labels)} — trying textarea fallback...`);
+    await this.nativeTypeTextareaOnPage(page, labels[0] || 'Description', value);
     return false;
   }
 
@@ -411,49 +443,86 @@ export class GroupPostingWorker {
     await this.scrollDownInDialog(page, 300);
     await this.delay(500);
 
-    const labelVariants = [labelText, 'คำอธิบาย', 'คำอธิบายอสังหาริมทรัพย์', 'คำอธิบายของที่พักให้เช่า', 'Description'];
+    const labelVariants = [labelText, 'คำอธิบาย', 'คำอธิบายอสังหาริมทรัพย์', 'คำอธิบายของที่พักให้เช่า', 'Description', 'description'];
     const textareaBox = await page.evaluate((labels) => {
       // Find form dialog (skip Notifications)
       const _ds = document.querySelectorAll('[role="dialog"]');
       let _fd = null;
       for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
       if (!_fd) _fd = _ds[_ds.length - 1];
-      if (!_fd) return { found: false };
+      if (!_fd) return { found: false, debug: 'no dialog' };
+
+      // Method 1: Find by span label near a textarea
       for (const label of labels) {
         const spans = _fd.querySelectorAll('span');
         for (const span of spans) {
           const text = (span.textContent || '').trim();
           if (!text.includes(label)) continue;
-          // SKIP headings/titles
           if (span.closest('h1, h2, h3, h4, [role="heading"]')) continue;
           const labelEl = span.closest('label');
           if (labelEl) {
             const ta = labelEl.querySelector('textarea');
-            if (ta) { ta.scrollIntoView({ block: 'center' }); const rect = ta.getBoundingClientRect(); if (rect.height > 0) return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true }; }
+            if (ta) { ta.scrollIntoView({ block: 'center' }); const rect = ta.getBoundingClientRect(); if (rect.height > 0) return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, method: 'span-label' }; }
           }
           let parent = span.parentElement;
           for (let i = 0; i < 10; i++) {
             if (!parent) break;
             if (parent.getAttribute('role') === 'heading' || parent.getAttribute('role') === 'dialog') break;
             const ta = parent.querySelector('textarea');
-            if (ta) { ta.scrollIntoView({ block: 'center' }); const rect = ta.getBoundingClientRect(); if (rect.height > 0) return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true }; }
+            if (ta) { ta.scrollIntoView({ block: 'center' }); const rect = ta.getBoundingClientRect(); if (rect.height > 0) return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, method: 'span-parent' }; }
             parent = parent.parentElement;
           }
         }
       }
-      // Fallback: find any textarea in dialog
+
+      // Method 2: Search textarea by placeholder/aria-label
+      const descKws = ['description', 'คำอธิบาย', 'describe', 'details'];
       const allTa = _fd.querySelectorAll('textarea');
+      for (const ta of allTa) {
+        const ph = (ta.placeholder || '').toLowerCase();
+        const al = (ta.getAttribute('aria-label') || '').toLowerCase();
+        if (descKws.some(kw => ph.includes(kw) || al.includes(kw))) {
+          ta.scrollIntoView({ block: 'center' }); const r = ta.getBoundingClientRect();
+          if (r.width > 50 && r.height > 0) return { x: r.x + r.width / 2, y: r.y + r.height / 2, found: true, method: 'textarea-placeholder' };
+        }
+      }
+
+      // Method 3: Search div[role="textbox"] (Facebook sometimes uses this)
+      const textboxes = _fd.querySelectorAll('div[role="textbox"], div[contenteditable="true"]');
+      for (const tb of textboxes) {
+        const ph = (tb.getAttribute('aria-label') || '').toLowerCase();
+        const placeholder = (tb.getAttribute('placeholder') || tb.dataset?.placeholder || '').toLowerCase();
+        if (descKws.some(kw => ph.includes(kw) || placeholder.includes(kw))) {
+          tb.scrollIntoView({ block: 'center' }); const r = tb.getBoundingClientRect();
+          if (r.width > 50 && r.height > 0) return { x: r.x + r.width / 2, y: r.y + r.height / 2, found: true, method: 'textbox-aria' };
+        }
+      }
+
+      // Method 4: Fallback — any textarea in dialog (not the title/price ones)
       for (const ta of allTa) {
         const rect = ta.getBoundingClientRect();
         if (rect.width > 100 && rect.height > 30 && rect.y > 0) {
           ta.scrollIntoView({ block: 'center' }); const r = ta.getBoundingClientRect();
-          return { x: r.x + r.width / 2, y: r.y + r.height / 2, found: true };
+          return { x: r.x + r.width / 2, y: r.y + r.height / 2, found: true, method: 'any-textarea' };
         }
       }
-      return { found: false };
+
+      // Method 5: Fallback — any large textbox div
+      for (const tb of textboxes) {
+        const rect = tb.getBoundingClientRect();
+        if (rect.width > 100 && rect.height > 20 && rect.y > 0) {
+          tb.scrollIntoView({ block: 'center' }); const r = tb.getBoundingClientRect();
+          return { x: r.x + r.width / 2, y: r.y + r.height / 2, found: true, method: 'any-textbox' };
+        }
+      }
+
+      // Debug: report what we found
+      const debugInfo = { textareas: allTa.length, textboxes: textboxes.length };
+      return { found: false, debug: JSON.stringify(debugInfo) };
     }, labelVariants);
 
-    if (!textareaBox.found) { console.log(`    ⚠️ Textarea not found`); return; }
+    if (!textareaBox.found) { console.log(`    ⚠️ Textarea not found. Debug: ${textareaBox.debug || 'none'}`); return; }
+    console.log(`    📝 Found textarea via ${textareaBox.method}`);
     await page.mouse.click(textareaBox.x, textareaBox.y);
     await this.delay(500);
     await page.keyboard.down('Control');
@@ -902,8 +971,10 @@ export class GroupPostingWorker {
       }
       // Debug: dump all visible form labels after scrolling
       const formLabels = await page.evaluate(() => {
-        const dialog = document.querySelector('[role="dialog"]');
-        if (!dialog) return [];
+        const _ds = document.querySelectorAll('[role="dialog"]');
+        let dialog = null;
+        for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; dialog = _d; break; }
+        if (!dialog) return ['NO_FORM_DIALOG'];
         const labels = [];
         // Check labels
         dialog.querySelectorAll('label span, label').forEach(el => {
@@ -917,7 +988,12 @@ export class GroupPostingWorker {
           if (ph) labels.push(`[placeholder: ${ph}]`);
           if (al) labels.push(`[aria-label: ${al}]`);
         });
-        return [...new Set(labels)].slice(0, 30);
+        // Check div[role=textbox] / contenteditable
+        dialog.querySelectorAll('div[role="textbox"], div[contenteditable="true"]').forEach(el => {
+          const al = el.getAttribute('aria-label') || '';
+          if (al) labels.push(`[textbox aria-label: ${al}]`);
+        });
+        return [...new Set(labels)].slice(0, 40);
       });
       console.log(`🔍 Form labels after scroll:`, JSON.stringify(formLabels));
 
@@ -956,12 +1032,16 @@ export class GroupPostingWorker {
           await this.delay(2000);
         }
         const nextBox = await page.evaluate(() => {
-          const buttons = document.querySelectorAll('[role="button"], button');
+          const _ds = document.querySelectorAll('[role="dialog"]');
+          let _fd = null;
+          for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+          const scope = _fd || document;
+          const buttons = scope.querySelectorAll('[role="button"], button');
+          let disabledInfo = null;
           for (const btn of buttons) {
             const spans = btn.querySelectorAll('span');
             let btnText = '';
             if (spans.length > 0) {
-              // Use innermost span text to avoid matching parent containers
               for (const s of spans) {
                 const t = (s.textContent || '').trim();
                 if (t === 'ถัดไป' || t === 'Next') { btnText = t; break; }
@@ -971,15 +1051,44 @@ export class GroupPostingWorker {
             const label = btn.getAttribute('aria-label') || '';
             if (btnText === 'ถัดไป' || btnText === 'Next' || label === 'ถัดไป' || label === 'Next') {
               const isDisabled = btn.getAttribute('aria-disabled') === 'true' || btn.disabled;
-              if (isDisabled) continue;
+              if (isDisabled) {
+                disabledInfo = { text: btnText, disabled: true };
+                continue;
+              }
               const rect = btn.getBoundingClientRect();
               if (rect.width > 0 && rect.height > 0) {
                 return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, text: btnText };
               }
             }
           }
-          return { found: false };
+          if (disabledInfo) return { found: false, disabled: true, text: disabledInfo.text };
+          return { found: false, disabled: false };
         });
+
+        if (!nextBox.found && nextBox.disabled && attempt === 0) {
+          console.log(`   ⚠️ Next button found but DISABLED — required fields may be missing`);
+          // Debug: dump what fields appear unfilled
+          const emptyFields = await page.evaluate(() => {
+            const _ds = document.querySelectorAll('[role="dialog"]');
+            let _fd = null;
+            for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+            if (!_fd) return [];
+            const info = [];
+            _fd.querySelectorAll('input').forEach(inp => {
+              if (!inp.value && inp.type !== 'hidden' && inp.type !== 'file') {
+                info.push(`input[${inp.type||'text'}] placeholder="${inp.placeholder||''}", aria="${inp.getAttribute('aria-label')||''}"`);
+              }
+            });
+            _fd.querySelectorAll('textarea').forEach(ta => {
+              if (!ta.value) info.push(`textarea placeholder="${ta.placeholder||''}", aria="${ta.getAttribute('aria-label')||''}"`);
+            });
+            _fd.querySelectorAll('div[role="textbox"]').forEach(tb => {
+              if (!(tb.textContent||'').trim()) info.push(`textbox aria="${tb.getAttribute('aria-label')||''}"`);
+            });
+            return info.slice(0, 10);
+          });
+          console.log(`   🔍 Empty fields in form:`, JSON.stringify(emptyFields));
+        }
 
         if (nextBox.found) {
           console.log(`   📍 "ถัดไป" at (${Math.round(nextBox.x)}, ${Math.round(nextBox.y)}) text="${nextBox.text}"`);

@@ -129,6 +129,46 @@ export class GroupPostingWorker {
     return listingType === 'rent' ? ['ให้เช่า', 'For Rent'] : ['สำหรับขาย', 'For Sale'];
   }
 
+  // Helper: click a button in the form dialog by keyword list, returns clicked text or null
+  async _clickButtonInDialog(page, keywords) {
+    const result = await page.evaluate((kws) => {
+      const _ds = document.querySelectorAll('[role="dialog"]');
+      let _fd = null;
+      for (const _d of _ds) {
+        if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
+        _fd = _d; break;
+      }
+      const scope = _fd || document;
+      const buttons = scope.querySelectorAll('[role="button"], button');
+      for (const btn of buttons) {
+        const spans = btn.querySelectorAll('span');
+        let text = '';
+        for (const s of spans) {
+          const t = (s.textContent || '').trim();
+          if (kws.some(kw => t.toLowerCase() === kw.toLowerCase())) { text = t; break; }
+        }
+        if (!text) {
+          const ft = (btn.textContent || '').trim();
+          if (ft.length < 30 && kws.some(kw => ft.toLowerCase() === kw.toLowerCase())) text = ft;
+        }
+        if (!text) continue;
+        const isDis = btn.getAttribute('aria-disabled') === 'true' || btn.disabled;
+        if (isDis) continue;
+        const rect = btn.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, text };
+        }
+      }
+      return { found: false };
+    }, keywords);
+    if (result.found) {
+      await page.mouse.click(result.x, result.y);
+      await this.delay(1000);
+      return result.text;
+    }
+    return null;
+  }
+
   // Facebook uses clickable tabs/buttons for "For sale" / "For rent" — NOT a dropdown
   async selectListingTypeTab(page, listingType) {
     const isSale = listingType !== 'rent';
@@ -1180,222 +1220,223 @@ export class GroupPostingWorker {
         return { success: false, error: 'ไม่สามารถกดปุ่มถัดไปได้' };
       }
 
-      // Wait for "แชร์ไปยังที่อื่นๆ เพิ่มเติม" page to load
-      console.log('⏳ Waiting for share page...');
-      await this.delay(5000);
+      // ══════════════════════════════════════════════════════════════
+      // POST-NEXT: State-aware flow — detect what Facebook shows and act
+      // ══════════════════════════════════════════════════════════════
+      console.log('⏳ Waiting after Next...');
+      await this.delay(4000);
 
-      // Step 5: Tick Marketplace checkbox — use native mouse click on the checkbox area
-      updateMsg('ติ้ก Marketplace...');
-      console.log('📌 Ticking Marketplace checkbox...');
-
-      // Find Marketplace row and click the checkbox/toggle on the right side
-      let mktClicked = false;
-      // Debug: dump what's on the page after Next
-      const afterNextDebug = await page.evaluate(() => {
+      // Detect what state we're in after clicking Next
+      const postNextState = await page.evaluate(() => {
         const _ds = document.querySelectorAll('[role="dialog"]');
-        const info = { dialogs: _ds.length, texts: [] };
+        let formDialog = null;
         for (const _d of _ds) {
           if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
-          const spans = _d.querySelectorAll('span');
-          for (const s of spans) {
-            const t = (s.textContent || '').trim();
-            if (t.length > 2 && t.length < 50) info.texts.push(t);
+          formDialog = _d; break;
+        }
+
+        // CASE A: No dialog (excluding Notifications) → listing may have published directly
+        if (!formDialog) return { state: 'no-dialog' };
+
+        const dialogText = (formDialog.textContent || '').toLowerCase();
+        const spans = formDialog.querySelectorAll('span');
+        const visibleTexts = [];
+        for (const s of spans) {
+          const t = (s.textContent || '').trim();
+          if (t.length > 1 && t.length < 60) visibleTexts.push(t);
+        }
+        const uniqueTexts = [...new Set(visibleTexts)].slice(0, 30);
+
+        // CASE D: Success message
+        const successKws = ['listing published', 'เผยแพร่รายการ', 'your listing', 'รายการของคุณ', 'listed successfully', 'สำเร็จแล้ว'];
+        if (successKws.some(kw => dialogText.includes(kw))) {
+          return { state: 'success', texts: uniqueTexts };
+        }
+
+        // Collect all buttons in dialog
+        const buttons = formDialog.querySelectorAll('[role="button"], button');
+        const btnInfo = [];
+        for (const btn of buttons) {
+          const innerSpans = btn.querySelectorAll('span');
+          let text = '';
+          for (const s of innerSpans) { const t = (s.textContent||'').trim(); if (t.length > 0 && t.length < 30) { text = t; break; } }
+          if (!text) text = (btn.textContent || '').trim();
+          if (text.length > 0 && text.length < 40) {
+            const disabled = btn.getAttribute('aria-disabled') === 'true' || btn.disabled;
+            const rect = btn.getBoundingClientRect();
+            btnInfo.push({ text, disabled, x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, w: rect.width, h: rect.height });
           }
         }
-        // Also check page-level buttons
-        const btns = document.querySelectorAll('[role="button"], button');
-        const btnTexts = [];
-        for (const b of btns) {
-          const t = (b.textContent || '').trim();
-          if (t.length > 1 && t.length < 30) btnTexts.push(t);
-        }
-        info.buttons = [...new Set(btnTexts)].slice(0, 20);
-        info.texts = [...new Set(info.texts)].slice(0, 25);
-        return info;
-      });
-      console.log('🔍 After Next — page content:', JSON.stringify(afterNextDebug));
 
-      for (let attempt = 0; attempt < 5 && !mktClicked; attempt++) {
-        if (attempt > 0) {
-          console.log(`   🔄 Retry Marketplace tick ${attempt + 1}/5...`);
-          await this.delay(2000);
-          // Scroll down in case Marketplace row is below fold
-          await this.scrollDownInDialog(page, 200);
+        // CASE C: Share page with Marketplace
+        const hasMarketplace = dialogText.includes('marketplace') || dialogText.includes('มาร์เก็ตเพลส');
+
+        // Find any publish/post button
+        const postKws = ['โพสต์', 'post', 'ลงประกาศ', 'publish', 'submit', 'list item', 'create listing', 'done', 'เสร็จ'];
+        let postBtn = null;
+        let disabledPostBtn = null;
+        for (const bi of btnInfo) {
+          const lower = bi.text.toLowerCase();
+          if (!postKws.some(kw => lower === kw || lower.includes(kw))) continue;
+          if (bi.disabled) { disabledPostBtn = bi; continue; }
+          if (bi.w > 0 && bi.h > 0) { postBtn = bi; break; }
         }
+
+        return {
+          state: hasMarketplace ? 'share-page' : 'dialog-open',
+          texts: uniqueTexts,
+          buttons: btnInfo.map(b => `${b.text}${b.disabled ? ' [DISABLED]' : ''}`).slice(0, 15),
+          postBtn: postBtn ? { x: postBtn.x, y: postBtn.y, text: postBtn.text, found: true } : null,
+          disabledPostBtn: disabledPostBtn ? { text: disabledPostBtn.text } : null,
+          hasMarketplace,
+        };
+      });
+
+      console.log(`🔍 After Next — state: ${postNextState.state}`);
+      if (postNextState.texts) console.log(`   📋 Texts: ${JSON.stringify(postNextState.texts)}`);
+      if (postNextState.buttons) console.log(`   🔘 Buttons: ${JSON.stringify(postNextState.buttons)}`);
+
+      // ── CASE A: Dialog closed — listing published directly ──
+      if (postNextState.state === 'no-dialog') {
+        console.log('✅ Dialog closed after Next — listing likely published directly!');
+        await this.delay(2000);
+        console.log('✅ Buy/sell listing posted successfully!');
+        return { success: true, postUrl: null };
+      }
+
+      // ── CASE D: Success message shown ──
+      if (postNextState.state === 'success') {
+        console.log('✅ Success message detected in dialog!');
+        // Click Done/OK/Close if present
+        const doneResult = await this._clickButtonInDialog(page, ['Done', 'OK', 'เสร็จ', 'ตกลง', 'Close', 'ปิด']);
+        if (doneResult) console.log('   📍 Clicked done/close button');
+        await this.delay(2000);
+        console.log('✅ Buy/sell listing posted successfully!');
+        return { success: true, postUrl: null };
+      }
+
+      // ── CASE C: Share page with Marketplace ──
+      if (postNextState.hasMarketplace) {
+        console.log('📌 Share page detected — ticking Marketplace...');
+        updateMsg('ติ้ก Marketplace...');
+        // Try to tick Marketplace
         const mktBox = await page.evaluate(() => {
-          const allSpans = document.querySelectorAll('span');
-          for (const span of allSpans) {
+          const _ds = document.querySelectorAll('[role="dialog"]');
+          let _fd = null;
+          for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+          if (!_fd) return { found: false };
+          const spans = _fd.querySelectorAll('span');
+          for (const span of spans) {
             const text = (span.textContent || '').trim();
             if (text !== 'Marketplace') continue;
-
-            // Strategy 1: Walk up to find the row, then find checkbox/toggle inside
             let row = span;
             for (let i = 0; i < 10; i++) {
               if (!row.parentElement) break;
               row = row.parentElement;
-
-              // Check for actual checkbox/toggle input
-              const checkbox = row.querySelector('input[type="checkbox"], [role="checkbox"], [role="switch"]');
-              if (checkbox) {
-                const isChecked = checkbox.checked || checkbox.getAttribute('aria-checked') === 'true';
-                if (isChecked) return { already: true };
-                const rect = checkbox.getBoundingClientRect();
-                if (rect.width > 0 && rect.height > 0) {
-                  return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, method: 'checkbox' };
-                }
+              const cb = row.querySelector('input[type="checkbox"], [role="checkbox"], [role="switch"]');
+              if (cb) {
+                if (cb.checked || cb.getAttribute('aria-checked') === 'true') return { already: true };
+                const r = cb.getBoundingClientRect();
+                if (r.width > 0 && r.height > 0) return { x: r.x + r.width / 2, y: r.y + r.height / 2, found: true };
               }
-
-              const rect = row.getBoundingClientRect();
-              // The Marketplace row is typically 50-120px tall and > 200px wide
-              if (rect.height > 40 && rect.height < 140 && rect.width > 200) {
-                // Click on the right side where the toggle/checkbox typically is
-                return { x: rect.x + rect.width - 30, y: rect.y + rect.height / 2, found: true, method: 'row-right' };
+              const r = row.getBoundingClientRect();
+              if (r.height > 40 && r.height < 140 && r.width > 200) {
+                return { x: r.x + r.width - 30, y: r.y + r.height / 2, found: true };
               }
-            }
-
-            // Strategy 2: Use the span's position and click to the far right on same Y
-            const spanRect = span.getBoundingClientRect();
-            if (spanRect.width > 0 && spanRect.height > 0) {
-              // The page is typically ~600px wide, checkbox is at the right edge
-              const pageWidth = window.innerWidth || document.documentElement.clientWidth;
-              return { x: pageWidth - 50, y: spanRect.y + spanRect.height / 2, found: true, method: 'span-right' };
             }
           }
           return { found: false };
         });
-
         if (mktBox.already) {
-          console.log('✅ Marketplace already checked');
-          mktClicked = true;
+          console.log('   ✅ Marketplace already checked');
         } else if (mktBox.found) {
-          console.log(`   📍 Marketplace checkbox via ${mktBox.method} at (${Math.round(mktBox.x)}, ${Math.round(mktBox.y)})`);
           await page.mouse.click(mktBox.x, mktBox.y);
-          await this.delay(500);
-          // Verify it was ticked
-          const verified = await page.evaluate(() => {
-            const checkboxes = document.querySelectorAll('input[type="checkbox"], [role="checkbox"], [role="switch"]');
-            for (const cb of checkboxes) {
-              if (cb.checked || cb.getAttribute('aria-checked') === 'true') return true;
-            }
-            return false;
-          });
-          if (verified) {
-            mktClicked = true;
-            console.log('✅ Marketplace checkbox ticked & verified');
-          } else {
-            console.log('   ⚠️ Click might not have registered — retrying...');
-          }
+          console.log('   ✅ Marketplace checkbox clicked');
+        } else {
+          console.log('   ⚠️ Marketplace checkbox not found on share page');
         }
+        await this.delay(1500);
       }
-      if (!mktClicked) {
-        console.log('⚠️ Marketplace checkbox not found — continuing anyway');
-      }
-      await this.delay(1500);
 
-      // Step 6: Scroll down to bottom of the share page
-      console.log('📜 Scrolling to bottom...');
-      // Scroll multiple times to ensure we reach the bottom
-      for (let scrollAttempt = 0; scrollAttempt < 3; scrollAttempt++) {
-        await page.evaluate(() => {
-          const dialogs = document.querySelectorAll('[role="dialog"]');
-          for (const d of dialogs) {
-            // Find scrollable containers inside the dialog
-            const scrollables = d.querySelectorAll('div');
-            for (const el of scrollables) {
-              if (el.scrollHeight > el.clientHeight + 50) {
-                el.scrollTop = el.scrollHeight;
-              }
-            }
-          }
-          window.scrollTo(0, document.body.scrollHeight);
-        });
-        await this.delay(1000);
-      }
-      await this.delay(1000);
-
-      // Step 7: Click "โพสต์" button — MUST use native mouse click
+      // ── CASES B & C: Find and click Post/Publish button ──
       updateMsg('กำลังกดโพสต์...');
-      console.log('🔄 Clicking "โพสต์"...');
-      const preSubmitDelay = 1000 + Math.floor(Math.random() * 2000);
-      await this.delay(preSubmitDelay);
-
       let posted = false;
-      const postKeywords = ['โพสต์', 'Post', 'ลงประกาศ', 'Publish', 'Submit', 'List item', 'Create listing'];
-      for (let attempt = 0; attempt < 5 && !posted; attempt++) {
+      const postKeywords = ['โพสต์', 'Post', 'ลงประกาศ', 'Publish', 'Submit', 'List item', 'Create listing', 'Done', 'เสร็จ'];
+
+      // If we already found a post button in the state detection, click it immediately
+      if (postNextState.postBtn && postNextState.postBtn.found) {
+        console.log(`🔄 Clicking "${postNextState.postBtn.text}" (detected earlier)...`);
+        await page.mouse.click(postNextState.postBtn.x, postNextState.postBtn.y);
+        posted = true;
+        console.log(`   ✅ "${postNextState.postBtn.text}" clicked!`);
+      }
+
+      // Otherwise retry finding the button
+      for (let attempt = 0; attempt < 8 && !posted; attempt++) {
         if (attempt > 0) {
-          console.log(`   🔄 Retry โพสต์ ${attempt + 1}/5...`);
+          console.log(`   🔄 Retry post button ${attempt + 1}/8...`);
           await this.delay(2000);
-          // Re-scroll down on retry
           await this.scrollDownInDialog(page, 300);
-          await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-          await this.delay(1000);
         }
 
         const postBox = await page.evaluate((keywords) => {
-          // Search in form dialog first (skip Notifications)
+          // Search in dialog first
           const _ds = document.querySelectorAll('[role="dialog"]');
           let _fd = null;
           for (const _d of _ds) {
             if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
             _fd = _d; break;
           }
-          const scope = _fd || document;
-          const buttons = scope.querySelectorAll('[role="button"], button');
-          let disabledBtn = null;
-          for (const btn of buttons) {
-            const spans = btn.querySelectorAll('span');
-            let btnText = '';
-            for (const s of spans) {
-              const t = (s.textContent || '').trim();
-              if (keywords.some(kw => t === kw || t.toLowerCase() === kw.toLowerCase())) { btnText = t; break; }
-            }
-            if (!btnText) {
-              const fullText = (btn.textContent || '').trim();
-              if (keywords.some(kw => fullText === kw || fullText.toLowerCase() === kw.toLowerCase())) btnText = fullText;
-            }
-            const label = btn.getAttribute('aria-label') || '';
-            const matched = btnText || keywords.some(kw => label === kw || label.toLowerCase() === kw.toLowerCase());
-            if (!matched) continue;
+          // If no dialog, check if we're back on group page (success!)
+          if (!_fd) return { found: false, noDialog: true };
 
-            const isDisabled = btn.getAttribute('aria-disabled') === 'true' || btn.disabled;
-            if (isDisabled) { disabledBtn = { text: btnText || label, disabled: true }; continue; }
+          const searchIn = (scope) => {
+            const buttons = scope.querySelectorAll('[role="button"], button');
+            let disabled = null;
+            for (const btn of buttons) {
+              const spans = btn.querySelectorAll('span');
+              let text = '';
+              for (const s of spans) {
+                const t = (s.textContent || '').trim();
+                if (keywords.some(kw => t.toLowerCase() === kw.toLowerCase())) { text = t; break; }
+              }
+              if (!text) {
+                const ft = (btn.textContent || '').trim();
+                if (ft.length < 30 && keywords.some(kw => ft.toLowerCase() === kw.toLowerCase())) text = ft;
+              }
+              const label = btn.getAttribute('aria-label') || '';
+              if (!text && keywords.some(kw => label.toLowerCase() === kw.toLowerCase())) text = label;
+              if (!text) continue;
+              const isDis = btn.getAttribute('aria-disabled') === 'true' || btn.disabled;
+              if (isDis) { disabled = { text, disabled: true }; continue; }
+              const rect = btn.getBoundingClientRect();
+              if (rect.width > 0 && rect.height > 0) {
+                return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, text };
+              }
+            }
+            return disabled || { found: false };
+          };
 
-            const rect = btn.getBoundingClientRect();
-            if (rect.width > 0 && rect.height > 0) {
-              return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, text: btnText || label };
-            }
-          }
-          // If not found in dialog, search entire page
-          if (!_fd) return disabledBtn ? { found: false, disabled: true, text: disabledBtn.text } : { found: false };
-          const allBtns = document.querySelectorAll('[role="button"], button');
-          for (const btn of allBtns) {
-            if (scope.contains(btn)) continue; // already checked
-            const spans = btn.querySelectorAll('span');
-            let btnText = '';
-            for (const s of spans) {
-              const t = (s.textContent || '').trim();
-              if (keywords.some(kw => t === kw || t.toLowerCase() === kw.toLowerCase())) { btnText = t; break; }
-            }
-            const label = btn.getAttribute('aria-label') || '';
-            if (!btnText && !keywords.some(kw => label === kw || label.toLowerCase() === kw.toLowerCase())) continue;
-            const isDisabled = btn.getAttribute('aria-disabled') === 'true' || btn.disabled;
-            if (isDisabled) { disabledBtn = { text: btnText || label, disabled: true }; continue; }
-            const rect = btn.getBoundingClientRect();
-            if (rect.width > 0 && rect.height > 0) {
-              return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, text: btnText || label, scope: 'page' };
-            }
-          }
-          return disabledBtn ? { found: false, disabled: true, text: disabledBtn.text } : { found: false };
+          const result = searchIn(_fd);
+          if (result.found) return result;
+          // Also search entire page as fallback
+          const pageResult = searchIn(document);
+          return pageResult.found ? { ...pageResult, scope: 'page' } : (result.disabled ? result : pageResult);
         }, postKeywords);
 
-        if (!postBox.found && postBox.disabled && attempt === 0) {
-          console.log(`   ⚠️ Post button found but DISABLED: "${postBox.text}"`);
+        // If dialog disappeared during retry, listing was published
+        if (postBox.noDialog) {
+          console.log('   ✅ Dialog closed — listing published!');
+          posted = true;
+          break;
         }
 
         if (postBox.found) {
-          console.log(`   📍 "${postBox.text}" at (${Math.round(postBox.x)}, ${Math.round(postBox.y)})`);
+          console.log(`   📍 "${postBox.text}" found${postBox.scope === 'page' ? ' (page-level)' : ''}`);
           await page.mouse.click(postBox.x, postBox.y);
           posted = true;
+        } else if (postBox.disabled && attempt === 0) {
+          console.log(`   ⚠️ Post button "${postBox.text}" found but DISABLED`);
         }
       }
 
@@ -1403,53 +1444,18 @@ export class GroupPostingWorker {
         return { success: false, error: 'ไม่สามารถกดปุ่มโพสต์ได้' };
       }
 
+      // Wait for post to complete
       console.log('⏳ Waiting for post to complete...');
       await this.delay(5000);
 
-      // Step 8: Click "ลงประกาศ" on the "เผยแพร่รายการสินค้าแล้ว" dialog if it appears
-      updateMsg('กดลงประกาศ...');
-      console.log('📌 Looking for "ลงประกาศ" button on publish dialog...');
-      const publishKeywords = ['ลงประกาศ', 'Publish', 'List Item'];
-      let publishClicked = false;
-      for (let attempt = 0; attempt < 5 && !publishClicked; attempt++) {
-        if (attempt > 0) {
-          console.log(`   🔄 Retry ลงประกาศ ${attempt + 1}/5...`);
-          await this.delay(2000);
-        }
-        const publishBox = await page.evaluate((keywords) => {
-          const buttons = document.querySelectorAll('[role="button"], button');
-          for (const btn of buttons) {
-            const spans = btn.querySelectorAll('span');
-            let btnText = '';
-            for (const s of spans) {
-              const t = (s.textContent || '').trim();
-              if (keywords.includes(t)) { btnText = t; break; }
-            }
-            if (!btnText) btnText = (btn.textContent || '').trim();
-            const label = btn.getAttribute('aria-label') || '';
-            const matched = keywords.includes(btnText) || keywords.includes(label);
-            if (!matched) continue;
-            const isDisabled = btn.getAttribute('aria-disabled') === 'true' || btn.disabled;
-            if (isDisabled) continue;
-            const rect = btn.getBoundingClientRect();
-            if (rect.width > 0 && rect.height > 0) {
-              return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, text: btnText };
-            }
-          }
-          return { found: false };
-        }, publishKeywords);
-
-        if (publishBox.found) {
-          console.log(`   📍 "${publishBox.text}" at (${Math.round(publishBox.x)}, ${Math.round(publishBox.y)})`);
-          await page.mouse.click(publishBox.x, publishBox.y);
-          publishClicked = true;
-          console.log('✅ "ลงประกาศ" clicked');
-        }
+      // Check for any final confirmation dialog (e.g. "ลงประกาศ" / "Publish" on success dialog)
+      const finalBtn = await this._clickButtonInDialog(page, ['ลงประกาศ', 'Publish', 'List Item', 'Done', 'OK', 'เสร็จ', 'ตกลง']);
+      if (finalBtn) {
+        console.log(`   ✅ Final button "${finalBtn}" clicked`);
+        await this.delay(3000);
+      } else {
+        console.log('   ℹ️ No final confirmation dialog');
       }
-      if (!publishClicked) {
-        console.log('ℹ️ "ลงประกาศ" dialog not found — may have auto-closed');
-      }
-      await this.delay(3000);
 
       console.log('✅ Buy/sell listing posted successfully!');
       return { success: true, postUrl: null };

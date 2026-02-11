@@ -356,8 +356,17 @@ export class GroupPostingWorker {
       await page.mouse.click(optionBox.x, optionBox.y);
       console.log(`    ✅ Selected "${optionValue}"`);
     } else {
-      console.log(`    ⚠️ Option "${optionValue}" not found — scrolling down in dialog to close dropdown`);
-      // Safe way to dismiss dropdown: scroll the dialog slightly
+      // Debug: show what options ARE available
+      const availableOpts = await page.evaluate(() => {
+        const opts = document.querySelectorAll('[role="option"], [role="menuitem"]');
+        const texts = [];
+        for (const o of opts) { const t = (o.textContent || '').trim(); if (t.length > 0 && t.length < 50) texts.push(t); }
+        return [...new Set(texts)].slice(0, 15);
+      });
+      console.log(`    ⚠️ Option "${optionValue}" not found. Available: ${JSON.stringify(availableOpts)}`);
+      // Safe way to dismiss dropdown: press Escape then scroll
+      await page.keyboard.press('Escape');
+      await this.delay(300);
       await this.scrollDownInDialog(page, 50);
     }
     await this.delay(500);
@@ -587,6 +596,37 @@ export class GroupPostingWorker {
       }
       await page.mouse.click(sellBtnBox.x, sellBtnBox.y);
       await this.delay(3000);
+
+      // ── Verify the dialog that opened is the CATEGORY dialog, not Notifications ──
+      for (let verifyAttempt = 0; verifyAttempt < 3; verifyAttempt++) {
+        const dialogType = await page.evaluate(() => {
+          const dialog = document.querySelector('[role="dialog"]');
+          if (!dialog) return 'none';
+          const text = dialog.textContent || '';
+          if (text.includes('Notification') || text.includes('Unread') || text.includes('push notification') || text.includes('การแจ้งเตือน')) return 'notifications';
+          return 'category';
+        });
+        console.log(`   🔍 Dialog type: ${dialogType}`);
+        if (dialogType === 'category') break;
+        if (dialogType === 'notifications') {
+          console.log(`   ⚠️ Still Notifications overlay! Closing again...`);
+          await page.keyboard.press('Escape');
+          await this.delay(500);
+          await page.evaluate(() => {
+            const closeButtons = document.querySelectorAll('[aria-label="Close"], [aria-label="ปิด"]');
+            for (const btn of closeButtons) { const r = btn.getBoundingClientRect(); if (r.width > 0) btn.click(); }
+          });
+          await this.delay(1000);
+          // Re-click sell button
+          console.log(`   🔄 Re-clicking sell button...`);
+          await page.mouse.click(sellBtnBox.x, sellBtnBox.y);
+          await this.delay(3000);
+        } else if (dialogType === 'none') {
+          console.log(`   ⚠️ No dialog found — re-clicking sell button...`);
+          await page.mouse.click(sellBtnBox.x, sellBtnBox.y);
+          await this.delay(3000);
+        }
+      }
 
       // Step 2: Dialog "สร้างรายการสินค้าใหม่" → Click "บ้านสำหรับขายหรือเช่า"
       // MUST use native mouse click — Facebook React ignores JS .click()
@@ -1866,33 +1906,46 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
       await page.goto(groupUrl, { waitUntil: 'networkidle2', timeout: 60000 });
       await this.delay(2000);
 
-      // ── Step 1.2: Dismiss any overlays (Notifications panel, popups) ──
+      // ── Step 1.2: AGGRESSIVELY dismiss Notifications overlay ──
+      // Facebook Notifications panel is [role="dialog"] and blocks everything
       console.log('🔕 Dismissing overlays...');
-      try {
-        // Press Escape to close any popup/overlay
-        await page.keyboard.press('Escape');
-        await this.delay(500);
-        // Click on the main content area to deselect any sidebar
-        await page.evaluate(() => {
-          const main = document.querySelector('[role="main"]');
-          if (main) main.click();
-        });
-        await this.delay(500);
-        // Close notification panel if open (click the close button or click away)
-        await page.evaluate(() => {
-          // Try closing notification popover
-          const closeButtons = document.querySelectorAll('[aria-label="Close"], [aria-label="ปิด"]');
-          for (const btn of closeButtons) {
-            const rect = btn.getBoundingClientRect();
-            if (rect.width > 0 && rect.height > 0) {
-              btn.click();
-              break;
+      for (let dismissAttempt = 0; dismissAttempt < 5; dismissAttempt++) {
+        const hasNotifOverlay = await page.evaluate(() => {
+          const dialogs = document.querySelectorAll('[role="dialog"]');
+          for (const d of dialogs) {
+            const text = d.textContent || '';
+            if (text.includes('Notification') || text.includes('การแจ้งเตือน') || text.includes('Unread') || text.includes('push notification')) {
+              return true;
             }
           }
+          return false;
         });
-        await this.delay(500);
-      } catch (e) {
-        // Ignore dismiss errors
+        if (!hasNotifOverlay) { console.log(`   ✅ No Notifications overlay (attempt ${dismissAttempt})`); break; }
+        console.log(`   🔕 Notifications overlay detected — closing (attempt ${dismissAttempt + 1})...`);
+        try {
+          // Method 1: Press Escape
+          await page.keyboard.press('Escape');
+          await this.delay(500);
+          // Method 2: Click close buttons
+          await page.evaluate(() => {
+            const closeButtons = document.querySelectorAll('[aria-label="Close"], [aria-label="ปิด"]');
+            for (const btn of closeButtons) {
+              const rect = btn.getBoundingClientRect();
+              if (rect.width > 0 && rect.height > 0) { btn.click(); }
+            }
+          });
+          await this.delay(500);
+          // Method 3: Click on [role="main"] to move focus away
+          await page.evaluate(() => {
+            const main = document.querySelector('[role="main"]');
+            if (main) main.click();
+          });
+          await this.delay(500);
+          // Method 4: Click on body at center of page
+          const viewport = await page.evaluate(() => ({ w: window.innerWidth, h: window.innerHeight }));
+          await page.mouse.click(viewport.w / 2, viewport.h / 2);
+          await this.delay(500);
+        } catch (e) { /* ignore */ }
       }
 
       // ── Step 1.5: READ group name — use document.title (more reliable than h1) ──

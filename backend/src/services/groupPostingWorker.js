@@ -1228,10 +1228,10 @@ export class GroupPostingWorker {
 
         if (nextBox.found) {
           console.log(`   📍 "ถัดไป" at (${Math.round(nextBox.x)}, ${Math.round(nextBox.y)}) text="${nextBox.text}" viewport=${nextBox.viewportH} inView=${nextBox.inViewport}`);
-          // Small delay after scrollIntoView to let browser settle
           await this.delay(300);
-          // Re-get coordinates after scroll settled
-          const freshCoords = await page.evaluate(() => {
+
+          // METHOD 1: scrollIntoView + full mouse event sequence (mousedown/mouseup/click)
+          const clickResult = await page.evaluate(() => {
             const _ds = document.querySelectorAll('[role="dialog"]');
             let _fd = null;
             for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
@@ -1245,20 +1245,63 @@ export class GroupPostingWorker {
                   const isDis = btn.getAttribute('aria-disabled') === 'true' || btn.disabled;
                   if (isDis) continue;
                   btn.scrollIntoView({ block: 'center', behavior: 'instant' });
+                  // Dispatch full native event sequence
                   const rect = btn.getBoundingClientRect();
-                  return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, ok: true };
+                  const cx = rect.x + rect.width / 2, cy = rect.y + rect.height / 2;
+                  const opts = { bubbles: true, cancelable: true, view: window, clientX: cx, clientY: cy };
+                  btn.dispatchEvent(new MouseEvent('mousedown', opts));
+                  btn.dispatchEvent(new MouseEvent('mouseup', opts));
+                  btn.dispatchEvent(new MouseEvent('click', opts));
+                  return { method: 'dispatchEvent', x: cx, y: cy };
                 }
               }
             }
-            return { ok: false };
+            return null;
           });
-          if (freshCoords.ok) {
-            console.log(`   📍 Fresh coords after scroll: (${Math.round(freshCoords.x)}, ${Math.round(freshCoords.y)})`);
-            await page.mouse.click(freshCoords.x, freshCoords.y);
+
+          if (clickResult) {
+            console.log(`   📍 Clicked via ${clickResult.method} at (${Math.round(clickResult.x)}, ${Math.round(clickResult.y)})`);
+          }
+
+          // Also do a physical mouse click at the button location
+          if (clickResult) {
+            await this.delay(200);
+            await page.mouse.click(clickResult.x, clickResult.y);
+            console.log(`   📍 Also mouse.click at same coords`);
           } else {
             await page.mouse.click(nextBox.x, nextBox.y);
           }
+
+          // METHOD 2: Focus + Enter as fallback
+          await this.delay(500);
+          await page.keyboard.press('Enter');
+          console.log(`   ⌨️ Also pressed Enter as fallback`);
+
           nextClicked = true;
+
+          // VERIFY: Did the page actually change?
+          await this.delay(3000);
+          const pageChanged = await page.evaluate(() => {
+            const _ds = document.querySelectorAll('[role="dialog"]');
+            let _fd = null;
+            for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+            if (!_fd) return { changed: true, reason: 'no-dialog' };
+            // Check if form indicators are still present
+            const txt = (_fd.textContent || '').toLowerCase();
+            const stillOnForm = txt.includes('choose listing type') || txt.includes('number of bedrooms') || txt.includes('เลือกประเภทรายการ');
+            if (stillOnForm) return { changed: false, reason: 'form-still-visible' };
+            return { changed: true, reason: 'form-gone' };
+          });
+          console.log(`   🔍 Page changed: ${pageChanged.changed} (${pageChanged.reason})`);
+
+          if (!pageChanged.changed) {
+            console.log(`   ⚠️ Next click didn't advance — trying Tab+Enter...`);
+            // Try Tab to focus Next button, then Enter
+            await page.keyboard.press('Tab');
+            await this.delay(200);
+            await page.keyboard.press('Enter');
+            await this.delay(3000);
+          }
         }
       }
 
@@ -1293,10 +1336,17 @@ export class GroupPostingWorker {
         }
         const uniqueTexts = [...new Set(visibleTexts)].slice(0, 30);
 
-        // CASE D: Success message
-        const successKws = ['listing published', 'เผยแพร่รายการ', 'your listing', 'รายการของคุณ', 'listed successfully', 'สำเร็จแล้ว'];
-        if (successKws.some(kw => dialogText.includes(kw))) {
-          return { state: 'success', texts: uniqueTexts };
+        // Negative check: if form indicators still visible, we're STILL on the form page
+        const formIndicators = ['choose listing type', 'number of bedrooms', 'number of bathrooms',
+          'เลือกประเภทรายการ', 'จำนวนห้องนอน', 'type of property'];
+        const stillOnForm = formIndicators.some(fi => dialogText.includes(fi));
+
+        // CASE D: Success message — ONLY if NOT still on form page
+        if (!stillOnForm) {
+          const successKws = ['listing published', 'เผยแพร่รายการ', 'your listing has been', 'รายการของคุณ', 'listed successfully', 'สำเร็จแล้ว', 'published to'];
+          if (successKws.some(kw => dialogText.includes(kw))) {
+            return { state: 'success', texts: uniqueTexts };
+          }
         }
 
         // Collect all buttons in dialog

@@ -45,7 +45,7 @@ interface BulkAddGroupDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   existingGroupUrls: string[];
-  onAddGroups: (groups: { name: string; url: string; memberCount: number; postsToday?: number; postsLastMonth?: number }[]) => void;
+  onAddGroups: (groups: { name: string; url: string; memberCount: number; postsToday?: number; postsLastMonth?: number }[]) => void | Promise<void>;
 }
 
 export function BulkAddGroupDialog({
@@ -151,7 +151,7 @@ export function BulkAddGroupDialog({
     const postsToday = info?.postsToday || 0;
     const postsLastMonth = info?.postsLastMonth || 0;
 
-    onAddGroups([{ name, url, memberCount, postsToday, postsLastMonth }]);
+    await onAddGroups([{ name, url, memberCount, postsToday, postsLastMonth }]);
     toast.success(`เพิ่มกลุ่ม "${name}" แล้ว`);
     setSingleName('');
     setSingleUrl('');
@@ -218,7 +218,7 @@ export function BulkAddGroupDialog({
   };
 
   // Add all successful groups
-  const handleBulkAdd = () => {
+  const handleBulkAdd = async () => {
     const successGroups = results
       .filter(r => r.status === 'success' || r.status === 'failed') // Add even failed (with slug name)
       .filter(r => r.status !== 'duplicate')
@@ -235,7 +235,7 @@ export function BulkAddGroupDialog({
       return;
     }
 
-    onAddGroups(successGroups);
+    await onAddGroups(successGroups);
     toast.success(`เพิ่ม ${successGroups.length} กลุ่มสำเร็จ!`);
     handleReset();
     onOpenChange(false);

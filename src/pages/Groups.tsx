@@ -554,32 +554,38 @@ export default function Groups() {
           open={isAddOpen}
           onOpenChange={setIsAddOpen}
           existingGroupUrls={groups.map(g => g.url)}
-          onAddGroups={(newGroups) => {
+          onAddGroups={async (newGroups) => {
             let added = 0;
             let duplicated = 0;
             let overLimit = 0;
             const currentCount = groups.length;
             const maxGroups = pkgLimits.maxGroups;
 
-            newGroups.forEach(g => {
+            for (const g of newGroups) {
               if (currentCount + added >= maxGroups) {
                 overLimit++;
-                return;
+                continue;
               }
-              const result = addGroup({
-                name: g.name,
-                url: g.url,
-                memberCount: g.memberCount,
-                postsToday: g.postsToday,
-                postsLastMonth: g.postsLastMonth,
-                lastUpdated: new Date(),
-              });
-              if (result === null) {
-                duplicated++;
-              } else {
-                added++;
+              try {
+                const groupId = extractGroupId(g.url);
+                const result = await addGroup({
+                  name: g.name,
+                  url: g.url,
+                  groupId: groupId,
+                  memberCount: g.memberCount,
+                  postsToday: g.postsToday,
+                  postsLastMonth: g.postsLastMonth,
+                  lastUpdated: new Date(),
+                });
+                if (result === null) {
+                  duplicated++;
+                } else {
+                  added++;
+                }
+              } catch (err) {
+                console.error('Error adding group:', err);
               }
-            });
+            }
             if (added > 0) {
               toast.success(`เพิ่ม ${added} กลุ่มสำเร็จ!`);
             }

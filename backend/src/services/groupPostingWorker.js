@@ -277,12 +277,114 @@ export class GroupPostingWorker {
       return true;
     }
 
-    // Strategy 5: Listing type might be an unlabeled combobox.
-    // We don't guess by text (FB often shows label text even when unselected). Instead:
-    // - iterate visible comboboxes
-    // - open dropdown
-    // - detect the correct one by option signature containing BOTH sale + rent options
-    console.log(`    🔍 Scanning comboboxes to locate listing type dropdown...`);
+    // Strategy 4.5: Proximity-based — find "Choose listing type" label position,
+    // then find the nearest combobox below it by Y coordinate
+    console.log(`    🔍 Trying proximity-based listing type selection...`);
+    const proximityResult = await page.evaluate((labelTexts) => {
+      const _ds = document.querySelectorAll('[role="dialog"]');
+      let _fd = null;
+      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+      if (!_fd) return { found: false, debug: 'no dialog' };
+
+      // Find the "Choose listing type" label position
+      let labelY = -1;
+      let labelText = '';
+      const spans = _fd.querySelectorAll('span');
+      for (const span of spans) {
+        const text = (span.textContent || '').trim();
+        if (text.length > 50) continue;
+        const textLower = text.toLowerCase();
+        for (const lbl of labelTexts) {
+          if (textLower === lbl.toLowerCase() || textLower.includes(lbl.toLowerCase())) {
+            if (span.closest('h1, h2, h3, h4')) continue;
+            const rect = span.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0 && rect.y > 0) {
+              labelY = rect.y + rect.height;
+              labelText = text;
+              break;
+            }
+          }
+        }
+        if (labelY > 0) break;
+      }
+      if (labelY < 0) return { found: false, debug: 'label not found' };
+
+      // Find ALL comboboxes and clickable elements near this label
+      const combos = _fd.querySelectorAll('[role="combobox"]');
+      let bestCombo = null;
+      let bestDist = 200; // max 200px below the label
+      for (const cb of combos) {
+        const rect = cb.getBoundingClientRect();
+        if (rect.width < 20 || rect.height < 10) continue;
+        const dist = rect.y - labelY;
+        // Must be below or at the label, within 200px
+        if (dist >= -10 && dist < bestDist) {
+          bestDist = dist;
+          bestCombo = { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, text: (cb.textContent || '').trim().slice(0, 60) };
+        }
+      }
+
+      if (bestCombo) return { found: true, ...bestCombo, labelText, labelY: Math.round(labelY), method: 'proximity-combobox' };
+
+      // Also look for any div/span that acts like a dropdown trigger near the label
+      const clickables = _fd.querySelectorAll('[role="button"], [tabindex="0"], [aria-haspopup]');
+      for (const el of clickables) {
+        const rect = el.getBoundingClientRect();
+        if (rect.width < 40 || rect.height < 15) continue;
+        const dist = rect.y - labelY;
+        if (dist >= -10 && dist < 200 && dist < bestDist) {
+          const elText = (el.textContent || '').trim().slice(0, 60);
+          // Skip if it looks like a submit/navigation button
+          if (/^(next|post|publish|ถัดไป|โพสต์)/i.test(elText)) continue;
+          bestDist = dist;
+          bestCombo = { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, text: elText };
+        }
+      }
+
+      if (bestCombo) return { found: true, ...bestCombo, labelText, labelY: Math.round(labelY), method: 'proximity-clickable' };
+
+      return { found: false, debug: `label "${labelText}" at y=${Math.round(labelY)} but no combobox nearby` };
+    }, dropdownLabels);
+
+    if (proximityResult.found) {
+      console.log(`    📍 Found via ${proximityResult.method}: "${proximityResult.text}" (label="${proximityResult.labelText}" labelY=${proximityResult.labelY})`);
+      await page.mouse.click(proximityResult.x, proximityResult.y);
+      await this.delay(1500);
+
+      // Try to select the desired option from the opened dropdown
+      for (const opt of dropdownOptions) {
+        const optClicked = await this._clickOptionInDropdown(page, opt);
+        if (optClicked) {
+          console.log(`    ✅ Listing type selected via proximity`);
+          await this.delay(1800);
+          return true;
+        }
+      }
+
+      // Dump available options for debugging
+      const availOpts = await page.evaluate(() => {
+        const selectors = '[role="option"], [role="menuitem"], [role="listbox"] [role="option"], [role="menu"] [role="menuitem"]';
+        const texts = [];
+        document.querySelectorAll(selectors).forEach(n => {
+          const t = (n.textContent || '').trim();
+          if (t.length > 0 && t.length < 60) texts.push(t);
+        });
+        // Also check for plain clickable items in open popups/overlays
+        document.querySelectorAll('[role="listbox"] > div, [role="menu"] > div, ul > li').forEach(n => {
+          const t = (n.textContent || '').trim();
+          if (t.length > 0 && t.length < 60) texts.push(t);
+        });
+        return [...new Set(texts)].slice(0, 20);
+      });
+      console.log(`    ⚠️ Proximity dropdown opened but option not found. Available: ${JSON.stringify(availOpts)}`);
+      await page.keyboard.press('Escape');
+      await this.delay(400);
+    } else {
+      console.log(`    ⚠️ Proximity search: ${proximityResult.debug}`);
+    }
+
+    // Strategy 5: Brute-force scan all comboboxes, click each, check options
+    console.log(`    🔍 Scanning ALL comboboxes to locate listing type dropdown...`);
 
     const comboCandidates = await page.evaluate(() => {
       const _ds = document.querySelectorAll('[role="dialog"]');
@@ -301,72 +403,97 @@ export class GroupPostingWorker {
       return out.slice(0, 12);
     });
 
-    const saleMarkers = ['for sale', 'sale', 'สำหรับขาย'];
-    const rentMarkers = ['for rent', 'rent', 'ให้เช่า'];
+    const saleMarkers = ['for sale', 'sale', 'สำหรับขาย', 'ขาย'];
+    const rentMarkers = ['for rent', 'rent', 'ให้เช่า', 'เช่า'];
 
     for (const cand of comboCandidates) {
+      // Skip comboboxes that clearly belong to other fields
+      const skipTexts = ['washing', 'parking', 'air con', 'heating', 'เครื่องซักผ้า', 'ที่จอดรถ', 'แอร์', 'เครื่องทำความร้อน'];
+      if (skipTexts.some(s => cand.text.toLowerCase().includes(s))) continue;
+
       console.log(`    📍 Combobox candidate y=${Math.round(cand.yTop)} text="${cand.text}"`);
       await page.mouse.click(cand.x, cand.y);
-      await this.delay(1200);
+      await this.delay(1500);
 
       const dropdownDebug = await page.evaluate(() => {
-        const nodes = document.querySelectorAll('[role="option"], [role="menuitem"], [role="listbox"] [role="option"], [role="menu"] [role="menuitem"]');
+        // Broad selector: also look for listbox children, ul/li
+        const selectors = '[role="option"], [role="menuitem"], [role="listbox"] [role="option"], [role="menu"] [role="menuitem"], [role="listbox"] > div, ul[role="listbox"] > li';
         const texts = [];
-        for (const n of nodes) {
+        for (const n of document.querySelectorAll(selectors)) {
           const t = (n.textContent || '').trim();
-          if (t.length > 1 && t.length < 50) texts.push(t);
+          if (t.length > 0 && t.length < 60) texts.push(t);
         }
         return [...new Set(texts)].slice(0, 25);
       });
+
+      console.log(`    🔍 Options found: ${JSON.stringify(dropdownDebug.slice(0, 15))}`);
 
       const signature = dropdownDebug.map(t => t.toLowerCase());
       const hasSale = signature.some(t => saleMarkers.some(m => t.includes(m)));
       const hasRent = signature.some(t => rentMarkers.some(m => t.includes(m)));
 
-      if (!(hasSale && hasRent)) {
-        // Not the listing type dropdown
-        await page.keyboard.press('Escape');
-        await this.delay(400);
-        continue;
-      }
+      if (hasSale || hasRent) {
+        console.log(`    ✅ Listing type dropdown detected (sale=${hasSale}, rent=${hasRent})`);
 
-      console.log(`    ✅ Listing type dropdown detected via option signature`);
-
-      // Click the desired option
-      let clicked = false;
-      for (const opt of dropdownOptions) {
-        const optResult = await page.evaluate((optText) => {
-          const optLower = optText.toLowerCase();
-          const selectors = '[role="option"], [role="listbox"] [role="option"], [role="menu"] [role="menuitem"], [role="menuitem"]';
-          const options = document.querySelectorAll(selectors);
-          for (const o of options) {
-            const t = (o.textContent || '').trim();
-            const tl = t.toLowerCase();
-            if (tl === optLower || tl.includes(optLower) || optLower.includes(tl)) {
-              const rect = o.getBoundingClientRect();
-              if (rect.width > 0 && rect.height > 0) return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, text: t };
-            }
+        // Click the desired option
+        for (const opt of dropdownOptions) {
+          const optClicked = await this._clickOptionInDropdown(page, opt);
+          if (optClicked) {
+            console.log(`    ✅ Listing type selected via combobox scan`);
+            await this.delay(1800);
+            return true;
           }
-          return { found: false };
-        }, opt);
-
-        if (optResult.found) {
-          console.log(`    📍 Selecting option "${optResult.text}"...`);
-          await page.mouse.click(optResult.x, optResult.y);
-          await this.delay(1800);
-          console.log(`    ✅ Listing type selected`);
-          clicked = true;
-          break;
         }
+
+        console.log(`    ⚠️ Could not click listing type option. Options: ${JSON.stringify(dropdownDebug.slice(0, 15))}`);
       }
 
-      if (clicked) return true;
-
-      console.log(`    ⚠️ Could not click listing type option. Options: ${JSON.stringify(dropdownDebug.slice(0, 15))}`);
       await page.keyboard.press('Escape');
       await this.delay(400);
     }
 
+    console.log(`    ❌ All listing type strategies exhausted — could not set listing type`);
+    return false;
+  }
+
+  // Helper: click an option in a currently open dropdown
+  async _clickOptionInDropdown(page, optionText) {
+    const optResult = await page.evaluate((optText) => {
+      const optLower = optText.toLowerCase();
+      // Broad selectors for dropdown options
+      const selectors = '[role="option"], [role="listbox"] [role="option"], [role="menu"] [role="menuitem"], [role="menuitem"]';
+      const options = document.querySelectorAll(selectors);
+      // Pass 1: exact or includes match
+      for (const o of options) {
+        const t = (o.textContent || '').trim();
+        const tl = t.toLowerCase();
+        if (tl === optLower || tl.includes(optLower) || optLower.includes(tl)) {
+          const rect = o.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, text: t };
+        }
+      }
+      // Pass 2: broader search — any visible leaf span/div matching the text
+      for (const el of document.querySelectorAll('span, div')) {
+        if (el.children.length > 1) continue;
+        const t = (el.textContent || '').trim();
+        const tl = t.toLowerCase();
+        if (t.length > 30 || t.length < 2) continue;
+        if (tl === optLower || tl.includes(optLower) || optLower.includes(tl)) {
+          // Must be in a popup/overlay context (not the main form)
+          const inPopup = el.closest('[role="listbox"], [role="menu"], [data-visualcompletion="ignore-dynamic"]');
+          if (!inPopup) continue;
+          const rect = el.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, text: t };
+        }
+      }
+      return { found: false };
+    }, optionText);
+
+    if (optResult.found) {
+      console.log(`    📍 Selecting option "${optResult.text}"...`);
+      await page.mouse.click(optResult.x, optResult.y);
+      return true;
+    }
     return false;
   }
 

@@ -512,20 +512,27 @@ export class GroupPostingWorker {
       console.log('📌 Clicking "ขายสินค้า"...');
       const sellBtnBox = await page.evaluate(() => {
         const btns = document.querySelectorAll('[role="button"]');
+        const sellKeywords = ['ขายสินค้า', 'sell something', 'sell', 'create listing', 'สร้างรายการ', 'list item'];
+        const debugTexts = [];
         for (const btn of btns) {
-          const label = btn.getAttribute('aria-label') || '';
+          const label = (btn.getAttribute('aria-label') || '').trim();
           const text = (btn.textContent || '').trim();
-          if (label === 'ขายสินค้า' || text === 'ขายสินค้า' || label === 'Sell something' || text === 'Sell something') {
+          const lower = (label + ' ' + text).toLowerCase();
+          if (text.length > 1 && text.length < 30) debugTexts.push(text);
+          if (sellKeywords.some(kw => lower.includes(kw))) {
             const rect = btn.getBoundingClientRect();
             if (rect.width > 0 && rect.height > 0) {
-              return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true };
+              return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, text };
             }
           }
         }
-        return { found: false };
+        return { found: false, debugTexts: [...new Set(debugTexts)].slice(0, 15) };
       });
 
-      if (!sellBtnBox.found) {
+      if (sellBtnBox.found) {
+        console.log(`   📍 Found sell button: "${sellBtnBox.text}"`);
+      } else {
+        console.log(`   🔍 Buttons on page:`, JSON.stringify(sellBtnBox.debugTexts));
         return { success: false, error: 'ไม่พบปุ่มขายสินค้า' };
       }
       await page.mouse.click(sellBtnBox.x, sellBtnBox.y);

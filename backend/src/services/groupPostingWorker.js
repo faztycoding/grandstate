@@ -133,8 +133,11 @@ export class GroupPostingWorker {
   async tryTypeOnPage(page, labels, value) {
     for (const label of labels) {
       const found = await page.evaluate((lbl) => {
-        const spans = document.querySelectorAll('[role="dialog"] span');
-        for (const s of spans) { if ((s.textContent || '').trim().includes(lbl)) return true; }
+        const _ds = document.querySelectorAll('[role="dialog"]');
+        for (const _d of _ds) {
+          if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
+          for (const s of _d.querySelectorAll('span')) { if ((s.textContent || '').trim().includes(lbl)) return true; }
+        }
         return false;
       }, label);
       if (found) { await this.nativeTypeOnPage(page, label, value); return true; }
@@ -148,8 +151,11 @@ export class GroupPostingWorker {
     const opts = Array.isArray(optionValues) ? optionValues : [optionValues];
     for (const label of labels) {
       const found = await page.evaluate((lbl) => {
-        const spans = document.querySelectorAll('[role="dialog"] span');
-        for (const s of spans) { if ((s.textContent || '').trim().includes(lbl)) return true; }
+        const _ds = document.querySelectorAll('[role="dialog"]');
+        for (const _d of _ds) {
+          if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
+          for (const s of _d.querySelectorAll('span')) { if ((s.textContent || '').trim().includes(lbl)) return true; }
+        }
         return false;
       }, label);
       if (found) {
@@ -167,8 +173,11 @@ export class GroupPostingWorker {
   async tryTypeTextareaOnPage(page, labels, value) {
     for (const label of labels) {
       const found = await page.evaluate((lbl) => {
-        const spans = document.querySelectorAll('[role="dialog"] span');
-        for (const s of spans) { if ((s.textContent || '').trim().includes(lbl)) return true; }
+        const _ds = document.querySelectorAll('[role="dialog"]');
+        for (const _d of _ds) {
+          if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
+          for (const s of _d.querySelectorAll('span')) { if ((s.textContent || '').trim().includes(lbl)) return true; }
+        }
         return false;
       }, label);
       if (found) { await this.nativeTypeTextareaOnPage(page, label, value); return true; }
@@ -182,7 +191,8 @@ export class GroupPostingWorker {
     await page.evaluate((scrollAmount) => {
       const dialogs = document.querySelectorAll('[role="dialog"]');
       for (const d of dialogs) {
-        // Find the scrollable div inside the dialog
+        // Skip Notifications dialog
+        if (/(notification|unread|การแจ้งเตือน)/i.test((d.textContent||'').slice(0,500))) continue;
         const divs = d.querySelectorAll('div');
         for (const el of divs) {
           if (el.scrollHeight > el.clientHeight + 50) {
@@ -197,7 +207,11 @@ export class GroupPostingWorker {
 
   async scrollToLabelOnPage(page, labelText) {
     await page.evaluate((label) => {
-      const spans = document.querySelectorAll('span');
+      // Search within form dialog only (skip Notifications)
+      const _ds = document.querySelectorAll('[role="dialog"]');
+      let _fd = null;
+      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+      const spans = (_fd || document).querySelectorAll('span');
       for (const span of spans) {
         const text = (span.textContent || '').trim();
         if (text !== label && !text.includes(label)) continue;
@@ -217,8 +231,12 @@ export class GroupPostingWorker {
     await this.scrollToLabelOnPage(page, labelText);
 
     const inputBox = await page.evaluate((label) => {
-      // Search within dialog only
-      const spans = document.querySelectorAll('[role="dialog"] span');
+      // Search within form dialog only (skip Notifications)
+      const _ds = document.querySelectorAll('[role="dialog"]');
+      let _fd = null;
+      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+      if (!_fd) return { found: false };
+      const spans = _fd.querySelectorAll('span');
       for (const span of spans) {
         const text = (span.textContent || '').trim();
         if (text !== label && !text.includes(label)) continue;
@@ -268,8 +286,12 @@ export class GroupPostingWorker {
     await this.scrollToLabelOnPage(page, labelText);
 
     const dropdownBox = await page.evaluate((label) => {
-      // Search ONLY within dialog form body — NEVER match title/header elements
-      const spans = document.querySelectorAll('[role="dialog"] span');
+      // Search within form dialog only (skip Notifications)
+      const _ds = document.querySelectorAll('[role="dialog"]');
+      let _fd = null;
+      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+      if (!_fd) return { found: false };
+      const spans = _fd.querySelectorAll('span');
       for (const span of spans) {
         const text = (span.textContent || '').trim();
         if (text !== label && !text.includes(label)) continue;
@@ -391,9 +413,14 @@ export class GroupPostingWorker {
 
     const labelVariants = [labelText, 'คำอธิบาย', 'คำอธิบายอสังหาริมทรัพย์', 'คำอธิบายของที่พักให้เช่า', 'Description'];
     const textareaBox = await page.evaluate((labels) => {
+      // Find form dialog (skip Notifications)
+      const _ds = document.querySelectorAll('[role="dialog"]');
+      let _fd = null;
+      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+      if (!_fd) _fd = _ds[_ds.length - 1];
+      if (!_fd) return { found: false };
       for (const label of labels) {
-        // Search within dialog only
-        const spans = document.querySelectorAll('[role="dialog"] span');
+        const spans = _fd.querySelectorAll('span');
         for (const span of spans) {
           const text = (span.textContent || '').trim();
           if (!text.includes(label)) continue;
@@ -415,7 +442,7 @@ export class GroupPostingWorker {
         }
       }
       // Fallback: find any textarea in dialog
-      const allTa = document.querySelectorAll('[role="dialog"] textarea');
+      const allTa = _fd.querySelectorAll('textarea');
       for (const ta of allTa) {
         const rect = ta.getBoundingClientRect();
         if (rect.width > 100 && rect.height > 30 && rect.y > 0) {
@@ -449,7 +476,11 @@ export class GroupPostingWorker {
 
     const locationBox = await page.evaluate(() => {
       // Search within dialog only
-      const dialog = document.querySelector('[role="dialog"]');
+      // Find form dialog (skip Notifications)
+      const _ds = document.querySelectorAll('[role="dialog"]');
+      let dialog = null;
+      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; dialog = _d; break; }
+      if (!dialog) dialog = _ds[_ds.length - 1];
       if (!dialog) return { found: false, debug: 'no dialog' };
 
       // Method 1: label with SVG icon + input
@@ -813,7 +844,11 @@ export class GroupPostingWorker {
       }
 
       // Verify dialog is still open after image upload
-      const dialogStillOpen = await page.evaluate(() => !!document.querySelector('[role="dialog"]'));
+      const dialogStillOpen = await page.evaluate(() => {
+        const ds = document.querySelectorAll('[role="dialog"]');
+        for (const d of ds) { if (!/(notification|unread|การแจ้งเตือน)/i.test((d.textContent||'').slice(0,500))) return true; }
+        return false;
+      });
       if (!dialogStillOpen) {
         console.log('❌ Dialog closed after image upload!');
         return { success: false, error: 'Dialog ปิดหลังอัพโหลดรูป — กรุณาลองใหม่' };
@@ -826,7 +861,7 @@ export class GroupPostingWorker {
       // as it conflicts with Property type. Only match specific listing type labels.
       const listingLabels = Array.isArray(listingTypeLabel) ? listingTypeLabel : [listingTypeLabel];
       await this.trySelectOnPage(page,
-        ['บ้านสำหรับขายหรือเช่า', 'Home for sale or rent', 'Listing type'],
+        ['บ้านสำหรับขายหรือเช่า', 'Property for sale or rent', 'Home for sale or rent', 'Listing type'],
         listingLabels
       );
       await this.delay(500);

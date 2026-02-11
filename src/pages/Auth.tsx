@@ -74,16 +74,18 @@ export default function Auth() {
   useEffect(() => {
     if (searchParams.get('logout') === 'true') {
       signOut();
+      setView('signin');
       window.history.replaceState(null, '', '/auth');
     }
   }, [searchParams, signOut]);
 
   // If user is authenticated but no license → show activation
+  // (skip if just logged out)
   useEffect(() => {
-    if (isAuthenticated && !isLicenseActive && view !== 'activate') {
+    if (isAuthenticated && !isLicenseActive && view !== 'activate' && searchParams.get('logout') !== 'true') {
       setView('activate');
     }
-  }, [isAuthenticated, isLicenseActive, view]);
+  }, [isAuthenticated, isLicenseActive, view, searchParams]);
 
   // If fully ready → redirect to app
   useEffect(() => {

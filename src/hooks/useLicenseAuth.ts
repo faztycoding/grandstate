@@ -117,9 +117,7 @@ export function useLicenseAuth() {
                     setUser(session?.user ?? null);
                     if (!session?.user) {
                         setLicense(null);
-                        localStorage.removeItem(STORAGE_KEY);
-                        localStorage.removeItem(LICENSE_CACHE_KEY);
-                        localStorage.removeItem('userPackage');
+                        // Keep license key + cache so re-login auto-restores license
                     }
                 }
             }
@@ -177,10 +175,8 @@ export function useLicenseAuth() {
     }, []);
 
     // ── 4. Sign Out ──
+    // Keep license key + cache in localStorage so re-login doesn't require re-entering key
     const signOut = useCallback(async () => {
-        localStorage.removeItem(STORAGE_KEY);
-        localStorage.removeItem(LICENSE_CACHE_KEY);
-        localStorage.removeItem('userPackage');
         setLicense(null);
         setUser(null);
         await supabase.auth.signOut();

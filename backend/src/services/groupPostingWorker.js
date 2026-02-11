@@ -229,6 +229,31 @@ export class GroupPostingWorker {
         }
       }
 
+      // Strategy 2.5: aria-label driven clickables (Facebook sometimes hides text)
+      const clickables = scope.querySelectorAll('[role="button"], [role="tab"], [role="radio"], [role="option"], [role="menuitemradio"], button, a, [tabindex="0"]');
+      const badPrefixes = ['next', 'post', 'publish', 'ถัดไป', 'โพสต์', 'add photo', 'เพิ่มรูป'];
+      for (const el of clickables) {
+        const rect = el.getBoundingClientRect();
+        if (rect.width < 20 || rect.height < 12) continue;
+        if (rect.y < -200 || rect.y > 1200) continue;
+
+        const aria = (el.getAttribute('aria-label') || '').trim();
+        const txt = (el.textContent || '').trim().slice(0, 60);
+        const combined = `${aria} ${txt}`.toLowerCase();
+
+        if (!combined) continue;
+        if (badPrefixes.some(p => combined.startsWith(p))) continue;
+        if (combined.includes('or rent') || combined.includes('or sale') || combined.includes('หรือเช่า') || combined.includes('หรือขาย')) continue;
+
+        const matchesTarget = targets.some(t => combined.includes(t.toLowerCase()));
+        const matchesOpp = opposites.some(t => combined.includes(t.toLowerCase()));
+        if (!matchesTarget || matchesOpp) continue;
+
+        const selected = el.getAttribute('aria-selected') === 'true' || el.getAttribute('aria-checked') === 'true';
+        if (selected) return { found: true, alreadySelected: true, method: 'aria-clickable', text: (aria || txt).slice(0, 60) };
+        return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, method: 'aria-clickable', text: (aria || txt).slice(0, 60) };
+      }
+
       // Strategy 3: Check if form header already shows correct type
       // Look for spans that contain the target text as part of a label
       // IMPORTANT: exclude category labels like "Property for sale or rent" which contain both
@@ -291,15 +316,25 @@ export class GroupPostingWorker {
         const textLower = text.toLowerCase();
         for (const lbl of labelTexts) {
           if (textLower === lbl.toLowerCase() || textLower.includes(lbl.toLowerCase())) {
-            const rect = span.getBoundingClientRect();
+            const clickTarget = span.closest('[role="combobox"], [role="button"], [tabindex="0"], [aria-haspopup], button, a, label') || span;
+            const rect = clickTarget.getBoundingClientRect();
             if (rect.width > 0 && rect.height > 0 && rect.y > 0) {
-              return { found: true, x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, text, labelY: Math.round(rect.y) };
+              return {
+                found: true,
+                x: rect.x + rect.width / 2,
+                y: rect.y + rect.height / 2,
+                text,
+                labelY: Math.round(rect.y),
+                anchorY: Math.round(rect.y + rect.height)
+              };
             }
           }
         }
       }
       return { found: false };
     }, dropdownLabels);
+
+    const anchorYFromDirect = directClickResult && directClickResult.found ? directClickResult.anchorY : null;
 
     if (directClickResult.found) {
       console.log(`    📍 Clicking "${directClickResult.text}" at y=${directClickResult.labelY}`);
@@ -314,6 +349,19 @@ export class GroupPostingWorker {
           return true;
         }
       }
+
+      // If dropdown is keyboard-driven, try ArrowDown to open it
+      await page.keyboard.press('ArrowDown');
+      await this.delay(900);
+      for (const opt of dropdownOptions) {
+        const optClicked = await this._clickOptionInDropdown(page, opt);
+        if (optClicked) {
+          console.log(`    ✅ Listing type selected via direct click + ArrowDown`);
+          await this.delay(1800);
+          return true;
+        }
+      }
+
       await page.keyboard.press('Escape');
       await this.delay(300);
     }
@@ -321,31 +369,35 @@ export class GroupPostingWorker {
     // Strategy 4.6: Proximity-based — find "Choose listing type" label position,
     // then find the nearest combobox below it within 600px
     console.log(`    🔍 Strategy 4.6: Proximity-based (600px range)...`);
-    const proximityResult = await page.evaluate((labelTexts) => {
+    const proximityResult = await page.evaluate((labelTexts, anchorY) => {
       const _ds = document.querySelectorAll('[role="dialog"]');
       let _fd = null;
       for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
       const scope = _fd || document.querySelector('[role="main"]') || document;
 
-      let labelY = -1;
-      let labelText = '';
-      const spans = scope.querySelectorAll('span');
-      for (const span of spans) {
-        const text = (span.textContent || '').trim();
-        if (text.length > 50) continue;
-        const textLower = text.toLowerCase();
-        for (const lbl of labelTexts) {
-          if (textLower === lbl.toLowerCase() || textLower.includes(lbl.toLowerCase())) {
-            const rect = span.getBoundingClientRect();
-            if (rect.width > 0 && rect.height > 0 && rect.y > 0) {
-              labelY = rect.y + rect.height;
-              labelText = text;
-              break;
+      let labelY = typeof anchorY === 'number' && anchorY > 0 ? anchorY : -1;
+      let labelText = typeof anchorY === 'number' && anchorY > 0 ? '(anchorY)' : '';
+
+      if (labelY < 0) {
+        const spans = scope.querySelectorAll('span');
+        for (const span of spans) {
+          const text = (span.textContent || '').trim();
+          if (text.length > 50) continue;
+          const textLower = text.toLowerCase();
+          for (const lbl of labelTexts) {
+            if (textLower === lbl.toLowerCase() || textLower.includes(lbl.toLowerCase())) {
+              const rect = span.getBoundingClientRect();
+              if (rect.width > 0 && rect.height > 0 && rect.y > 0) {
+                labelY = rect.y + rect.height;
+                labelText = text;
+                break;
+              }
             }
           }
+          if (labelY > 0) break;
         }
-        if (labelY > 0) break;
       }
+
       if (labelY < 0) return { found: false, debug: 'label not found' };
 
       // Find the first combobox below the label within 600px
@@ -386,7 +438,7 @@ export class GroupPostingWorker {
       if (bestCombo) return { found: true, ...bestCombo, labelText, labelY: Math.round(labelY), method: 'proximity-clickable' };
 
       return { found: false, debug: `label "${labelText}" at y=${Math.round(labelY)} but no interactive element within 600px` };
-    }, dropdownLabels);
+    }, dropdownLabels, anchorYFromDirect);
 
     if (proximityResult.found) {
       console.log(`    📍 Found via ${proximityResult.method}: "${proximityResult.text}" at y=${proximityResult.comboY} (label="${proximityResult.labelText}" labelY=${proximityResult.labelY})`);
@@ -510,11 +562,12 @@ export class GroupPostingWorker {
       const _ds = document.querySelectorAll('[role="dialog"]');
       let _fd = null;
       for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
-      if (!_fd) return { debug: 'no dialog' };
+      const scope = _fd || document.querySelector('[role="main"]') || document;
+      const scopeKind = _fd ? 'dialog' : (document.querySelector('[role="main"]') ? 'main' : 'document');
 
       // Find the "Choose listing type" span
       let targetSpan = null;
-      const spans = _fd.querySelectorAll('span');
+      const spans = scope.querySelectorAll('span');
       for (const span of spans) {
         const text = (span.textContent || '').trim();
         if (text.length > 50) continue;
@@ -526,7 +579,16 @@ export class GroupPostingWorker {
         }
         if (targetSpan) break;
       }
-      if (!targetSpan) return { debug: 'label span not found' };
+      if (!targetSpan) {
+        // Provide top-of-scope debug so we can see what's rendered
+        const topTexts = [];
+        for (const el of scope.querySelectorAll('span, label, [role="button"], [role="tab"], [role="radio"]')) {
+          const t = (el.textContent || '').trim();
+          if (t.length > 2 && t.length < 40) topTexts.push(t);
+          if (topTexts.length > 30) break;
+        }
+        return { debug: 'label span not found', scopeKind, topTexts: [...new Set(topTexts)].slice(0, 25) };
+      }
 
       // Walk up to find the container section
       const ancestors = [];
@@ -559,11 +621,11 @@ export class GroupPostingWorker {
         if (nearbyElements.length > 10) break;
       }
 
-      return { ancestors, nearbyElements: nearbyElements.slice(0, 20) };
+      return { ancestors, nearbyElements: nearbyElements.slice(0, 20), scopeKind };
     }, dropdownLabels);
     console.log(`    📋 DOM near "Choose listing type":`);
     console.log(`    📋 Ancestors: ${JSON.stringify(domDump.ancestors || [])}`);
-    console.log(`    📋 Nearby: ${JSON.stringify(domDump.nearbyElements || domDump.debug || [])}`);
+    console.log(`    📋 Nearby: ${JSON.stringify(domDump.nearbyElements || domDump.topTexts || domDump.debug || [])}`);
 
     console.log(`    ❌ All listing type strategies exhausted — could not set listing type`);
     return false;

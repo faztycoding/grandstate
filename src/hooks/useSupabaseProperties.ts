@@ -217,18 +217,21 @@ export function useSupabaseProperties() {
     }
   }, []);
 
-  // Initial fetch
+  // Fetch on mount + auth changes (debounced to avoid excessive calls)
   useEffect(() => {
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    
     fetchProperties();
-  }, [fetchProperties]);
-
-  // Listen for auth changes
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      fetchProperties();
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event) => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => fetchProperties(), 300);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      if (debounceTimer) clearTimeout(debounceTimer);
+    };
   }, [fetchProperties]);
 
   return {

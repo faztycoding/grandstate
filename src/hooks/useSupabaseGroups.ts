@@ -294,18 +294,23 @@ export function useSupabaseGroups() {
   const activeGroups = groups.filter(g => g.isActive);
   const inactiveGroups = groups.filter(g => !g.isActive);
 
-  // Initial fetch
+  // Fetch on mount + auth changes (debounced to avoid excessive calls)
   useEffect(() => {
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    
+    // Initial fetch
     fetchGroups();
-  }, [fetchGroups]);
-
-  // Listen for auth changes
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      fetchGroups();
+    
+    // Listen for auth changes (debounced)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event) => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => fetchGroups(), 300);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      if (debounceTimer) clearTimeout(debounceTimer);
+    };
   }, [fetchGroups]);
 
   return {

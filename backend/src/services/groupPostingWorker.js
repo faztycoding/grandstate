@@ -441,13 +441,18 @@ export class GroupPostingWorker {
   async nativeFillLocationOnPage(page, location) {
     if (!location) return;
     console.log(`  📍 Filling location: "${location}"...`);
-    await this.scrollDownInDialog(page, 300);
-    await this.delay(800);
+    // Scroll down aggressively to ensure location field is rendered
+    for (let i = 0; i < 3; i++) {
+      await this.scrollDownInDialog(page, 300);
+      await this.delay(500);
+    }
 
     const locationBox = await page.evaluate(() => {
       // Search within dialog only
       const dialog = document.querySelector('[role="dialog"]');
-      if (!dialog) return { found: false };
+      if (!dialog) return { found: false, debug: 'no dialog' };
+
+      // Method 1: label with SVG icon + input
       const labels = dialog.querySelectorAll('label');
       for (const label of labels) {
         const svg = label.querySelector('svg');
@@ -457,10 +462,47 @@ export class GroupPostingWorker {
           if (rect.y > 150 && rect.width > 50 && rect.height > 0) {
             input.scrollIntoView({ block: 'center' });
             const r = input.getBoundingClientRect();
-            return { x: r.x + r.width / 2, y: r.y + r.height / 2, found: true };
+            return { x: r.x + r.width / 2, y: r.y + r.height / 2, found: true, method: 'svg-label' };
           }
         }
       }
+
+      // Method 2: input with placeholder/aria-label containing location keywords
+      const locationKws = ['location', 'ตำแหน่ง', 'สถานที่', 'city', 'address', 'where'];
+      const allInputs = dialog.querySelectorAll('input');
+      for (const input of allInputs) {
+        const ph = (input.placeholder || '').toLowerCase();
+        const al = (input.getAttribute('aria-label') || '').toLowerCase();
+        const combined = ph + ' ' + al;
+        if (locationKws.some(kw => combined.includes(kw))) {
+          input.scrollIntoView({ block: 'center' });
+          const r = input.getBoundingClientRect();
+          if (r.width > 50 && r.height > 0) {
+            return { x: r.x + r.width / 2, y: r.y + r.height / 2, found: true, method: 'placeholder' };
+          }
+        }
+      }
+
+      // Method 3: span with location text near a combobox
+      const spans = dialog.querySelectorAll('span');
+      for (const span of spans) {
+        const text = (span.textContent || '').trim().toLowerCase();
+        if (!locationKws.some(kw => text.includes(kw))) continue;
+        let parent = span;
+        for (let i = 0; i < 8; i++) {
+          if (!parent.parentElement) break;
+          parent = parent.parentElement;
+          if (parent.getAttribute('role') === 'dialog') break;
+          const input = parent.querySelector('input[role="combobox"], input[type="text"], input:not([type])');
+          if (input) {
+            input.scrollIntoView({ block: 'center' });
+            const r = input.getBoundingClientRect();
+            if (r.width > 50 && r.height > 0) return { x: r.x + r.width / 2, y: r.y + r.height / 2, found: true, method: 'span-near' };
+          }
+        }
+      }
+
+      // Method 4: empty combobox (last resort)
       const combos = dialog.querySelectorAll('input[role="combobox"]');
       for (const input of combos) {
         const rect = input.getBoundingClientRect();
@@ -468,13 +510,23 @@ export class GroupPostingWorker {
         if (!input.value && rect.width > 50 && rect.height > 0) {
           input.scrollIntoView({ block: 'center' });
           const r = input.getBoundingClientRect();
-          return { x: r.x + r.width / 2, y: r.y + r.height / 2, found: true };
+          return { x: r.x + r.width / 2, y: r.y + r.height / 2, found: true, method: 'empty-combo' };
         }
       }
-      return { found: false };
+
+      // Debug info
+      const debugInputs = [];
+      dialog.querySelectorAll('input').forEach(inp => {
+        debugInputs.push({ type: inp.type, placeholder: inp.placeholder, ariaLabel: inp.getAttribute('aria-label'), role: inp.getAttribute('role') });
+      });
+      return { found: false, debug: JSON.stringify(debugInputs.slice(0, 10)) };
     });
 
-    if (!locationBox.found) { console.log(`    ⚠️ Location input not found`); return; }
+    if (!locationBox.found) {
+      console.log(`    ⚠️ Location input not found. Debug: ${locationBox.debug || 'none'}`);
+      return;
+    }
+    console.log(`    📍 Location found via ${locationBox.method}`);
 
     const parts = location.split(' ').filter(Boolean);
     const searchTerms = parts.length >= 2 ? [parts[parts.length - 1], location] : [location];
@@ -807,11 +859,40 @@ export class GroupPostingWorker {
       );
       await this.delay(300);
 
+      // ── SCROLL DOWN to force Facebook to render Location/Description/Size fields ──
+      console.log('📜 Scrolling down to reveal remaining fields...');
+      for (let scrollI = 0; scrollI < 5; scrollI++) {
+        await this.scrollDownInDialog(page, 400);
+        await this.delay(800);
+      }
+      // Debug: dump all visible form labels after scrolling
+      const formLabels = await page.evaluate(() => {
+        const dialog = document.querySelector('[role="dialog"]');
+        if (!dialog) return [];
+        const labels = [];
+        // Check labels
+        dialog.querySelectorAll('label span, label').forEach(el => {
+          const t = (el.textContent || '').trim();
+          if (t.length > 1 && t.length < 50) labels.push(t);
+        });
+        // Check inputs with placeholders or aria-labels
+        dialog.querySelectorAll('input, textarea').forEach(el => {
+          const ph = el.placeholder || '';
+          const al = el.getAttribute('aria-label') || '';
+          if (ph) labels.push(`[placeholder: ${ph}]`);
+          if (al) labels.push(`[aria-label: ${al}]`);
+        });
+        return [...new Set(labels)].slice(0, 30);
+      });
+      console.log(`🔍 Form labels after scroll:`, JSON.stringify(formLabels));
+
       // 3g. Location
       await this.nativeFillLocationOnPage(page, location);
       await this.delay(500);
 
-      // 3h. Description
+      // 3h. Description — scroll down more first
+      await this.scrollDownInDialog(page, 400);
+      await this.delay(500);
       await this.tryTypeTextareaOnPage(page,
         property.listingType === 'rent'
           ? ['คำอธิบายของที่พักให้เช่า', 'คำอธิบาย', 'Rental description', 'Description']
@@ -820,9 +901,9 @@ export class GroupPostingWorker {
       );
       await this.delay(300);
 
-      // 3i. Square meters
+      // 3i. Square meters — scroll down more first
       if (size && size !== '0') {
-        await this.scrollDownInDialog(page, 300);
+        await this.scrollDownInDialog(page, 400);
         await this.delay(500);
         await this.tryTypeOnPage(page, ['ตารางเมตร', 'Square meters', 'Square feet', 'Area', 'Size'], size);
         await this.delay(300);

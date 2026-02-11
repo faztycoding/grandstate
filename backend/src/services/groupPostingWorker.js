@@ -191,6 +191,98 @@ export class GroupPostingWorker {
       : ['สำหรับขาย', 'For sale', 'For Sale', 'Property for sale'];
     console.log(`  🔀 Selecting listing type: ${isSale ? 'SALE' : 'RENT'}...`);
 
+    // ── Strategy 0: Check if a combobox already shows the correct listing type ──
+    const ddLabels0 = ['Choose listing type', 'Listing type', 'เลือกประเภทรายการ', 'ประเภทรายการ'];
+    const ddOpts0 = isSale
+      ? ['For sale', 'For Sale', 'สำหรับขาย', 'Sale']
+      : ['For rent', 'For Rent', 'ให้เช่า', 'Rent'];
+    const comboValueCheck = await page.evaluate((targets, opposites, ddLabels) => {
+      const _ds = document.querySelectorAll('[role="dialog"]');
+      let _fd = null;
+      for (const _d of _ds) {
+        if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
+        _fd = _d; break;
+      }
+      const scope = _fd || document.querySelector('[role="main"]') || document;
+      const combos = scope.querySelectorAll('[role="combobox"]');
+      for (const cb of combos) {
+        const cbText = (cb.textContent || '').trim();
+        if (!cbText || cbText.length > 40) continue;
+        const cbLower = cbText.toLowerCase();
+        if (/house|flat|townhouse|room only|บ้าน|อพาร์ท|ทาวน์|ห้อง|washing|parking|air con|heating|เครื่องซัก|ที่จอดรถ|แอร์/i.test(cbText)) continue;
+        const matchesTarget = targets.some(t => cbLower.includes(t.toLowerCase()));
+        const matchesOpposite = opposites.some(t => cbLower.includes(t.toLowerCase()));
+        if (matchesTarget && matchesOpposite) continue;
+        if (matchesTarget) return { alreadyCorrect: true, text: cbText };
+        if (matchesOpposite) {
+          const rect = cb.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0)
+            return { needsChange: true, x: rect.x + rect.width/2, y: rect.y + rect.height/2, text: cbText };
+        }
+        const isPlaceholder = ddLabels.some(lbl => cbLower.includes(lbl.toLowerCase()));
+        if (isPlaceholder) {
+          const rect = cb.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0)
+            return { isPlaceholder: true, x: rect.x + rect.width/2, y: rect.y + rect.height/2, text: cbText };
+        }
+      }
+      // Also search: find label text then look for nearby combobox sibling
+      const spans = scope.querySelectorAll('span');
+      for (const span of spans) {
+        const t = (span.textContent || '').trim();
+        if (t.length > 50) continue;
+        const tl = t.toLowerCase();
+        if (!ddLabels.some(lbl => tl.includes(lbl.toLowerCase()))) continue;
+        let parent = span;
+        for (let i = 0; i < 8; i++) {
+          if (!parent.parentElement) break;
+          parent = parent.parentElement;
+          if (parent.getAttribute('role') === 'dialog') break;
+          const combo = parent.querySelector('[role="combobox"]');
+          if (combo) {
+            const cText = (combo.textContent || '').trim();
+            const cLow = cText.toLowerCase();
+            const mT = targets.some(tt => cLow.includes(tt.toLowerCase()));
+            const mO = opposites.some(tt => cLow.includes(tt.toLowerCase()));
+            if (mT && !mO) return { alreadyCorrect: true, text: cText };
+            const rect = combo.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+              if (mO && !mT) return { needsChange: true, x: rect.x + rect.width/2, y: rect.y + rect.height/2, text: cText };
+              return { isPlaceholder: true, x: rect.x + rect.width/2, y: rect.y + rect.height/2, text: cText };
+            }
+          }
+        }
+      }
+      return { alreadyCorrect: false, needsChange: false };
+    }, targetTexts, oppositeTexts, ddLabels0);
+
+    if (comboValueCheck.alreadyCorrect) {
+      console.log(`    ✅ Strategy 0: Listing type already correct in combobox: "${comboValueCheck.text}"`);
+      return true;
+    }
+    if (comboValueCheck.needsChange || comboValueCheck.isPlaceholder) {
+      const reason = comboValueCheck.needsChange ? 'wrong value' : 'placeholder';
+      console.log(`    🔄 Strategy 0: Combobox has ${reason} "${comboValueCheck.text}" — clicking...`);
+      await page.mouse.click(comboValueCheck.x, comboValueCheck.y);
+      await this.delay(1500);
+      for (const opt of ddOpts0) {
+        const optClicked = await this._clickOptionInDropdown(page, opt);
+        if (optClicked) { console.log(`    ✅ Listing type set via Strategy 0 combobox`); await this.delay(1800); return true; }
+      }
+      await page.keyboard.press('ArrowDown');
+      await this.delay(800);
+      for (const opt of ddOpts0) {
+        const optClicked = await this._clickOptionInDropdown(page, opt);
+        if (optClicked) { console.log(`    ✅ Listing type set via Strategy 0 combobox+ArrowDown`); await this.delay(1800); return true; }
+      }
+      const avail0 = await this._getVisibleOptions(page);
+      console.log(`    ⚠️ Strategy 0: combobox opened but no option matched. Available: ${JSON.stringify(avail0)}`);
+      await page.keyboard.press('Escape');
+      await this.delay(300);
+    } else {
+      console.log(`    ℹ️ Strategy 0: No listing-type combobox detected, trying tabs/buttons...`);
+    }
+
     const tabResult = await page.evaluate((targets, opposites) => {
       const _ds = document.querySelectorAll('[role="dialog"]');
       let _fd = null;
@@ -316,7 +408,18 @@ export class GroupPostingWorker {
         const textLower = text.toLowerCase();
         for (const lbl of labelTexts) {
           if (textLower === lbl.toLowerCase() || textLower.includes(lbl.toLowerCase())) {
-            const clickTarget = span.closest('[role="combobox"], [role="button"], [tabindex="0"], [aria-haspopup], button, a, label') || span;
+            // PRIORITY 1: Walk up parent tree to find a nearby combobox sibling
+            let comboTarget = null;
+            let p = span;
+            for (let i = 0; i < 8; i++) {
+              if (!p.parentElement) break;
+              p = p.parentElement;
+              if (p.getAttribute('role') === 'dialog') break;
+              const combo = p.querySelector('[role="combobox"]');
+              if (combo && combo !== span) { comboTarget = combo; break; }
+            }
+            // PRIORITY 2: closest combobox/haspopup ancestor (narrow selectors only)
+            const clickTarget = comboTarget || span.closest('[role="combobox"], [aria-haspopup], [tabindex="0"]') || span;
             const rect = clickTarget.getBoundingClientRect();
             if (rect.width > 0 && rect.height > 0 && rect.y > 0) {
               return {
@@ -325,7 +428,8 @@ export class GroupPostingWorker {
                 y: rect.y + rect.height / 2,
                 text,
                 labelY: Math.round(rect.y),
-                anchorY: Math.round(rect.y + rect.height)
+                anchorY: Math.round(rect.y + rect.height),
+                hitCombo: !!comboTarget
               };
             }
           }
@@ -337,7 +441,7 @@ export class GroupPostingWorker {
     const anchorYFromDirect = directClickResult && directClickResult.found ? directClickResult.anchorY : null;
 
     if (directClickResult.found) {
-      console.log(`    📍 Clicking "${directClickResult.text}" at y=${directClickResult.labelY}`);
+      console.log(`    📍 Strategy 4.5: Clicking "${directClickResult.text}" at y=${directClickResult.labelY} hitCombo=${directClickResult.hitCombo || false}`);
       await page.mouse.click(directClickResult.x, directClickResult.y);
       await this.delay(1500);
       // Check if clicking opened a dropdown
@@ -421,21 +525,22 @@ export class GroupPostingWorker {
 
       if (bestCombo) return { found: true, ...bestCombo, labelText, labelY: Math.round(labelY), method: 'proximity-combobox' };
 
-      // Also look for buttons/clickables near the label
-      const clickables = scope.querySelectorAll('[role="button"], [tabindex="0"], [aria-haspopup]');
-      for (const el of clickables) {
+      // Also look for aria-haspopup elements near the label (strict: dropdown triggers only, NOT generic buttons)
+      const haspopups = scope.querySelectorAll('[aria-haspopup="true"], [aria-haspopup="listbox"], [aria-haspopup="menu"]');
+      for (const el of haspopups) {
         const rect = el.getBoundingClientRect();
         if (rect.width < 40 || rect.height < 15) continue;
+        const elText = (el.textContent || '').trim();
+        if (elText.length > 30) continue; // listing type values are short
         const dist = rect.y - labelY;
-        if (dist >= -20 && dist < 600 && dist < bestDist) {
-          const elText = (el.textContent || '').trim().slice(0, 60);
+        if (dist >= -20 && dist < 200 && dist < bestDist) {
           if (/^(next|post|publish|ถัดไป|โพสต์|add photo|เพิ่มรูป)/i.test(elText)) continue;
           bestDist = dist;
-          bestCombo = { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, text: elText, comboY: Math.round(rect.y) };
+          bestCombo = { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, text: elText.slice(0, 60), comboY: Math.round(rect.y) };
         }
       }
 
-      if (bestCombo) return { found: true, ...bestCombo, labelText, labelY: Math.round(labelY), method: 'proximity-clickable' };
+      if (bestCombo) return { found: true, ...bestCombo, labelText, labelY: Math.round(labelY), method: 'proximity-haspopup' };
 
       return { found: false, debug: `label "${labelText}" at y=${Math.round(labelY)} but no interactive element within 600px` };
     }, dropdownLabels, anchorYFromDirect);

@@ -129,6 +129,91 @@ export class GroupPostingWorker {
     return listingType === 'rent' ? ['ให้เช่า', 'For Rent'] : ['สำหรับขาย', 'For Sale'];
   }
 
+  // Facebook uses clickable tabs/buttons for "For sale" / "For rent" — NOT a dropdown
+  async selectListingTypeTab(page, listingType) {
+    const isSale = listingType !== 'rent';
+    const targetTexts = isSale
+      ? ['สำหรับขาย', 'For sale', 'For Sale', 'Property for sale']
+      : ['ให้เช่า', 'For rent', 'For Rent', 'Property for rent'];
+    // Also define the OPPOSITE to detect if we need to switch
+    const oppositeTexts = isSale
+      ? ['ให้เช่า', 'For rent', 'For Rent', 'Property for rent']
+      : ['สำหรับขาย', 'For sale', 'For Sale', 'Property for sale'];
+    console.log(`  🔀 Selecting listing type: ${isSale ? 'SALE' : 'RENT'}...`);
+
+    const tabResult = await page.evaluate((targets, opposites) => {
+      const _ds = document.querySelectorAll('[role="dialog"]');
+      let _fd = null;
+      for (const _d of _ds) {
+        if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
+        _fd = _d; break;
+      }
+      if (!_fd) return { found: false, debug: 'no dialog' };
+
+      // Strategy 1: role="tab", role="radio", role="option"
+      const tabRoles = _fd.querySelectorAll('[role="tab"], [role="radio"], [role="option"], [role="menuitemradio"]');
+      for (const tab of tabRoles) {
+        const text = (tab.textContent || '').trim();
+        if (targets.some(t => text === t || text.toLowerCase().includes(t.toLowerCase()))) {
+          const selected = tab.getAttribute('aria-selected') === 'true' || tab.getAttribute('aria-checked') === 'true';
+          if (selected) return { found: true, alreadySelected: true, method: 'tab-role' };
+          const rect = tab.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0)
+            return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, method: 'tab-role', text };
+        }
+      }
+
+      // Strategy 2: Find any span/div with exact target text — click it
+      const allEls = _fd.querySelectorAll('span, div, a, label');
+      for (const el of allEls) {
+        const text = (el.textContent || '').trim();
+        // Must be a short text match (avoid matching long paragraphs)
+        if (text.length > 40) continue;
+        if (!targets.some(t => text === t || text.toLowerCase() === t.toLowerCase())) continue;
+        if (el.closest('h1, h2, h3, h4, [role="heading"]')) continue;
+        // Check if this element or parent is clickable
+        const clickTarget = el.closest('[role="button"], [role="tab"], [role="radio"], button, a, label') || el;
+        const rect = clickTarget.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, method: 'text-match', text };
+        }
+      }
+
+      // Strategy 3: Check if form header already shows correct type
+      // Look for spans that contain the target text as part of a label
+      for (const el of allEls) {
+        const text = (el.textContent || '').trim().toLowerCase();
+        if (targets.some(t => text.includes(t.toLowerCase()) && text.includes('property'))) {
+          return { found: true, alreadySelected: true, method: 'header-check' };
+        }
+      }
+
+      // Debug: dump clickable elements near top of form
+      const debugEls = [];
+      for (const el of allEls) {
+        const text = (el.textContent || '').trim();
+        if (text.length > 2 && text.length < 40) {
+          const rect = el.getBoundingClientRect();
+          if (rect.y > 0 && rect.y < 400 && rect.width > 20) debugEls.push(text);
+        }
+      }
+      return { found: false, debug: [...new Set(debugEls)].slice(0, 15) };
+    }, targetTexts, oppositeTexts);
+
+    if (tabResult.alreadySelected) {
+      console.log(`    ✅ Listing type already correct`);
+      return true;
+    }
+    if (tabResult.found) {
+      console.log(`    📍 Found listing type tab via ${tabResult.method}: "${tabResult.text}"`);
+      await page.mouse.click(tabResult.x, tabResult.y);
+      await this.delay(2000); // Wait for form to reload with correct fields
+      return true;
+    }
+    console.log(`    ⚠️ Listing type tab not found. Top elements: ${JSON.stringify(tabResult.debug)}`);
+    return false;
+  }
+
   // Try multiple labels for nativeTypeOnPage — returns true if any label worked
   async tryTypeOnPage(page, labels, value) {
     for (const label of labels) {
@@ -925,14 +1010,8 @@ export class GroupPostingWorker {
       console.log('✅ Dialog still open — continuing form fill...');
       updateMsg('กรอกข้อมูลสินทรัพย์...');
 
-      // 3b. Listing type: ให้เช่า / สำหรับขาย / For Rent / For Sale
-      // NOTE: This dropdown may not exist on all forms. DO NOT use generic "Type" label
-      // as it conflicts with Property type. Only match specific listing type labels.
-      const listingLabels = Array.isArray(listingTypeLabel) ? listingTypeLabel : [listingTypeLabel];
-      await this.trySelectOnPage(page,
-        ['บ้านสำหรับขายหรือเช่า', 'Property for sale or rent', 'Home for sale or rent', 'Listing type'],
-        listingLabels
-      );
+      // 3b. Listing type: For Sale / For Rent — Facebook uses TABS/BUTTONS, not dropdown
+      await this.selectListingTypeTab(page, property.listingType || 'sale');
       await this.delay(500);
 
       // 3c. Property type (Thai + English)
@@ -1111,6 +1190,31 @@ export class GroupPostingWorker {
 
       // Find Marketplace row and click the checkbox/toggle on the right side
       let mktClicked = false;
+      // Debug: dump what's on the page after Next
+      const afterNextDebug = await page.evaluate(() => {
+        const _ds = document.querySelectorAll('[role="dialog"]');
+        const info = { dialogs: _ds.length, texts: [] };
+        for (const _d of _ds) {
+          if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
+          const spans = _d.querySelectorAll('span');
+          for (const s of spans) {
+            const t = (s.textContent || '').trim();
+            if (t.length > 2 && t.length < 50) info.texts.push(t);
+          }
+        }
+        // Also check page-level buttons
+        const btns = document.querySelectorAll('[role="button"], button');
+        const btnTexts = [];
+        for (const b of btns) {
+          const t = (b.textContent || '').trim();
+          if (t.length > 1 && t.length < 30) btnTexts.push(t);
+        }
+        info.buttons = [...new Set(btnTexts)].slice(0, 20);
+        info.texts = [...new Set(info.texts)].slice(0, 25);
+        return info;
+      });
+      console.log('🔍 After Next — page content:', JSON.stringify(afterNextDebug));
+
       for (let attempt = 0; attempt < 5 && !mktClicked; attempt++) {
         if (attempt > 0) {
           console.log(`   🔄 Retry Marketplace tick ${attempt + 1}/5...`);
@@ -1216,53 +1320,77 @@ export class GroupPostingWorker {
       await this.delay(preSubmitDelay);
 
       let posted = false;
-      const postKeywords = ['โพสต์', 'Post', 'ลงประกาศ', 'Publish'];
+      const postKeywords = ['โพสต์', 'Post', 'ลงประกาศ', 'Publish', 'Submit', 'List item', 'Create listing'];
       for (let attempt = 0; attempt < 5 && !posted; attempt++) {
         if (attempt > 0) {
           console.log(`   🔄 Retry โพสต์ ${attempt + 1}/5...`);
           await this.delay(2000);
           // Re-scroll down on retry
-          await page.evaluate(() => {
-            const dialogs = document.querySelectorAll('[role="dialog"]');
-            for (const d of dialogs) {
-              const scrollables = d.querySelectorAll('div');
-              for (const el of scrollables) {
-                if (el.scrollHeight > el.clientHeight + 50) {
-                  el.scrollTop = el.scrollHeight;
-                }
-              }
-            }
-            window.scrollTo(0, document.body.scrollHeight);
-          });
+          await this.scrollDownInDialog(page, 300);
+          await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
           await this.delay(1000);
         }
 
         const postBox = await page.evaluate((keywords) => {
-          const buttons = document.querySelectorAll('[role="button"], button');
+          // Search in form dialog first (skip Notifications)
+          const _ds = document.querySelectorAll('[role="dialog"]');
+          let _fd = null;
+          for (const _d of _ds) {
+            if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
+            _fd = _d; break;
+          }
+          const scope = _fd || document;
+          const buttons = scope.querySelectorAll('[role="button"], button');
+          let disabledBtn = null;
           for (const btn of buttons) {
-            // Check innermost span text first
             const spans = btn.querySelectorAll('span');
             let btnText = '';
             for (const s of spans) {
               const t = (s.textContent || '').trim();
-              if (keywords.includes(t)) { btnText = t; break; }
+              if (keywords.some(kw => t === kw || t.toLowerCase() === kw.toLowerCase())) { btnText = t; break; }
             }
-            if (!btnText) btnText = (btn.textContent || '').trim();
+            if (!btnText) {
+              const fullText = (btn.textContent || '').trim();
+              if (keywords.some(kw => fullText === kw || fullText.toLowerCase() === kw.toLowerCase())) btnText = fullText;
+            }
             const label = btn.getAttribute('aria-label') || '';
-
-            const matched = keywords.includes(btnText) || keywords.includes(label);
+            const matched = btnText || keywords.some(kw => label === kw || label.toLowerCase() === kw.toLowerCase());
             if (!matched) continue;
 
             const isDisabled = btn.getAttribute('aria-disabled') === 'true' || btn.disabled;
-            if (isDisabled) continue;
+            if (isDisabled) { disabledBtn = { text: btnText || label, disabled: true }; continue; }
 
             const rect = btn.getBoundingClientRect();
             if (rect.width > 0 && rect.height > 0) {
-              return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, text: btnText };
+              return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, text: btnText || label };
             }
           }
-          return { found: false };
+          // If not found in dialog, search entire page
+          if (!_fd) return disabledBtn ? { found: false, disabled: true, text: disabledBtn.text } : { found: false };
+          const allBtns = document.querySelectorAll('[role="button"], button');
+          for (const btn of allBtns) {
+            if (scope.contains(btn)) continue; // already checked
+            const spans = btn.querySelectorAll('span');
+            let btnText = '';
+            for (const s of spans) {
+              const t = (s.textContent || '').trim();
+              if (keywords.some(kw => t === kw || t.toLowerCase() === kw.toLowerCase())) { btnText = t; break; }
+            }
+            const label = btn.getAttribute('aria-label') || '';
+            if (!btnText && !keywords.some(kw => label === kw || label.toLowerCase() === kw.toLowerCase())) continue;
+            const isDisabled = btn.getAttribute('aria-disabled') === 'true' || btn.disabled;
+            if (isDisabled) { disabledBtn = { text: btnText || label, disabled: true }; continue; }
+            const rect = btn.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+              return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, text: btnText || label, scope: 'page' };
+            }
+          }
+          return disabledBtn ? { found: false, disabled: true, text: disabledBtn.text } : { found: false };
         }, postKeywords);
+
+        if (!postBox.found && postBox.disabled && attempt === 0) {
+          console.log(`   ⚠️ Post button found but DISABLED: "${postBox.text}"`);
+        }
 
         if (postBox.found) {
           console.log(`   📍 "${postBox.text}" at (${Math.round(postBox.x)}, ${Math.round(postBox.y)})`);

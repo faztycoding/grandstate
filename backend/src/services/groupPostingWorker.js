@@ -1623,10 +1623,168 @@ export class GroupPostingWorker {
 
       // ── CASE A: Dialog closed — listing published directly ──
       if (postNextState.state === 'no-dialog') {
-        console.log('✅ Dialog closed after Next — listing likely published directly!');
-        await this.delay(2000);
-        console.log('✅ Buy/sell listing posted successfully!');
-        return { success: true, postUrl: null };
+        console.log('✅ Dialog closed after Next — verifying publish result...');
+
+        const checkResult = async () => {
+          return page.evaluate(() => {
+            const url = location.href;
+            const title = document.title || '';
+
+            const toastSelectors = '[role="alert"], [role="status"], [aria-live="polite"], [aria-live="assertive"]';
+            const toastTexts = [];
+            document.querySelectorAll(toastSelectors).forEach(el => {
+              const t = (el.textContent || '').trim();
+              if (t.length > 2 && t.length < 250) toastTexts.push(t);
+            });
+
+            const allText = (document.body?.innerText || document.body?.textContent || '').toLowerCase();
+            const pendingKws = ['pending approval', 'awaiting approval', 'pending', 'รอการอนุมัติ', 'กำลังรอการอนุมัติ', 'รอดำเนินการ'];
+            const successKws = ['listing published', 'listed successfully', 'your listing has been', 'published to', 'posted to', 'เผยแพร่', 'ลงประกาศแล้ว', 'โพสต์แล้ว', 'สำเร็จ'];
+
+            const pendingText = pendingKws.find(kw => allText.includes(kw)) || '';
+            const successText = successKws.find(kw => allText.includes(kw)) || '';
+
+            const urls = [];
+            document.querySelectorAll('a[href]').forEach(a => {
+              const href = a.href || '';
+              if (!href) return;
+              const isMarketplaceItem = href.includes('/marketplace/item/');
+              const isPermalink = href.includes('/permalink/');
+              const isBuySell = href.includes('/buy_sell/');
+              const isGroupPost = href.includes('/groups/') && href.includes('/posts/');
+              if (isMarketplaceItem || isPermalink || isBuySell || isGroupPost) urls.push(href);
+            });
+            const postUrl = [...new Set(urls)][0] || null;
+
+            const postKws = ['โพสต์', 'post', 'ลงประกาศ', 'publish', 'submit', 'list item', 'create listing', 'done', 'เสร็จ', 'ตกลง'];
+            let postBtnText = '';
+            let postBtnDisabled = false;
+            for (const btn of document.querySelectorAll('[role="button"], button')) {
+              const spans = btn.querySelectorAll('span');
+              let text = '';
+              for (const s of spans) {
+                const t = (s.textContent || '').trim();
+                if (t.length > 0 && t.length < 35) { text = t; break; }
+              }
+              if (!text) text = (btn.textContent || '').trim();
+              const lower = text.toLowerCase();
+              if (!postKws.some(kw => lower === kw || lower.includes(kw))) continue;
+              const rect = btn.getBoundingClientRect();
+              if (rect.width < 40 || rect.height < 18) continue;
+              postBtnText = text.slice(0, 40);
+              postBtnDisabled = btn.getAttribute('aria-disabled') === 'true' || btn.disabled;
+              break;
+            }
+
+            return {
+              url,
+              title: title.slice(0, 80),
+              toasts: [...new Set(toastTexts)].slice(0, 10),
+              pendingText,
+              successText,
+              postUrl,
+              postBtnText,
+              postBtnDisabled,
+            };
+          });
+        };
+
+        let verify1 = null;
+        try {
+          verify1 = await checkResult();
+        } catch (e) {
+          console.log(`   ⚠️ Verify (pass 1) failed: ${e.message}`);
+        }
+
+        if (verify1) {
+          console.log(`   🌐 URL: ${verify1.url}`);
+          if (verify1.toasts?.length) console.log(`   🔔 Toasts: ${JSON.stringify(verify1.toasts)}`);
+          if (verify1.pendingText) console.log(`   🕓 Pending indicator: ${verify1.pendingText}`);
+          if (verify1.successText) console.log(`   ✅ Success indicator: ${verify1.successText}`);
+          if (verify1.postUrl) console.log(`   🔗 Post URL: ${verify1.postUrl}`);
+        }
+
+        if (verify1?.postUrl) {
+          console.log('✅ Buy/sell listing posted successfully!');
+          return { success: true, postUrl: verify1.postUrl };
+        }
+
+        if (verify1?.pendingText) {
+          console.log('✅ Listing submitted (pending approval)');
+          return { success: true, postUrl: null, pendingApproval: true };
+        }
+
+        if (verify1?.successText) {
+          console.log('✅ Success indicator detected (no URL)');
+          return { success: true, postUrl: null };
+        }
+
+        if (verify1?.postBtnText && !verify1.postBtnDisabled) {
+          console.log(`   📍 Found page-level post button "${verify1.postBtnText}" — clicking...`);
+          try {
+            const postHandle = await page.evaluateHandle((postKws) => {
+              const kws = postKws.map(k => k.toLowerCase());
+              for (const btn of document.querySelectorAll('[role="button"], button')) {
+                const spans = btn.querySelectorAll('span');
+                let text = '';
+                for (const s of spans) {
+                  const t = (s.textContent || '').trim();
+                  if (t.length > 0 && t.length < 35) { text = t; break; }
+                }
+                if (!text) text = (btn.textContent || '').trim();
+                const lower = text.toLowerCase();
+                if (!kws.some(kw => lower === kw || lower.includes(kw))) continue;
+                const dis = btn.getAttribute('aria-disabled') === 'true' || btn.disabled;
+                if (dis) continue;
+                const rect = btn.getBoundingClientRect();
+                if (rect.width < 40 || rect.height < 18) continue;
+                return btn;
+              }
+              return null;
+            }, ['โพสต์', 'post', 'ลงประกาศ', 'publish', 'submit', 'list item', 'create listing', 'done', 'เสร็จ', 'ตกลง']);
+
+            if (postHandle.asElement()) {
+              await postHandle.asElement().click();
+              console.log('   ✅ Page-level post button clicked');
+            }
+            await postHandle.dispose();
+          } catch (e) {
+            console.log(`   ⚠️ Page-level post button click failed: ${e.message}`);
+          }
+
+          await this.delay(5000);
+
+          let verify2 = null;
+          try {
+            verify2 = await checkResult();
+          } catch (e) {
+            console.log(`   ⚠️ Verify (pass 2) failed: ${e.message}`);
+          }
+
+          if (verify2) {
+            console.log(`   🌐 URL: ${verify2.url}`);
+            if (verify2.toasts?.length) console.log(`   🔔 Toasts: ${JSON.stringify(verify2.toasts)}`);
+            if (verify2.pendingText) console.log(`   🕓 Pending indicator: ${verify2.pendingText}`);
+            if (verify2.successText) console.log(`   ✅ Success indicator: ${verify2.successText}`);
+            if (verify2.postUrl) console.log(`   🔗 Post URL: ${verify2.postUrl}`);
+          }
+
+          if (verify2?.postUrl) {
+            console.log('✅ Buy/sell listing posted successfully!');
+            return { success: true, postUrl: verify2.postUrl };
+          }
+          if (verify2?.pendingText) {
+            console.log('✅ Listing submitted (pending approval)');
+            return { success: true, postUrl: null, pendingApproval: true };
+          }
+          if (verify2?.successText) {
+            console.log('✅ Success indicator detected (no URL)');
+            return { success: true, postUrl: null };
+          }
+        }
+
+        console.log('❌ Dialog closed but no publish confirmation detected');
+        return { success: false, error: 'กดถัดไปแล้ว dialog ปิด แต่ไม่พบสัญญาณยืนยันว่าโพสต์สำเร็จ/รออนุมัติ (อาจปิดหน้าต่างหรือยังไม่ได้กด Post)' };
       }
 
       // ── CASE D: Success message shown ──
@@ -1793,8 +1951,66 @@ export class GroupPostingWorker {
         console.log('   ℹ️ No final confirmation dialog');
       }
 
-      console.log('✅ Buy/sell listing posted successfully!');
-      return { success: true, postUrl: null };
+      const finalVerify = await page.evaluate(() => {
+        const url = location.href;
+        const title = document.title || '';
+
+        const toastSelectors = '[role="alert"], [role="status"], [aria-live="polite"], [aria-live="assertive"]';
+        const toastTexts = [];
+        document.querySelectorAll(toastSelectors).forEach(el => {
+          const t = (el.textContent || '').trim();
+          if (t.length > 2 && t.length < 250) toastTexts.push(t);
+        });
+
+        const allText = (document.body?.innerText || document.body?.textContent || '').toLowerCase();
+        const pendingKws = ['pending approval', 'awaiting approval', 'pending', 'รอการอนุมัติ', 'กำลังรอการอนุมัติ', 'รอดำเนินการ'];
+        const successKws = ['listing published', 'listed successfully', 'your listing has been', 'published to', 'posted to', 'เผยแพร่', 'ลงประกาศแล้ว', 'โพสต์แล้ว', 'สำเร็จ'];
+        const pendingText = pendingKws.find(kw => allText.includes(kw)) || '';
+        const successText = successKws.find(kw => allText.includes(kw)) || '';
+
+        const urls = [];
+        document.querySelectorAll('a[href]').forEach(a => {
+          const href = a.href || '';
+          if (!href) return;
+          const isMarketplaceItem = href.includes('/marketplace/item/');
+          const isPermalink = href.includes('/permalink/');
+          const isBuySell = href.includes('/buy_sell/');
+          const isGroupPost = href.includes('/groups/') && href.includes('/posts/');
+          if (isMarketplaceItem || isPermalink || isBuySell || isGroupPost) urls.push(href);
+        });
+        const postUrl = [...new Set(urls)][0] || null;
+
+        return {
+          url,
+          title: title.slice(0, 80),
+          toasts: [...new Set(toastTexts)].slice(0, 10),
+          pendingText,
+          successText,
+          postUrl,
+        };
+      });
+
+      console.log(`   🌐 URL: ${finalVerify.url}`);
+      if (finalVerify.toasts?.length) console.log(`   🔔 Toasts: ${JSON.stringify(finalVerify.toasts)}`);
+      if (finalVerify.pendingText) console.log(`   🕓 Pending indicator: ${finalVerify.pendingText}`);
+      if (finalVerify.successText) console.log(`   ✅ Success indicator: ${finalVerify.successText}`);
+      if (finalVerify.postUrl) console.log(`   🔗 Post URL: ${finalVerify.postUrl}`);
+
+      if (finalVerify.postUrl) {
+        console.log('✅ Buy/sell listing posted successfully!');
+        return { success: true, postUrl: finalVerify.postUrl };
+      }
+      if (finalVerify.pendingText) {
+        console.log('✅ Listing submitted (pending approval)');
+        return { success: true, postUrl: null, pendingApproval: true };
+      }
+      if (finalVerify.successText) {
+        console.log('✅ Success indicator detected (no URL)');
+        return { success: true, postUrl: null };
+      }
+
+      console.log('❌ Post click finished but no publish confirmation detected');
+      return { success: false, error: 'กดโพสต์แล้ว แต่ไม่พบสัญญาณยืนยันว่าโพสต์สำเร็จ/รออนุมัติ (อาจถูกปฏิเสธ/เงื่อนไขกลุ่ม/FB ไม่รับโพสต์)' };
 
     } catch (error) {
       console.error('❌ Buy/sell listing error:', error.message);
@@ -3306,9 +3522,13 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
 
             if (result.success) {
               task.status = 'completed';
-              task.message = 'โพสต์สำเร็จ';
+              task.message = result.pendingApproval ? 'โพสต์รออนุมัติ' : 'โพสต์สำเร็จ';
               task.postUrl = result.postUrl;
-              console.log(`   ✅ [${globalIdx}] Posted: ${result.actualGroupName || task.groupName}`);
+              if (result.pendingApproval) {
+                console.log(`   🕓 [${globalIdx}] Pending approval: ${result.actualGroupName || task.groupName}`);
+              } else {
+                console.log(`   ✅ [${globalIdx}] Posted: ${result.actualGroupName || task.groupName}`);
+              }
               if (this.onPostResult) this.onPostResult(property?.id, task.groupId, result.actualGroupName || task.groupName, true);
             } else {
               task.status = 'failed';

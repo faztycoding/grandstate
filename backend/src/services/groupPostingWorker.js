@@ -198,10 +198,10 @@ export class GroupPostingWorker {
         if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
         _fd = _d; break;
       }
-      if (!_fd) return { found: false, debug: 'no dialog' };
+      const scope = _fd || document.querySelector('[role="main"]') || document;
 
       // Strategy 1: role="tab", role="radio", role="option"
-      const tabRoles = _fd.querySelectorAll('[role="tab"], [role="radio"], [role="option"], [role="menuitemradio"]');
+      const tabRoles = scope.querySelectorAll('[role="tab"], [role="radio"], [role="option"], [role="menuitemradio"]');
       for (const tab of tabRoles) {
         const text = (tab.textContent || '').trim();
         if (targets.some(t => text === t || text.toLowerCase().includes(t.toLowerCase()))) {
@@ -214,7 +214,7 @@ export class GroupPostingWorker {
       }
 
       // Strategy 2: Find any span/div with exact target text — click it
-      const allEls = _fd.querySelectorAll('span, div, a, label');
+      const allEls = scope.querySelectorAll('span, div, a, label');
       for (const el of allEls) {
         const text = (el.textContent || '').trim();
         // Must be a short text match (avoid matching long paragraphs)
@@ -283,8 +283,8 @@ export class GroupPostingWorker {
       const _ds = document.querySelectorAll('[role="dialog"]');
       let _fd = null;
       for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
-      if (!_fd) return { found: false };
-      const spans = _fd.querySelectorAll('span');
+      const scope = _fd || document.querySelector('[role="main"]') || document;
+      const spans = scope.querySelectorAll('span');
       for (const span of spans) {
         const text = (span.textContent || '').trim();
         if (text.length > 50) continue;
@@ -325,11 +325,11 @@ export class GroupPostingWorker {
       const _ds = document.querySelectorAll('[role="dialog"]');
       let _fd = null;
       for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
-      if (!_fd) return { found: false, debug: 'no dialog' };
+      const scope = _fd || document.querySelector('[role="main"]') || document;
 
       let labelY = -1;
       let labelText = '';
-      const spans = _fd.querySelectorAll('span');
+      const spans = scope.querySelectorAll('span');
       for (const span of spans) {
         const text = (span.textContent || '').trim();
         if (text.length > 50) continue;
@@ -349,7 +349,7 @@ export class GroupPostingWorker {
       if (labelY < 0) return { found: false, debug: 'label not found' };
 
       // Find the first combobox below the label within 600px
-      const combos = _fd.querySelectorAll('[role="combobox"]');
+      const combos = scope.querySelectorAll('[role="combobox"]');
       let bestCombo = null;
       let bestDist = 600;
       for (const cb of combos) {
@@ -370,7 +370,7 @@ export class GroupPostingWorker {
       if (bestCombo) return { found: true, ...bestCombo, labelText, labelY: Math.round(labelY), method: 'proximity-combobox' };
 
       // Also look for buttons/clickables near the label
-      const clickables = _fd.querySelectorAll('[role="button"], [tabindex="0"], [aria-haspopup]');
+      const clickables = scope.querySelectorAll('[role="button"], [tabindex="0"], [aria-haspopup]');
       for (const el of clickables) {
         const rect = el.getBoundingClientRect();
         if (rect.width < 40 || rect.height < 15) continue;
@@ -427,9 +427,9 @@ export class GroupPostingWorker {
       const _ds = document.querySelectorAll('[role="dialog"]');
       let _fd = null;
       for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
-      if (!_fd) return [];
+      const scope = _fd || document.querySelector('[role="main"]') || document;
       const out = [];
-      const combos = _fd.querySelectorAll('[role="combobox"]');
+      const combos = scope.querySelectorAll('[role="combobox"]');
       for (const cb of combos) {
         const rect = cb.getBoundingClientRect();
         if (rect.width < 20 || rect.height < 10) continue;
@@ -626,20 +626,8 @@ export class GroupPostingWorker {
   // Try multiple labels for nativeTypeOnPage — returns true if any label worked
   async tryTypeOnPage(page, labels, value, { alsoTryDropdown = false } = {}) {
     for (const label of labels) {
-      const found = await page.evaluate((lbl) => {
-        const _ds = document.querySelectorAll('[role="dialog"]');
-        for (const _d of _ds) {
-          if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
-          for (const s of _d.querySelectorAll('span')) { if ((s.textContent || '').trim().includes(lbl)) return true; }
-        }
-        return false;
-      }, label);
-      if (found) {
-        const typed = await this.nativeTypeOnPage(page, label, value);
-        if (typed) return true;
-        // Input not found for this label — continue trying other labels
-        console.log(`    🔄 Label "${label}" found but no input — trying next...`);
-      }
+      const typed = await this.nativeTypeOnPage(page, label, value);
+      if (typed) return true;
     }
     // nativeTypeOnPage already has aria-label/placeholder search built in (PRIORITY 3)
     // So if we get here, no input was found at all
@@ -658,19 +646,9 @@ export class GroupPostingWorker {
   async trySelectOnPage(page, labels, optionValues) {
     const opts = Array.isArray(optionValues) ? optionValues : [optionValues];
     for (const label of labels) {
-      const found = await page.evaluate((lbl) => {
-        const _ds = document.querySelectorAll('[role="dialog"]');
-        for (const _d of _ds) {
-          if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
-          for (const s of _d.querySelectorAll('span')) { if ((s.textContent || '').trim().includes(lbl)) return true; }
-        }
-        return false;
-      }, label);
-      if (found) {
-        for (const opt of opts) {
-          const ok = await this.nativeSelectDropdownOnPage(page, label, opt);
-          if (ok) return true;
-        }
+      for (const opt of opts) {
+        const ok = await this.nativeSelectDropdownOnPage(page, label, opt);
+        if (ok) return true;
       }
     }
     console.log(`    ⚠️ None of dropdown labels found or could not select: ${JSON.stringify(labels)}`);
@@ -680,27 +658,21 @@ export class GroupPostingWorker {
   // Try multiple labels for nativeTypeTextareaOnPage
   async tryTypeTextareaOnPage(page, labels, value) {
     for (const label of labels) {
-      const found = await page.evaluate((lbl) => {
-        const _ds = document.querySelectorAll('[role="dialog"]');
-        for (const _d of _ds) {
-          if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
-          for (const s of _d.querySelectorAll('span')) { if ((s.textContent || '').trim().includes(lbl)) return true; }
-        }
-        return false;
-      }, label);
-      if (found) { await this.nativeTypeTextareaOnPage(page, label, value); return true; }
+      const ok = await this.nativeTypeTextareaOnPage(page, label, value);
+      if (ok) return true;
     }
     // Fallback: no span label found, but nativeTypeTextareaOnPage has its own
     // textarea/textbox finder — always try it
     console.log(`    ⚠️ None of textarea labels found: ${JSON.stringify(labels)} — trying textarea fallback...`);
-    await this.nativeTypeTextareaOnPage(page, labels[0] || 'Description', value);
-    return false;
+    const ok = await this.nativeTypeTextareaOnPage(page, labels[0] || 'Description', value);
+    return !!ok;
   }
 
   // Scroll within the dialog (NOT window) — prevents closing the dialog
   async scrollDownInDialog(page, amount = 300) {
     await page.evaluate((scrollAmount) => {
       const dialogs = document.querySelectorAll('[role="dialog"]');
+      let didScroll = false;
       for (const d of dialogs) {
         // Skip Notifications dialog
         if (/(notification|unread|การแจ้งเตือน)/i.test((d.textContent||'').slice(0,500))) continue;
@@ -708,10 +680,12 @@ export class GroupPostingWorker {
         for (const el of divs) {
           if (el.scrollHeight > el.clientHeight + 50) {
             el.scrollBy(0, scrollAmount);
+            didScroll = true;
             return;
           }
         }
       }
+      if (!didScroll) window.scrollBy(0, scrollAmount);
     }, amount);
     await this.delay(400);
   }
@@ -746,12 +720,12 @@ export class GroupPostingWorker {
       const _ds = document.querySelectorAll('[role="dialog"]');
       let _fd = null;
       for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
-      if (!_fd) return { found: false, reason: 'no-dialog' };
+      const scope = _fd || document.querySelector('[role="main"]') || document;
 
       // Broad input selector: match text, number, tel, and untyped inputs + spinbutton
       const INPUT_SEL = 'input[type="text"], input[type="number"], input[type="tel"], input:not([type]), [role="spinbutton"]';
 
-      const spans = _fd.querySelectorAll('span');
+      const spans = scope.querySelectorAll('span');
       for (const span of spans) {
         const text = (span.textContent || '').trim();
         if (text !== label && !text.includes(label)) continue;
@@ -788,7 +762,7 @@ export class GroupPostingWorker {
 
       // PRIORITY 3: Search ALL inputs by aria-label/placeholder containing label
       const lbl = label.toLowerCase();
-      for (const inp of _fd.querySelectorAll(INPUT_SEL)) {
+      for (const inp of scope.querySelectorAll(INPUT_SEL)) {
         if (inp.type === 'hidden' || inp.type === 'file' || inp.type === 'checkbox' || inp.type === 'radio') continue;
         const ph = (inp.placeholder || '').toLowerCase();
         const al = (inp.getAttribute('aria-label') || '').toLowerCase();
@@ -829,8 +803,8 @@ export class GroupPostingWorker {
       const _ds = document.querySelectorAll('[role="dialog"]');
       let _fd = null;
       for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
-      if (!_fd) return { found: false };
-      const spans = _fd.querySelectorAll('span');
+      const scope = _fd || document.querySelector('[role="main"]') || document;
+      const spans = scope.querySelectorAll('span');
       for (const span of spans) {
         const text = (span.textContent || '').trim();
         if (text !== label && !text.includes(label)) continue;
@@ -933,8 +907,8 @@ export class GroupPostingWorker {
         const _ds = document.querySelectorAll('[role="dialog"]');
         let _fd = null;
         for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
-        if (!_fd) return { ok: false };
-        const spans = _fd.querySelectorAll('span');
+        const scope = _fd || document.querySelector('[role="main"]') || document;
+        const spans = scope.querySelectorAll('span');
         let targetSpan = null;
         for (const span of spans) {
           const t = (span.textContent || '').trim();
@@ -972,7 +946,7 @@ export class GroupPostingWorker {
   }
 
   async nativeTypeTextareaOnPage(page, labelText, value) {
-    if (!value) return;
+    if (!value) return false;
     console.log(`  📝 Typing description...`);
     await this.scrollDownInDialog(page, 300);
     await this.delay(500);
@@ -983,12 +957,11 @@ export class GroupPostingWorker {
       const _ds = document.querySelectorAll('[role="dialog"]');
       let _fd = null;
       for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
-      if (!_fd) _fd = _ds[_ds.length - 1];
-      if (!_fd) return { found: false, debug: 'no dialog' };
+      const scope = _fd || document.querySelector('[role="main"]') || document;
 
       // Method 1: Find by span label near a textarea
       for (const label of labels) {
-        const spans = _fd.querySelectorAll('span');
+        const spans = scope.querySelectorAll('span');
         for (const span of spans) {
           const text = (span.textContent || '').trim();
           if (!text.includes(label)) continue;
@@ -1011,7 +984,7 @@ export class GroupPostingWorker {
 
       // Method 2: Search textarea by placeholder/aria-label
       const descKws = ['description', 'คำอธิบาย', 'describe', 'details'];
-      const allTa = _fd.querySelectorAll('textarea');
+      const allTa = scope.querySelectorAll('textarea');
       for (const ta of allTa) {
         const ph = (ta.placeholder || '').toLowerCase();
         const al = (ta.getAttribute('aria-label') || '').toLowerCase();
@@ -1022,7 +995,7 @@ export class GroupPostingWorker {
       }
 
       // Method 3: Search div[role="textbox"] (Facebook sometimes uses this)
-      const textboxes = _fd.querySelectorAll('div[role="textbox"], div[contenteditable="true"]');
+      const textboxes = scope.querySelectorAll('div[role="textbox"], div[contenteditable="true"]');
       for (const tb of textboxes) {
         const ph = (tb.getAttribute('aria-label') || '').toLowerCase();
         const placeholder = (tb.getAttribute('placeholder') || tb.dataset?.placeholder || '').toLowerCase();
@@ -1055,7 +1028,7 @@ export class GroupPostingWorker {
       return { found: false, debug: JSON.stringify(debugInfo) };
     }, labelVariants);
 
-    if (!textareaBox.found) { console.log(`    ⚠️ Textarea not found. Debug: ${textareaBox.debug || 'none'}`); return; }
+    if (!textareaBox.found) { console.log(`    ⚠️ Textarea not found. Debug: ${textareaBox.debug || 'none'}`); return false; }
     console.log(`    📝 Found textarea via ${textareaBox.method}`);
     await page.mouse.click(textareaBox.x, textareaBox.y);
     await this.delay(500);
@@ -1066,10 +1039,11 @@ export class GroupPostingWorker {
     await this.delay(200);
     await page.keyboard.type(value, { delay: 15 + Math.random() * 10 });
     console.log(`    ✅ Description typed (${value.length} chars)`);
+    return true;
   }
 
   async nativeFillLocationOnPage(page, location) {
-    if (!location) return;
+    if (!location) return false;
     console.log(`  📍 Filling location: "${location}"...`);
     // Scroll down aggressively to ensure location field is rendered
     for (let i = 0; i < 3; i++) {
@@ -1083,11 +1057,10 @@ export class GroupPostingWorker {
       const _ds = document.querySelectorAll('[role="dialog"]');
       let dialog = null;
       for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; dialog = _d; break; }
-      if (!dialog) dialog = _ds[_ds.length - 1];
-      if (!dialog) return { found: false, debug: 'no dialog' };
+      const scope = dialog || document.querySelector('[role="main"]') || document;
 
       // Method 1: label with SVG icon + input
-      const labels = dialog.querySelectorAll('label');
+      const labels = scope.querySelectorAll('label');
       for (const label of labels) {
         const svg = label.querySelector('svg');
         const input = label.querySelector('input[role="combobox"], input[type="text"], input:not([type])');
@@ -1103,7 +1076,7 @@ export class GroupPostingWorker {
 
       // Method 2: input with placeholder/aria-label containing location keywords
       const locationKws = ['location', 'ตำแหน่ง', 'สถานที่', 'city', 'address', 'where'];
-      const allInputs = dialog.querySelectorAll('input');
+      const allInputs = scope.querySelectorAll('input');
       for (const input of allInputs) {
         const ph = (input.placeholder || '').toLowerCase();
         const al = (input.getAttribute('aria-label') || '').toLowerCase();
@@ -1118,7 +1091,7 @@ export class GroupPostingWorker {
       }
 
       // Method 3: span with location text near a combobox
-      const spans = dialog.querySelectorAll('span');
+      const spans = scope.querySelectorAll('span');
       for (const span of spans) {
         const text = (span.textContent || '').trim().toLowerCase();
         if (!locationKws.some(kw => text.includes(kw))) continue;
@@ -1137,7 +1110,7 @@ export class GroupPostingWorker {
       }
 
       // Method 4: empty combobox (last resort)
-      const combos = dialog.querySelectorAll('input[role="combobox"]');
+      const combos = scope.querySelectorAll('input[role="combobox"]');
       for (const input of combos) {
         const rect = input.getBoundingClientRect();
         if (rect.y < 150) continue;
@@ -1150,7 +1123,7 @@ export class GroupPostingWorker {
 
       // Debug info
       const debugInputs = [];
-      dialog.querySelectorAll('input').forEach(inp => {
+      scope.querySelectorAll('input').forEach(inp => {
         debugInputs.push({ type: inp.type, placeholder: inp.placeholder, ariaLabel: inp.getAttribute('aria-label'), role: inp.getAttribute('role') });
       });
       return { found: false, debug: JSON.stringify(debugInputs.slice(0, 10)) };
@@ -1158,7 +1131,7 @@ export class GroupPostingWorker {
 
     if (!locationBox.found) {
       console.log(`    ⚠️ Location input not found. Debug: ${locationBox.debug || 'none'}`);
-      return;
+      return false;
     }
     console.log(`    📍 Location found via ${locationBox.method}`);
 
@@ -1200,7 +1173,7 @@ export class GroupPostingWorker {
         await this.delay(1000);
         await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
         await this.delay(300);
-        return;
+        return true;
       }
     }
     // Fallback: ArrowDown + Enter (NO Tab — Tab could exit the dialog)
@@ -1211,6 +1184,7 @@ export class GroupPostingWorker {
     // Click away from input to deselect (safe, stays in dialog)
     await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
     await this.delay(300);
+    return true;
   }
 
   // Upload images on the buy/sell listing form (uses file input, not composer)
@@ -1447,20 +1421,29 @@ export class GroupPostingWorker {
       }
 
       // Verify dialog is still open after image upload
-      const dialogStillOpen = await page.evaluate(() => {
+      const formStillOpen = await page.evaluate(() => {
         const ds = document.querySelectorAll('[role="dialog"]');
-        for (const d of ds) { if (!/(notification|unread|การแจ้งเตือน)/i.test((d.textContent||'').slice(0,500))) return true; }
-        return false;
+        for (const d of ds) {
+          if (!/(notification|unread|การแจ้งเตือน)/i.test((d.textContent||'').slice(0,500))) return { ok: true, mode: 'dialog' };
+        }
+        const main = document.querySelector('[role="main"]') || document;
+        const t = (main.textContent || '').toLowerCase();
+        const looksLikeListingForm = t.includes('choose listing type') || t.includes('listing type') || t.includes('type of property') || t.includes('property type') || t.includes('number of bedrooms') || t.includes('bedrooms') || t.includes('เลือกประเภทรายการ') || t.includes('ประเภทอสังหาริมทรัพย์') || t.includes('จำนวนห้องนอน');
+        if (looksLikeListingForm) return { ok: true, mode: 'page' };
+        return { ok: false, mode: 'unknown' };
       });
-      if (!dialogStillOpen) {
-        console.log('❌ Dialog closed after image upload!');
-        return { success: false, error: 'Dialog ปิดหลังอัพโหลดรูป — กรุณาลองใหม่' };
+      if (!formStillOpen.ok) {
+        console.log('❌ Listing form not detected after image upload!');
+        return { success: false, error: 'ไม่พบฟอร์มลงประกาศหลังอัพโหลดรูป — กรุณาลองใหม่' };
       }
-      console.log('✅ Dialog still open — continuing form fill...');
+      console.log(`✅ Listing form detected — mode=${formStillOpen.mode}`);
       updateMsg('กรอกข้อมูลสินทรัพย์...');
 
       // 3b. Listing type: For Sale / For Rent — Facebook uses TABS/BUTTONS, not dropdown
-      await this.selectListingTypeTab(page, property.listingType || 'sale');
+      const listingTypeOk = await this.selectListingTypeTab(page, property.listingType || 'sale');
+      if (!listingTypeOk) {
+        return { success: false, error: 'ไม่สามารถเลือก Listing type (For sale/For rent) ได้' };
+      }
       await this.delay(500);
 
       // 3c. Property type (Thai + English)
@@ -1502,22 +1485,22 @@ export class GroupPostingWorker {
         const _ds = document.querySelectorAll('[role="dialog"]');
         let dialog = null;
         for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; dialog = _d; break; }
-        if (!dialog) return ['NO_FORM_DIALOG'];
+        const scope = dialog || document.querySelector('[role="main"]') || document;
         const labels = [];
         // Check labels
-        dialog.querySelectorAll('label span, label').forEach(el => {
+        scope.querySelectorAll('label span, label').forEach(el => {
           const t = (el.textContent || '').trim();
           if (t.length > 1 && t.length < 50) labels.push(t);
         });
         // Check inputs with placeholders or aria-labels
-        dialog.querySelectorAll('input, textarea').forEach(el => {
+        scope.querySelectorAll('input, textarea').forEach(el => {
           const ph = el.placeholder || '';
           const al = el.getAttribute('aria-label') || '';
           if (ph) labels.push(`[placeholder: ${ph}]`);
           if (al) labels.push(`[aria-label: ${al}]`);
         });
         // Check div[role=textbox] / contenteditable
-        dialog.querySelectorAll('div[role="textbox"], div[contenteditable="true"]').forEach(el => {
+        scope.querySelectorAll('div[role="textbox"], div[contenteditable="true"]').forEach(el => {
           const al = el.getAttribute('aria-label') || '';
           if (al) labels.push(`[textbox aria-label: ${al}]`);
         });
@@ -1555,28 +1538,28 @@ export class GroupPostingWorker {
         const _ds = document.querySelectorAll('[role="dialog"]');
         let _fd = null;
         for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
-        if (!_fd) return { error: 'no dialog' };
+        const scope = _fd || document.querySelector('[role="main"]') || document;
         const fields = [];
         // Check all inputs
-        _fd.querySelectorAll('input').forEach(inp => {
+        scope.querySelectorAll('input').forEach(inp => {
           if (inp.type === 'hidden' || inp.type === 'file') return;
           const label = inp.getAttribute('aria-label') || inp.placeholder || inp.name || '';
           fields.push({ type: `input[${inp.type||'text'}]`, label, value: inp.value || '', filled: !!inp.value });
         });
         // Check all comboboxes
-        _fd.querySelectorAll('[role="combobox"]').forEach(cb => {
+        scope.querySelectorAll('[role="combobox"]').forEach(cb => {
           const label = cb.getAttribute('aria-label') || '';
           const value = (cb.textContent || '').trim().slice(0, 30);
           fields.push({ type: 'combobox', label, value, filled: value.length > 0 });
         });
         // Check all textboxes
-        _fd.querySelectorAll('div[role="textbox"], textarea').forEach(tb => {
+        scope.querySelectorAll('div[role="textbox"], textarea').forEach(tb => {
           const label = tb.getAttribute('aria-label') || '';
           const value = (tb.textContent || tb.value || '').trim().slice(0, 30);
           fields.push({ type: 'textbox', label, value, filled: value.length > 0 });
         });
         // Check all selects
-        _fd.querySelectorAll('select').forEach(sel => {
+        scope.querySelectorAll('select').forEach(sel => {
           const label = sel.getAttribute('aria-label') || sel.name || '';
           fields.push({ type: 'select', label, value: sel.value, filled: !!sel.value });
         });
@@ -1654,22 +1637,22 @@ export class GroupPostingWorker {
             const _ds = document.querySelectorAll('[role="dialog"]');
             let _fd = null;
             for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
-            if (!_fd) return { empty: [], all: [] };
+            const scope = _fd || document.querySelector('[role="main"]') || document;
             const empty = [], all = [];
-            _fd.querySelectorAll('input').forEach(inp => {
+            scope.querySelectorAll('input').forEach(inp => {
               if (inp.type === 'hidden' || inp.type === 'file') return;
               const desc = `input[${inp.type||'text'}] aria="${inp.getAttribute('aria-label')||''}" ph="${inp.placeholder||''}" val="${(inp.value||'').slice(0,20)}"`;
               all.push(desc);
               if (!inp.value) empty.push(desc);
             });
-            _fd.querySelectorAll('[role="combobox"]').forEach(cb => {
+            scope.querySelectorAll('[role="combobox"]').forEach(cb => {
               const txt = (cb.textContent||'').trim().slice(0, 30);
               const desc = `combobox aria="${cb.getAttribute('aria-label')||''}" txt="${txt}"`;
               all.push(desc);
               // Combobox with no selection often shows placeholder text
               if (!txt || txt.length < 2) empty.push(desc);
             });
-            _fd.querySelectorAll('textarea, div[role="textbox"]').forEach(tb => {
+            scope.querySelectorAll('textarea, div[role="textbox"]').forEach(tb => {
               const val = (tb.value || tb.textContent || '').trim().slice(0, 20);
               const desc = `${tb.tagName === 'TEXTAREA' ? 'textarea' : 'textbox'} aria="${tb.getAttribute('aria-label')||''}" val="${val}"`;
               all.push(desc);

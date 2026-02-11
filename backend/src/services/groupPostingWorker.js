@@ -131,40 +131,50 @@ export class GroupPostingWorker {
 
   // Helper: click a button in the form dialog by keyword list, returns clicked text or null
   async _clickButtonInDialog(page, keywords) {
-    const result = await page.evaluate((kws) => {
-      const _ds = document.querySelectorAll('[role="dialog"]');
-      let _fd = null;
-      for (const _d of _ds) {
-        if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
-        _fd = _d; break;
+    try {
+      // Use Puppeteer elementHandle.click() for reliable clicking
+      const btnHandle = await page.evaluateHandle((kws) => {
+        const _ds = document.querySelectorAll('[role="dialog"]');
+        let _fd = null;
+        for (const _d of _ds) {
+          if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
+          _fd = _d; break;
+        }
+        const scope = _fd || document;
+        const buttons = scope.querySelectorAll('[role="button"], button');
+        for (const btn of buttons) {
+          const spans = btn.querySelectorAll('span');
+          let text = '';
+          for (const s of spans) {
+            const t = (s.textContent || '').trim();
+            if (kws.some(kw => t.toLowerCase() === kw.toLowerCase())) { text = t; break; }
+          }
+          if (!text) {
+            const ft = (btn.textContent || '').trim();
+            if (ft.length < 30 && kws.some(kw => ft.toLowerCase() === kw.toLowerCase())) text = ft;
+          }
+          if (!text) continue;
+          const isDis = btn.getAttribute('aria-disabled') === 'true' || btn.disabled;
+          if (isDis) continue;
+          const rect = btn.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) return btn;
+        }
+        return null;
+      }, keywords);
+      if (btnHandle.asElement()) {
+        // Get button text before clicking
+        const text = await page.evaluate(el => {
+          for (const s of el.querySelectorAll('span')) { const t = (s.textContent||'').trim(); if (t.length > 0 && t.length < 30) return t; }
+          return (el.textContent||'').trim().slice(0, 30);
+        }, btnHandle);
+        await btnHandle.asElement().click();
+        await btnHandle.dispose();
+        await this.delay(1000);
+        return text;
       }
-      const scope = _fd || document;
-      const buttons = scope.querySelectorAll('[role="button"], button');
-      for (const btn of buttons) {
-        const spans = btn.querySelectorAll('span');
-        let text = '';
-        for (const s of spans) {
-          const t = (s.textContent || '').trim();
-          if (kws.some(kw => t.toLowerCase() === kw.toLowerCase())) { text = t; break; }
-        }
-        if (!text) {
-          const ft = (btn.textContent || '').trim();
-          if (ft.length < 30 && kws.some(kw => ft.toLowerCase() === kw.toLowerCase())) text = ft;
-        }
-        if (!text) continue;
-        const isDis = btn.getAttribute('aria-disabled') === 'true' || btn.disabled;
-        if (isDis) continue;
-        const rect = btn.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0) {
-          return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, text };
-        }
-      }
-      return { found: false };
-    }, keywords);
-    if (result.found) {
-      await page.mouse.click(result.x, result.y);
-      await this.delay(1000);
-      return result.text;
+      await btnHandle.dispose();
+    } catch (e) {
+      console.log(`   ⚠️ _clickButtonInDialog error: ${e.message}`);
     }
     return null;
   }
@@ -221,8 +231,11 @@ export class GroupPostingWorker {
 
       // Strategy 3: Check if form header already shows correct type
       // Look for spans that contain the target text as part of a label
+      // IMPORTANT: exclude category labels like "Property for sale or rent" which contain both
       for (const el of allEls) {
         const text = (el.textContent || '').trim().toLowerCase();
+        // Skip if this is the category label (contains "or rent" / "or sale")
+        if (text.includes('or rent') || text.includes('or sale') || text.includes('หรือเช่า') || text.includes('หรือขาย')) continue;
         if (targets.some(t => text.includes(t.toLowerCase()) && text.includes('property'))) {
           return { found: true, alreadySelected: true, method: 'header-check' };
         }
@@ -1125,8 +1138,8 @@ export class GroupPostingWorker {
       await this.delay(500);
       await this.tryTypeTextareaOnPage(page,
         property.listingType === 'rent'
-          ? ['คำอธิบายของที่พักให้เช่า', 'คำอธิบาย', 'Rental description', 'Description']
-          : ['คำอธิบายอสังหาริมทรัพย์', 'คำอธิบาย', 'Property description', 'Description'],
+          ? ['คำอธิบายของที่พักให้เช่า', 'คำอธิบาย', 'Rental description', 'Property for rent description', 'Description']
+          : ['คำอธิบายอสังหาริมทรัพย์', 'คำอธิบาย', 'Property description', 'Property for sale description', 'Property for rent description', 'Description'],
         description
       );
       await this.delay(300);
@@ -1135,7 +1148,7 @@ export class GroupPostingWorker {
       if (size && size !== '0') {
         await this.scrollDownInDialog(page, 400);
         await this.delay(500);
-        await this.tryTypeOnPage(page, ['ตารางเมตร', 'Square meters', 'Square feet', 'Area', 'Size'], size);
+        await this.tryTypeOnPage(page, ['ตารางเมตร', 'Square meters', 'Square feet', 'Property square feet', 'Property square meters', 'Area', 'Size', 'พื้นที่'], size);
         await this.delay(300);
       }
 
@@ -1228,79 +1241,106 @@ export class GroupPostingWorker {
 
         if (nextBox.found) {
           console.log(`   📍 "ถัดไป" at (${Math.round(nextBox.x)}, ${Math.round(nextBox.y)}) text="${nextBox.text}" viewport=${nextBox.viewportH} inView=${nextBox.inViewport}`);
-          await this.delay(300);
 
-          // METHOD 1: scrollIntoView + full mouse event sequence (mousedown/mouseup/click)
-          const clickResult = await page.evaluate(() => {
+          // METHOD 1 (most reliable): Puppeteer elementHandle.click() — handles scroll + click natively
+          let clickedViaHandle = false;
+          try {
+            const nextHandle = await page.evaluateHandle(() => {
+              const _ds = document.querySelectorAll('[role="dialog"]');
+              let _fd = null;
+              for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+              const scope = _fd || document;
+              for (const btn of scope.querySelectorAll('[role="button"], button')) {
+                for (const s of btn.querySelectorAll('span')) {
+                  const t = (s.textContent || '').trim();
+                  if ((t === 'ถัดไป' || t === 'Next') && btn.getAttribute('aria-disabled') !== 'true' && !btn.disabled) return btn;
+                }
+              }
+              return null;
+            });
+            if (nextHandle.asElement()) {
+              await nextHandle.asElement().click();
+              clickedViaHandle = true;
+              console.log(`   ✅ Clicked via Puppeteer elementHandle.click()`);
+            }
+            await nextHandle.dispose();
+          } catch (e) {
+            console.log(`   ⚠️ elementHandle.click() failed: ${e.message}`);
+          }
+
+          // METHOD 2: dispatchEvent full mouse sequence
+          if (!clickedViaHandle) {
+            await page.evaluate(() => {
+              const _ds = document.querySelectorAll('[role="dialog"]');
+              let _fd = null;
+              for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+              const scope = _fd || document;
+              for (const btn of scope.querySelectorAll('[role="button"], button')) {
+                for (const s of btn.querySelectorAll('span')) {
+                  const t = (s.textContent || '').trim();
+                  if ((t === 'ถัดไป' || t === 'Next') && btn.getAttribute('aria-disabled') !== 'true') {
+                    btn.scrollIntoView({ block: 'center', behavior: 'instant' });
+                    const rect = btn.getBoundingClientRect();
+                    const cx = rect.x + rect.width / 2, cy = rect.y + rect.height / 2;
+                    const opts = { bubbles: true, cancelable: true, view: window, clientX: cx, clientY: cy };
+                    btn.dispatchEvent(new MouseEvent('mousedown', opts));
+                    btn.dispatchEvent(new MouseEvent('mouseup', opts));
+                    btn.dispatchEvent(new MouseEvent('click', opts));
+                    btn.dispatchEvent(new PointerEvent('pointerdown', opts));
+                    btn.dispatchEvent(new PointerEvent('pointerup', opts));
+                    return;
+                  }
+                }
+              }
+            });
+            console.log(`   📍 Clicked via dispatchEvent (mouse+pointer)`);
+          }
+
+          // METHOD 3: Focus + Enter as final fallback
+          await this.delay(500);
+          await page.evaluate(() => {
             const _ds = document.querySelectorAll('[role="dialog"]');
             let _fd = null;
             for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
             const scope = _fd || document;
-            const buttons = scope.querySelectorAll('[role="button"], button');
-            for (const btn of buttons) {
-              const spans = btn.querySelectorAll('span');
-              for (const s of spans) {
-                const t = (s.textContent || '').trim();
-                if (t === 'ถัดไป' || t === 'Next') {
-                  const isDis = btn.getAttribute('aria-disabled') === 'true' || btn.disabled;
-                  if (isDis) continue;
-                  btn.scrollIntoView({ block: 'center', behavior: 'instant' });
-                  // Dispatch full native event sequence
-                  const rect = btn.getBoundingClientRect();
-                  const cx = rect.x + rect.width / 2, cy = rect.y + rect.height / 2;
-                  const opts = { bubbles: true, cancelable: true, view: window, clientX: cx, clientY: cy };
-                  btn.dispatchEvent(new MouseEvent('mousedown', opts));
-                  btn.dispatchEvent(new MouseEvent('mouseup', opts));
-                  btn.dispatchEvent(new MouseEvent('click', opts));
-                  return { method: 'dispatchEvent', x: cx, y: cy };
+            for (const btn of scope.querySelectorAll('[role="button"], button')) {
+              for (const s of btn.querySelectorAll('span')) {
+                if ((s.textContent||'').trim() === 'Next' || (s.textContent||'').trim() === 'ถัดไป') {
+                  btn.focus();
+                  return;
                 }
               }
             }
-            return null;
           });
-
-          if (clickResult) {
-            console.log(`   📍 Clicked via ${clickResult.method} at (${Math.round(clickResult.x)}, ${Math.round(clickResult.y)})`);
-          }
-
-          // Also do a physical mouse click at the button location
-          if (clickResult) {
-            await this.delay(200);
-            await page.mouse.click(clickResult.x, clickResult.y);
-            console.log(`   📍 Also mouse.click at same coords`);
-          } else {
-            await page.mouse.click(nextBox.x, nextBox.y);
-          }
-
-          // METHOD 2: Focus + Enter as fallback
-          await this.delay(500);
           await page.keyboard.press('Enter');
-          console.log(`   ⌨️ Also pressed Enter as fallback`);
+          console.log(`   ⌨️ Also focus+Enter as fallback`);
 
           nextClicked = true;
 
           // VERIFY: Did the page actually change?
-          await this.delay(3000);
+          await this.delay(4000);
           const pageChanged = await page.evaluate(() => {
             const _ds = document.querySelectorAll('[role="dialog"]');
             let _fd = null;
             for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
             if (!_fd) return { changed: true, reason: 'no-dialog' };
-            // Check if form indicators are still present
             const txt = (_fd.textContent || '').toLowerCase();
             const stillOnForm = txt.includes('choose listing type') || txt.includes('number of bedrooms') || txt.includes('เลือกประเภทรายการ');
-            if (stillOnForm) return { changed: false, reason: 'form-still-visible' };
+            // Also check what element is at click coords for debugging
+            const topEl = document.elementFromPoint(960, 300);
+            const topTag = topEl ? `${topEl.tagName}.${topEl.getAttribute('role')||''}` : 'null';
+            if (stillOnForm) return { changed: false, reason: 'form-still-visible', topElement: topTag };
             return { changed: true, reason: 'form-gone' };
           });
-          console.log(`   🔍 Page changed: ${pageChanged.changed} (${pageChanged.reason})`);
+          console.log(`   🔍 Page changed: ${pageChanged.changed} (${pageChanged.reason})${pageChanged.topElement ? ' topEl=' + pageChanged.topElement : ''}`);
 
           if (!pageChanged.changed) {
-            console.log(`   ⚠️ Next click didn't advance — trying Tab+Enter...`);
-            // Try Tab to focus Next button, then Enter
-            await page.keyboard.press('Tab');
-            await this.delay(200);
-            await page.keyboard.press('Enter');
-            await this.delay(3000);
+            console.log(`   ⚠️ Next click didn't advance — retrying with mouse.click...`);
+            // Last resort: direct mouse click at the coordinates
+            await page.mouse.click(nextBox.x, nextBox.y);
+            await this.delay(1000);
+            await page.mouse.click(nextBox.x, nextBox.y);
+            await this.delay(4000);
           }
         }
       }
@@ -1459,36 +1499,38 @@ export class GroupPostingWorker {
       let posted = false;
       const postKeywords = ['โพสต์', 'Post', 'ลงประกาศ', 'Publish', 'Submit', 'List item', 'Create listing', 'Done', 'เสร็จ'];
 
-      // If we already found a post button in the state detection, click it immediately
-      if (postNextState.postBtn && postNextState.postBtn.found) {
-        console.log(`🔄 Clicking "${postNextState.postBtn.text}" (detected earlier)...`);
-        await page.mouse.click(postNextState.postBtn.x, postNextState.postBtn.y);
-        posted = true;
-        console.log(`   ✅ "${postNextState.postBtn.text}" clicked!`);
-      }
-
-      // Otherwise retry finding the button
+      // Use elementHandle.click() for reliable Post button clicking
       for (let attempt = 0; attempt < 8 && !posted; attempt++) {
         if (attempt > 0) {
           console.log(`   🔄 Retry post button ${attempt + 1}/8...`);
           await this.delay(2000);
-          await this.scrollDownInDialog(page, 300);
         }
 
-        const postBox = await page.evaluate((keywords) => {
-          // Search in dialog first
+        // Check if dialog is gone (listing published)
+        const hasDialog = await page.evaluate(() => {
           const _ds = document.querySelectorAll('[role="dialog"]');
-          let _fd = null;
           for (const _d of _ds) {
             if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
-            _fd = _d; break;
+            return true;
           }
-          // If no dialog, check if we're back on group page (success!)
-          if (!_fd) return { found: false, noDialog: true };
+          return false;
+        });
+        if (!hasDialog) {
+          console.log('   ✅ Dialog closed — listing published!');
+          posted = true;
+          break;
+        }
 
-          const searchIn = (scope) => {
+        try {
+          const postHandle = await page.evaluateHandle((keywords) => {
+            const _ds = document.querySelectorAll('[role="dialog"]');
+            let _fd = null;
+            for (const _d of _ds) {
+              if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
+              _fd = _d; break;
+            }
+            const scope = _fd || document;
             const buttons = scope.querySelectorAll('[role="button"], button');
-            let disabled = null;
             for (const btn of buttons) {
               const spans = btn.querySelectorAll('span');
               let text = '';
@@ -1504,35 +1546,44 @@ export class GroupPostingWorker {
               if (!text && keywords.some(kw => label.toLowerCase() === kw.toLowerCase())) text = label;
               if (!text) continue;
               const isDis = btn.getAttribute('aria-disabled') === 'true' || btn.disabled;
-              if (isDis) { disabled = { text, disabled: true }; continue; }
+              if (isDis) continue;
               const rect = btn.getBoundingClientRect();
-              if (rect.width > 0 && rect.height > 0) {
-                return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, text };
-              }
+              if (rect.width > 0 && rect.height > 0) return btn;
             }
-            return disabled || { found: false };
-          };
+            return null;
+          }, postKeywords);
 
-          const result = searchIn(_fd);
-          if (result.found) return result;
-          // Also search entire page as fallback
-          const pageResult = searchIn(document);
-          return pageResult.found ? { ...pageResult, scope: 'page' } : (result.disabled ? result : pageResult);
-        }, postKeywords);
-
-        // If dialog disappeared during retry, listing was published
-        if (postBox.noDialog) {
-          console.log('   ✅ Dialog closed — listing published!');
-          posted = true;
-          break;
-        }
-
-        if (postBox.found) {
-          console.log(`   📍 "${postBox.text}" found${postBox.scope === 'page' ? ' (page-level)' : ''}`);
-          await page.mouse.click(postBox.x, postBox.y);
-          posted = true;
-        } else if (postBox.disabled && attempt === 0) {
-          console.log(`   ⚠️ Post button "${postBox.text}" found but DISABLED`);
+          if (postHandle.asElement()) {
+            const btnText = await page.evaluate(el => {
+              for (const s of el.querySelectorAll('span')) { const t = (s.textContent||'').trim(); if (t.length > 0 && t.length < 30) return t; }
+              return (el.textContent||'').trim().slice(0, 30);
+            }, postHandle);
+            console.log(`   📍 Post button "${btnText}" found — clicking via elementHandle...`);
+            await postHandle.asElement().click();
+            await postHandle.dispose();
+            posted = true;
+            console.log(`   ✅ "${btnText}" clicked!`);
+          } else {
+            await postHandle.dispose();
+            if (attempt === 0) {
+              // Debug: show what buttons are available
+              const availBtns = await page.evaluate(() => {
+                const _ds = document.querySelectorAll('[role="dialog"]');
+                let _fd = null;
+                for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+                if (!_fd) return [];
+                const btns = [];
+                for (const b of _fd.querySelectorAll('[role="button"], button')) {
+                  const t = (b.textContent||'').trim();
+                  if (t.length > 0 && t.length < 40) btns.push(t);
+                }
+                return [...new Set(btns)].slice(0, 15);
+              });
+              console.log(`   🔘 Available buttons: ${JSON.stringify(availBtns)}`);
+            }
+          }
+        } catch (e) {
+          console.log(`   ⚠️ Post button click error: ${e.message}`);
         }
       }
 

@@ -268,7 +268,7 @@ export class GroupPostingWorker {
   }
 
   // Try multiple labels for nativeTypeOnPage — returns true if any label worked
-  async tryTypeOnPage(page, labels, value) {
+  async tryTypeOnPage(page, labels, value, { alsoTryDropdown = false } = {}) {
     for (const label of labels) {
       const found = await page.evaluate((lbl) => {
         const _ds = document.querySelectorAll('[role="dialog"]');
@@ -278,38 +278,23 @@ export class GroupPostingWorker {
         }
         return false;
       }, label);
-      if (found) { await this.nativeTypeOnPage(page, label, value); return true; }
-    }
-    // Fallback: search by placeholder/aria-label in the form dialog
-    const fallbackResult = await page.evaluate((lbls) => {
-      const _ds = document.querySelectorAll('[role="dialog"]');
-      let _fd = null;
-      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
-      if (!_fd) return { found: false };
-      const allInputs = _fd.querySelectorAll('input');
-      for (const input of allInputs) {
-        const ph = (input.placeholder || '').toLowerCase();
-        const al = (input.getAttribute('aria-label') || '').toLowerCase();
-        const combined = ph + ' ' + al;
-        if (lbls.some(l => combined.includes(l.toLowerCase()))) {
-          input.scrollIntoView({ block: 'center' });
-          const r = input.getBoundingClientRect();
-          if (r.width > 30 && r.height > 0) return { x: r.x + r.width / 2, y: r.y + r.height / 2, found: true, matchedBy: combined.trim() };
-        }
+      if (found) {
+        const typed = await this.nativeTypeOnPage(page, label, value);
+        if (typed) return true;
+        // Input not found for this label — continue trying other labels
+        console.log(`    🔄 Label "${label}" found but no input — trying next...`);
       }
-      return { found: false };
-    }, labels);
-    if (fallbackResult.found) {
-      console.log(`  ⌨️ Typing "${value}" via placeholder/aria-label: "${fallbackResult.matchedBy}"...`);
-      await page.mouse.click(fallbackResult.x, fallbackResult.y);
-      await this.delay(300);
-      await page.keyboard.down('Control'); await page.keyboard.press('KeyA'); await page.keyboard.up('Control');
-      await page.keyboard.press('Backspace'); await this.delay(200);
-      await page.keyboard.type(String(value), { delay: 30 + Math.random() * 20 });
-      console.log(`    ✅ Done (placeholder fallback)`);
-      return true;
     }
-    console.log(`    ⚠️ None of labels found: ${JSON.stringify(labels)}`);
+    // nativeTypeOnPage already has aria-label/placeholder search built in (PRIORITY 3)
+    // So if we get here, no input was found at all
+
+    // If alsoTryDropdown, try selecting from a dropdown (for bedrooms/bathrooms)
+    if (alsoTryDropdown) {
+      console.log(`    🔽 Trying as dropdown instead...`);
+      const selectResult = await this.trySelectOnPage(page, labels, [String(value)]);
+      if (selectResult) return true;
+    }
+    console.log(`    ⚠️ None of labels found or no input: ${JSON.stringify(labels)}`);
     return false;
   }
 
@@ -395,7 +380,7 @@ export class GroupPostingWorker {
   }
 
   async nativeTypeOnPage(page, labelText, value) {
-    if (!value && value !== 0) return;
+    if (!value && value !== 0) return false;
     const val = String(value);
     console.log(`  ⌨️ Typing "${val}" into "${labelText}"...`);
     await this.scrollToLabelOnPage(page, labelText);
@@ -405,40 +390,67 @@ export class GroupPostingWorker {
       const _ds = document.querySelectorAll('[role="dialog"]');
       let _fd = null;
       for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
-      if (!_fd) return { found: false };
+      if (!_fd) return { found: false, reason: 'no-dialog' };
+
+      // Broad input selector: match text, number, tel, and untyped inputs + spinbutton
+      const INPUT_SEL = 'input[type="text"], input[type="number"], input[type="tel"], input:not([type]), [role="spinbutton"]';
+
       const spans = _fd.querySelectorAll('span');
       for (const span of spans) {
         const text = (span.textContent || '').trim();
         if (text !== label && !text.includes(label)) continue;
         // SKIP headings/titles
         if (span.closest('h1, h2, h3, h4, [role="heading"]')) continue;
+
+        // PRIORITY 1: label > input (any type)
         const labelEl = span.closest('label');
         if (labelEl) {
-          const input = labelEl.querySelector('input');
-          if (input) {
+          const input = labelEl.querySelector(INPUT_SEL);
+          if (input && input.type !== 'hidden' && input.type !== 'file' && input.type !== 'checkbox' && input.type !== 'radio') {
             input.scrollIntoView({ block: 'center' });
             const rect = input.getBoundingClientRect();
-            return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true };
+            if (rect.width > 10 && rect.height > 0)
+              return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, method: 'label-input' };
           }
         }
+
+        // PRIORITY 2: Walk up parents to find ANY visible input
         let parent = span.parentElement;
         for (let i = 0; i < 8; i++) {
           if (!parent) break;
-          // Don't walk up past heading or dialog
           if (parent.getAttribute('role') === 'heading' || parent.getAttribute('role') === 'dialog') break;
-          const input = parent.querySelector('input[type="text"], input:not([type])');
-          if (input) {
+          const input = parent.querySelector(INPUT_SEL);
+          if (input && input.type !== 'hidden' && input.type !== 'file' && input.type !== 'checkbox' && input.type !== 'radio') {
             input.scrollIntoView({ block: 'center' });
             const rect = input.getBoundingClientRect();
-            return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true };
+            if (rect.width > 10 && rect.height > 0)
+              return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, method: 'parent-input' };
           }
           parent = parent.parentElement;
         }
       }
-      return { found: false };
+
+      // PRIORITY 3: Search ALL inputs by aria-label/placeholder containing label
+      const lbl = label.toLowerCase();
+      for (const inp of _fd.querySelectorAll(INPUT_SEL)) {
+        if (inp.type === 'hidden' || inp.type === 'file' || inp.type === 'checkbox' || inp.type === 'radio') continue;
+        const ph = (inp.placeholder || '').toLowerCase();
+        const al = (inp.getAttribute('aria-label') || '').toLowerCase();
+        if (ph.includes(lbl) || al.includes(lbl)) {
+          inp.scrollIntoView({ block: 'center' });
+          const rect = inp.getBoundingClientRect();
+          if (rect.width > 10 && rect.height > 0)
+            return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, method: 'aria-match' };
+        }
+      }
+      return { found: false, reason: 'no-input-near-label' };
     }, labelText);
 
-    if (!inputBox.found) { console.log(`    ⚠️ Input "${labelText}" not found`); return; }
+    if (!inputBox.found) {
+      console.log(`    ⚠️ Input "${labelText}" not found (${inputBox.reason})`);
+      return false;
+    }
+    console.log(`    📍 Found via ${inputBox.method}`);
     await page.mouse.click(inputBox.x, inputBox.y);
     await this.delay(300);
     await page.keyboard.down('Control');
@@ -448,6 +460,7 @@ export class GroupPostingWorker {
     await this.delay(200);
     await page.keyboard.type(val, { delay: 30 + Math.random() * 20 });
     console.log(`    ✅ Done`);
+    return true;
   }
 
   async nativeSelectDropdownOnPage(page, labelText, optionValue) {
@@ -1078,12 +1091,12 @@ export class GroupPostingWorker {
       );
       await this.delay(500);
 
-      // 3d. Bedrooms
-      await this.tryTypeOnPage(page, ['จำนวนห้องนอน', 'Bedrooms', 'Number of bedrooms', 'Beds'], bedrooms);
+      // 3d. Bedrooms — try text input first, then dropdown fallback (Facebook may use combobox)
+      await this.tryTypeOnPage(page, ['จำนวนห้องนอน', 'Bedrooms', 'Number of bedrooms', 'Beds'], bedrooms, { alsoTryDropdown: true });
       await this.delay(300);
 
-      // 3e. Bathrooms
-      await this.tryTypeOnPage(page, ['จำนวนห้องน้ำ', 'Bathrooms', 'Number of bathrooms', 'Baths'], bathrooms);
+      // 3e. Bathrooms — try text input first, then dropdown fallback
+      await this.tryTypeOnPage(page, ['จำนวนห้องน้ำ', 'Bathrooms', 'Number of bathrooms', 'Baths'], bathrooms, { alsoTryDropdown: true });
       await this.delay(300);
 
       // 3f. Price
@@ -1154,6 +1167,43 @@ export class GroupPostingWorker {
 
       console.log('✅ Form filled!');
 
+      // COMPREHENSIVE FIELD AUDIT — dump EVERY field's state before clicking Next
+      const fieldAudit = await page.evaluate(() => {
+        const _ds = document.querySelectorAll('[role="dialog"]');
+        let _fd = null;
+        for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+        if (!_fd) return { error: 'no dialog' };
+        const fields = [];
+        // Check all inputs
+        _fd.querySelectorAll('input').forEach(inp => {
+          if (inp.type === 'hidden' || inp.type === 'file') return;
+          const label = inp.getAttribute('aria-label') || inp.placeholder || inp.name || '';
+          fields.push({ type: `input[${inp.type||'text'}]`, label, value: inp.value || '', filled: !!inp.value });
+        });
+        // Check all comboboxes
+        _fd.querySelectorAll('[role="combobox"]').forEach(cb => {
+          const label = cb.getAttribute('aria-label') || '';
+          const value = (cb.textContent || '').trim().slice(0, 30);
+          fields.push({ type: 'combobox', label, value, filled: value.length > 0 });
+        });
+        // Check all textboxes
+        _fd.querySelectorAll('div[role="textbox"], textarea').forEach(tb => {
+          const label = tb.getAttribute('aria-label') || '';
+          const value = (tb.textContent || tb.value || '').trim().slice(0, 30);
+          fields.push({ type: 'textbox', label, value, filled: value.length > 0 });
+        });
+        // Check all selects
+        _fd.querySelectorAll('select').forEach(sel => {
+          const label = sel.getAttribute('aria-label') || sel.name || '';
+          fields.push({ type: 'select', label, value: sel.value, filled: !!sel.value });
+        });
+        return { fields, unfilled: fields.filter(f => !f.filled).map(f => `${f.type} "${f.label}"`) };
+      });
+      console.log('📋 FIELD AUDIT:', JSON.stringify(fieldAudit.unfilled || fieldAudit.error));
+      if (fieldAudit.fields) {
+        console.log('📋 ALL FIELDS:', JSON.stringify(fieldAudit.fields));
+      }
+
       // Step 4: Click "ถัดไป" (Next) — scrollIntoView first, then native mouse click
       updateMsg('กดถัดไป...');
       console.log('🔄 Clicking "ถัดไป"...');
@@ -1216,27 +1266,36 @@ export class GroupPostingWorker {
 
         if (!nextBox.found && nextBox.disabled && attempt === 0) {
           console.log(`   ⚠️ Next button found but DISABLED — required fields may be missing`);
-          // Debug: dump what fields appear unfilled
-          const emptyFields = await page.evaluate(() => {
+          // Debug: dump ALL fields — filled AND empty — to see what's wrong
+          const allFields = await page.evaluate(() => {
             const _ds = document.querySelectorAll('[role="dialog"]');
             let _fd = null;
             for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
-            if (!_fd) return [];
-            const info = [];
+            if (!_fd) return { empty: [], all: [] };
+            const empty = [], all = [];
             _fd.querySelectorAll('input').forEach(inp => {
-              if (!inp.value && inp.type !== 'hidden' && inp.type !== 'file') {
-                info.push(`input[${inp.type||'text'}] placeholder="${inp.placeholder||''}", aria="${inp.getAttribute('aria-label')||''}"`);
-              }
+              if (inp.type === 'hidden' || inp.type === 'file') return;
+              const desc = `input[${inp.type||'text'}] aria="${inp.getAttribute('aria-label')||''}" ph="${inp.placeholder||''}" val="${(inp.value||'').slice(0,20)}"`;
+              all.push(desc);
+              if (!inp.value) empty.push(desc);
             });
-            _fd.querySelectorAll('textarea').forEach(ta => {
-              if (!ta.value) info.push(`textarea placeholder="${ta.placeholder||''}", aria="${ta.getAttribute('aria-label')||''}"`);
+            _fd.querySelectorAll('[role="combobox"]').forEach(cb => {
+              const txt = (cb.textContent||'').trim().slice(0, 30);
+              const desc = `combobox aria="${cb.getAttribute('aria-label')||''}" txt="${txt}"`;
+              all.push(desc);
+              // Combobox with no selection often shows placeholder text
+              if (!txt || txt.length < 2) empty.push(desc);
             });
-            _fd.querySelectorAll('div[role="textbox"]').forEach(tb => {
-              if (!(tb.textContent||'').trim()) info.push(`textbox aria="${tb.getAttribute('aria-label')||''}"`);
+            _fd.querySelectorAll('textarea, div[role="textbox"]').forEach(tb => {
+              const val = (tb.value || tb.textContent || '').trim().slice(0, 20);
+              const desc = `${tb.tagName === 'TEXTAREA' ? 'textarea' : 'textbox'} aria="${tb.getAttribute('aria-label')||''}" val="${val}"`;
+              all.push(desc);
+              if (!val) empty.push(desc);
             });
-            return info.slice(0, 10);
+            return { empty: empty.slice(0, 10), all: all.slice(0, 20) };
           });
-          console.log(`   🔍 Empty fields in form:`, JSON.stringify(emptyFields));
+          console.log(`   🔍 EMPTY fields:`, JSON.stringify(allFields.empty));
+          console.log(`   🔍 ALL fields:`, JSON.stringify(allFields.all));
         }
 
         if (nextBox.found) {

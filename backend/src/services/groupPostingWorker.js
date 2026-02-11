@@ -1141,7 +1141,7 @@ export class GroupPostingWorker {
 
       console.log('✅ Form filled!');
 
-      // Step 4: Click "ถัดไป" (Next) — MUST use native mouse click
+      // Step 4: Click "ถัดไป" (Next) — scrollIntoView first, then native mouse click
       updateMsg('กดถัดไป...');
       console.log('🔄 Clicking "ถัดไป"...');
       let nextClicked = false;
@@ -1149,7 +1149,9 @@ export class GroupPostingWorker {
         if (attempt > 0) {
           console.log(`   🔄 Retry ถัดไป ${attempt + 1}/5...`);
           await this.delay(2000);
+          await this.scrollDownInDialog(page, 500);
         }
+        // STEP A: Find Next button + scrollIntoView so it's visible in viewport
         const nextBox = await page.evaluate(() => {
           const _ds = document.querySelectorAll('[role="dialog"]');
           let _fd = null;
@@ -1157,6 +1159,7 @@ export class GroupPostingWorker {
           const scope = _fd || document;
           const buttons = scope.querySelectorAll('[role="button"], button');
           let disabledInfo = null;
+          let targetBtn = null;
           for (const btn of buttons) {
             const spans = btn.querySelectorAll('span');
             let btnText = '';
@@ -1174,14 +1177,28 @@ export class GroupPostingWorker {
                 disabledInfo = { text: btnText, disabled: true };
                 continue;
               }
-              const rect = btn.getBoundingClientRect();
-              if (rect.width > 0 && rect.height > 0) {
-                return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, text: btnText };
-              }
+              targetBtn = btn;
+              break;
             }
           }
-          if (disabledInfo) return { found: false, disabled: true, text: disabledInfo.text };
-          return { found: false, disabled: false };
+          if (!targetBtn) {
+            if (disabledInfo) return { found: false, disabled: true, text: disabledInfo.text };
+            return { found: false, disabled: false };
+          }
+          // CRITICAL: Scroll the button into view before getting coordinates
+          targetBtn.scrollIntoView({ block: 'center', behavior: 'instant' });
+          // Force reflow
+          void targetBtn.offsetHeight;
+          const rect = targetBtn.getBoundingClientRect();
+          const vpH = window.innerHeight || document.documentElement.clientHeight;
+          return {
+            x: rect.x + rect.width / 2,
+            y: rect.y + rect.height / 2,
+            found: true,
+            text: (targetBtn.textContent || '').trim().slice(0, 20),
+            viewportH: vpH,
+            inViewport: rect.y >= 0 && rect.y + rect.height <= vpH
+          };
         });
 
         if (!nextBox.found && nextBox.disabled && attempt === 0) {
@@ -1210,8 +1227,37 @@ export class GroupPostingWorker {
         }
 
         if (nextBox.found) {
-          console.log(`   📍 "ถัดไป" at (${Math.round(nextBox.x)}, ${Math.round(nextBox.y)}) text="${nextBox.text}"`);
-          await page.mouse.click(nextBox.x, nextBox.y);
+          console.log(`   📍 "ถัดไป" at (${Math.round(nextBox.x)}, ${Math.round(nextBox.y)}) text="${nextBox.text}" viewport=${nextBox.viewportH} inView=${nextBox.inViewport}`);
+          // Small delay after scrollIntoView to let browser settle
+          await this.delay(300);
+          // Re-get coordinates after scroll settled
+          const freshCoords = await page.evaluate(() => {
+            const _ds = document.querySelectorAll('[role="dialog"]');
+            let _fd = null;
+            for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+            const scope = _fd || document;
+            const buttons = scope.querySelectorAll('[role="button"], button');
+            for (const btn of buttons) {
+              const spans = btn.querySelectorAll('span');
+              for (const s of spans) {
+                const t = (s.textContent || '').trim();
+                if (t === 'ถัดไป' || t === 'Next') {
+                  const isDis = btn.getAttribute('aria-disabled') === 'true' || btn.disabled;
+                  if (isDis) continue;
+                  btn.scrollIntoView({ block: 'center', behavior: 'instant' });
+                  const rect = btn.getBoundingClientRect();
+                  return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, ok: true };
+                }
+              }
+            }
+            return { ok: false };
+          });
+          if (freshCoords.ok) {
+            console.log(`   📍 Fresh coords after scroll: (${Math.round(freshCoords.x)}, ${Math.round(freshCoords.y)})`);
+            await page.mouse.click(freshCoords.x, freshCoords.y);
+          } else {
+            await page.mouse.click(nextBox.x, nextBox.y);
+          }
           nextClicked = true;
         }
       }
@@ -1509,7 +1555,7 @@ export class GroupPostingWorker {
     ];
     const launchOptions = {
       headless: isHeadless ? 'new' : false,
-      defaultViewport: isHeadless ? { width: 1920, height: 1080 } : null,
+      defaultViewport: isHeadless ? { width: 1920, height: 2160 } : null,
       userDataDir: appProfileDir,
       protocolTimeout: 120000,
       args: isVPS ? vpsArgs : localArgs,

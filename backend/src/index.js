@@ -59,6 +59,34 @@ app.get('/api/ping', (req, res) => {
   res.json({ success: true, message: 'Grand$tate API is running', sessions: sessionManager.getStats() });
 });
 
+// Debug: check user data in DB (service key bypasses RLS)
+app.get('/api/debug/my-data', ...auth, async (req, res) => {
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supa = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY);
+    
+    const { data: groups, error: gErr } = await supa
+      .from('facebook_groups').select('id, user_id, name, created_at').eq('user_id', req.userId);
+    const { data: props, error: pErr } = await supa
+      .from('properties').select('id, user_id, title, created_at').eq('user_id', req.userId);
+    
+    // Also check ALL data (any user_id)
+    const { data: allGroups } = await supa.from('facebook_groups').select('id, user_id, name').limit(20);
+    const { data: allProps } = await supa.from('properties').select('id, user_id, title').limit(20);
+    
+    res.json({
+      success: true,
+      userId: req.userId,
+      myGroups: { count: groups?.length || 0, data: groups, error: gErr?.message },
+      myProperties: { count: props?.length || 0, data: props, error: pErr?.message },
+      allGroups: { count: allGroups?.length || 0, data: allGroups },
+      allProperties: { count: allProps?.length || 0, data: allProps },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // API Endpoints
 
 // ============================================

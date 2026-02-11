@@ -277,16 +277,56 @@ export class GroupPostingWorker {
       return true;
     }
 
-    // Strategy 4.5: Proximity-based — find "Choose listing type" label position,
-    // then find the nearest combobox below it by Y coordinate
-    console.log(`    🔍 Trying proximity-based listing type selection...`);
+    // Strategy 4.5: Click directly on "Choose listing type" text — it may be the dropdown trigger itself
+    console.log(`    🔍 Strategy 4.5: Click on "Choose listing type" text directly...`);
+    const directClickResult = await page.evaluate((labelTexts) => {
+      const _ds = document.querySelectorAll('[role="dialog"]');
+      let _fd = null;
+      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+      if (!_fd) return { found: false };
+      const spans = _fd.querySelectorAll('span');
+      for (const span of spans) {
+        const text = (span.textContent || '').trim();
+        if (text.length > 50) continue;
+        const textLower = text.toLowerCase();
+        for (const lbl of labelTexts) {
+          if (textLower === lbl.toLowerCase() || textLower.includes(lbl.toLowerCase())) {
+            const rect = span.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0 && rect.y > 0) {
+              return { found: true, x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, text, labelY: Math.round(rect.y) };
+            }
+          }
+        }
+      }
+      return { found: false };
+    }, dropdownLabels);
+
+    if (directClickResult.found) {
+      console.log(`    📍 Clicking "${directClickResult.text}" at y=${directClickResult.labelY}`);
+      await page.mouse.click(directClickResult.x, directClickResult.y);
+      await this.delay(1500);
+      // Check if clicking opened a dropdown
+      for (const opt of dropdownOptions) {
+        const optClicked = await this._clickOptionInDropdown(page, opt);
+        if (optClicked) {
+          console.log(`    ✅ Listing type selected via direct click on label`);
+          await this.delay(1800);
+          return true;
+        }
+      }
+      await page.keyboard.press('Escape');
+      await this.delay(300);
+    }
+
+    // Strategy 4.6: Proximity-based — find "Choose listing type" label position,
+    // then find the nearest combobox below it within 600px
+    console.log(`    🔍 Strategy 4.6: Proximity-based (600px range)...`);
     const proximityResult = await page.evaluate((labelTexts) => {
       const _ds = document.querySelectorAll('[role="dialog"]');
       let _fd = null;
       for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
       if (!_fd) return { found: false, debug: 'no dialog' };
 
-      // Find the "Choose listing type" label position
       let labelY = -1;
       let labelText = '';
       const spans = _fd.querySelectorAll('span');
@@ -296,7 +336,6 @@ export class GroupPostingWorker {
         const textLower = text.toLowerCase();
         for (const lbl of labelTexts) {
           if (textLower === lbl.toLowerCase() || textLower.includes(lbl.toLowerCase())) {
-            if (span.closest('h1, h2, h3, h4')) continue;
             const rect = span.getBoundingClientRect();
             if (rect.width > 0 && rect.height > 0 && rect.y > 0) {
               labelY = rect.y + rect.height;
@@ -309,49 +348,50 @@ export class GroupPostingWorker {
       }
       if (labelY < 0) return { found: false, debug: 'label not found' };
 
-      // Find ALL comboboxes and clickable elements near this label
+      // Find the first combobox below the label within 600px
       const combos = _fd.querySelectorAll('[role="combobox"]');
       let bestCombo = null;
-      let bestDist = 200; // max 200px below the label
+      let bestDist = 600;
       for (const cb of combos) {
         const rect = cb.getBoundingClientRect();
         if (rect.width < 20 || rect.height < 10) continue;
+        const cbText = (cb.textContent || '').trim().slice(0, 60).toLowerCase();
+        // Skip property type combobox (already filled)
+        if (cbText.includes('type of property') || cbText.includes('ประเภทอสังหาริมทรัพย์') || cbText.includes('house') || cbText.includes('flat') || cbText.includes('townhouse') || cbText.includes('บ้าน') || cbText.includes('อพาร์ท')) continue;
+        // Skip utility comboboxes
+        if (/washing|parking|air con|heating|เครื่องซัก|ที่จอดรถ|แอร์|เครื่องทำความร้อน/i.test(cbText)) continue;
         const dist = rect.y - labelY;
-        // Must be below or at the label, within 200px
-        if (dist >= -10 && dist < bestDist) {
+        if (dist >= -20 && dist < bestDist) {
           bestDist = dist;
-          bestCombo = { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, text: (cb.textContent || '').trim().slice(0, 60) };
+          bestCombo = { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, text: (cb.textContent || '').trim().slice(0, 60), comboY: Math.round(rect.y) };
         }
       }
 
       if (bestCombo) return { found: true, ...bestCombo, labelText, labelY: Math.round(labelY), method: 'proximity-combobox' };
 
-      // Also look for any div/span that acts like a dropdown trigger near the label
+      // Also look for buttons/clickables near the label
       const clickables = _fd.querySelectorAll('[role="button"], [tabindex="0"], [aria-haspopup]');
       for (const el of clickables) {
         const rect = el.getBoundingClientRect();
         if (rect.width < 40 || rect.height < 15) continue;
         const dist = rect.y - labelY;
-        if (dist >= -10 && dist < 200 && dist < bestDist) {
+        if (dist >= -20 && dist < 600 && dist < bestDist) {
           const elText = (el.textContent || '').trim().slice(0, 60);
-          // Skip if it looks like a submit/navigation button
-          if (/^(next|post|publish|ถัดไป|โพสต์)/i.test(elText)) continue;
+          if (/^(next|post|publish|ถัดไป|โพสต์|add photo|เพิ่มรูป)/i.test(elText)) continue;
           bestDist = dist;
-          bestCombo = { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, text: elText };
+          bestCombo = { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, text: elText, comboY: Math.round(rect.y) };
         }
       }
 
       if (bestCombo) return { found: true, ...bestCombo, labelText, labelY: Math.round(labelY), method: 'proximity-clickable' };
 
-      return { found: false, debug: `label "${labelText}" at y=${Math.round(labelY)} but no combobox nearby` };
+      return { found: false, debug: `label "${labelText}" at y=${Math.round(labelY)} but no interactive element within 600px` };
     }, dropdownLabels);
 
     if (proximityResult.found) {
-      console.log(`    📍 Found via ${proximityResult.method}: "${proximityResult.text}" (label="${proximityResult.labelText}" labelY=${proximityResult.labelY})`);
+      console.log(`    📍 Found via ${proximityResult.method}: "${proximityResult.text}" at y=${proximityResult.comboY} (label="${proximityResult.labelText}" labelY=${proximityResult.labelY})`);
       await page.mouse.click(proximityResult.x, proximityResult.y);
       await this.delay(1500);
-
-      // Try to select the desired option from the opened dropdown
       for (const opt of dropdownOptions) {
         const optClicked = await this._clickOptionInDropdown(page, opt);
         if (optClicked) {
@@ -360,31 +400,28 @@ export class GroupPostingWorker {
           return true;
         }
       }
-
-      // Dump available options for debugging
-      const availOpts = await page.evaluate(() => {
-        const selectors = '[role="option"], [role="menuitem"], [role="listbox"] [role="option"], [role="menu"] [role="menuitem"]';
-        const texts = [];
-        document.querySelectorAll(selectors).forEach(n => {
-          const t = (n.textContent || '').trim();
-          if (t.length > 0 && t.length < 60) texts.push(t);
-        });
-        // Also check for plain clickable items in open popups/overlays
-        document.querySelectorAll('[role="listbox"] > div, [role="menu"] > div, ul > li').forEach(n => {
-          const t = (n.textContent || '').trim();
-          if (t.length > 0 && t.length < 60) texts.push(t);
-        });
-        return [...new Set(texts)].slice(0, 20);
-      });
-      console.log(`    ⚠️ Proximity dropdown opened but option not found. Available: ${JSON.stringify(availOpts)}`);
+      // Try keyboard navigation: focus + ArrowDown to reveal options
+      console.log(`    🔍 Trying keyboard navigation (ArrowDown)...`);
+      await page.keyboard.press('ArrowDown');
+      await this.delay(1000);
+      for (const opt of dropdownOptions) {
+        const optClicked = await this._clickOptionInDropdown(page, opt);
+        if (optClicked) {
+          console.log(`    ✅ Listing type selected via proximity+keyboard`);
+          await this.delay(1800);
+          return true;
+        }
+      }
+      const availOpts = await this._getVisibleOptions(page);
+      console.log(`    ⚠️ Proximity: no matching option. Available: ${JSON.stringify(availOpts)}`);
       await page.keyboard.press('Escape');
       await this.delay(400);
     } else {
       console.log(`    ⚠️ Proximity search: ${proximityResult.debug}`);
     }
 
-    // Strategy 5: Brute-force scan all comboboxes, click each, check options
-    console.log(`    🔍 Scanning ALL comboboxes to locate listing type dropdown...`);
+    // Strategy 5: Try each EMPTY combobox — the first unfilled one after property type is likely listing type
+    console.log(`    🔍 Strategy 5: Trying empty comboboxes (click + focus + ArrowDown)...`);
 
     const comboCandidates = await page.evaluate(() => {
       const _ds = document.querySelectorAll('[role="dialog"]');
@@ -397,7 +434,8 @@ export class GroupPostingWorker {
         const rect = cb.getBoundingClientRect();
         if (rect.width < 20 || rect.height < 10) continue;
         const text = (cb.textContent || '').trim().slice(0, 60);
-        out.push({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, yTop: rect.y, text });
+        const isEmpty = text.length === 0 || text.length < 3;
+        out.push({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, yTop: rect.y, text, isEmpty });
       }
       out.sort((a, b) => a.yTop - b.yTop);
       return out.slice(0, 12);
@@ -406,36 +444,52 @@ export class GroupPostingWorker {
     const saleMarkers = ['for sale', 'sale', 'สำหรับขาย', 'ขาย'];
     const rentMarkers = ['for rent', 'rent', 'ให้เช่า', 'เช่า'];
 
-    for (const cand of comboCandidates) {
-      // Skip comboboxes that clearly belong to other fields
-      const skipTexts = ['washing', 'parking', 'air con', 'heating', 'เครื่องซักผ้า', 'ที่จอดรถ', 'แอร์', 'เครื่องทำความร้อน'];
-      if (skipTexts.some(s => cand.text.toLowerCase().includes(s))) continue;
+    // Try empty comboboxes FIRST (most likely to be listing type)
+    const emptyFirst = [...comboCandidates].sort((a, b) => (a.isEmpty === b.isEmpty ? 0 : a.isEmpty ? -1 : 1));
 
-      console.log(`    📍 Combobox candidate y=${Math.round(cand.yTop)} text="${cand.text}"`);
+    for (const cand of emptyFirst) {
+      // Skip utility comboboxes
+      const skipTexts = ['washing', 'parking', 'air con', 'heating', 'เครื่องซักผ้า', 'ที่จอดรถ', 'แอร์', 'เครื่องทำความร้อน', 'type of property', 'ประเภทอสังหาริมทรัพย์'];
+      if (skipTexts.some(s => cand.text.toLowerCase().includes(s))) continue;
+      // Skip property type (already has value like House/Flat/etc.)
+      if (/house|flat|townhouse|room|บ้าน|อพาร์ท|ทาวน์/i.test(cand.text)) continue;
+
+      console.log(`    📍 Combobox y=${Math.round(cand.yTop)} text="${cand.text}" empty=${cand.isEmpty}`);
+
+      // Method A: mouse click
       await page.mouse.click(cand.x, cand.y);
       await this.delay(1500);
 
-      const dropdownDebug = await page.evaluate(() => {
-        // Broad selector: also look for listbox children, ul/li
-        const selectors = '[role="option"], [role="menuitem"], [role="listbox"] [role="option"], [role="menu"] [role="menuitem"], [role="listbox"] > div, ul[role="listbox"] > li';
-        const texts = [];
-        for (const n of document.querySelectorAll(selectors)) {
-          const t = (n.textContent || '').trim();
-          if (t.length > 0 && t.length < 60) texts.push(t);
-        }
-        return [...new Set(texts)].slice(0, 25);
-      });
+      let dropdownOpts = await this._getVisibleOptions(page);
+      console.log(`    🔍 After click — options: ${JSON.stringify(dropdownOpts.slice(0, 15))}`);
 
-      console.log(`    🔍 Options found: ${JSON.stringify(dropdownDebug.slice(0, 15))}`);
+      // If no options appeared, try focus + ArrowDown
+      if (dropdownOpts.length === 0) {
+        console.log(`    🔍 No options from click, trying focus+ArrowDown...`);
+        await page.keyboard.press('ArrowDown');
+        await this.delay(1000);
+        dropdownOpts = await this._getVisibleOptions(page);
+        console.log(`    🔍 After ArrowDown — options: ${JSON.stringify(dropdownOpts.slice(0, 15))}`);
+      }
 
-      const signature = dropdownDebug.map(t => t.toLowerCase());
+      // If still no options, try typing to trigger autocomplete
+      if (dropdownOpts.length === 0 && cand.isEmpty) {
+        console.log(`    🔍 No options, trying type trigger...`);
+        await page.keyboard.type('F', { delay: 50 });
+        await this.delay(1000);
+        dropdownOpts = await this._getVisibleOptions(page);
+        console.log(`    🔍 After typing "F" — options: ${JSON.stringify(dropdownOpts.slice(0, 15))}`);
+        // Clear what we typed
+        await page.keyboard.press('Backspace');
+        await this.delay(300);
+      }
+
+      const signature = dropdownOpts.map(t => t.toLowerCase());
       const hasSale = signature.some(t => saleMarkers.some(m => t.includes(m)));
       const hasRent = signature.some(t => rentMarkers.some(m => t.includes(m)));
 
       if (hasSale || hasRent) {
-        console.log(`    ✅ Listing type dropdown detected (sale=${hasSale}, rent=${hasRent})`);
-
-        // Click the desired option
+        console.log(`    ✅ Listing type dropdown detected! (sale=${hasSale}, rent=${hasRent})`);
         for (const opt of dropdownOptions) {
           const optClicked = await this._clickOptionInDropdown(page, opt);
           if (optClicked) {
@@ -444,16 +498,88 @@ export class GroupPostingWorker {
             return true;
           }
         }
-
-        console.log(`    ⚠️ Could not click listing type option. Options: ${JSON.stringify(dropdownDebug.slice(0, 15))}`);
+        console.log(`    ⚠️ Detected but could not click option. Options: ${JSON.stringify(dropdownOpts.slice(0, 15))}`);
       }
 
       await page.keyboard.press('Escape');
       await this.delay(400);
     }
 
+    // Strategy 6: DOM debug dump — show what's near "Choose listing type" so we can fix
+    const domDump = await page.evaluate((labelTexts) => {
+      const _ds = document.querySelectorAll('[role="dialog"]');
+      let _fd = null;
+      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+      if (!_fd) return { debug: 'no dialog' };
+
+      // Find the "Choose listing type" span
+      let targetSpan = null;
+      const spans = _fd.querySelectorAll('span');
+      for (const span of spans) {
+        const text = (span.textContent || '').trim();
+        if (text.length > 50) continue;
+        for (const lbl of labelTexts) {
+          if (text.toLowerCase().includes(lbl.toLowerCase())) {
+            targetSpan = span;
+            break;
+          }
+        }
+        if (targetSpan) break;
+      }
+      if (!targetSpan) return { debug: 'label span not found' };
+
+      // Walk up to find the container section
+      const ancestors = [];
+      let el = targetSpan;
+      for (let i = 0; i < 8; i++) {
+        if (!el.parentElement) break;
+        el = el.parentElement;
+        const tag = el.tagName;
+        const role = el.getAttribute('role') || '';
+        const cls = (el.className || '').toString().slice(0, 40);
+        ancestors.push(`${tag}[role=${role}][class=${cls}]`);
+      }
+
+      // Look at siblings of each ancestor level
+      const nearbyElements = [];
+      el = targetSpan;
+      for (let i = 0; i < 6; i++) {
+        if (!el.parentElement) break;
+        el = el.parentElement;
+        const children = el.children;
+        for (const child of children) {
+          const rect = child.getBoundingClientRect();
+          if (rect.width < 10 || rect.height < 5) continue;
+          const tag = child.tagName;
+          const role = child.getAttribute('role') || '';
+          const text = (child.textContent || '').trim().slice(0, 50);
+          const ariaLabel = child.getAttribute('aria-label') || '';
+          nearbyElements.push({ tag, role, text: text.length > 40 ? text.slice(0, 40) + '...' : text, ariaLabel, y: Math.round(rect.y), h: Math.round(rect.height) });
+        }
+        if (nearbyElements.length > 10) break;
+      }
+
+      return { ancestors, nearbyElements: nearbyElements.slice(0, 20) };
+    }, dropdownLabels);
+    console.log(`    📋 DOM near "Choose listing type":`);
+    console.log(`    📋 Ancestors: ${JSON.stringify(domDump.ancestors || [])}`);
+    console.log(`    📋 Nearby: ${JSON.stringify(domDump.nearbyElements || domDump.debug || [])}`);
+
     console.log(`    ❌ All listing type strategies exhausted — could not set listing type`);
     return false;
+  }
+
+  // Helper: get visible dropdown options currently on page
+  async _getVisibleOptions(page) {
+    return page.evaluate(() => {
+      const selectors = '[role="option"], [role="menuitem"], [role="listbox"] [role="option"], [role="menu"] [role="menuitem"], [role="listbox"] > div, ul[role="listbox"] > li';
+      const texts = [];
+      for (const n of document.querySelectorAll(selectors)) {
+        const t = (n.textContent || '').trim();
+        if (t.length > 0 && t.length < 60) texts.push(t);
+      }
+      return [...new Set(texts)].slice(0, 25);
+    });
   }
 
   // Helper: click an option in a currently open dropdown

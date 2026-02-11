@@ -111,14 +111,15 @@ export class GroupPostingWorker {
   // ============================================
 
   mapPropertyType(type) {
-    // Return [Thai, English] for bilingual support
+    // Return [Thai, English] — English must match Facebook's EXACT dropdown options:
+    // Facebook EN options: "House", "Townhouse", "Flat/apartment", "Room only"
     const typeMap = {
-      'condo': ['อพาร์ทเมนท์', 'Apartment'],
+      'condo': ['อพาร์ทเมนท์', 'Flat/apartment'],
       'house': ['บ้าน', 'House'],
       'townhouse': ['ทาวน์เฮาส์', 'Townhouse'],
-      'apartment': ['อพาร์ทเมนท์', 'Apartment'],
+      'apartment': ['อพาร์ทเมนท์', 'Flat/apartment'],
       'land': ['บ้าน', 'House'],
-      'commercial': ['อพาร์ทเมนท์', 'Apartment'],
+      'commercial': ['อพาร์ทเมนท์', 'Flat/apartment'],
     };
     return typeMap[type] || ['บ้าน', 'House'];
   }
@@ -327,14 +328,24 @@ export class GroupPostingWorker {
     await this.delay(1000);
 
     const optionBox = await page.evaluate((val) => {
+      const valLower = val.toLowerCase();
       const selectors = '[role="option"], [role="menuitem"], [role="listbox"] [role="option"]';
       let options = document.querySelectorAll(selectors);
       if (options.length === 0) {
         options = document.querySelectorAll('[role="listbox"] div, [role="menu"] div');
       }
+      // Pass 1: exact or includes match
       for (const option of options) {
         const text = (option.textContent || '').trim();
         if (text === val || text.includes(val)) {
+          const rect = option.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true };
+        }
+      }
+      // Pass 2: case-insensitive partial match
+      for (const option of options) {
+        const text = (option.textContent || '').trim().toLowerCase();
+        if (text === valLower || text.includes(valLower) || valLower.includes(text)) {
           const rect = option.getBoundingClientRect();
           if (rect.width > 0 && rect.height > 0) return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true };
         }
@@ -344,7 +355,7 @@ export class GroupPostingWorker {
       for (const el of allEls) {
         if (el.children.length > 0) continue;
         const text = (el.textContent || '').trim();
-        if (text === val) {
+        if (text === val || text.toLowerCase() === valLower) {
           const rect = el.getBoundingClientRect();
           if (rect.width > 0 && rect.height > 0 && rect.y > 0) return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true };
         }
@@ -597,32 +608,49 @@ export class GroupPostingWorker {
       await page.mouse.click(sellBtnBox.x, sellBtnBox.y);
       await this.delay(3000);
 
-      // ── Verify the dialog that opened is the CATEGORY dialog, not Notifications ──
-      for (let verifyAttempt = 0; verifyAttempt < 3; verifyAttempt++) {
-        const dialogType = await page.evaluate(() => {
-          const dialog = document.querySelector('[role="dialog"]');
-          if (!dialog) return 'none';
-          const text = dialog.textContent || '';
-          if (text.includes('Notification') || text.includes('Unread') || text.includes('push notification') || text.includes('การแจ้งเตือน')) return 'notifications';
+      // ── Verify the dialog is CATEGORY dialog, not Notifications ──
+      const getDialogType = () => page.evaluate(() => {
+        const dialogs = document.querySelectorAll('[role="dialog"]');
+        for (const d of dialogs) {
+          const text = (d.textContent || '').toLowerCase();
+          if (text.includes('notification') || text.includes('unread') || text.includes('push notification') || text.includes('การแจ้งเตือน')) continue;
+          // This dialog is NOT notifications — it's the category/form dialog
           return 'category';
-        });
+        }
+        // Check if ANY dialog exists
+        if (dialogs.length > 0) return 'notifications';
+        return 'none';
+      });
+
+      for (let verifyAttempt = 0; verifyAttempt < 3; verifyAttempt++) {
+        const dialogType = await getDialogType();
         console.log(`   🔍 Dialog type: ${dialogType}`);
         if (dialogType === 'category') break;
         if (dialogType === 'notifications') {
-          console.log(`   ⚠️ Still Notifications overlay! Closing again...`);
-          await page.keyboard.press('Escape');
-          await this.delay(500);
-          await page.evaluate(() => {
-            const closeButtons = document.querySelectorAll('[aria-label="Close"], [aria-label="ปิด"]');
-            for (const btn of closeButtons) { const r = btn.getBoundingClientRect(); if (r.width > 0) btn.click(); }
-          });
-          await this.delay(1000);
-          // Re-click sell button
-          console.log(`   🔄 Re-clicking sell button...`);
-          await page.mouse.click(sellBtnBox.x, sellBtnBox.y);
+          console.log(`   ⚠️ Notifications still blocking! Reloading page...`);
+          await page.reload({ waitUntil: 'networkidle2', timeout: 60000 });
           await this.delay(3000);
+          // Re-find and re-click sell button after reload
+          console.log(`   🔄 Re-finding sell button after reload...`);
+          const newSellBtn = await page.evaluate(() => {
+            const btns = document.querySelectorAll('[role="button"]');
+            const kws = ['sell something', 'ขายสินค้า', 'sell', 'create listing'];
+            for (const btn of btns) {
+              const lower = ((btn.getAttribute('aria-label') || '') + ' ' + (btn.textContent || '')).toLowerCase();
+              if (kws.some(kw => lower.includes(kw))) {
+                const r = btn.getBoundingClientRect();
+                if (r.width > 0) return { x: r.x + r.width / 2, y: r.y + r.height / 2, found: true };
+              }
+            }
+            return { found: false };
+          });
+          if (newSellBtn.found) {
+            await page.mouse.click(newSellBtn.x, newSellBtn.y);
+            console.log(`   📍 Re-clicked sell button`);
+            await this.delay(3000);
+          }
         } else if (dialogType === 'none') {
-          console.log(`   ⚠️ No dialog found — re-clicking sell button...`);
+          console.log(`   ⚠️ No dialog — re-clicking sell button...`);
           await page.mouse.click(sellBtnBox.x, sellBtnBox.y);
           await this.delay(3000);
         }
@@ -632,10 +660,11 @@ export class GroupPostingWorker {
       // MUST use native mouse click — Facebook React ignores JS .click()
       updateMsg('เลือกประเภท บ้านสำหรับขายหรือเช่า...');
       console.log('📌 Selecting "บ้านสำหรับขายหรือเช่า" category...');
+      // IMPORTANT: Do NOT use generic words like "Property" — they match group names!
       const keywords = [
         'บ้านสำหรับขายหรือเช่า', 'บ้านสำหรับขาย',
         'Home for Sale', 'Homes for Sale or Rent', 'Home for sale or rent',
-        'Property for Sale', 'Property', 'Real Estate',
+        'Property for Sale or Rent',
       ];
 
       let cardClicked = false;
@@ -645,52 +674,63 @@ export class GroupPostingWorker {
           await this.delay(2000);
         }
 
-        // Debug: log all visible category items in dialog
-        if (attempt === 0) {
-          const allCategories = await page.evaluate(() => {
-            const dialog = document.querySelector('[role="dialog"]');
-            if (!dialog) return ['NO DIALOG'];
+        // Debug: log categories from the CORRECT (non-Notifications) dialog
+        const allCategories = await page.evaluate(() => {
+          const dialogs = document.querySelectorAll('[role="dialog"]');
+          for (const dialog of dialogs) {
+            const dText = (dialog.textContent || '').toLowerCase();
+            // Skip Notifications dialog
+            if (dText.includes('notification') || dText.includes('unread') || dText.includes('การแจ้งเตือน')) continue;
             const spans = dialog.querySelectorAll('span');
             const texts = [];
             for (const s of spans) {
               const t = (s.textContent || '').trim();
-              if (t.length > 3 && t.length < 60) texts.push(t);
+              if (t.length > 2 && t.length < 60) texts.push(t);
             }
-            return [...new Set(texts)].slice(0, 20);
-          });
-          console.log(`   🔍 Categories in dialog:`, JSON.stringify(allCategories));
-        }
+            return { dialogFound: true, texts: [...new Set(texts)].slice(0, 25) };
+          }
+          return { dialogFound: false, texts: [] };
+        });
+        console.log(`   🔍 Category dialog found: ${allCategories.dialogFound}, items:`, JSON.stringify(allCategories.texts));
 
+        // Search ONLY in non-Notifications dialogs
         const cardBox = await page.evaluate((kws) => {
-          const allSpans = document.querySelectorAll('span');
-          for (const span of allSpans) {
-            const text = (span.textContent || '').trim();
-            const lower = text.toLowerCase();
-            if (!kws.some(kw => text === kw || text.includes(kw) || lower.includes(kw.toLowerCase()))) continue;
-            // Walk up to find card container with icon
-            let card = span;
-            for (let i = 0; i < 15; i++) {
-              if (!card.parentElement) break;
-              card = card.parentElement;
-              const hasIcon = card.querySelector('i[data-visualcompletion="css-img"]');
-              if (hasIcon || card.getAttribute('role') === 'button') {
-                const rect = card.getBoundingClientRect();
-                if (rect.width > 0 && rect.height > 0) {
-                  return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, method: 'card' };
+          const dialogs = document.querySelectorAll('[role="dialog"]');
+          for (const dialog of dialogs) {
+            const dText = (dialog.textContent || '').toLowerCase();
+            if (dText.includes('notification') || dText.includes('unread') || dText.includes('การแจ้งเตือน')) continue;
+            const spans = dialog.querySelectorAll('span');
+            for (const span of spans) {
+              const text = (span.textContent || '').trim();
+              const lower = text.toLowerCase();
+              if (!kws.some(kw => text === kw || text.includes(kw) || lower.includes(kw.toLowerCase()))) continue;
+              // Walk up to find card container with icon
+              let card = span;
+              for (let i = 0; i < 15; i++) {
+                if (!card.parentElement) break;
+                card = card.parentElement;
+                // Don't walk outside the dialog
+                if (card.getAttribute('role') === 'dialog') break;
+                const hasIcon = card.querySelector('i[data-visualcompletion="css-img"]');
+                if (hasIcon || card.getAttribute('role') === 'button') {
+                  const rect = card.getBoundingClientRect();
+                  if (rect.width > 0 && rect.height > 0) {
+                    return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, method: 'card', matchedText: text };
+                  }
                 }
               }
-            }
-            // Fallback: use span position
-            const rect = span.getBoundingClientRect();
-            if (rect.width > 0 && rect.height > 0) {
-              return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, method: 'span' };
+              // Fallback: use span position
+              const rect = span.getBoundingClientRect();
+              if (rect.width > 0 && rect.height > 0) {
+                return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, found: true, method: 'span', matchedText: text };
+              }
             }
           }
           return { found: false };
         }, keywords);
 
         if (cardBox.found) {
-          console.log(`   📍 Found via ${cardBox.method} at (${Math.round(cardBox.x)}, ${Math.round(cardBox.y)})`);
+          console.log(`   📍 Found "${cardBox.matchedText}" via ${cardBox.method} at (${Math.round(cardBox.x)}, ${Math.round(cardBox.y)})`);
           await page.mouse.click(cardBox.x, cardBox.y);
           cardClicked = true;
         }
@@ -730,18 +770,21 @@ export class GroupPostingWorker {
       updateMsg('กรอกข้อมูลสินทรัพย์...');
 
       // 3b. Listing type: ให้เช่า / สำหรับขาย / For Rent / For Sale
+      // NOTE: This dropdown may not exist on all forms. DO NOT use generic "Type" label
+      // as it conflicts with Property type. Only match specific listing type labels.
       const listingLabels = Array.isArray(listingTypeLabel) ? listingTypeLabel : [listingTypeLabel];
       await this.trySelectOnPage(page,
-        ['บ้านสำหรับขายหรือเช่า', 'Home for sale or rent', 'Listing type', 'Type'],
+        ['บ้านสำหรับขายหรือเช่า', 'Home for sale or rent', 'Listing type'],
         listingLabels
       );
       await this.delay(500);
 
       // 3c. Property type (Thai + English)
+      // Facebook EN dropdown label = "Type", options: House, Townhouse, Flat/apartment, Room only
       const propTypeValues = Array.isArray(propertyTypeLabel) ? propertyTypeLabel : [propertyTypeLabel];
       await this.trySelectOnPage(page,
         property.listingType === 'rent'
-          ? ['ประเภทของที่พักให้เช่า', 'ประเภท', 'Rental type', 'Property type', 'Type']
+          ? ['ประเภทของที่พักให้เช่า', 'ประเภท', 'Rental type', 'Property type', 'Home type', 'Type']
           : ['ประเภทอสังหาริมทรัพย์', 'ประเภทของที่พักสำหรับขาย', 'ประเภท', 'Property type', 'Home type', 'Type'],
         propTypeValues
       );
@@ -1909,43 +1952,40 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
       // ── Step 1.2: AGGRESSIVELY dismiss Notifications overlay ──
       // Facebook Notifications panel is [role="dialog"] and blocks everything
       console.log('🔕 Dismissing overlays...');
-      for (let dismissAttempt = 0; dismissAttempt < 5; dismissAttempt++) {
-        const hasNotifOverlay = await page.evaluate(() => {
-          const dialogs = document.querySelectorAll('[role="dialog"]');
-          for (const d of dialogs) {
-            const text = d.textContent || '';
-            if (text.includes('Notification') || text.includes('การแจ้งเตือน') || text.includes('Unread') || text.includes('push notification')) {
-              return true;
-            }
-          }
-          return false;
-        });
-        if (!hasNotifOverlay) { console.log(`   ✅ No Notifications overlay (attempt ${dismissAttempt})`); break; }
+      const hasNotifDialog = () => page.evaluate(() => {
+        const dialogs = document.querySelectorAll('[role="dialog"]');
+        for (const d of dialogs) {
+          const text = (d.textContent || '').toLowerCase();
+          if (text.includes('notification') || text.includes('การแจ้งเตือน') || text.includes('unread') || text.includes('push notification')) return true;
+        }
+        return false;
+      });
+      for (let dismissAttempt = 0; dismissAttempt < 3; dismissAttempt++) {
+        if (!(await hasNotifDialog())) { console.log(`   ✅ No Notifications overlay`); break; }
         console.log(`   🔕 Notifications overlay detected — closing (attempt ${dismissAttempt + 1})...`);
         try {
-          // Method 1: Press Escape
           await page.keyboard.press('Escape');
-          await this.delay(500);
-          // Method 2: Click close buttons
+          await this.delay(300);
           await page.evaluate(() => {
-            const closeButtons = document.querySelectorAll('[aria-label="Close"], [aria-label="ปิด"]');
-            for (const btn of closeButtons) {
-              const rect = btn.getBoundingClientRect();
-              if (rect.width > 0 && rect.height > 0) { btn.click(); }
-            }
+            document.querySelectorAll('[aria-label="Close"], [aria-label="ปิด"]').forEach(b => { if (b.getBoundingClientRect().width > 0) b.click(); });
           });
-          await this.delay(500);
-          // Method 3: Click on [role="main"] to move focus away
-          await page.evaluate(() => {
-            const main = document.querySelector('[role="main"]');
-            if (main) main.click();
-          });
-          await this.delay(500);
-          // Method 4: Click on body at center of page
-          const viewport = await page.evaluate(() => ({ w: window.innerWidth, h: window.innerHeight }));
-          await page.mouse.click(viewport.w / 2, viewport.h / 2);
-          await this.delay(500);
+          await this.delay(300);
+          await page.evaluate(() => { const m = document.querySelector('[role="main"]'); if (m) m.click(); });
+          await this.delay(300);
         } catch (e) { /* ignore */ }
+      }
+      // NUCLEAR OPTION: if Notifications STILL open, reload the page to kill all overlays
+      if (await hasNotifDialog()) {
+        console.log('   ☢️ Notifications won\'t close — reloading page...');
+        await page.reload({ waitUntil: 'networkidle2', timeout: 60000 });
+        await this.delay(3000);
+        // One more check after reload
+        if (await hasNotifDialog()) {
+          console.log('   ☢️ Still there after reload — navigating directly...');
+          await page.goto(groupUrl, { waitUntil: 'networkidle2', timeout: 60000 });
+          await this.delay(3000);
+        }
+        console.log('   ✅ Page reloaded — overlays cleared');
       }
 
       // ── Step 1.5: READ group name — use document.title (more reliable than h1) ──

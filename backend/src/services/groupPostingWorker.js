@@ -111,19 +111,69 @@ export class GroupPostingWorker {
   // ============================================
 
   mapPropertyType(type) {
+    // Return [Thai, English] for bilingual support
     const typeMap = {
-      'condo': 'อพาร์ทเมนท์',
-      'house': 'บ้าน',
-      'townhouse': 'ทาวน์เฮาส์',
-      'apartment': 'อพาร์ทเมนท์',
-      'land': 'บ้าน',
-      'commercial': 'อพาร์ทเมนท์',
+      'condo': ['อพาร์ทเมนท์', 'Apartment'],
+      'house': ['บ้าน', 'House'],
+      'townhouse': ['ทาวน์เฮาส์', 'Townhouse'],
+      'apartment': ['อพาร์ทเมนท์', 'Apartment'],
+      'land': ['บ้าน', 'House'],
+      'commercial': ['อพาร์ทเมนท์', 'Apartment'],
     };
-    return typeMap[type] || 'บ้าน';
+    return typeMap[type] || ['บ้าน', 'House'];
   }
 
   mapListingType(listingType) {
-    return listingType === 'rent' ? 'ให้เช่า' : 'สำหรับขาย';
+    // Return [Thai, English]
+    return listingType === 'rent' ? ['ให้เช่า', 'For Rent'] : ['สำหรับขาย', 'For Sale'];
+  }
+
+  // Try multiple labels for nativeTypeOnPage — returns true if any label worked
+  async tryTypeOnPage(page, labels, value) {
+    for (const label of labels) {
+      const found = await page.evaluate((lbl) => {
+        const spans = document.querySelectorAll('[role="dialog"] span');
+        for (const s of spans) { if ((s.textContent || '').trim().includes(lbl)) return true; }
+        return false;
+      }, label);
+      if (found) { await this.nativeTypeOnPage(page, label, value); return true; }
+    }
+    console.log(`    ⚠️ None of labels found: ${JSON.stringify(labels)}`);
+    return false;
+  }
+
+  // Try multiple labels for nativeSelectDropdownOnPage
+  async trySelectOnPage(page, labels, optionValues) {
+    const opts = Array.isArray(optionValues) ? optionValues : [optionValues];
+    for (const label of labels) {
+      const found = await page.evaluate((lbl) => {
+        const spans = document.querySelectorAll('[role="dialog"] span');
+        for (const s of spans) { if ((s.textContent || '').trim().includes(lbl)) return true; }
+        return false;
+      }, label);
+      if (found) {
+        for (const opt of opts) {
+          await this.nativeSelectDropdownOnPage(page, label, opt);
+        }
+        return true;
+      }
+    }
+    console.log(`    ⚠️ None of dropdown labels found: ${JSON.stringify(labels)}`);
+    return false;
+  }
+
+  // Try multiple labels for nativeTypeTextareaOnPage
+  async tryTypeTextareaOnPage(page, labels, value) {
+    for (const label of labels) {
+      const found = await page.evaluate((lbl) => {
+        const spans = document.querySelectorAll('[role="dialog"] span');
+        for (const s of spans) { if ((s.textContent || '').trim().includes(lbl)) return true; }
+        return false;
+      }, label);
+      if (found) { await this.nativeTypeTextareaOnPage(page, label, value); return true; }
+    }
+    console.log(`    ⚠️ None of textarea labels found: ${JSON.stringify(labels)}`);
+    return false;
   }
 
   // Scroll within the dialog (NOT window) — prevents closing the dialog
@@ -542,20 +592,41 @@ export class GroupPostingWorker {
       // MUST use native mouse click — Facebook React ignores JS .click()
       updateMsg('เลือกประเภท บ้านสำหรับขายหรือเช่า...');
       console.log('📌 Selecting "บ้านสำหรับขายหรือเช่า" category...');
-      const keywords = ['บ้านสำหรับขายหรือเช่า', 'บ้านสำหรับขาย', 'Home for Sale', 'Homes for Sale or Rent'];
+      const keywords = [
+        'บ้านสำหรับขายหรือเช่า', 'บ้านสำหรับขาย',
+        'Home for Sale', 'Homes for Sale or Rent', 'Home for sale or rent',
+        'Property for Sale', 'Property', 'Real Estate',
+      ];
 
       let cardClicked = false;
-      for (let attempt = 0; attempt < 3 && !cardClicked; attempt++) {
+      for (let attempt = 0; attempt < 5 && !cardClicked; attempt++) {
         if (attempt > 0) {
-          console.log(`   🔄 Retry ${attempt + 1}/3...`);
+          console.log(`   🔄 Retry ${attempt + 1}/5...`);
           await this.delay(2000);
+        }
+
+        // Debug: log all visible category items in dialog
+        if (attempt === 0) {
+          const allCategories = await page.evaluate(() => {
+            const dialog = document.querySelector('[role="dialog"]');
+            if (!dialog) return ['NO DIALOG'];
+            const spans = dialog.querySelectorAll('span');
+            const texts = [];
+            for (const s of spans) {
+              const t = (s.textContent || '').trim();
+              if (t.length > 3 && t.length < 60) texts.push(t);
+            }
+            return [...new Set(texts)].slice(0, 20);
+          });
+          console.log(`   🔍 Categories in dialog:`, JSON.stringify(allCategories));
         }
 
         const cardBox = await page.evaluate((kws) => {
           const allSpans = document.querySelectorAll('span');
           for (const span of allSpans) {
             const text = (span.textContent || '').trim();
-            if (!kws.some(kw => text === kw || text.includes(kw))) continue;
+            const lower = text.toLowerCase();
+            if (!kws.some(kw => text === kw || text.includes(kw) || lower.includes(kw.toLowerCase()))) continue;
             // Walk up to find card container with icon
             let card = span;
             for (let i = 0; i < 15; i++) {
@@ -618,35 +689,39 @@ export class GroupPostingWorker {
       console.log('✅ Dialog still open — continuing form fill...');
       updateMsg('กรอกข้อมูลสินทรัพย์...');
 
-      // 3b. Listing type: ให้เช่า / สำหรับขาย
-      await this.nativeSelectDropdownOnPage(page, 'บ้านสำหรับขายหรือเช่า', listingTypeLabel);
+      // 3b. Listing type: ให้เช่า / สำหรับขาย / For Rent / For Sale
+      const listingLabels = Array.isArray(listingTypeLabel) ? listingTypeLabel : [listingTypeLabel];
+      await this.trySelectOnPage(page,
+        ['บ้านสำหรับขายหรือเช่า', 'Home for sale or rent', 'Listing type', 'Type'],
+        listingLabels
+      );
       await this.delay(500);
 
-      // 3c. Property type
-      const propTypeLabels = property.listingType === 'rent'
-        ? ['ประเภทของที่พักให้เช่า', 'ประเภท']
-        : ['ประเภทอสังหาริมทรัพย์', 'ประเภทของที่พักสำหรับขาย', 'ประเภท'];
-      for (const label of propTypeLabels) {
-        const exists = await page.evaluate((lbl) => {
-          const spans = document.querySelectorAll('span');
-          for (const s of spans) { if ((s.textContent || '').trim().includes(lbl)) return true; }
-          return false;
-        }, label);
-        if (exists) { await this.nativeSelectDropdownOnPage(page, label, propertyTypeLabel); break; }
-      }
+      // 3c. Property type (Thai + English)
+      const propTypeValues = Array.isArray(propertyTypeLabel) ? propertyTypeLabel : [propertyTypeLabel];
+      await this.trySelectOnPage(page,
+        property.listingType === 'rent'
+          ? ['ประเภทของที่พักให้เช่า', 'ประเภท', 'Rental type', 'Property type', 'Type']
+          : ['ประเภทอสังหาริมทรัพย์', 'ประเภทของที่พักสำหรับขาย', 'ประเภท', 'Property type', 'Home type', 'Type'],
+        propTypeValues
+      );
       await this.delay(500);
 
       // 3d. Bedrooms
-      await this.nativeTypeOnPage(page, 'จำนวนห้องนอน', bedrooms);
+      await this.tryTypeOnPage(page, ['จำนวนห้องนอน', 'Bedrooms', 'Number of bedrooms', 'Beds'], bedrooms);
       await this.delay(300);
 
       // 3e. Bathrooms
-      await this.nativeTypeOnPage(page, 'จำนวนห้องน้ำ', bathrooms);
+      await this.tryTypeOnPage(page, ['จำนวนห้องน้ำ', 'Bathrooms', 'Number of bathrooms', 'Baths'], bathrooms);
       await this.delay(300);
 
       // 3f. Price
-      const priceLabel = property.listingType === 'rent' ? 'ราคาต่อเดือน' : 'ราคา';
-      await this.nativeTypeOnPage(page, priceLabel, price);
+      await this.tryTypeOnPage(page,
+        property.listingType === 'rent'
+          ? ['ราคาต่อเดือน', 'Price per month', 'Monthly rent', 'Price']
+          : ['ราคา', 'Price'],
+        price
+      );
       await this.delay(300);
 
       // 3g. Location
@@ -654,15 +729,19 @@ export class GroupPostingWorker {
       await this.delay(500);
 
       // 3h. Description
-      const descLabel = property.listingType === 'rent' ? 'คำอธิบายของที่พักให้เช่า' : 'คำอธิบายอสังหาริมทรัพย์';
-      await this.nativeTypeTextareaOnPage(page, descLabel, description);
+      await this.tryTypeTextareaOnPage(page,
+        property.listingType === 'rent'
+          ? ['คำอธิบายของที่พักให้เช่า', 'คำอธิบาย', 'Rental description', 'Description']
+          : ['คำอธิบายอสังหาริมทรัพย์', 'คำอธิบาย', 'Property description', 'Description'],
+        description
+      );
       await this.delay(300);
 
       // 3i. Square meters
       if (size && size !== '0') {
         await this.scrollDownInDialog(page, 300);
         await this.delay(500);
-        await this.nativeTypeOnPage(page, 'ตารางเมตร', size);
+        await this.tryTypeOnPage(page, ['ตารางเมตร', 'Square meters', 'Square feet', 'Area', 'Size'], size);
         await this.delay(300);
       }
 

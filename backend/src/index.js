@@ -64,16 +64,16 @@ app.get('/api/debug/my-data', ...auth, async (req, res) => {
   try {
     const { createClient } = await import('@supabase/supabase-js');
     const supa = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY);
-    
+
     const { data: groups, error: gErr } = await supa
       .from('facebook_groups').select('id, user_id, name, created_at').eq('user_id', req.userId);
     const { data: props, error: pErr } = await supa
       .from('properties').select('id, user_id, title, created_at').eq('user_id', req.userId);
-    
+
     // Also check ALL data (any user_id)
     const { data: allGroups } = await supa.from('facebook_groups').select('id, user_id, name').limit(20);
     const { data: allProps } = await supa.from('properties').select('id, user_id, title').limit(20);
-    
+
     res.json({
       success: true,
       userId: req.userId,
@@ -123,9 +123,9 @@ app.get('/api/posting-history', ...auth, (req, res) => {
 // Property-specific posting history
 app.get('/api/posting-history/:propertyId', ...auth, (req, res) => {
   const { propertyId } = req.params;
-  res.json({ 
-    success: true, 
-    history: req.postingTracker.getPropertyHistory(propertyId) 
+  res.json({
+    success: true,
+    history: req.postingTracker.getPropertyHistory(propertyId)
   });
 });
 
@@ -133,14 +133,14 @@ app.get('/api/posting-history/:propertyId', ...auth, (req, res) => {
 app.get('/api/available-groups/:propertyId', ...auth, (req, res) => {
   const { propertyId } = req.params;
   const { groupIds, cooldownHours } = req.query;
-  
+
   const allGroupIds = groupIds ? groupIds.split(',') : [];
   const available = req.postingTracker.filterAvailableGroups(
-    propertyId, 
-    allGroupIds, 
+    propertyId,
+    allGroupIds,
     parseInt(cooldownHours) || 24
   );
-  
+
   res.json({ success: true, availableGroups: available });
 });
 
@@ -148,7 +148,7 @@ app.get('/api/available-groups/:propertyId', ...auth, (req, res) => {
 app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
   try {
     const { url } = req.body;
-    
+
     if (!url || !url.includes('facebook.com/groups')) {
       return res.status(400).json({ success: false, error: 'Invalid Facebook group URL' });
     }
@@ -165,20 +165,20 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
     }
 
     const page = req.groupWorker.page;
-    
+
     // Navigate to the group's ABOUT page to get activity info
     // Convert URL to /about page: https://www.facebook.com/groups/XXX -> https://www.facebook.com/groups/XXX/about
     let aboutUrl = url.replace(/\/$/, ''); // Remove trailing slash
     if (!aboutUrl.includes('/about')) {
       aboutUrl = aboutUrl + '/about';
     }
-    
+
     console.log('Fetching group info from:', aboutUrl);
     await page.goto(aboutUrl, { waitUntil: 'networkidle2', timeout: 30000 });
-    
+
     // Wait for the page to fully load (about page needs more time)
     await new Promise(r => setTimeout(r, 4000));
-    
+
     // Try to extract group name and member count
     const groupInfo = await page.evaluate(() => {
       let name = '';
@@ -189,6 +189,8 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
         'การแจ้งเตือน', 'แชท', 'Chat', 'Notifications', 'Messenger',
         'Facebook', 'หน้าหลัก', 'Home', 'Watch', 'Marketplace',
         'สร้าง', 'Create', 'เมนู', 'Menu',
+        'Groups', 'กลุ่ม', 'Group', 'กลุ่มของคุณ', 'Your groups',
+        'เข้าร่วมกลุ่ม', 'Join group', 'ค้นพบ', 'Discover',
       ];
       const isBlacklisted = (text) => blacklist.some(b => text === b || text.startsWith(b + ' '));
 
@@ -230,7 +232,7 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
           }
         }
       }
-      
+
       // Strategy 4: aria-label on group header links
       if (!name) {
         const groupLinks = document.querySelectorAll('a[href*="/groups/"]');
@@ -242,20 +244,20 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
           }
         }
       }
-      
+
       // ======= FIND MEMBER COUNT =======
       const bodyText = document.body.innerText;
       let match;
-      
+
       // Helper: parse Thai unit multiplier
       const thaiUnits = { 'พัน': 1000, 'หมื่น': 10000, 'แสน': 100000, 'ล้าน': 1000000 };
-      
+
       // ── Thai: "สมาชิก X.X [หมื่น/แสน/ล้าน/พัน]" (สมาชิก comes first)
       match = bodyText.match(/สมาชิก\s*([\d.,]+)\s*(พัน|หมื่น|แสน|ล้าน)/);
       if (match) {
         memberCount = Math.round(parseFloat(match[1].replace(',', '.')) * (thaiUnits[match[2]] || 1));
       }
-      
+
       // ── Thai: "X.X [หมื่น/แสน/ล้าน/พัน] สมาชิก" (number comes first)
       if (!memberCount) {
         match = bodyText.match(/([\d.,]+)\s*(พัน|หมื่น|แสน|ล้าน)\s*(?:คน\s*)?สมาชิก/);
@@ -263,7 +265,7 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
           memberCount = Math.round(parseFloat(match[1].replace(',', '.')) * (thaiUnits[match[2]] || 1));
         }
       }
-      
+
       // ── Thai: "สมาชิก X,XXX คน" (plain number with คน)
       if (!memberCount) {
         match = bodyText.match(/สมาชิก\s*([\d,]+)\s*คน/);
@@ -271,7 +273,7 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
           memberCount = parseInt(match[1].replace(/,/g, ''));
         }
       }
-      
+
       // ── Thai: "สมาชิก X,XXX" (plain number without คน)
       if (!memberCount) {
         match = bodyText.match(/สมาชิก\s*([\d,]+)/);
@@ -279,7 +281,7 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
           memberCount = parseInt(match[1].replace(/,/g, ''));
         }
       }
-      
+
       // ── Thai: "X,XXX สมาชิก" (number before สมาชิก)
       if (!memberCount) {
         match = bodyText.match(/([\d,]+)\s*สมาชิก/);
@@ -287,7 +289,7 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
           memberCount = parseInt(match[1].replace(/,/g, ''));
         }
       }
-      
+
       // ── English: "X.XK members" or "XK members"
       if (!memberCount) {
         match = bodyText.match(/([\d.]+)\s*[Kk]\s*members/i);
@@ -295,7 +297,7 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
           memberCount = Math.round(parseFloat(match[1]) * 1000);
         }
       }
-      
+
       // ── English: "X.XM members"
       if (!memberCount) {
         match = bodyText.match(/([\d.]+)\s*[Mm]\s*members/i);
@@ -303,7 +305,7 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
           memberCount = Math.round(parseFloat(match[1]) * 1000000);
         }
       }
-      
+
       // ── English: "X,XXX members" (plain number)
       if (!memberCount) {
         match = bodyText.match(/([\d,]+)\s*members/i);
@@ -311,7 +313,7 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
           memberCount = parseInt(match[1].replace(/,/g, ''));
         }
       }
-      
+
       // ── English: "X,XXX total members"
       if (!memberCount) {
         match = bodyText.match(/([\d,]+)\s*total\s*members/i);
@@ -319,26 +321,26 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
           memberCount = parseInt(match[1].replace(/,/g, ''));
         }
       }
-      
+
       // ======= FIND POSTS TODAY & LAST MONTH FROM ACTIVITY SECTION =======
       let postsToday = 0;
       let postsLastMonth = 0;
-      
+
       // Search all spans with specific Facebook class patterns
       // Example: <span class="x193iq5w xeuugli...">780 โพสต์ใหม่ในวันนี้</span>
       const allSpans = document.querySelectorAll('span');
-      
+
       // DEBUG: Log all span texts that contain numbers to help diagnose
       const debugTexts = [];
-      
+
       allSpans.forEach(span => {
         const text = span.textContent?.trim() || '';
-        
+
         // Collect ALL texts with numbers near post/โพสต์/เดือน/month for debugging
         if (text.match(/\d+/) && (text.includes('โพสต์') || text.includes('post') || text.includes('เดือน') || text.includes('month'))) {
           debugTexts.push(text);
         }
-        
+
         // ===== POSTS TODAY =====
         if (!postsToday) {
           const todayPatterns = [
@@ -352,7 +354,7 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
             if (m) { postsToday = parseInt(m[1].replace(/,/g, '')); break; }
           }
         }
-        
+
         // ===== POSTS LAST MONTH =====
         if (!postsLastMonth) {
           const monthPatterns = [
@@ -372,18 +374,18 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
           }
         }
       });
-      
+
       // Fallback: Search in bodyText if spans didn't work
       if (!postsToday || !postsLastMonth) {
         const postsBodyText = document.body.innerText;
-        
+
         if (!postsToday) {
           const todayBodyMatch = postsBodyText.match(/([\d,]+)\s*โพสต์ใหม่ในวันนี้/);
           if (todayBodyMatch) {
             postsToday = parseInt(todayBodyMatch[1].replace(/,/g, ''));
           }
         }
-        
+
         // English fallback for posts today (RELAXED)
         if (!postsToday) {
           const todayEnBody = postsBodyText.match(/([\d,]+)\s*new posts?\s*today/i);
@@ -391,7 +393,7 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
             postsToday = parseInt(todayEnBody[1].replace(/,/g, ''));
           }
         }
-        
+
         if (!postsLastMonth) {
           const monthBodyPatterns = [
             /([\d,]+)\s*โพสต์ในเดือนที่ผ่านมา/,
@@ -407,14 +409,14 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
             if (m) { postsLastMonth = parseInt(m[1].replace(/,/g, '')); break; }
           }
         }
-        
+
         // Match: "สมาชิกทั้งหมด XX,XXX ราย" (more accurate member count)
         const totalMemberMatch = postsBodyText.match(/สมาชิกทั้งหมด\s*([\d,]+)\s*ราย/);
         if (totalMemberMatch) {
           memberCount = parseInt(totalMemberMatch[1].replace(/,/g, ''));
         }
       }
-      
+
       // Clean name: remove "(N) " notification count prefix from FB page titles
       if (name) {
         name = name.replace(/^\(\d+\)\s*/, '').trim();
@@ -422,18 +424,18 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
 
       return { name, memberCount, postsToday, postsLastMonth, debugTexts };
     });
-    
+
     // Debug logging
     if (groupInfo.debugTexts && groupInfo.debugTexts.length > 0) {
       console.log(`🔍 Debug: Found ${groupInfo.debugTexts.length} span texts with numbers + 'post/โพสต์':`);
       console.log(groupInfo.debugTexts.slice(0, 10)); // Show first 10 matches
     }
     console.log(`📊 Scraped: ${groupInfo.name?.substring(0, 40)} | Members: ${groupInfo.memberCount} | Today: ${groupInfo.postsToday} | Month: ${groupInfo.postsLastMonth}`);
-    
+
     // Browser stays open for reuse by this user's session
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       groupInfo: {
         name: groupInfo.name || '',
         memberCount: groupInfo.memberCount || 0,
@@ -470,8 +472,8 @@ app.post('/api/group-automation/start', ...auth, async (req, res) => {
     const packageLimits = { free: 10, agent: 300, elite: 750 };
     const limit = packageLimits[userPackage] || 10;
     if (groups.length > limit) {
-      return res.status(400).json({ 
-        success: false, 
+      return res.status(400).json({
+        success: false,
         error: `Package ${userPackage} limit exceeded`,
         message: `แพ็กเกจ ${userPackage.toUpperCase()} จำกัด ${limit} โพสต์/วัน คุณเลือก ${groups.length} กลุ่ม`
       });
@@ -626,20 +628,20 @@ app.post('/api/group-automation/generate-caption', ...auth, async (req, res) => 
     }
 
     console.log(`📝 Generate caption request - Package: ${userPackage}, Required: ${requiredCaptions}`);
-    
+
     // Generate multiple captions based on required count
     const allCaptions = [];
-    
+
     for (let i = 0; i < requiredCaptions; i++) {
       const caption = await req.groupWorker.generateCaption(property, style || 'friendly', userPackage);
       allCaptions.push(caption);
     }
-    
+
     // allCaptions is already an array of individual captions — use directly
     const fullResponse = allCaptions.join('\n\n---\n\n');
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       caption: fullResponse,           // Full response (joined)
       captions: allCaptions,           // Array of individual captions
       package: userPackage,
@@ -670,32 +672,32 @@ app.post('/api/facebook/connect', ...auth, async (req, res) => {
         retries--;
         console.error(`Browser init failed (${retries} retries left):`, initErr.message);
         // Clean up before retry
-        try { if (req.groupWorker.browser) await req.groupWorker.browser.close(); } catch(e) {}
+        try { if (req.groupWorker.browser) await req.groupWorker.browser.close(); } catch (e) { }
         req.groupWorker.browser = null;
         req.groupWorker.page = null;
         if (retries > 0) await new Promise(r => setTimeout(r, 2000));
       }
     }
-    
+
     if (!req.groupWorker.browser || !req.groupWorker.page) {
       throw lastError || new Error('Browser initialization failed');
     }
-    
+
     // Navigate to Facebook
     await req.groupWorker.page.goto('https://www.facebook.com', {
       waitUntil: 'domcontentloaded',
       timeout: 30000,
     });
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       message: 'Browser opened - Please login to Facebook',
       status: 'pending_login'
     });
   } catch (error) {
     console.error('Facebook connect error:', error.message);
     // Clean up on failure
-    try { if (req.groupWorker.browser) await req.groupWorker.browser.close(); } catch(e) {}
+    try { if (req.groupWorker.browser) await req.groupWorker.browser.close(); } catch (e) { }
     req.groupWorker.browser = null;
     req.groupWorker.page = null;
     res.status(500).json({ success: false, error: `เชื่อมต่อไม่ได้: ${error.message}` });
@@ -726,15 +728,15 @@ app.post('/api/facebook/auto-login', ...auth, async (req, res) => {
 
     // Handle cookie consent dialog if present
     try {
-      const cookieBtn = await page.$('button[data-cookiebanner="accept_button"]') || 
-                         await page.$('button[title="Allow all cookies"]') ||
-                         await page.$('button[value="1"][name="accept"]');
+      const cookieBtn = await page.$('button[data-cookiebanner="accept_button"]') ||
+        await page.$('button[title="Allow all cookies"]') ||
+        await page.$('button[value="1"][name="accept"]');
       if (cookieBtn) {
         await cookieBtn.click();
         await new Promise(r => setTimeout(r, 1000));
         console.log('🍪 Cookie consent accepted');
       }
-    } catch(e) {}
+    } catch (e) { }
 
     // Try multiple selectors for email input
     const emailSelectors = ['#m_login_email', '#email', 'input[name="email"]', 'input[type="email"]', 'input[type="text"]'];
@@ -837,25 +839,25 @@ app.get('/api/facebook/status', ...auth, async (req, res) => {
   try {
     // Check if browser exists and is logged in
     if (!req.groupWorker.browser) {
-      return res.json({ 
-        success: true, 
-        connected: false, 
-        message: 'ยังไม่ได้เชื่อมต่อ Facebook' 
+      return res.json({
+        success: true,
+        connected: false,
+        message: 'ยังไม่ได้เชื่อมต่อ Facebook'
       });
     }
-    
+
     // Check if logged in (with 10s timeout to prevent hanging)
     const isLoggedIn = await Promise.race([
       req.groupWorker.checkLogin(),
       new Promise(resolve => setTimeout(() => resolve(false), 10000)),
     ]);
-    
+
     if (isLoggedIn) {
       // Get user info - scrape real name & profile pic from Facebook nav
       const userInfo = await req.groupWorker.page.evaluate(() => {
         let name = '';
         let profilePic = '';
-        
+
         try {
           // Method 1: Find profile link in navigation list items
           // Facebook shows user profile in left sidebar or account menu
@@ -873,7 +875,7 @@ app.get('/api/facebook/status', ...auth, async (req, res) => {
               }
             }
           }
-          
+
           // Method 2: Try account menu / profile shortcut
           if (!name) {
             const profileLinks = document.querySelectorAll('a[href*="/me/"], a[aria-label*="profile"], a[aria-label*="โปรไฟล์"]');
@@ -885,7 +887,7 @@ app.get('/api/facebook/status', ...auth, async (req, res) => {
               }
             }
           }
-          
+
           // Method 3: Get profile pic from any navigation image
           if (!profilePic) {
             const images = document.querySelectorAll('image[*|href*="scontent"]');
@@ -900,13 +902,13 @@ app.get('/api/facebook/status', ...auth, async (req, res) => {
         } catch (e) {
           console.error('Error scraping FB user info:', e.message);
         }
-        
+
         return { name, profilePic };
       });
-      
-      return res.json({ 
-        success: true, 
-        connected: true, 
+
+      return res.json({
+        success: true,
+        connected: true,
         user: {
           name: userInfo.name || 'Facebook User',
           profilePic: userInfo.profilePic || '',
@@ -915,17 +917,17 @@ app.get('/api/facebook/status', ...auth, async (req, res) => {
         message: 'เชื่อมต่อ Facebook สำเร็จ'
       });
     }
-    
-    res.json({ 
-      success: true, 
-      connected: false, 
-      message: 'ยังไม่ได้ Login Facebook' 
+
+    res.json({
+      success: true,
+      connected: false,
+      message: 'ยังไม่ได้ Login Facebook'
     });
   } catch (error) {
-    res.json({ 
-      success: true, 
-      connected: false, 
-      message: 'ยังไม่ได้เชื่อมต่อ Facebook' 
+    res.json({
+      success: true,
+      connected: false,
+      message: 'ยังไม่ได้เชื่อมต่อ Facebook'
     });
   }
 });
@@ -946,15 +948,15 @@ app.post('/api/facebook/confirm-login', ...auth, async (req, res) => {
     if (!req.groupWorker.browser) {
       return res.status(400).json({ success: false, error: 'Browser not open' });
     }
-    
+
     const isLoggedIn = await req.groupWorker.checkLogin();
-    
+
     if (isLoggedIn) {
       // Get user name + profile pic from Facebook page
       const userInfo = await req.groupWorker.page.evaluate(() => {
         let name = '';
         let profilePic = '';
-        
+
         try {
           // Find profile link with image + name span in navigation
           const allLinks = document.querySelectorAll('a[role="link"][href*="facebook.com/"]');
@@ -971,7 +973,7 @@ app.post('/api/facebook/confirm-login', ...auth, async (req, res) => {
               }
             }
           }
-          
+
           // Fallback: try other selectors
           if (!name) {
             const profileLinks = document.querySelectorAll('a[href*="/me/"], a[aria-label*="profile"], a[aria-label*="โปรไฟล์"]');
@@ -983,7 +985,7 @@ app.post('/api/facebook/confirm-login', ...auth, async (req, res) => {
               }
             }
           }
-          
+
           if (!profilePic) {
             const images = document.querySelectorAll('image[*|href*="scontent"]');
             for (const img of images) {
@@ -997,12 +999,12 @@ app.post('/api/facebook/confirm-login', ...auth, async (req, res) => {
         } catch (e) {
           console.error('Error scraping FB user info:', e.message);
         }
-        
+
         return { name, profilePic };
       });
-      
-      res.json({ 
-        success: true, 
+
+      res.json({
+        success: true,
         connected: true,
         user: {
           name: userInfo.name || 'Facebook User',
@@ -1012,8 +1014,8 @@ app.post('/api/facebook/confirm-login', ...auth, async (req, res) => {
         message: 'เชื่อมต่อ Facebook สำเร็จ!'
       });
     } else {
-      res.json({ 
-        success: false, 
+      res.json({
+        success: false,
         connected: false,
         message: 'กรุณา Login Facebook ในหน้าต่างที่เปิดอยู่'
       });

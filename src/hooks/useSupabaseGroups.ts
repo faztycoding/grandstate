@@ -47,9 +47,9 @@ export function useSupabaseGroups() {
       setLoading(true);
       setError(null);
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       console.log('[Groups] Auth user:', user?.id || 'NOT LOGGED IN');
-      
+
       if (!user) {
         // Fallback to localStorage if not logged in
         const stored = localStorage.getItem('facebookGroups');
@@ -84,7 +84,7 @@ export function useSupabaseGroups() {
   const addGroup = useCallback(async (groupData: Partial<FacebookGroup>) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         // Fallback to localStorage if not logged in
         const newGroup: FacebookGroup = {
@@ -100,7 +100,7 @@ export function useSupabaseGroups() {
           lastPosted: groupData.lastPosted,
           lastUpdated: groupData.lastUpdated,
         };
-        
+
         const stored = localStorage.getItem('facebookGroups');
         const groups = stored ? JSON.parse(stored) : [];
         groups.unshift(newGroup);
@@ -110,7 +110,7 @@ export function useSupabaseGroups() {
       }
 
       const dbData = groupToDb(groupData, user.id);
-      
+
       try {
         await directInsert('facebook_groups', dbData);
       } catch (err: any) {
@@ -130,7 +130,7 @@ export function useSupabaseGroups() {
   const updateGroup = useCallback(async (id: string, updates: Partial<FacebookGroup>) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         // Fallback to localStorage if not logged in
         const stored = localStorage.getItem('facebookGroups');
@@ -170,7 +170,7 @@ export function useSupabaseGroups() {
   const deleteGroup = useCallback(async (id: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         // Fallback to localStorage if not logged in
         const stored = localStorage.getItem('facebookGroups');
@@ -244,6 +244,8 @@ export function useSupabaseGroups() {
       'การแจ้งเตือน', 'แชท', 'Chat', 'Notifications', 'Messenger',
       'Facebook', 'หน้าหลัก', 'Home', 'Watch', 'Marketplace',
       'สร้าง', 'Create', 'เมนู', 'Menu',
+      'Groups', 'กลุ่ม', 'Group', 'กลุ่มของคุณ', 'Your groups',
+      'เข้าร่วมกลุ่ม', 'Join group', 'ค้นพบ', 'Discover',
     ];
     const isValidName = (name: string) => {
       if (!name || name.length < 3) return false;
@@ -268,7 +270,7 @@ export function useSupabaseGroups() {
 
           await updateGroup(group.id, {
             name: newName,
-            memberCount: data.groupInfo.memberCount || group.memberCount || 0,
+            memberCount: data.groupInfo.memberCount || group.memberCount,
             postsToday: data.groupInfo.postsToday || 0,
             postsLastMonth: data.groupInfo.postsLastMonth || 0,
             lastUpdated: new Date(),
@@ -297,10 +299,10 @@ export function useSupabaseGroups() {
   // Fetch on mount + auth changes (debounced to avoid excessive calls)
   useEffect(() => {
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-    
+
     // Initial fetch
     fetchGroups();
-    
+
     // Listen for auth changes (debounced)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event) => {
       if (debounceTimer) clearTimeout(debounceTimer);

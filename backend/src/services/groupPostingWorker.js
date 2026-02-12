@@ -191,6 +191,54 @@ export class GroupPostingWorker {
       : ['สำหรับขาย', 'For sale', 'For Sale', 'Property for sale'];
     console.log(`  🔀 Selecting listing type: ${isSale ? 'SALE' : 'RENT'}...`);
 
+    // ── PRE-SCAN: Scroll dialog to top to reveal listing type controls ──
+    await page.evaluate(() => {
+      const _ds = document.querySelectorAll('[role="dialog"]');
+      for (const _d of _ds) {
+        if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
+        const scrollable = _d.querySelector('[style*="overflow"], [class*="scroll"]') || _d;
+        for (const el of [scrollable, ..._d.querySelectorAll('div')]) {
+          if (el.scrollHeight > el.clientHeight + 50) { el.scrollTop = 0; break; }
+        }
+        break;
+      }
+    });
+    await this.delay(800);
+
+    // ── Strategy 0: Dump ALL comboboxes + interactive elements for debugging ──
+    const formDump = await page.evaluate((targets, opposites) => {
+      const _ds = document.querySelectorAll('[role="dialog"]');
+      let _fd = null;
+      for (const _d of _ds) {
+        if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
+        _fd = _d; break;
+      }
+      const scope = _fd || document.querySelector('[role="main"]') || document;
+      const combos = [];
+      for (const cb of scope.querySelectorAll('[role="combobox"]')) {
+        const r = cb.getBoundingClientRect();
+        combos.push({ text: (cb.textContent||'').trim().slice(0,60), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) });
+      }
+      // Also scan for any element with exact sale/rent text
+      const saleRentEls = [];
+      const allEls = scope.querySelectorAll('span, div, a, label, [role="button"], [role="tab"], [role="radio"], [role="option"], [tabindex]');
+      for (const el of allEls) {
+        const t = (el.textContent||'').trim();
+        if (t.length < 3 || t.length > 30) continue;
+        const tl = t.toLowerCase();
+        const match = [...targets, ...opposites].some(x => tl === x.toLowerCase() || tl.includes(x.toLowerCase()));
+        if (!match) continue;
+        // Skip if text also contains other unrelated stuff
+        if (/property|house|flat|townhouse|room|บ้าน|อพาร์ท|ทาวน์|or rent|or sale|หรือเช่า|หรือขาย|type of/i.test(t)) continue;
+        const r = el.getBoundingClientRect();
+        if (r.width < 5 || r.height < 5) continue;
+        saleRentEls.push({ tag: el.tagName, role: el.getAttribute('role')||'', text: t, y: Math.round(r.y), x: Math.round(r.x), w: Math.round(r.width), h: Math.round(r.height), tabindex: el.getAttribute('tabindex'), ariaLabel: (el.getAttribute('aria-label')||'').slice(0,40) });
+      }
+      return { combos, saleRentEls };
+    }, targetTexts, oppositeTexts);
+    console.log(`    📋 Form comboboxes: ${JSON.stringify(formDump.combos)}`);
+    console.log(`    📋 Sale/rent elements: ${JSON.stringify(formDump.saleRentEls)}`);
+
     // ── Strategy 0: Check if a combobox already shows the correct listing type ──
     const ddLabels0 = ['Choose listing type', 'Listing type', 'เลือกประเภทรายการ', 'ประเภทรายการ'];
     const ddOpts0 = isSale
@@ -209,7 +257,8 @@ export class GroupPostingWorker {
         const cbText = (cb.textContent || '').trim();
         if (!cbText || cbText.length > 40) continue;
         const cbLower = cbText.toLowerCase();
-        if (/house|flat|townhouse|room only|บ้าน|อพาร์ท|ทาวน์|ห้อง|washing|parking|air con|heating|เครื่องซัก|ที่จอดรถ|แอร์/i.test(cbText)) continue;
+        // Skip property type, utility, and location comboboxes
+        if (/house|flat|townhouse|room only|บ้าน|อพาร์ท|ทาวน์|ห้อง|washing|parking|air con|heating|เครื่องซัก|ที่จอดรถ|แอร์|type of property|ประเภทอสังหาริมทรัพย์|ประเภทของอสังหาริมทรัพย์/i.test(cbText)) continue;
         const matchesTarget = targets.some(t => cbLower.includes(t.toLowerCase()));
         const matchesOpposite = opposites.some(t => cbLower.includes(t.toLowerCase()));
         if (matchesTarget && matchesOpposite) continue;
@@ -241,6 +290,8 @@ export class GroupPostingWorker {
           const combo = parent.querySelector('[role="combobox"]');
           if (combo) {
             const cText = (combo.textContent || '').trim();
+            // Skip property type combobox even when found via label
+            if (/type of property|ประเภทอสังหาริมทรัพย์|ประเภทของอสังหาริมทรัพย์/i.test(cText)) continue;
             const cLow = cText.toLowerCase();
             const mT = targets.some(tt => cLow.includes(tt.toLowerCase()));
             const mO = opposites.some(tt => cLow.includes(tt.toLowerCase()));
@@ -280,7 +331,25 @@ export class GroupPostingWorker {
       await page.keyboard.press('Escape');
       await this.delay(300);
     } else {
-      console.log(`    ℹ️ Strategy 0: No listing-type combobox detected, trying tabs/buttons...`);
+      console.log(`    ℹ️ Strategy 0: No listing-type combobox detected`);
+    }
+
+    // ── Strategy 0.5: Click standalone For sale/For rent element if found ──
+    if (formDump.saleRentEls.length > 0) {
+      // Pick the best candidate: prefer role=tab/radio/button, then smallest text, then highest Y
+      const ranked = formDump.saleRentEls
+        .filter(e => targetTexts.some(t => e.text.toLowerCase().includes(t.toLowerCase())))
+        .sort((a, b) => {
+          const roleScore = (r) => ['tab','radio','button','option'].includes(r) ? 0 : 1;
+          return roleScore(a.role) - roleScore(b.role) || a.text.length - b.text.length;
+        });
+      if (ranked.length > 0) {
+        const best = ranked[0];
+        console.log(`    📍 Strategy 0.5: Clicking ${best.tag}[role=${best.role}] "${best.text}" at y=${best.y}`);
+        await page.mouse.click(best.x + best.w / 2, best.y + best.h / 2);
+        await this.delay(2000);
+        return true;
+      }
     }
 
     const tabResult = await page.evaluate((targets, opposites) => {
@@ -408,15 +477,21 @@ export class GroupPostingWorker {
         const textLower = text.toLowerCase();
         for (const lbl of labelTexts) {
           if (textLower === lbl.toLowerCase() || textLower.includes(lbl.toLowerCase())) {
-            // PRIORITY 1: Walk up parent tree to find a nearby combobox sibling
+            // PRIORITY 1: Walk up parent tree to find a nearby combobox sibling (skip property type)
             let comboTarget = null;
             let p = span;
             for (let i = 0; i < 8; i++) {
               if (!p.parentElement) break;
               p = p.parentElement;
               if (p.getAttribute('role') === 'dialog') break;
-              const combo = p.querySelector('[role="combobox"]');
-              if (combo && combo !== span) { comboTarget = combo; break; }
+              const combos = p.querySelectorAll('[role="combobox"]');
+              for (const combo of combos) {
+                if (combo === span) continue;
+                const ct = (combo.textContent||'').trim().toLowerCase();
+                if (/type of property|ประเภทอสังหาริมทรัพย์|ประเภทของอสังหาริมทรัพย์|house|flat|townhouse|บ้าน|อพาร์ท/i.test(ct)) continue;
+                comboTarget = combo; break;
+              }
+              if (comboTarget) break;
             }
             // PRIORITY 2: closest combobox/haspopup ancestor (narrow selectors only)
             const clickTarget = comboTarget || span.closest('[role="combobox"], [aria-haspopup], [tabindex="0"]') || span;

@@ -807,6 +807,40 @@ export class GroupPostingWorker {
     console.log(`    📋 Ancestors: ${JSON.stringify(domDump.ancestors || [])}`);
     console.log(`    📋 Nearby: ${JSON.stringify(domDump.nearbyElements || domDump.topTexts || domDump.debug || [])}`);
 
+    // Final fallback: check if property type dropdown label already contains the correct mode
+    const modeCheck = await page.evaluate((targets, opposites) => {
+      const _ds = document.querySelectorAll('[role="dialog"]');
+      let _fd = null;
+      for (const _d of _ds) {
+        if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
+        _fd = _d; break;
+      }
+      const scope = _fd || document.querySelector('[role="main"]') || document;
+      // Check all comboboxes and labels for "for sale" / "for rent" in their text
+      const allText = (scope.textContent || '').toLowerCase();
+      const hasTarget = targets.some(t => allText.includes(t.toLowerCase()));
+      const hasOpposite = opposites.some(t => allText.includes(t.toLowerCase()));
+      // Check property type dropdown specifically
+      const combos = scope.querySelectorAll('[role="combobox"]');
+      for (const cb of combos) {
+        const ct = (cb.textContent||'').trim();
+        if (/type of property|ประเภท.*อสังหาริมทรัพย์/i.test(ct)) {
+          const ctl = ct.toLowerCase();
+          const matchTarget = targets.some(t => ctl.includes(t.toLowerCase()));
+          const matchOpp = opposites.some(t => ctl.includes(t.toLowerCase()));
+          if (matchTarget && !matchOpp) return { ok: true, reason: `property type label says "${ct}"` };
+          if (matchOpp && !matchTarget) return { ok: false, reason: `property type label says "${ct}" (wrong mode)` };
+        }
+      }
+      return { ok: false, reason: 'no mode indicator found' };
+    }, targetTexts, oppositeTexts);
+
+    if (modeCheck.ok) {
+      console.log(`    ✅ Listing type confirmed via fallback: ${modeCheck.reason}`);
+      return true;
+    }
+    console.log(`    ⚠️ Fallback mode check: ${modeCheck.reason}`);
+
     console.log(`    ❌ All listing type strategies exhausted — could not set listing type`);
     return false;
   }
@@ -1642,6 +1676,109 @@ export class GroupPostingWorker {
         return { success: false, error: 'ไม่พบปุ่ม "บ้านสำหรับขายหรือเช่า"' };
       }
       await this.delay(3000);
+
+      // Step 2.5: Facebook may show a sub-selection "For sale" / "For rent" after clicking "Property for sale or rent"
+      // We must click the correct one BEFORE the form fields appear
+      const isSaleType = (property.listingType || 'sale') !== 'rent';
+      const subTargets = isSaleType
+        ? ['For sale', 'สำหรับขาย', 'Property for sale', 'บ้านสำหรับขาย']
+        : ['For rent', 'ให้เช่า', 'Property for rent', 'บ้านให้เช่า'];
+      const subOpposites = isSaleType
+        ? ['For rent', 'ให้เช่า', 'Property for rent']
+        : ['For sale', 'สำหรับขาย', 'Property for sale'];
+
+      console.log(`📌 Step 2.5: Looking for "${isSaleType ? 'For sale' : 'For rent'}" sub-category...`);
+
+      // Scan dialog for sub-category cards/buttons with "For sale" / "For rent"
+      for (let subAttempt = 0; subAttempt < 3; subAttempt++) {
+        if (subAttempt > 0) await this.delay(2000);
+
+        const subResult = await page.evaluate((targets, opposites) => {
+          const _ds = document.querySelectorAll('[role="dialog"]');
+          let _fd = null;
+          for (const _d of _ds) {
+            if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
+            _fd = _d; break;
+          }
+          const scope = _fd || document.querySelector('[role="main"]') || document;
+
+          // Debug: dump all visible short texts in dialog
+          const debugTexts = [];
+          for (const el of scope.querySelectorAll('span')) {
+            const t = (el.textContent||'').trim();
+            if (t.length > 2 && t.length < 60) debugTexts.push(t);
+          }
+
+          // Look for elements with target text (For sale / For rent)
+          const allEls = scope.querySelectorAll('span, div, a, [role="button"], [role="tab"], [role="radio"], [role="option"], [tabindex]');
+          const candidates = [];
+          for (const el of allEls) {
+            const t = (el.textContent||'').trim();
+            if (t.length < 3 || t.length > 50) continue;
+            const tl = t.toLowerCase();
+            // Must match target AND not contain opposite or "or rent"/"or sale"
+            const matchesTarget = targets.some(x => tl === x.toLowerCase() || tl.includes(x.toLowerCase()));
+            if (!matchesTarget) continue;
+            const matchesOpposite = opposites.some(x => tl.includes(x.toLowerCase()));
+            if (matchesOpposite) continue;
+            // Skip category header texts that contain both
+            if (/or rent|or sale|หรือเช่า|หรือขาย/i.test(t)) continue;
+            // Skip long descriptions
+            if (t.length > 30 && !/^(for sale|for rent|สำหรับขาย|ให้เช่า)$/i.test(t)) continue;
+            const rect = el.getBoundingClientRect();
+            if (rect.width < 10 || rect.height < 10) continue;
+            // Walk up to find clickable parent (card/button)
+            let clickEl = el;
+            for (let i = 0; i < 10; i++) {
+              if (!clickEl.parentElement) break;
+              clickEl = clickEl.parentElement;
+              if (clickEl.getAttribute('role') === 'dialog') { clickEl = el; break; }
+              const r = clickEl.getAttribute('role') || '';
+              const hasIcon = clickEl.querySelector('i[data-visualcompletion="css-img"]');
+              if (r === 'button' || r === 'tab' || r === 'radio' || r === 'option' || hasIcon) {
+                break;
+              }
+            }
+            const cr = clickEl.getBoundingClientRect();
+            candidates.push({
+              text: t, tag: el.tagName, role: el.getAttribute('role')||'',
+              x: cr.x + cr.width/2, y: cr.y + cr.height/2,
+              w: Math.round(cr.width), h: Math.round(cr.height)
+            });
+          }
+          return { candidates, debugTexts: [...new Set(debugTexts)].slice(0, 30) };
+        }, subTargets, subOpposites);
+
+        if (subAttempt === 0) {
+          console.log(`   🔍 Dialog texts: ${JSON.stringify(subResult.debugTexts)}`);
+        }
+
+        if (subResult.candidates.length > 0) {
+          // Pick the best: prefer role=button/tab/radio, then smallest text
+          const best = subResult.candidates.sort((a, b) => {
+            const rs = (r) => ['button','tab','radio','option'].includes(r) ? 0 : 1;
+            return rs(a.role) - rs(b.role) || a.text.length - b.text.length;
+          })[0];
+          console.log(`   📍 Found sub-category "${best.text}" (${best.tag}[role=${best.role}]) at y=${Math.round(best.y)} — clicking`);
+          await page.mouse.click(best.x, best.y);
+          await this.delay(3000);
+          break;
+        }
+
+        if (subAttempt === 0) {
+          console.log(`   ⚠️ No sub-category found yet, scrolling up and retrying...`);
+          await page.evaluate(() => {
+            const _ds = document.querySelectorAll('[role="dialog"]');
+            for (const _d of _ds) {
+              if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
+              for (const el of _d.querySelectorAll('div')) {
+                if (el.scrollHeight > el.clientHeight + 50) { el.scrollTop = 0; break; }
+              }
+              break;
+            }
+          });
+        }
+      }
 
       // Step 3: Fill the property form
       updateMsg('กำลังกรอกแบบฟอร์ม...');

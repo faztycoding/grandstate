@@ -48,8 +48,6 @@ export function useSupabaseGroups() {
       setError(null);
       const { data: { user } } = await supabase.auth.getUser();
 
-      console.log('[Groups] Auth user:', user?.id || 'NOT LOGGED IN');
-
       if (!user) {
         // Fallback to localStorage if not logged in
         const stored = localStorage.getItem('facebookGroups');
@@ -66,8 +64,6 @@ export function useSupabaseGroups() {
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
-
-      console.log('[Groups] Supabase fetch:', { data: data?.length || 0, error: fetchError?.message || null });
 
       if (fetchError) throw fetchError;
 
@@ -304,9 +300,12 @@ export function useSupabaseGroups() {
     fetchGroups();
 
     // Listen for auth changes (debounced)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event) => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => fetchGroups(), 300);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      // Only re-fetch on meaningful auth events, not token refreshes
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => fetchGroups(), 300);
+      }
     });
 
     return () => {

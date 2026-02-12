@@ -2509,7 +2509,7 @@ export class GroupPostingWorker {
     this.selectedBrowser = browserType;
 
     const isVPS = process.platform === 'linux';
-    const isHeadless = process.env.HEADLESS === 'true' || isVPS;
+    const isHeadless = process.env.HEADLESS === 'true';
 
     // Per-user profile directory
     const appProfileDir = this.userDataDir;

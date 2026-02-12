@@ -146,7 +146,7 @@ export class MarketplaceWorker {
     this.borrowedBrowser = false;
 
     const isVPS = process.platform === 'linux';
-    const isHeadless = process.env.HEADLESS === 'true' || isVPS;
+    const isHeadless = process.env.HEADLESS === 'true';
 
     // Per-user marketplace profile directory
     const appProfileDir = path.join(process.cwd(), 'profiles', this.userId, 'marketplace-profile');

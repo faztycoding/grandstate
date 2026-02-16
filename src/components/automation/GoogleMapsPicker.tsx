@@ -1,10 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { MapPin, ExternalLink, Navigation, Loader2, CheckCircle2, Search } from 'lucide-react';
+import { MapPin, ExternalLink, Navigation, Loader2, CheckCircle2, Search, MousePointerClick } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+import 'leaflet/dist/leaflet.css';
 
 export interface LocationData {
   lat: number;
@@ -22,32 +28,77 @@ interface GoogleMapsPickerProps {
   className?: string;
 }
 
+const DEFAULT_COORDS = { lat: 13.7563, lng: 100.5018 };
+const MARKER_ICON = L.icon({
+  iconRetinaUrl: markerIcon2x,
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  tooltipAnchor: [16, -28],
+  shadowSize: [41, 41],
+});
+
+const extractCoordsFromLink = (link: string): { lat: number; lng: number } | null => {
+  const patterns = [
+    /@(-?\d+\.\d+),(-?\d+\.\d+)/,
+    /q=(-?\d+\.\d+),(-?\d+\.\d+)/,
+    /ll=(-?\d+\.\d+),(-?\d+\.\d+)/,
+    /place\/.*\/@(-?\d+\.\d+),(-?\d+\.\d+)/,
+    /maps\?.*?(-?\d+\.\d+),(-?\d+\.\d+)/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = link.match(pattern);
+    if (match) {
+      return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+    }
+  }
+  return null;
+};
+
+function MapClickHandler({ onPick }: { onPick: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click: (event) => {
+      onPick(event.latlng.lat, event.latlng.lng);
+    },
+  });
+
+  return null;
+}
+
+function MapViewportSync({ center, zoom }: { center: [number, number]; zoom: number }) {
+  const map = useMap();
+
+  useEffect(() => {
+    map.setView(center, zoom, { animate: true });
+  }, [center, zoom, map]);
+
+  return null;
+}
+
 export function GoogleMapsPicker({ value, onChange, onLocationSelect, className }: GoogleMapsPickerProps) {
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
 
+  const parsedCoordsFromValue = useMemo(() => extractCoordsFromLink(value), [value]);
+
+  useEffect(() => {
+    if (!value?.trim()) {
+      setSelectedLocation(null);
+      return;
+    }
+
+    if (parsedCoordsFromValue) {
+      setSelectedLocation(parsedCoordsFromValue);
+    }
+  }, [value, parsedCoordsFromValue]);
+
   const generateGoogleMapsLink = (lat: number, lng: number) => {
     return `https://www.google.com/maps?q=${lat},${lng}`;
-  };
-
-  const extractCoordsFromLink = (link: string): { lat: number; lng: number } | null => {
-    const patterns = [
-      /@(-?\d+\.\d+),(-?\d+\.\d+)/,
-      /q=(-?\d+\.\d+),(-?\d+\.\d+)/,
-      /ll=(-?\d+\.\d+),(-?\d+\.\d+)/,
-      /place\/.*\/@(-?\d+\.\d+),(-?\d+\.\d+)/,
-      /maps\?.*?(-?\d+\.\d+),(-?\d+\.\d+)/,
-    ];
-
-    for (const pattern of patterns) {
-      const match = link.match(pattern);
-      if (match) {
-        return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
-      }
-    }
-    return null;
   };
 
   // Reverse geocode coords → structured address
@@ -95,8 +146,33 @@ export function GoogleMapsPicker({ value, onChange, onLocationSelect, className 
     }
   };
 
+  const applyCoordinates = async (
+    lat: number,
+    lng: number,
+    options?: { skipLinkUpdate?: boolean }
+  ) => {
+    setSelectedLocation({ lat, lng });
+    if (!options?.skipLinkUpdate) {
+      onChange(generateGoogleMapsLink(lat, lng));
+    }
+
+    const addrData = await reverseGeocode(lat, lng);
+    onLocationSelect?.({
+      lat,
+      lng,
+      address: addrData.address || '',
+      district: addrData.district || '',
+      province: addrData.province || '',
+      displayName: addrData.displayName || '',
+    });
+  };
+
+  const handleMapPick = (lat: number, lng: number) => {
+    void applyCoordinates(lat, lng);
+  };
+
   const openGoogleMaps = () => {
-    const coords = selectedLocation || { lat: 13.7563, lng: 100.5018 };
+    const coords = selectedLocation || parsedCoordsFromValue || DEFAULT_COORDS;
     const url = `https://www.google.com/maps/@${coords.lat},${coords.lng},15z`;
     window.open(url, '_blank');
   };
@@ -111,18 +187,7 @@ export function GoogleMapsPicker({ value, onChange, onLocationSelect, className 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
-        setSelectedLocation({ lat: latitude, lng: longitude });
-        const link = generateGoogleMapsLink(latitude, longitude);
-        onChange(link);
-        const addrData = await reverseGeocode(latitude, longitude);
-        onLocationSelect?.({
-          lat: latitude,
-          lng: longitude,
-          address: addrData.address || '',
-          district: addrData.district || '',
-          province: addrData.province || '',
-          displayName: addrData.displayName || '',
-        });
+        await applyCoordinates(latitude, longitude);
         setIsLocating(false);
         toast.success('ได้ตำแหน่งปัจจุบันแล้ว!');
       },
@@ -151,8 +216,7 @@ export function GoogleMapsPicker({ value, onChange, onLocationSelect, className 
         const result = data[0];
         const coords = { lat: parseFloat(result.lat), lng: parseFloat(result.lon) };
         setSelectedLocation(coords);
-        const link = generateGoogleMapsLink(coords.lat, coords.lng);
-        onChange(link);
+        onChange(generateGoogleMapsLink(coords.lat, coords.lng));
 
         // Extract structured address from search result
         let addrData: Partial<LocationData> = { address: '', district: '', province: '', displayName: result.display_name };
@@ -182,15 +246,13 @@ export function GoogleMapsPicker({ value, onChange, onLocationSelect, className 
     }
   };
 
-  // Build OpenStreetMap embed URL (free, no API key needed)
-  const getMapEmbedUrl = () => {
-    if (!selectedLocation) return null;
-    const { lat, lng } = selectedLocation;
-    const bbox = `${lng - 0.005},${lat - 0.003},${lng + 0.005},${lat + 0.003}`;
-    return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lng}`;
-  };
+  const activeLocation = selectedLocation || parsedCoordsFromValue;
+  const mapCenter = useMemo<[number, number]>(() => {
+    const coords = activeLocation || DEFAULT_COORDS;
+    return [coords.lat, coords.lng];
+  }, [activeLocation]);
 
-  const embedUrl = getMapEmbedUrl();
+  const mapZoom = activeLocation ? 16 : 11;
 
   return (
     <div className={cn("space-y-3", className)}>
@@ -246,27 +308,54 @@ export function GoogleMapsPicker({ value, onChange, onLocationSelect, className 
         </Button>
       </div>
 
-      {/* Map Preview — OpenStreetMap (free, no key) */}
-      {embedUrl && (
-        <Card className="overflow-hidden border border-gray-200">
-          <div className="relative">
-            <iframe
-              width="100%"
-              height="200"
-              style={{ border: 0 }}
-              loading="lazy"
-              src={embedUrl}
+      {/* Interactive Map — click anywhere to drop a pin */}
+      <Card className="overflow-hidden border border-gray-200">
+        <div className="relative">
+          <MapContainer
+            center={mapCenter}
+            zoom={mapZoom}
+            scrollWheelZoom
+            className="h-[200px] w-full"
+          >
+            <TileLayer
+              attribution='&copy; OpenStreetMap contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            {selectedLocation && (
-              <div className="absolute bottom-2 left-2 bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1 text-xs flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3 text-green-500" />
-                <MapPin className="w-3 h-3 text-red-500" />
-                {selectedLocation.lat.toFixed(6)}, {selectedLocation.lng.toFixed(6)}
-              </div>
+            <MapClickHandler onPick={handleMapPick} />
+            <MapViewportSync center={mapCenter} zoom={mapZoom} />
+            {activeLocation && (
+              <Marker
+                position={[activeLocation.lat, activeLocation.lng]}
+                icon={MARKER_ICON}
+                draggable
+                eventHandlers={{
+                  dragend: (event) => {
+                    const marker = event.target as L.Marker;
+                    const pos = marker.getLatLng();
+                    void applyCoordinates(pos.lat, pos.lng);
+                  },
+                }}
+              />
             )}
+          </MapContainer>
+
+          <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1 text-[11px] flex items-center gap-1 shadow-sm">
+            <MousePointerClick className="w-3 h-3 text-blue-600" />
+            คลิกแผนที่เพื่อปักหมุด
           </div>
-        </Card>
-      )}
+
+          {activeLocation && (
+            <div className="absolute bottom-2 left-2 bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1 text-xs flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3 text-green-500" />
+              <MapPin className="w-3 h-3 text-red-500" />
+              {activeLocation.lat.toFixed(6)}, {activeLocation.lng.toFixed(6)}
+            </div>
+          )}
+        </div>
+      </Card>
+      <p className="text-[11px] text-gray-500">
+        Tip: คลิกบนแผนที่เพื่อปักหมุด หรือจับหมุดลากเพื่อปรับตำแหน่งให้เป๊ะ
+      </p>
     </div>
   );
 }

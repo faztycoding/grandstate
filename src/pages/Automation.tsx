@@ -62,7 +62,7 @@ interface TaskStatus {
   groupId: string;
   groupName: string;
   groupUrl?: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'failed';
+  status: 'pending' | 'in_progress' | 'pending_approval' | 'completed' | 'failed';
   message?: string;
   postUrl?: string;
 }
@@ -416,16 +416,25 @@ export default function Automation() {
             }));
 
             const completed = data.tasks?.filter((t: TaskStatus) => t.status === 'completed').length || 0;
+            const pendingApproval = data.tasks?.filter((t: TaskStatus) => t.status === 'pending_approval').length || 0;
             const failed = data.tasks?.filter((t: TaskStatus) => t.status === 'failed').length || 0;
+            const posted = completed + pendingApproval;
 
             // Refetch health check after task updates (backend records posts directly)
-            if (data.tasks?.some((t: TaskStatus) => t.status === 'completed' || t.status === 'failed')) {
+            if (data.tasks?.some((t: TaskStatus) => t.status === 'completed' || t.status === 'pending_approval' || t.status === 'failed')) {
               refetchHealth();
             }
 
-            if (completed > 0 || failed > 0) {
+            if (posted > 0 || failed > 0) {
+              const summaryParts = [`${t.automation.successCount} ${posted} ${t.automation.groups}`];
+              if (pendingApproval > 0) {
+                summaryParts.push(`รออนุมัติ ${pendingApproval} ${t.automation.groups}`);
+              }
+              if (failed > 0) {
+                summaryParts.push(`${t.automation.failedCount} ${failed} ${t.automation.groups}`);
+              }
               toast.success(t.automation.automationDone, {
-                description: `${t.automation.successCount} ${completed} ${t.automation.groups}${failed > 0 ? `, ${t.automation.failedCount} ${failed} ${t.automation.groups}` : ''}`,
+                description: summaryParts.join(', '),
               });
             }
           }
@@ -474,7 +483,7 @@ export default function Automation() {
           }
           // Also check if automation just finished (has tasks but not running)
           if (data.success && !data.isRunning && data.tasks && data.tasks.length > 0) {
-            const hasResults = data.tasks.some((t: TaskStatus) => t.status === 'completed' || t.status === 'failed');
+            const hasResults = data.tasks.some((t: TaskStatus) => t.status === 'completed' || t.status === 'pending_approval' || t.status === 'failed');
             if (hasResults) {
               console.log(`📋 Found completed ${mode} automation results`);
               setPostingMode(mode);
@@ -563,9 +572,11 @@ export default function Automation() {
 
   // Calculate progress
   const completedTasks = automation.tasks.filter(t => t.status === 'completed').length;
+  const pendingApprovalTasks = automation.tasks.filter(t => t.status === 'pending_approval').length;
   const failedTasks = automation.tasks.filter(t => t.status === 'failed').length;
+  const resolvedTasks = completedTasks + pendingApprovalTasks + failedTasks;
   const progressPercent = automation.totalSteps > 0
-    ? Math.round((completedTasks / automation.totalSteps) * 100)
+    ? Math.round((resolvedTasks / automation.totalSteps) * 100)
     : 0;
 
   return (

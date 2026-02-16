@@ -263,12 +263,18 @@ export function useSupabaseGroups() {
           // Only update name if scraped name is valid (not a FB UI element)
           const scrapedName = data.groupInfo.name || '';
           const newName = isValidName(scrapedName) ? scrapedName : group.name;
+          const nextPostsToday = typeof data.groupInfo.postsToday === 'number'
+            ? data.groupInfo.postsToday
+            : group.postsToday;
+          const nextPostsLastMonth = typeof data.groupInfo.postsLastMonth === 'number'
+            ? data.groupInfo.postsLastMonth
+            : group.postsLastMonth;
 
           await updateGroup(group.id, {
             name: newName,
             memberCount: data.groupInfo.memberCount || group.memberCount,
-            postsToday: data.groupInfo.postsToday || 0,
-            postsLastMonth: data.groupInfo.postsLastMonth || 0,
+            postsToday: nextPostsToday,
+            postsLastMonth: nextPostsLastMonth,
             lastUpdated: new Date(),
           });
           success++;

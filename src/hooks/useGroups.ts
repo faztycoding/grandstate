@@ -201,12 +201,19 @@ export function useGroups() {
       if (result.success && result.groupInfo) {
         const updated = current.map(g => {
           if (g.id === id) {
+            const nextPostsToday = typeof result.groupInfo.postsToday === 'number'
+              ? result.groupInfo.postsToday
+              : g.postsToday;
+            const nextPostsLastMonth = typeof result.groupInfo.postsLastMonth === 'number'
+              ? result.groupInfo.postsLastMonth
+              : g.postsLastMonth;
+
             return {
               ...g,
               name: result.groupInfo.name || g.name,
               memberCount: result.groupInfo.memberCount || g.memberCount,
-              postsToday: result.groupInfo.postsToday || 0,
-              postsLastMonth: result.groupInfo.postsLastMonth || 0,
+              postsToday: nextPostsToday,
+              postsLastMonth: nextPostsLastMonth,
               lastUpdated: new Date(),
             };
           }

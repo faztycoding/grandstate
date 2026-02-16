@@ -24,7 +24,7 @@ interface TaskStatus {
     groupId: string;
     groupName: string;
     groupUrl?: string;
-    status: 'pending' | 'in_progress' | 'completed' | 'failed';
+    status: 'pending' | 'in_progress' | 'pending_approval' | 'completed' | 'failed';
     message?: string;
     postUrl?: string;
 }
@@ -102,7 +102,10 @@ export function TaskProgressPopup({
     const logContainerRef = useRef<HTMLDivElement>(null);
     const [autoScroll, setAutoScroll] = useState(true);
 
-    const isDone = !isRunning && tasks.length > 0 && tasks.every(t => t.status === 'completed' || t.status === 'failed');
+    const pendingApprovalTasks = tasks.filter(t => t.status === 'pending_approval').length;
+    const isDone = !isRunning && tasks.length > 0 && tasks.every(
+        t => t.status === 'completed' || t.status === 'pending_approval' || t.status === 'failed'
+    );
     const hasContent = isRunning || isDone || tasks.length > 0;
 
     // Elapsed time timer
@@ -145,6 +148,7 @@ export function TaskProgressPopup({
     const getStatusIcon = (status: string) => {
         switch (status) {
             case 'completed': return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+            case 'pending_approval': return <Clock className="w-4 h-4 text-amber-500" />;
             case 'failed': return <XCircle className="w-4 h-4 text-red-500" />;
             case 'in_progress': return <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />;
             default: return <Clock className="w-4 h-4 text-muted-foreground" />;
@@ -154,6 +158,7 @@ export function TaskProgressPopup({
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'completed': return <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px]">สำเร็จ</Badge>;
+            case 'pending_approval': return <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px]">รออนุมัติ</Badge>;
             case 'failed': return <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-[10px]">ล้มเหลว</Badge>;
             case 'in_progress': return <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-[10px]">กำลังทำ</Badge>;
             default: return <Badge variant="secondary" className="text-[10px]">รอคิว</Badge>;
@@ -181,7 +186,11 @@ export function TaskProgressPopup({
                             <div className="w-2 h-2 rounded-full bg-blue-500" />
                         ) : null}
                         <span className="font-semibold text-sm">
-                            {isDone ? '✅ เสร็จสิ้น' : isPaused ? '⏸️ หยุดชั่วคราว' : '🚀 กำลังโพสต์อัตโนมัติ'}
+                            {isDone
+                                ? (pendingApprovalTasks > 0 ? '✅ โพสต์เสร็จ (บางกลุ่มรออนุมัติ)' : '✅ เสร็จสิ้น')
+                                : isPaused
+                                    ? '⏸️ หยุดชั่วคราว'
+                                    : '🚀 กำลังโพสต์อัตโนมัติ'}
                         </span>
 
                         {/* Elapsed Time */}
@@ -217,13 +226,21 @@ export function TaskProgressPopup({
                     <>
                         {/* Progress */}
                         <div className="px-4 py-2 border-b border-border">
+                            <>
+                            {(() => {
+                                const resolvedTasks = completedTasks + pendingApprovalTasks + failedTasks;
+                                return (
                             <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                                <span>{completedTasks + failedTasks} / {totalSteps} กลุ่ม</span>
+                                <span>{resolvedTasks} / {totalSteps} กลุ่ม</span>
                                 <span>
                                     <span className="text-green-500">{completedTasks} สำเร็จ</span>
+                                    {pendingApprovalTasks > 0 && <span className="text-amber-500 ml-2">{pendingApprovalTasks} รออนุมัติ</span>}
                                     {failedTasks > 0 && <span className="text-red-500 ml-2">{failedTasks} ล้มเหลว</span>}
                                 </span>
                             </div>
+                                );
+                            })()}
+                            </>
                             <Progress value={progressPercent} className="h-2" />
                         </div>
 

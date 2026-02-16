@@ -4198,7 +4198,7 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
             if (result.actualGroupName) task.actualGroupName = result.actualGroupName;
 
             if (result.success) {
-              task.status = 'completed';
+              task.status = result.pendingApproval ? 'pending_approval' : 'completed';
               task.message = result.pendingApproval ? 'โพสต์รออนุมัติ' : 'โพสต์สำเร็จ';
               task.postUrl = result.postUrl;
               if (result.pendingApproval) {
@@ -4337,16 +4337,19 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
       this.endTime = Date.now();
 
       const completed = this.tasks.filter(t => t.status === 'completed').length;
+      const pendingApproval = this.tasks.filter(t => t.status === 'pending_approval').length;
       const failed = this.tasks.filter(t => t.status === 'failed').length;
+      const posted = completed + pendingApproval;
 
-      console.log(`\n✅ Automation completed: ${completed} success, ${failed} failed out of ${this.tasks.length}`);
-      this.addLog(`🏁 Automation เสร็จสิ้น: สำเร็จ ${completed}, ล้มเหลว ${failed} จาก ${this.tasks.length} กลุ่ม`, 'success');
+      console.log(`\n✅ Automation completed: ${posted} posted (${pendingApproval} pending approval), ${failed} failed out of ${this.tasks.length}`);
+      this.addLog(`🏁 Automation เสร็จสิ้น: โพสต์แล้ว ${posted} (รออนุมัติ ${pendingApproval}), ล้มเหลว ${failed} จาก ${this.tasks.length} กลุ่ม`, 'success');
 
       return {
         success: true,
-        message: `โพสต์สำเร็จ ${completed} กลุ่ม, ล้มเหลว ${failed} กลุ่ม`,
+        message: `โพสต์แล้ว ${posted} กลุ่ม (รออนุมัติ ${pendingApproval}), ล้มเหลว ${failed} กลุ่ม`,
         tasks: this.tasks,
         completed,
+        pendingApproval,
         failed,
       };
 

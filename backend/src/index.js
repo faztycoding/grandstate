@@ -323,8 +323,84 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
       }
 
       // ======= FIND POSTS TODAY & LAST MONTH FROM ACTIVITY SECTION =======
-      let postsToday = 0;
-      let postsLastMonth = 0;
+      let postsToday;
+      let postsLastMonth;
+
+      const parseCompactMetric = (rawValue) => {
+        if (!rawValue) return undefined;
+        const compact = String(rawValue)
+          .replace(/\u00A0/g, ' ')
+          .trim()
+          .replace(/\s+/g, '');
+
+        const matched = compact.match(/^([\d.,]+)([KkMm]|พัน|หมื่น|แสน|ล้าน)?$/);
+        if (!matched) return undefined;
+
+        const numberPart = matched[1];
+        const suffix = matched[2] || '';
+
+        let normalized = numberPart;
+        if (numberPart.includes('.') && numberPart.includes(',')) {
+          normalized = numberPart.replace(/,/g, '');
+        } else if (!numberPart.includes('.') && /,\d{1,2}$/.test(numberPart)) {
+          normalized = numberPart.replace(',', '.');
+        } else {
+          normalized = numberPart.replace(/,/g, '');
+        }
+
+        const base = parseFloat(normalized);
+        if (!Number.isFinite(base)) return undefined;
+
+        const normalizedSuffix = suffix === 'K' ? 'k' : (suffix === 'M' ? 'm' : suffix);
+        const multipliers = {
+          k: 1000,
+          m: 1000000,
+          'พัน': 1000,
+          'หมื่น': 10000,
+          'แสน': 100000,
+          'ล้าน': 1000000,
+        };
+
+        const multiplier = multipliers[normalizedSuffix] || 1;
+        return Math.round(base * multiplier);
+      };
+
+      const countToken = '([\\d.,]+\\s*(?:[KkMm]|พัน|หมื่น|แสน|ล้าน)?)';
+      const todayPatterns = [
+        new RegExp(`${countToken}\\s*โพสต์ใหม่ในวันนี้`, 'i'),
+        new RegExp(`${countToken}\\s*โพสต์ใหม่วันนี้`, 'i'),
+        new RegExp(`${countToken}\\s*โพสต์\\s*วันนี้`, 'i'),
+        new RegExp(`${countToken}\\s*new\\s*posts?\\s*today`, 'i'),
+        new RegExp(`โพสต์ใหม่ในวันนี้\\s*[:\\-]?\\s*${countToken}`, 'i'),
+        new RegExp(`new\\s*posts?\\s*today\\s*[:\\-]?\\s*${countToken}`, 'i'),
+      ];
+
+      const monthPatterns = [
+        new RegExp(`${countToken}\\s*โพสต์ในเดือนที่ผ่านมา`, 'i'),
+        new RegExp(`${countToken}\\s*โพสต์เมื่อเดือนที่แล้ว`, 'i'),
+        new RegExp(`${countToken}\\s*โพสต์ต่อเดือน`, 'i'),
+        new RegExp(`${countToken}\\s*โพสต์\\s*\\/\\s*เดือน`, 'i'),
+        new RegExp(`${countToken}\\s*โพสต์ในช่วง\\s*30\\s*วันที่ผ่านมา`, 'i'),
+        new RegExp(`${countToken}\\s*posts?\\s*in\\s*the\\s*last\\s*month`, 'i'),
+        new RegExp(`${countToken}\\s*posts?\\s*last\\s*month`, 'i'),
+        new RegExp(`${countToken}\\s*posts?\\s*\\/\\s*month`, 'i'),
+        new RegExp(`${countToken}\\s*posts?\\s*in\\s*the\\s*last\\s*30\\s*days`, 'i'),
+        new RegExp(`โพสต์ในเดือนที่ผ่านมา\\s*[:\\-]?\\s*${countToken}`, 'i'),
+        new RegExp(`posts?\\s*in\\s*the\\s*last\\s*month\\s*[:\\-]?\\s*${countToken}`, 'i'),
+      ];
+
+      const extractMetricFromText = (text, patterns) => {
+        for (const pattern of patterns) {
+          const matched = text.match(pattern);
+          if (matched && matched[1]) {
+            const parsed = parseCompactMetric(matched[1]);
+            if (typeof parsed === 'number') {
+              return parsed;
+            }
+          }
+        }
+        return undefined;
+      };
 
       // Search all spans with specific Facebook class patterns
       // Example: <span class="x193iq5w xeuugli...">780 โพสต์ใหม่ในวันนี้</span>
@@ -341,73 +417,27 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
           debugTexts.push(text);
         }
 
-        // ===== POSTS TODAY =====
-        if (!postsToday) {
-          const todayPatterns = [
-            /([\d,]+)\s*โพสต์ใหม่ในวันนี้/,
-            /([\d,]+)\s*new posts? today/i,
-            /([\d,]+)\s*โพสต์ใหม่วันนี้/,
-            /([\d,]+)\s*โพสต์.*?วันนี้/,
-          ];
-          for (const pat of todayPatterns) {
-            const m = text.match(pat);
-            if (m) { postsToday = parseInt(m[1].replace(/,/g, '')); break; }
-          }
+        if (postsToday === undefined) {
+          const value = extractMetricFromText(text, todayPatterns);
+          if (value !== undefined) postsToday = value;
         }
 
-        // ===== POSTS LAST MONTH =====
-        if (!postsLastMonth) {
-          const monthPatterns = [
-            /([\d,]+)\s*โพสต์ในเดือนที่ผ่านมา/,
-            /([\d,]+)\s*โพสต์เมื่อเดือนที่แล้ว/,
-            /([\d,]+)\s*โพสต์ต่อเดือน/,
-            /([\d,]+)\s*โพสต์.*?เดือน/,
-            /([\d,]+)\s*posts? in the last month/i,
-            /([\d,]+)\s*in the last month/i,
-            /([\d,]+)\s*posts? last month/i,
-            /([\d,]+)\s*posts?\/month/i,
-            /([\d,]+)\s*total posts? last month/i,
-          ];
-          for (const pat of monthPatterns) {
-            const m = text.match(pat);
-            if (m) { postsLastMonth = parseInt(m[1].replace(/,/g, '')); break; }
-          }
+        if (postsLastMonth === undefined) {
+          const value = extractMetricFromText(text, monthPatterns);
+          if (value !== undefined) postsLastMonth = value;
         }
       });
 
       // Fallback: Search in bodyText if spans didn't work
-      if (!postsToday || !postsLastMonth) {
+      if (postsToday === undefined || postsLastMonth === undefined) {
         const postsBodyText = document.body.innerText;
 
-        if (!postsToday) {
-          const todayBodyMatch = postsBodyText.match(/([\d,]+)\s*โพสต์ใหม่ในวันนี้/);
-          if (todayBodyMatch) {
-            postsToday = parseInt(todayBodyMatch[1].replace(/,/g, ''));
-          }
+        if (postsToday === undefined) {
+          postsToday = extractMetricFromText(postsBodyText, todayPatterns);
         }
 
-        // English fallback for posts today (RELAXED)
-        if (!postsToday) {
-          const todayEnBody = postsBodyText.match(/([\d,]+)\s*new posts?\s*today/i);
-          if (todayEnBody) {
-            postsToday = parseInt(todayEnBody[1].replace(/,/g, ''));
-          }
-        }
-
-        if (!postsLastMonth) {
-          const monthBodyPatterns = [
-            /([\d,]+)\s*โพสต์ในเดือนที่ผ่านมา/,
-            /([\d,]+)\s*โพสต์เมื่อเดือนที่แล้ว/,
-            /([\d,]+)\s*โพสต์ต่อเดือน/,
-            /([\d,]+)\s*โพสต์.*?เดือน/,
-            /([\d,]+)\s*posts?\s*in\s*the\s*last\s*month/i,
-            /([\d,]+)\s*in\s*the\s*last\s*month/i,
-            /([\d,]+)\s*posts?\s*last\s*month/i,
-          ];
-          for (const pat of monthBodyPatterns) {
-            const m = postsBodyText.match(pat);
-            if (m) { postsLastMonth = parseInt(m[1].replace(/,/g, '')); break; }
-          }
+        if (postsLastMonth === undefined) {
+          postsLastMonth = extractMetricFromText(postsBodyText, monthPatterns);
         }
 
         // Match: "สมาชิกทั้งหมด XX,XXX ราย" (more accurate member count)
@@ -439,8 +469,8 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
       groupInfo: {
         name: groupInfo.name || '',
         memberCount: groupInfo.memberCount || 0,
-        postsToday: groupInfo.postsToday || 0,
-        postsLastMonth: groupInfo.postsLastMonth || 0,
+        postsToday: typeof groupInfo.postsToday === 'number' ? groupInfo.postsToday : undefined,
+        postsLastMonth: typeof groupInfo.postsLastMonth === 'number' ? groupInfo.postsLastMonth : undefined,
         url: url,
         lastUpdated: new Date().toISOString()
       }

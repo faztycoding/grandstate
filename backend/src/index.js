@@ -519,8 +519,8 @@ app.post('/api/group-automation/start', ...auth, async (req, res) => {
       captionAssignments[g.id] = generatedCaptions[idx];
     });
 
-    // Start automation in background
-    const result = await req.groupWorker.startAutomation({
+    // Start automation in BACKGROUND — don't await, so frontend can poll immediately
+    req.groupWorker.startAutomation({
       property,
       groups,
       caption: generatedCaptions[0],
@@ -532,12 +532,28 @@ app.post('/api/group-automation/start', ...auth, async (req, res) => {
       captionStyle,
       browser: browser || 'chrome',
       userPackage: userPackage || 'free',
+    }).then(result => {
+      console.log('✅ Group automation finished:', result.success ? 'SUCCESS' : 'FAILED');
+    }).catch(err => {
+      console.error('❌ Group automation error:', err.message);
     });
 
-    // Include generated captions in response for TaskProgress display
-    result.generatedCaptions = generatedCaptions;
+    const status = req.groupWorker.getStatus();
 
-    res.json(result);
+    res.json({
+      success: true,
+      message: `เริ่ม automation แล้ว — ${groups.length} กลุ่ม`,
+      totalGroups: groups.length,
+      generatedCaptions,
+      isRunning: status.isRunning,
+      isPaused: status.isPaused,
+      currentStep: status.currentStep,
+      totalSteps: status.totalSteps,
+      tasks: status.tasks,
+      logs: status.logs,
+      startTime: status.startTime,
+      endTime: status.endTime,
+    });
   } catch (error) {
     console.error('Group automation start error:', error);
     res.status(500).json({ success: false, error: error.message });
@@ -1098,6 +1114,8 @@ app.post('/api/marketplace-automation/start', ...auth, async (req, res) => {
       console.error('❌ Marketplace automation error:', err.message);
     });
 
+    const status = req.marketplaceWorker.getStatus();
+
     // Return immediately with "started" response
     res.json({
       success: true,
@@ -1105,6 +1123,15 @@ app.post('/api/marketplace-automation/start', ...auth, async (req, res) => {
       skippedDuplicate: preflight.skippedDuplicate.length,
       skippedOverLimit: preflight.skippedOverLimit.length,
       totalGroups: preflight.canPost.length,
+      isRunning: status.isRunning,
+      isPaused: status.isPaused,
+      currentStep: status.currentStep,
+      totalSteps: status.totalSteps,
+      tasks: status.tasks,
+      logs: status.logs,
+      startTime: status.startTime,
+      endTime: status.endTime,
+      generatedCaptions: status.generatedCaptions,
     });
   } catch (error) {
     console.error('Marketplace automation start error:', error);

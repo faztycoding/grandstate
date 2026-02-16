@@ -76,6 +76,14 @@ interface AutomationState {
   startTime?: Date;
 }
 
+interface LogEntry {
+  time: number;
+  msg: string;
+  level: 'info' | 'success' | 'error' | 'warn' | 'start';
+}
+
+type AutomationMode = 'group' | 'marketplace';
+
 // Caption styles will be set dynamically in component using translations
 
 export default function Automation() {
@@ -111,6 +119,11 @@ export default function Automation() {
     totalSteps: 0,
     tasks: [],
   });
+
+  // Live log buffer from backend
+  const [automationLogs, setAutomationLogs] = useState<LogEntry[]>([]);
+  const [automationStartTime, setAutomationStartTime] = useState<number | null>(null);
+  const [automationEndTime, setAutomationEndTime] = useState<number | null>(null);
 
   // Health Check — fetches real data from backend postingTracker
   const { result: healthResult, clearHistory, refetch: refetchHealth } = useHealthCheck();
@@ -246,6 +259,10 @@ export default function Automation() {
       tasks,
       startTime: new Date(),
     });
+    setGeneratedCaptions([]);
+    setAutomationLogs([]);
+    setAutomationStartTime(Date.now());
+    setAutomationEndTime(null);
 
     toast.info(t.automation.automationStarting, {
       description: `${t.automation.postingTo} ${tasks.length} ${t.automation.groups}`,
@@ -319,35 +336,49 @@ export default function Automation() {
         setGeneratedCaptions(result.generatedCaptions);
       }
 
+      // Store startup status metadata so popup is accurate immediately
+      setAutomation(prev => ({
+        ...prev,
+        isRunning: result.isRunning ?? true,
+        isPaused: result.isPaused ?? false,
+        currentStep: result.currentStep ?? prev.currentStep,
+        totalSteps: result.totalSteps ?? prev.totalSteps,
+        tasks: result.tasks ?? prev.tasks,
+      }));
+      setAutomationLogs(Array.isArray(result.logs) ? result.logs : []);
+      setAutomationStartTime(typeof result.startTime === 'number' ? result.startTime : Date.now());
+      setAutomationEndTime(typeof result.endTime === 'number' ? result.endTime : null);
+
       // Start polling for status updates
-      pollAutomationStatus();
+      pollAutomationStatus(postingMode);
     } catch (error: any) {
       toast.error(t.automation.automationError, {
         description: error.message || t.automation.checkBackend,
       });
       // Auto reset UI state
       setAutomation({ isRunning: false, isPaused: false, currentStep: 0, totalSteps: 0, tasks: [] });
+      setAutomationLogs([]);
+      setAutomationStartTime(null);
+      setAutomationEndTime(null);
     }
   };
 
   // Polling interval ref — prevents stacking intervals
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Cleanup polling on unmount
-  useEffect(() => {
-    return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
-    };
-  }, []);
+  const getAutomationStatusPath = (mode: AutomationMode) => (
+    mode === 'marketplace'
+      ? '/api/marketplace-automation/status'
+      : '/api/group-automation/status'
+  );
 
   // Poll automation status
-  const pollAutomationStatus = useCallback(() => {
+  const pollAutomationStatus = useCallback((modeOverride?: AutomationMode) => {
     // Clear any existing interval first
     if (pollingRef.current) clearInterval(pollingRef.current);
 
-    const statusPath = postingMode === 'marketplace'
-      ? '/api/marketplace-automation/status'
-      : '/api/group-automation/status';
+    const modeToPoll = modeOverride || postingMode;
+    const statusPath = getAutomationStatusPath(modeToPoll);
 
     pollingRef.current = setInterval(async () => {
       try {
@@ -363,6 +394,14 @@ export default function Automation() {
             isRunning: data.isRunning ?? prev.isRunning,
             isPaused: data.isPaused ?? prev.isPaused,
           }));
+
+          // Capture logs + timing metadata from backend
+          setAutomationLogs(Array.isArray(data.logs) ? data.logs : []);
+          setAutomationStartTime(typeof data.startTime === 'number' ? data.startTime : null);
+          setAutomationEndTime(typeof data.endTime === 'number' ? data.endTime : null);
+          if (Array.isArray(data.generatedCaptions) && data.generatedCaptions.length > 0) {
+            setGeneratedCaptions(data.generatedCaptions);
+          }
 
           if (!data.isRunning) {
             if (pollingRef.current) clearInterval(pollingRef.current);
@@ -397,6 +436,73 @@ export default function Automation() {
     }, 1000);
   }, [postingMode, refetchHealth, t]);
 
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, []);
+
+  // ── AUTO-RECONNECT: Check automation status on page load ──
+  // If backend is still running (user closed tab / navigated away), restore UI
+  useEffect(() => {
+    const checkExistingAutomation = async () => {
+      try {
+        // Try both modes
+        for (const mode of ['group', 'marketplace'] as const) {
+          const response = await apiFetch(getAutomationStatusPath(mode));
+          const data = await response.json();
+          if (data.success && data.isRunning) {
+            console.log(`🔄 Reconnecting to ${mode} automation (isRunning=true)`);
+            setPostingMode(mode);
+            setAutomation({
+              isRunning: true,
+              isPaused: data.isPaused ?? false,
+              currentStep: data.currentStep || 0,
+              totalSteps: data.totalSteps || 0,
+              tasks: data.tasks || [],
+            });
+            setAutomationLogs(Array.isArray(data.logs) ? data.logs : []);
+            setAutomationStartTime(typeof data.startTime === 'number' ? data.startTime : null);
+            setAutomationEndTime(typeof data.endTime === 'number' ? data.endTime : null);
+            if (Array.isArray(data.generatedCaptions) && data.generatedCaptions.length > 0) {
+              setGeneratedCaptions(data.generatedCaptions);
+            }
+            // Start polling for the detected mode (avoid stale postingMode closure)
+            pollAutomationStatus(mode);
+            return; // found running automation, stop checking
+          }
+          // Also check if automation just finished (has tasks but not running)
+          if (data.success && !data.isRunning && data.tasks && data.tasks.length > 0) {
+            const hasResults = data.tasks.some((t: TaskStatus) => t.status === 'completed' || t.status === 'failed');
+            if (hasResults) {
+              console.log(`📋 Found completed ${mode} automation results`);
+              setPostingMode(mode);
+              setAutomation({
+                isRunning: false,
+                isPaused: false,
+                currentStep: data.currentStep || 0,
+                totalSteps: data.totalSteps || 0,
+                tasks: data.tasks,
+              });
+              setAutomationLogs(Array.isArray(data.logs) ? data.logs : []);
+              setAutomationStartTime(typeof data.startTime === 'number' ? data.startTime : null);
+              setAutomationEndTime(typeof data.endTime === 'number' ? data.endTime : null);
+              if (Array.isArray(data.generatedCaptions) && data.generatedCaptions.length > 0) {
+                setGeneratedCaptions(data.generatedCaptions);
+              }
+              return;
+            }
+          }
+        }
+      } catch (err) {
+        // Backend not available — silently ignore
+      }
+    };
+    checkExistingAutomation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Stop Automation
   const stopAutomation = async () => {
     // Clear polling immediately
@@ -408,12 +514,35 @@ export default function Automation() {
     const stopPath = postingMode === 'marketplace'
       ? '/api/marketplace-automation/stop'
       : '/api/group-automation/stop';
+
+    const statusPath = getAutomationStatusPath(postingMode);
     try {
       await apiFetch(stopPath, { method: 'POST' });
-      setAutomation(prev => ({ ...prev, isRunning: false, isPaused: false }));
+
+      // Sync final state (tasks/logs/endTime) after stop
+      const statusResponse = await apiFetch(statusPath);
+      const statusData = await statusResponse.json();
+      if (statusData.success) {
+        setAutomation(prev => ({
+          ...prev,
+          isRunning: false,
+          isPaused: false,
+          currentStep: statusData.currentStep ?? prev.currentStep,
+          totalSteps: statusData.totalSteps ?? prev.totalSteps,
+          tasks: statusData.tasks || prev.tasks,
+        }));
+        setAutomationLogs(Array.isArray(statusData.logs) ? statusData.logs : []);
+        setAutomationStartTime(typeof statusData.startTime === 'number' ? statusData.startTime : null);
+        setAutomationEndTime(typeof statusData.endTime === 'number' ? statusData.endTime : Date.now());
+      } else {
+        setAutomation(prev => ({ ...prev, isRunning: false, isPaused: false }));
+        setAutomationEndTime(Date.now());
+      }
+
       toast.info(t.automation.automationStopped);
     } catch (error) {
       setAutomation(prev => ({ ...prev, isRunning: false, isPaused: false }));
+      setAutomationEndTime(Date.now());
     }
   };
 
@@ -897,11 +1026,17 @@ export default function Automation() {
         failedTasks={failedTasks}
         progressPercent={progressPercent}
         generatedCaptions={generatedCaptions}
+        logs={automationLogs}
+        startTime={automationStartTime}
+        endTime={automationEndTime}
         onStop={stopAutomation}
         onPause={pauseAutomation}
         onDismiss={() => {
           setAutomation({ isRunning: false, isPaused: false, currentStep: 0, totalSteps: 0, tasks: [] });
           setGeneratedCaptions([]);
+          setAutomationLogs([]);
+          setAutomationStartTime(null);
+          setAutomationEndTime(null);
         }}
       />
 

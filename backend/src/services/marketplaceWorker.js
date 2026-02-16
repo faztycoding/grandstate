@@ -53,6 +53,12 @@ export class MarketplaceWorker {
     this.anthropic = null;
     this.tracker = new PostingTracker(userId);
 
+    // Live log buffer + timing for frontend display
+    this.logs = [];        // ring buffer — max 150 entries
+    this.startTime = null; // Date.now() when automation starts
+    this.endTime = null;   // Date.now() when automation ends/stops
+    this.generatedCaptions = [];
+
     // Auto-init from env var if available
     const envKey = process.env.ANTHROPIC_API_KEY;
     if (envKey && Anthropic) {
@@ -73,6 +79,21 @@ export class MarketplaceWorker {
 
   async delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  // ── Live log helper ──
+  // level: 'info' | 'success' | 'error' | 'warn' | 'start'
+  addLog(msg, level = 'info') {
+    const entry = {
+      time: Date.now(),
+      msg,
+      level,
+    };
+    this.logs.push(entry);
+    // Ring buffer: keep last 150 entries
+    if (this.logs.length > 150) {
+      this.logs = this.logs.slice(-150);
+    }
   }
 
   // Human-like random delay
@@ -211,17 +232,25 @@ export class MarketplaceWorker {
   }
 
   handleBrowserClosed() {
+    const wasRunning = this.isRunning;
+
+    if (wasRunning && this.tasks.length > 0) {
+      for (const task of this.tasks) {
+        if (task.status === 'pending' || task.status === 'in_progress') {
+          task.status = 'failed';
+          task.message = '❌ Browser ถูกปิดระหว่างทำงาน';
+        }
+      }
+      this.endTime = Date.now();
+      this.addLog('❌ Browser ถูกปิดระหว่าง marketplace automation — หยุดการทำงาน', 'error');
+    }
+
     this.browser = null;
     this.page = null;
     this.isRunning = false;
     this.isPaused = false;
-    this.tasks = [];
-    this.batches = [];
-    this.currentStep = 0;
-    this.totalSteps = 0;
-    this.currentBatch = 0;
-    this.totalBatches = 0;
     this.currentTask = null;
+    this.borrowedBrowser = false;
   }
 
   isBrowserConnected() {
@@ -2244,6 +2273,13 @@ export class MarketplaceWorker {
     this.isRunning = true;
     this.isPaused = false;
 
+    // Reset log buffer and set timing metadata
+    this.logs = [];
+    this.startTime = Date.now();
+    this.endTime = null;
+    this.generatedCaptions = caption ? [caption] : [];
+    this.addLog(`🚀 เริ่ม Marketplace Automation: ${groups.length} กลุ่ม`, 'start');
+
     // Initialize Claude
     if (claudeApiKey) this.initAnthropicClient(claudeApiKey);
 
@@ -2268,6 +2304,8 @@ export class MarketplaceWorker {
       const reason = preflight.dailyRemaining === 0
         ? `ถึงลิมิตวันนี้แล้ว (${preflight.dailyLimit} โพสต์) รีเซ็ตตี 5`
         : `กลุ่มทั้งหมดถูกโพสต์ไปแล้ววันนี้`;
+      this.endTime = Date.now();
+      this.addLog(`⏭️ ไม่สามารถเริ่มงาน: ${reason}`, 'warn');
       return {
         success: false,
         error: reason,
@@ -2359,6 +2397,8 @@ export class MarketplaceWorker {
     const batchDelayLabel = useSeconds ? `${delaySeconds} seconds (+2-5s random)` : `${delayMinutes || 5} minutes`;
     console.log(`⏱️ Delay between batches: ${batchDelayLabel}`);
     console.log(`📦 Package: ${userPackage}`);
+    this.addLog(`🌐 Browser: ${browser} | ⏱️ Delay: ${batchDelayLabel}`, 'info');
+    this.addLog(`📦 Package: ${userPackage}`, 'info');
 
     try {
       // Initialize browser
@@ -2367,6 +2407,8 @@ export class MarketplaceWorker {
           await this.initialize(browser);
         } catch (initError) {
           this.isRunning = false;
+          this.endTime = Date.now();
+          this.addLog(`❌ เปิด Browser ไม่สำเร็จ: ${initError.message}`, 'error');
           return { success: false, error: `ไม่สามารถเปิด Browser: ${initError.message}`, tasks: this.tasks };
         }
       }
@@ -2375,6 +2417,8 @@ export class MarketplaceWorker {
       const isLoggedIn = await this.checkLogin();
       if (!isLoggedIn) {
         this.isRunning = false;
+        this.endTime = Date.now();
+        this.addLog('❌ ยังไม่ได้ Login Facebook', 'error');
         return {
           success: false,
           error: 'ยังไม่ได้ Login',
@@ -2398,6 +2442,7 @@ export class MarketplaceWorker {
         console.log(`\n═══════════════════════════════════════`);
         console.log(`📦 Batch ${this.currentBatch}/${this.totalBatches} (${batch.length} groups)`);
         console.log(`═══════════════════════════════════════`);
+        this.addLog(`📦 Batch ${this.currentBatch}/${this.totalBatches} (${batch.length} กลุ่ม)`, 'info');
 
         // Mark batch tasks as in_progress (offset by skipped tasks)
         const batchStartIdx = skippedOffset + (batchIdx * BATCH_SIZE);
@@ -2413,6 +2458,7 @@ export class MarketplaceWorker {
           const checkpoint = await this.detectCheckpoint();
           if (checkpoint.detected) {
             console.log(`🚨 ${checkpoint.type} detected — stopping automation`);
+            this.addLog(`🚨 ${checkpoint.type} detected — หยุด automation`, 'error');
             // Mark all remaining tasks as failed
             for (let i = 0; i < batch.length; i++) {
               const taskIdx = batchStartIdx + i;
@@ -2586,9 +2632,11 @@ export class MarketplaceWorker {
           // Record batch stats
           this.tracker.recordBatch(this.currentBatch, batch.length, batchSuccess);
           console.log(`✅ Batch ${this.currentBatch} done: ${batchSuccess} success, ${batch.length - batchSuccess} failed`);
+          this.addLog(`✅ Batch ${this.currentBatch} เสร็จ: สำเร็จ ${batchSuccess}, ล้มเหลว ${batch.length - batchSuccess}`, 'success');
 
         } catch (batchError) {
           console.error(`❌ Batch ${this.currentBatch} error:`, batchError.message);
+          this.addLog(`❌ Batch ${this.currentBatch} error: ${batchError.message}`, 'error');
 
           // ── RETRY ONCE ──
           // Check if it's a recoverable error (not checkpoint/captcha)
@@ -2670,10 +2718,12 @@ export class MarketplaceWorker {
             const jitter = 2000 + Math.floor(Math.random() * 3000); // 2-5s
             delayMs = (delaySeconds * 1000) + jitter;
             console.log(`\n⏳ Waiting ${delaySeconds}s + ${(jitter/1000).toFixed(1)}s jitter = ${(delayMs/1000).toFixed(1)}s before batch ${batchIdx + 2} (${nextBatch.length} groups)...`);
+            this.addLog(`⏳ รอ ${(delayMs / 1000).toFixed(0)}s ก่อน batch ${batchIdx + 2}...`, 'warn');
           } else {
             // Minutes mode (legacy fallback)
             delayMs = ((delayMinutes || 5) * 60 + (Math.random() * 60 - 30)) * 1000;
             console.log(`\n⏳ Waiting ~${delayMinutes || 5} min before batch ${batchIdx + 2} (${nextBatch.length} groups)...`);
+            this.addLog(`⏳ รอ ~${delayMinutes || 5} นาทีก่อน batch ${batchIdx + 2}...`, 'warn');
           }
           const delaySec = Math.round(delayMs / 1000);
           
@@ -2692,6 +2742,7 @@ export class MarketplaceWorker {
 
       this.isRunning = false;
       this.currentTask = null;
+      this.endTime = Date.now();
 
       const completed = this.tasks.filter(t => t.status === 'completed').length;
       const failed = this.tasks.filter(t => t.status === 'failed').length;
@@ -2700,6 +2751,7 @@ export class MarketplaceWorker {
       console.log(`   ✅ Success: ${completed} groups`);
       console.log(`   ❌ Failed: ${failed} groups`);
       console.log(`   📦 Batches: ${this.totalBatches}`);
+      this.addLog(`🏁 Marketplace automation เสร็จสิ้น: สำเร็จ ${completed}, ล้มเหลว ${failed}`, 'success');
 
       return {
         success: true,
@@ -2712,6 +2764,8 @@ export class MarketplaceWorker {
 
     } catch (error) {
       this.isRunning = false;
+      this.endTime = Date.now();
+      this.addLog(`❌ Marketplace automation error: ${error.message}`, 'error');
       console.error('Marketplace automation error:', error);
       return { success: false, error: error.message, tasks: this.tasks };
     }
@@ -2738,28 +2792,42 @@ export class MarketplaceWorker {
       browserConnected: this.isBrowserConnected(),
       mode: 'marketplace',
       summary: { completed, failed, pending, total: this.tasks.length },
+      logs: this.logs,
+      startTime: this.startTime,
+      endTime: this.endTime,
+      generatedCaptions: this.generatedCaptions,
     };
   }
 
   pause() {
     this.isPaused = true;
+    this.addLog('⏸️ Pause marketplace automation', 'warn');
     console.log('⏸️ Marketplace automation paused');
   }
 
   resume() {
     this.isPaused = false;
+    this.addLog('▶️ Resume marketplace automation', 'info');
     console.log('▶️ Marketplace automation resumed');
   }
 
   async stop() {
+    const wasRunning = this.isRunning;
     this.isRunning = false;
     this.isPaused = false;
-    this.tasks = [];
-    this.batches = [];
-    this.currentStep = 0;
-    this.totalSteps = 0;
-    this.currentBatch = 0;
-    this.totalBatches = 0;
+    this.endTime = Date.now();
+
+    if (this.tasks.length > 0) {
+      for (const task of this.tasks) {
+        if (task.status === 'pending' || task.status === 'in_progress') {
+          task.status = 'failed';
+          task.message = '🛑 หยุดโดยผู้ใช้';
+        }
+      }
+    }
+    if (wasRunning) {
+      this.addLog('🛑 ผู้ใช้หยุด marketplace automation', 'warn');
+    }
 
     // Don't close borrowed browser (it belongs to groupWorker)
     if (this.browser && !this.borrowedBrowser) {

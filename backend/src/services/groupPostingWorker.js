@@ -65,6 +65,12 @@ export class GroupPostingWorker {
     this.anthropic = null;
     this.onPostResult = null; // callback: (propertyId, groupId, groupName, success) => void
 
+    // Live log buffer + timing for frontend display
+    this.logs = [];        // ring buffer — max 150 entries
+    this.startTime = null; // Date.now() when automation starts
+    this.endTime = null;   // Date.now() when automation ends/stops
+    this.generatedCaptions = [];
+
     // Auto-init from env var if available
     const envKey = process.env.ANTHROPIC_API_KEY;
     if (envKey && Anthropic) {
@@ -81,6 +87,21 @@ export class GroupPostingWorker {
     const key = apiKey || process.env.ANTHROPIC_API_KEY;
     if (key && Anthropic) {
       this.anthropic = new Anthropic({ apiKey: key });
+    }
+  }
+
+  // ── Live log helper ──
+  // level: 'info' | 'success' | 'error' | 'warn' | 'start'
+  addLog(msg, level = 'info') {
+    const entry = {
+      time: Date.now(),
+      msg,
+      level,
+    };
+    this.logs.push(entry);
+    // Ring buffer: keep last 150 entries
+    if (this.logs.length > 150) {
+      this.logs = this.logs.slice(-150);
     }
   }
 
@@ -137,7 +158,7 @@ export class GroupPostingWorker {
         const _ds = document.querySelectorAll('[role="dialog"]');
         let _fd = null;
         for (const _d of _ds) {
-          if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
+          if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue;
           _fd = _d; break;
         }
         const scope = _fd || document;
@@ -164,8 +185,8 @@ export class GroupPostingWorker {
       if (btnHandle.asElement()) {
         // Get button text before clicking
         const text = await page.evaluate(el => {
-          for (const s of el.querySelectorAll('span')) { const t = (s.textContent||'').trim(); if (t.length > 0 && t.length < 30) return t; }
-          return (el.textContent||'').trim().slice(0, 30);
+          for (const s of el.querySelectorAll('span')) { const t = (s.textContent || '').trim(); if (t.length > 0 && t.length < 30) return t; }
+          return (el.textContent || '').trim().slice(0, 30);
         }, btnHandle);
         await btnHandle.asElement().click();
         await btnHandle.dispose();
@@ -195,7 +216,7 @@ export class GroupPostingWorker {
     await page.evaluate(() => {
       const _ds = document.querySelectorAll('[role="dialog"]');
       for (const _d of _ds) {
-        if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
+        if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue;
         const scrollable = _d.querySelector('[style*="overflow"], [class*="scroll"]') || _d;
         for (const el of [scrollable, ..._d.querySelectorAll('div')]) {
           if (el.scrollHeight > el.clientHeight + 50) { el.scrollTop = 0; break; }
@@ -210,20 +231,20 @@ export class GroupPostingWorker {
       const _ds = document.querySelectorAll('[role="dialog"]');
       let _fd = null;
       for (const _d of _ds) {
-        if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
+        if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue;
         _fd = _d; break;
       }
       const scope = _fd || document.querySelector('[role="main"]') || document;
       const combos = [];
       for (const cb of scope.querySelectorAll('[role="combobox"]')) {
         const r = cb.getBoundingClientRect();
-        combos.push({ text: (cb.textContent||'').trim().slice(0,60), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) });
+        combos.push({ text: (cb.textContent || '').trim().slice(0, 60), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) });
       }
       // Also scan for any element with exact sale/rent text
       const saleRentEls = [];
       const allEls = scope.querySelectorAll('span, div, a, label, [role="button"], [role="tab"], [role="radio"], [role="option"], [tabindex]');
       for (const el of allEls) {
-        const t = (el.textContent||'').trim();
+        const t = (el.textContent || '').trim();
         if (t.length < 3 || t.length > 30) continue;
         const tl = t.toLowerCase();
         const match = [...targets, ...opposites].some(x => tl === x.toLowerCase() || tl.includes(x.toLowerCase()));
@@ -232,7 +253,7 @@ export class GroupPostingWorker {
         if (/property|house|flat|townhouse|room|บ้าน|อพาร์ท|ทาวน์|or rent|or sale|หรือเช่า|หรือขาย|type of/i.test(t)) continue;
         const r = el.getBoundingClientRect();
         if (r.width < 5 || r.height < 5) continue;
-        saleRentEls.push({ tag: el.tagName, role: el.getAttribute('role')||'', text: t, y: Math.round(r.y), x: Math.round(r.x), w: Math.round(r.width), h: Math.round(r.height), tabindex: el.getAttribute('tabindex'), ariaLabel: (el.getAttribute('aria-label')||'').slice(0,40) });
+        saleRentEls.push({ tag: el.tagName, role: el.getAttribute('role') || '', text: t, y: Math.round(r.y), x: Math.round(r.x), w: Math.round(r.width), h: Math.round(r.height), tabindex: el.getAttribute('tabindex'), ariaLabel: (el.getAttribute('aria-label') || '').slice(0, 40) });
       }
       return { combos, saleRentEls };
     }, targetTexts, oppositeTexts);
@@ -248,7 +269,7 @@ export class GroupPostingWorker {
       const _ds = document.querySelectorAll('[role="dialog"]');
       let _fd = null;
       for (const _d of _ds) {
-        if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
+        if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue;
         _fd = _d; break;
       }
       const scope = _fd || document.querySelector('[role="main"]') || document;
@@ -266,13 +287,13 @@ export class GroupPostingWorker {
         if (matchesOpposite) {
           const rect = cb.getBoundingClientRect();
           if (rect.width > 0 && rect.height > 0)
-            return { needsChange: true, x: rect.x + rect.width/2, y: rect.y + rect.height/2, text: cbText };
+            return { needsChange: true, x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, text: cbText };
         }
         const isPlaceholder = ddLabels.some(lbl => cbLower.includes(lbl.toLowerCase()));
         if (isPlaceholder) {
           const rect = cb.getBoundingClientRect();
           if (rect.width > 0 && rect.height > 0)
-            return { isPlaceholder: true, x: rect.x + rect.width/2, y: rect.y + rect.height/2, text: cbText };
+            return { isPlaceholder: true, x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, text: cbText };
         }
       }
       // Also search: find label text then look for nearby combobox sibling
@@ -298,8 +319,8 @@ export class GroupPostingWorker {
             if (mT && !mO) return { alreadyCorrect: true, text: cText };
             const rect = combo.getBoundingClientRect();
             if (rect.width > 0 && rect.height > 0) {
-              if (mO && !mT) return { needsChange: true, x: rect.x + rect.width/2, y: rect.y + rect.height/2, text: cText };
-              return { isPlaceholder: true, x: rect.x + rect.width/2, y: rect.y + rect.height/2, text: cText };
+              if (mO && !mT) return { needsChange: true, x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, text: cText };
+              return { isPlaceholder: true, x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, text: cText };
             }
           }
         }
@@ -340,7 +361,7 @@ export class GroupPostingWorker {
       const ranked = formDump.saleRentEls
         .filter(e => targetTexts.some(t => e.text.toLowerCase().includes(t.toLowerCase())))
         .sort((a, b) => {
-          const roleScore = (r) => ['tab','radio','button','option'].includes(r) ? 0 : 1;
+          const roleScore = (r) => ['tab', 'radio', 'button', 'option'].includes(r) ? 0 : 1;
           return roleScore(a.role) - roleScore(b.role) || a.text.length - b.text.length;
         });
       if (ranked.length > 0) {
@@ -356,7 +377,7 @@ export class GroupPostingWorker {
       const _ds = document.querySelectorAll('[role="dialog"]');
       let _fd = null;
       for (const _d of _ds) {
-        if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
+        if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue;
         _fd = _d; break;
       }
       const scope = _fd || document.querySelector('[role="main"]') || document;
@@ -468,7 +489,7 @@ export class GroupPostingWorker {
     const directClickResult = await page.evaluate((labelTexts) => {
       const _ds = document.querySelectorAll('[role="dialog"]');
       let _fd = null;
-      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue; _fd = _d; break; }
       const scope = _fd || document.querySelector('[role="main"]') || document;
       const spans = scope.querySelectorAll('span');
       for (const span of spans) {
@@ -487,7 +508,7 @@ export class GroupPostingWorker {
               const combos = p.querySelectorAll('[role="combobox"]');
               for (const combo of combos) {
                 if (combo === span) continue;
-                const ct = (combo.textContent||'').trim().toLowerCase();
+                const ct = (combo.textContent || '').trim().toLowerCase();
                 if (/type of property|ประเภทอสังหาริมทรัพย์|ประเภทของอสังหาริมทรัพย์|house|flat|townhouse|บ้าน|อพาร์ท/i.test(ct)) continue;
                 comboTarget = combo; break;
               }
@@ -551,7 +572,7 @@ export class GroupPostingWorker {
     const proximityResult = await page.evaluate((labelTexts, anchorY) => {
       const _ds = document.querySelectorAll('[role="dialog"]');
       let _fd = null;
-      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue; _fd = _d; break; }
       const scope = _fd || document.querySelector('[role="main"]') || document;
 
       let labelY = typeof anchorY === 'number' && anchorY > 0 ? anchorY : -1;
@@ -658,7 +679,7 @@ export class GroupPostingWorker {
     const comboCandidates = await page.evaluate(() => {
       const _ds = document.querySelectorAll('[role="dialog"]');
       let _fd = null;
-      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue; _fd = _d; break; }
       const scope = _fd || document.querySelector('[role="main"]') || document;
       const out = [];
       const combos = scope.querySelectorAll('[role="combobox"]');
@@ -741,7 +762,7 @@ export class GroupPostingWorker {
     const domDump = await page.evaluate((labelTexts) => {
       const _ds = document.querySelectorAll('[role="dialog"]');
       let _fd = null;
-      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue; _fd = _d; break; }
       const scope = _fd || document.querySelector('[role="main"]') || document;
       const scopeKind = _fd ? 'dialog' : (document.querySelector('[role="main"]') ? 'main' : 'document');
 
@@ -812,7 +833,7 @@ export class GroupPostingWorker {
       const _ds = document.querySelectorAll('[role="dialog"]');
       let _fd = null;
       for (const _d of _ds) {
-        if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
+        if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue;
         _fd = _d; break;
       }
       const scope = _fd || document.querySelector('[role="main"]') || document;
@@ -823,7 +844,7 @@ export class GroupPostingWorker {
       // Check property type dropdown specifically
       const combos = scope.querySelectorAll('[role="combobox"]');
       for (const cb of combos) {
-        const ct = (cb.textContent||'').trim();
+        const ct = (cb.textContent || '').trim();
         if (/type of property|ประเภท.*อสังหาริมทรัพย์/i.test(ct)) {
           const ctl = ct.toLowerCase();
           const matchTarget = targets.some(t => ctl.includes(t.toLowerCase()));
@@ -951,7 +972,7 @@ export class GroupPostingWorker {
       let didScroll = false;
       for (const d of dialogs) {
         // Skip Notifications dialog
-        if (/(notification|unread|การแจ้งเตือน)/i.test((d.textContent||'').slice(0,500))) continue;
+        if (/(notification|unread|การแจ้งเตือน)/i.test((d.textContent || '').slice(0, 500))) continue;
         const divs = d.querySelectorAll('div');
         for (const el of divs) {
           if (el.scrollHeight > el.clientHeight + 50) {
@@ -971,7 +992,7 @@ export class GroupPostingWorker {
       // Search within form dialog only (skip Notifications)
       const _ds = document.querySelectorAll('[role="dialog"]');
       let _fd = null;
-      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue; _fd = _d; break; }
       const spans = (_fd || document).querySelectorAll('span');
       for (const span of spans) {
         const text = (span.textContent || '').trim();
@@ -995,7 +1016,7 @@ export class GroupPostingWorker {
       // Search within form dialog only (skip Notifications)
       const _ds = document.querySelectorAll('[role="dialog"]');
       let _fd = null;
-      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue; _fd = _d; break; }
       const scope = _fd || document.querySelector('[role="main"]') || document;
 
       // Broad input selector: match text, number, tel, and untyped inputs + spinbutton
@@ -1078,7 +1099,7 @@ export class GroupPostingWorker {
       // Search within form dialog only (skip Notifications)
       const _ds = document.querySelectorAll('[role="dialog"]');
       let _fd = null;
-      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue; _fd = _d; break; }
       const scope = _fd || document.querySelector('[role="main"]') || document;
       const spans = scope.querySelectorAll('span');
       for (const span of spans) {
@@ -1182,7 +1203,7 @@ export class GroupPostingWorker {
       const verify = await page.evaluate((label, val) => {
         const _ds = document.querySelectorAll('[role="dialog"]');
         let _fd = null;
-        for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+        for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue; _fd = _d; break; }
         const scope = _fd || document.querySelector('[role="main"]') || document;
         const spans = scope.querySelectorAll('span');
         let targetSpan = null;
@@ -1232,7 +1253,7 @@ export class GroupPostingWorker {
       // Find form dialog (skip Notifications)
       const _ds = document.querySelectorAll('[role="dialog"]');
       let _fd = null;
-      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue; _fd = _d; break; }
       const scope = _fd || document.querySelector('[role="main"]') || document;
 
       // Method 1: Find by span label near a textarea
@@ -1332,7 +1353,7 @@ export class GroupPostingWorker {
       // Find form dialog (skip Notifications)
       const _ds = document.querySelectorAll('[role="dialog"]');
       let dialog = null;
-      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; dialog = _d; break; }
+      for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue; dialog = _d; break; }
       const scope = dialog || document.querySelector('[role="main"]') || document;
 
       // Method 1: label with SVG icon + input
@@ -1697,7 +1718,7 @@ export class GroupPostingWorker {
           const _ds = document.querySelectorAll('[role="dialog"]');
           let _fd = null;
           for (const _d of _ds) {
-            if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
+            if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue;
             _fd = _d; break;
           }
           const scope = _fd || document.querySelector('[role="main"]') || document;
@@ -1705,7 +1726,7 @@ export class GroupPostingWorker {
           // Debug: dump all visible short texts in dialog
           const debugTexts = [];
           for (const el of scope.querySelectorAll('span')) {
-            const t = (el.textContent||'').trim();
+            const t = (el.textContent || '').trim();
             if (t.length > 2 && t.length < 60) debugTexts.push(t);
           }
 
@@ -1713,7 +1734,7 @@ export class GroupPostingWorker {
           const allEls = scope.querySelectorAll('span, div, a, [role="button"], [role="tab"], [role="radio"], [role="option"], [tabindex]');
           const candidates = [];
           for (const el of allEls) {
-            const t = (el.textContent||'').trim();
+            const t = (el.textContent || '').trim();
             if (t.length < 3 || t.length > 50) continue;
             const tl = t.toLowerCase();
             // Must match target AND not contain opposite or "or rent"/"or sale"
@@ -1741,8 +1762,8 @@ export class GroupPostingWorker {
             }
             const cr = clickEl.getBoundingClientRect();
             candidates.push({
-              text: t, tag: el.tagName, role: el.getAttribute('role')||'',
-              x: cr.x + cr.width/2, y: cr.y + cr.height/2,
+              text: t, tag: el.tagName, role: el.getAttribute('role') || '',
+              x: cr.x + cr.width / 2, y: cr.y + cr.height / 2,
               w: Math.round(cr.width), h: Math.round(cr.height)
             });
           }
@@ -1756,7 +1777,7 @@ export class GroupPostingWorker {
         if (subResult.candidates.length > 0) {
           // Pick the best: prefer role=button/tab/radio, then smallest text
           const best = subResult.candidates.sort((a, b) => {
-            const rs = (r) => ['button','tab','radio','option'].includes(r) ? 0 : 1;
+            const rs = (r) => ['button', 'tab', 'radio', 'option'].includes(r) ? 0 : 1;
             return rs(a.role) - rs(b.role) || a.text.length - b.text.length;
           })[0];
           console.log(`   📍 Found sub-category "${best.text}" (${best.tag}[role=${best.role}]) at y=${Math.round(best.y)} — clicking`);
@@ -1770,7 +1791,7 @@ export class GroupPostingWorker {
           await page.evaluate(() => {
             const _ds = document.querySelectorAll('[role="dialog"]');
             for (const _d of _ds) {
-              if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
+              if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue;
               for (const el of _d.querySelectorAll('div')) {
                 if (el.scrollHeight > el.clientHeight + 50) { el.scrollTop = 0; break; }
               }
@@ -1803,7 +1824,7 @@ export class GroupPostingWorker {
       const formStillOpen = await page.evaluate(() => {
         const ds = document.querySelectorAll('[role="dialog"]');
         for (const d of ds) {
-          if (!/(notification|unread|การแจ้งเตือน)/i.test((d.textContent||'').slice(0,500))) return { ok: true, mode: 'dialog' };
+          if (!/(notification|unread|การแจ้งเตือน)/i.test((d.textContent || '').slice(0, 500))) return { ok: true, mode: 'dialog' };
         }
         const main = document.querySelector('[role="main"]') || document;
         const t = (main.textContent || '').toLowerCase();
@@ -1863,7 +1884,7 @@ export class GroupPostingWorker {
       const formLabels = await page.evaluate(() => {
         const _ds = document.querySelectorAll('[role="dialog"]');
         let dialog = null;
-        for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; dialog = _d; break; }
+        for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue; dialog = _d; break; }
         const scope = dialog || document.querySelector('[role="main"]') || document;
         const labels = [];
         // Check labels
@@ -1916,14 +1937,14 @@ export class GroupPostingWorker {
       const fieldAudit = await page.evaluate(() => {
         const _ds = document.querySelectorAll('[role="dialog"]');
         let _fd = null;
-        for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+        for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue; _fd = _d; break; }
         const scope = _fd || document.querySelector('[role="main"]') || document;
         const fields = [];
         // Check all inputs
         scope.querySelectorAll('input').forEach(inp => {
           if (inp.type === 'hidden' || inp.type === 'file') return;
           const label = inp.getAttribute('aria-label') || inp.placeholder || inp.name || '';
-          fields.push({ type: `input[${inp.type||'text'}]`, label, value: inp.value || '', filled: !!inp.value });
+          fields.push({ type: `input[${inp.type || 'text'}]`, label, value: inp.value || '', filled: !!inp.value });
         });
         // Check all comboboxes
         scope.querySelectorAll('[role="combobox"]').forEach(cb => {
@@ -1963,7 +1984,7 @@ export class GroupPostingWorker {
         const nextBox = await page.evaluate(() => {
           const _ds = document.querySelectorAll('[role="dialog"]');
           let _fd = null;
-          for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+          for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue; _fd = _d; break; }
           const scope = _fd || document;
           const buttons = scope.querySelectorAll('[role="button"], button');
           let disabledInfo = null;
@@ -2015,25 +2036,25 @@ export class GroupPostingWorker {
           const allFields = await page.evaluate(() => {
             const _ds = document.querySelectorAll('[role="dialog"]');
             let _fd = null;
-            for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+            for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue; _fd = _d; break; }
             const scope = _fd || document.querySelector('[role="main"]') || document;
             const empty = [], all = [];
             scope.querySelectorAll('input').forEach(inp => {
               if (inp.type === 'hidden' || inp.type === 'file') return;
-              const desc = `input[${inp.type||'text'}] aria="${inp.getAttribute('aria-label')||''}" ph="${inp.placeholder||''}" val="${(inp.value||'').slice(0,20)}"`;
+              const desc = `input[${inp.type || 'text'}] aria="${inp.getAttribute('aria-label') || ''}" ph="${inp.placeholder || ''}" val="${(inp.value || '').slice(0, 20)}"`;
               all.push(desc);
               if (!inp.value) empty.push(desc);
             });
             scope.querySelectorAll('[role="combobox"]').forEach(cb => {
-              const txt = (cb.textContent||'').trim().slice(0, 30);
-              const desc = `combobox aria="${cb.getAttribute('aria-label')||''}" txt="${txt}"`;
+              const txt = (cb.textContent || '').trim().slice(0, 30);
+              const desc = `combobox aria="${cb.getAttribute('aria-label') || ''}" txt="${txt}"`;
               all.push(desc);
               // Combobox with no selection often shows placeholder text
               if (!txt || txt.length < 2) empty.push(desc);
             });
             scope.querySelectorAll('textarea, div[role="textbox"]').forEach(tb => {
               const val = (tb.value || tb.textContent || '').trim().slice(0, 20);
-              const desc = `${tb.tagName === 'TEXTAREA' ? 'textarea' : 'textbox'} aria="${tb.getAttribute('aria-label')||''}" val="${val}"`;
+              const desc = `${tb.tagName === 'TEXTAREA' ? 'textarea' : 'textbox'} aria="${tb.getAttribute('aria-label') || ''}" val="${val}"`;
               all.push(desc);
               if (!val) empty.push(desc);
             });
@@ -2052,7 +2073,7 @@ export class GroupPostingWorker {
             const nextHandle = await page.evaluateHandle(() => {
               const _ds = document.querySelectorAll('[role="dialog"]');
               let _fd = null;
-              for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+              for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue; _fd = _d; break; }
               const scope = _fd || document;
               for (const btn of scope.querySelectorAll('[role="button"], button')) {
                 for (const s of btn.querySelectorAll('span')) {
@@ -2077,7 +2098,7 @@ export class GroupPostingWorker {
             await page.evaluate(() => {
               const _ds = document.querySelectorAll('[role="dialog"]');
               let _fd = null;
-              for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+              for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue; _fd = _d; break; }
               const scope = _fd || document;
               for (const btn of scope.querySelectorAll('[role="button"], button')) {
                 for (const s of btn.querySelectorAll('span')) {
@@ -2105,11 +2126,11 @@ export class GroupPostingWorker {
           await page.evaluate(() => {
             const _ds = document.querySelectorAll('[role="dialog"]');
             let _fd = null;
-            for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+            for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue; _fd = _d; break; }
             const scope = _fd || document;
             for (const btn of scope.querySelectorAll('[role="button"], button')) {
               for (const s of btn.querySelectorAll('span')) {
-                if ((s.textContent||'').trim() === 'Next' || (s.textContent||'').trim() === 'ถัดไป') {
+                if ((s.textContent || '').trim() === 'Next' || (s.textContent || '').trim() === 'ถัดไป') {
                   btn.focus();
                   return;
                 }
@@ -2126,13 +2147,13 @@ export class GroupPostingWorker {
           const pageChanged = await page.evaluate(() => {
             const _ds = document.querySelectorAll('[role="dialog"]');
             let _fd = null;
-            for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+            for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue; _fd = _d; break; }
             if (!_fd) return { changed: true, reason: 'no-dialog' };
             const txt = (_fd.textContent || '').toLowerCase();
             const stillOnForm = txt.includes('choose listing type') || txt.includes('number of bedrooms') || txt.includes('เลือกประเภทรายการ');
             // Also check what element is at click coords for debugging
             const topEl = document.elementFromPoint(960, 300);
-            const topTag = topEl ? `${topEl.tagName}.${topEl.getAttribute('role')||''}` : 'null';
+            const topTag = topEl ? `${topEl.tagName}.${topEl.getAttribute('role') || ''}` : 'null';
             if (stillOnForm) return { changed: false, reason: 'form-still-visible', topElement: topTag };
             return { changed: true, reason: 'form-gone' };
           });
@@ -2164,7 +2185,7 @@ export class GroupPostingWorker {
         const _ds = document.querySelectorAll('[role="dialog"]');
         let formDialog = null;
         for (const _d of _ds) {
-          if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
+          if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue;
           formDialog = _d; break;
         }
 
@@ -2199,7 +2220,7 @@ export class GroupPostingWorker {
         for (const btn of buttons) {
           const innerSpans = btn.querySelectorAll('span');
           let text = '';
-          for (const s of innerSpans) { const t = (s.textContent||'').trim(); if (t.length > 0 && t.length < 30) { text = t; break; } }
+          for (const s of innerSpans) { const t = (s.textContent || '').trim(); if (t.length > 0 && t.length < 30) { text = t; break; } }
           if (!text) text = (btn.textContent || '').trim();
           if (text.length > 0 && text.length < 40) {
             const disabled = btn.getAttribute('aria-disabled') === 'true' || btn.disabled;
@@ -2421,7 +2442,7 @@ export class GroupPostingWorker {
         const mktBox = await page.evaluate(() => {
           const _ds = document.querySelectorAll('[role="dialog"]');
           let _fd = null;
-          for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+          for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue; _fd = _d; break; }
           if (!_fd) return { found: false };
           const spans = _fd.querySelectorAll('span');
           for (const span of spans) {
@@ -2472,7 +2493,7 @@ export class GroupPostingWorker {
         const hasDialog = await page.evaluate(() => {
           const _ds = document.querySelectorAll('[role="dialog"]');
           for (const _d of _ds) {
-            if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
+            if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue;
             return true;
           }
           return false;
@@ -2488,7 +2509,7 @@ export class GroupPostingWorker {
             const _ds = document.querySelectorAll('[role="dialog"]');
             let _fd = null;
             for (const _d of _ds) {
-              if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue;
+              if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue;
               _fd = _d; break;
             }
             const scope = _fd || document;
@@ -2517,8 +2538,8 @@ export class GroupPostingWorker {
 
           if (postHandle.asElement()) {
             const btnText = await page.evaluate(el => {
-              for (const s of el.querySelectorAll('span')) { const t = (s.textContent||'').trim(); if (t.length > 0 && t.length < 30) return t; }
-              return (el.textContent||'').trim().slice(0, 30);
+              for (const s of el.querySelectorAll('span')) { const t = (s.textContent || '').trim(); if (t.length > 0 && t.length < 30) return t; }
+              return (el.textContent || '').trim().slice(0, 30);
             }, postHandle);
             console.log(`   📍 Post button "${btnText}" found — clicking via elementHandle...`);
             await postHandle.asElement().click();
@@ -2532,11 +2553,11 @@ export class GroupPostingWorker {
               const availBtns = await page.evaluate(() => {
                 const _ds = document.querySelectorAll('[role="dialog"]');
                 let _fd = null;
-                for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent||'').slice(0,500))) continue; _fd = _d; break; }
+                for (const _d of _ds) { if (/(notification|unread|การแจ้งเตือน)/i.test((_d.textContent || '').slice(0, 500))) continue; _fd = _d; break; }
                 if (!_fd) return [];
                 const btns = [];
                 for (const b of _fd.querySelectorAll('[role="button"], button')) {
-                  const t = (b.textContent||'').trim();
+                  const t = (b.textContent || '').trim();
                   if (t.length > 0 && t.length < 40) btns.push(t);
                 }
                 return [...new Set(btns)].slice(0, 15);
@@ -2638,7 +2659,7 @@ export class GroupPostingWorker {
     if (this.browser) {
       try {
         await this.browser.close();
-      } catch (e) {}
+      } catch (e) { }
       this.browser = null;
       this.page = null;
     }
@@ -2721,22 +2742,44 @@ export class GroupPostingWorker {
 
   // Handle browser closed by user (clicked X)
   handleBrowserClosed() {
-    console.log('🔄 Auto-resetting state after browser closed...');
+    const wasRunning = this.isRunning;
+    console.log('🔄 Handling browser disconnect...');
+
+    if (wasRunning && this.tasks.length > 0) {
+      for (const task of this.tasks) {
+        if (task.status === 'pending' || task.status === 'in_progress') {
+          task.status = 'failed';
+          task.message = '❌ Browser ถูกปิดระหว่างทำงาน';
+        }
+      }
+      this.endTime = Date.now();
+      this.addLog('❌ Browser ถูกปิดระหว่าง automation — หยุดการทำงาน', 'error');
+    }
+
     this.browser = null;
     this.page = null;
     this.isRunning = false;
     this.isPaused = false;
-    this.tasks = [];
-    this.currentStep = 0;
-    this.totalSteps = 0;
     this.currentTask = null;
-    console.log('✅ State reset - ready for fresh start');
+    console.log('✅ Browser state reset');
   }
 
   async close() {
+    const wasRunning = this.isRunning;
     this.isRunning = false;
     this.isPaused = false;
-    
+
+    if (wasRunning && this.tasks.length > 0) {
+      for (const task of this.tasks) {
+        if (task.status === 'pending' || task.status === 'in_progress') {
+          task.status = 'failed';
+          task.message = '❌ ปิด browser ระหว่างทำงาน';
+        }
+      }
+      this.endTime = Date.now();
+      this.addLog('❌ ปิด Browser ระหว่าง automation', 'error');
+    }
+
     if (this.browser) {
       await this.browser.close();
       this.browser = null;
@@ -2762,8 +2805,8 @@ export class GroupPostingWorker {
       await this.delay(2000);
 
       const isLoggedIn = await this.page.evaluate(() => {
-        return !document.querySelector('input[name="email"]') && 
-               !document.querySelector('button[name="login"]');
+        return !document.querySelector('input[name="email"]') &&
+          !document.querySelector('button[name="login"]');
       });
 
       if (!isLoggedIn) {
@@ -2785,36 +2828,36 @@ export class GroupPostingWorker {
   // Handle notification permission dialog (click Allow/อนุญาต)
   async handleNotificationPermission() {
     console.log('🔔 Checking for notification permission dialog...');
-    
+
     try {
       await this.delay(1500);
-      
+
       const clicked = await this.page.evaluate(() => {
         // Find all buttons
         const buttons = document.querySelectorAll('button, [role="button"], div[tabindex="0"]');
-        
+
         for (const btn of buttons) {
           const text = btn.textContent?.trim() || '';
           const ariaLabel = btn.getAttribute('aria-label') || '';
-          
+
           // Check for Allow/อนุญาต button
-          if (text === 'อนุญาต' || 
-              text === 'Allow' || 
-              text.includes('อนุญาต') ||
-              ariaLabel.includes('อนุญาต') ||
-              ariaLabel.includes('Allow')) {
+          if (text === 'อนุญาต' ||
+            text === 'Allow' ||
+            text.includes('อนุญาต') ||
+            ariaLabel.includes('อนุญาต') ||
+            ariaLabel.includes('Allow')) {
             btn.click();
             return { success: true, text };
           }
         }
-        
+
         // Also check for dialog with notification permission
         const dialogs = document.querySelectorAll('[role="dialog"]');
         for (const dialog of dialogs) {
           const dialogText = dialog.textContent || '';
-          if (dialogText.includes('แสดงการแจ้งเตือน') || 
-              dialogText.includes('notification') ||
-              dialogText.includes('แจ้งเตือน')) {
+          if (dialogText.includes('แสดงการแจ้งเตือน') ||
+            dialogText.includes('notification') ||
+            dialogText.includes('แจ้งเตือน')) {
             const allowBtn = dialog.querySelector('button, [role="button"]');
             if (allowBtn) {
               const btnText = allowBtn.textContent?.trim() || '';
@@ -2825,7 +2868,7 @@ export class GroupPostingWorker {
             }
           }
         }
-        
+
         return { success: false };
       });
 
@@ -2946,7 +2989,7 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
   // Navigate to a Facebook group
   async navigateToGroup(groupUrl) {
     console.log(`🔄 Navigating to group: ${groupUrl}`);
-    
+
     try {
       await this.page.goto(groupUrl, {
         waitUntil: 'networkidle2',
@@ -2983,10 +3026,10 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
         const writeButtons = document.querySelectorAll('[role="button"]');
         for (const btn of writeButtons) {
           const text = btn.textContent || '';
-          if (text.includes('เขียนอะไรสักหน่อย') || 
-              text.includes('Write something') ||
-              text.includes('สร้างโพสต์') ||
-              text.includes('Create post')) {
+          if (text.includes('เขียนอะไรสักหน่อย') ||
+            text.includes('Write something') ||
+            text.includes('สร้างโพสต์') ||
+            text.includes('Create post')) {
             btn.click();
             return { success: true, method: 'write-button' };
           }
@@ -3035,7 +3078,7 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
     console.log('Images param:', images);
     console.log('Images type:', typeof images);
     console.log('Is array:', Array.isArray(images));
-    
+
     if (!images || images.length === 0) {
       console.log('❌ No images to upload - images is empty or undefined');
       return true;
@@ -3053,7 +3096,7 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
       const filePaths = [];
       for (let i = 0; i < images.length; i++) {
         const image = images[i];
-        
+
         if (image.startsWith('data:')) {
           // Base64 image - save to temp file
           const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
@@ -3091,14 +3134,14 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
       // CRITICAL: Set up fileChooser listener BEFORE clicking any button
       // This intercepts the file dialog before it opens
       console.log('📤 Setting up file chooser listener FIRST...');
-      
+
       try {
         // Start listening for file chooser BEFORE triggering
         const fileChooserPromise = this.page.waitForFileChooser({ timeout: 10000 });
-        
+
         // Now click the photo button to trigger file chooser
         console.log('🔍 Clicking photo/video button...');
-        
+
         await this.page.evaluate(() => {
           const dialog = document.querySelector('[role="dialog"]');
           if (!dialog) return false;
@@ -3125,8 +3168,8 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
           for (const btn of buttons) {
             const text = (btn.textContent || '').toLowerCase();
             const label = (btn.getAttribute('aria-label') || '').toLowerCase();
-            if (text.includes('รูปภาพ') || text.includes('photo') || 
-                label.includes('รูปภาพ') || label.includes('photo')) {
+            if (text.includes('รูปภาพ') || text.includes('photo') ||
+              label.includes('รูปภาพ') || label.includes('photo')) {
               btn.click();
               return true;
             }
@@ -3138,19 +3181,19 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
         // Wait for the file chooser we set up earlier
         console.log('⏳ Waiting for file chooser...');
         const fileChooser = await fileChooserPromise;
-        
+
         console.log('✅ File chooser intercepted!');
         await fileChooser.accept(filePaths);
         console.log('✅ Files sent to chooser - no dialog should appear');
-        
+
       } catch (chooserError) {
         console.log('⚠️ FileChooser failed:', chooserError.message);
         console.log('🔄 Trying direct input method...');
-        
+
         // Fallback: Direct input method
         const fileInputs = await this.page.$$('input[type="file"]');
         console.log(`Found ${fileInputs.length} file inputs`);
-        
+
         if (fileInputs.length > 0) {
           const fileInput = fileInputs[fileInputs.length - 1];
           await fileInput.uploadFile(...filePaths);
@@ -3160,11 +3203,11 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
           return false;
         }
       }
-      
+
       // Wait for images to upload and show preview
       console.log('⏳ Waiting for images to process...');
       await this.delay(5000);
-      
+
       // Verify images were uploaded
       const hasImages = await this.page.evaluate(() => {
         const dialog = document.querySelector('[role="dialog"]');
@@ -3172,14 +3215,14 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
         const images = dialog.querySelectorAll('img[src*="blob:"], img[src*="scontent"]');
         return images.length > 0;
       });
-      
+
       console.log(`🖼️ Images visible in preview: ${hasImages}`);
 
       // Clean up temp files after delay
       setTimeout(() => {
         for (const fp of filePaths) {
           if (fp.includes('temp')) {
-            try { fs.unlinkSync(fp); } catch (e) {}
+            try { fs.unlinkSync(fp); } catch (e) { }
           }
         }
       }, 60000);
@@ -3353,12 +3396,12 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
         // Find the Create Post dialog first
         const dialogs = document.querySelectorAll('[role="dialog"]');
         let postDialog = null;
-        
+
         for (const dialog of dialogs) {
           const dialogText = dialog.textContent || '';
-          if (dialogText.includes('สร้างโพสต์') || 
-              dialogText.includes('Create post') ||
-              dialogText.includes('Create Post')) {
+          if (dialogText.includes('สร้างโพสต์') ||
+            dialogText.includes('Create post') ||
+            dialogText.includes('Create Post')) {
             postDialog = dialog;
             break;
           }
@@ -3374,21 +3417,21 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
 
         // Find the Post button inside the dialog
         const buttons = postDialog.querySelectorAll('[role="button"], button');
-        
+
         for (const btn of buttons) {
           const text = btn.textContent?.trim() || '';
           const ariaLabel = btn.getAttribute('aria-label') || '';
-          
+
           // Check if this is the Post button
-          if (text === 'โพสต์' || 
-              text === 'Post' || 
-              ariaLabel === 'โพสต์' ||
-              ariaLabel === 'Post') {
-            
+          if (text === 'โพสต์' ||
+            text === 'Post' ||
+            ariaLabel === 'โพสต์' ||
+            ariaLabel === 'Post') {
+
             // Check if button is enabled
             const isDisabled = btn.hasAttribute('aria-disabled') && btn.getAttribute('aria-disabled') === 'true';
             const isActuallyDisabled = btn.disabled === true;
-            
+
             if (!isDisabled && !isActuallyDisabled) {
               btn.click();
               return { success: true, text, method: 'dialog-button' };
@@ -3437,7 +3480,7 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
     try {
       // Try to get the URL from the notification or redirect
       const url = await this.page.url();
-      
+
       if (url.includes('/posts/') || url.includes('/permalink/')) {
         return url;
       }
@@ -3549,11 +3592,11 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
       if (taskGroupName && actualGroupName) {
         const normActual = (actualGroupName || '').replace(/\s+/g, ' ').trim().toLowerCase();
         const normTask = (taskGroupName || '').replace(/\s+/g, ' ').trim().toLowerCase();
-        
-        const isMatch = normActual === normTask || 
-                        normActual.includes(normTask) || 
-                        normTask.includes(normActual) ||
-                        this.fuzzyGroupNameMatch(normTask, normActual);
+
+        const isMatch = normActual === normTask ||
+          normActual.includes(normTask) ||
+          normTask.includes(normActual) ||
+          this.fuzzyGroupNameMatch(normTask, normActual);
 
         if (isMatch) {
           console.log(`✅ ชื่อตรงกัน — ยืนยันกลุ่มถูกต้อง`);
@@ -3572,9 +3615,9 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
         for (const b of allBtns) {
           const t = b.textContent?.trim()?.toLowerCase() || '';
           if (t.includes('ขายสินค้า') || t.includes('sell something') || t.includes('sell') ||
-              t.includes('create listing') || t.includes('สร้างรายการ') || t.includes('list item')) hasSellBtn = true;
+            t.includes('create listing') || t.includes('สร้างรายการ') || t.includes('list item')) hasSellBtn = true;
           if (t.includes('เขียนอะไรสักหน่อย') || t.includes('write something') ||
-              t.includes('สร้างโพสต์') || t.includes('create post')) hasWriteBtn = true;
+            t.includes('สร้างโพสต์') || t.includes('create post')) hasWriteBtn = true;
         }
         const tabs = document.querySelectorAll('[role="tab"], a[role="link"]');
         let hasBuySellTab = false;
@@ -3625,9 +3668,9 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
           for (const b of allBtns) {
             const t = b.textContent?.trim()?.toLowerCase() || '';
             if (t.includes('ขายสินค้า') || t.includes('sell something') || t.includes('sell') ||
-                t.includes('create listing') || t.includes('สร้างรายการ') || t.includes('list item')) hasSellBtn = true;
+              t.includes('create listing') || t.includes('สร้างรายการ') || t.includes('list item')) hasSellBtn = true;
             if (t.includes('เขียนอะไรสักหน่อย') || t.includes('write something') ||
-                t.includes('สร้างโพสต์') || t.includes('create post')) hasWriteBtn = true;
+              t.includes('สร้างโพสต์') || t.includes('create post')) hasWriteBtn = true;
           }
           return { hasSellBtn, hasWriteBtn, hasBuySellTab: true };
         });
@@ -3650,8 +3693,8 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
           const btns = document.querySelectorAll('[role="button"]');
           for (const b of btns) {
             const t = b.textContent || '';
-            if (t.includes('เขียนอะไรสักหน่อย') || t.includes('Write something') || 
-                t.includes('สร้างโพสต์') || t.includes('Create post')) return true;
+            if (t.includes('เขียนอะไรสักหน่อย') || t.includes('Write something') ||
+              t.includes('สร้างโพสต์') || t.includes('Create post')) return true;
           }
           return false;
         }, { timeout: 10000 });
@@ -3678,7 +3721,7 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
           for (const btn of writeButtons) {
             const text = btn.textContent || '';
             if (text.includes('เขียนอะไรสักหน่อย') || text.includes('Write something') ||
-                text.includes('สร้างโพสต์') || text.includes('Create post')) {
+              text.includes('สร้างโพสต์') || text.includes('Create post')) {
               btn.click();
               return true;
             }
@@ -3739,7 +3782,7 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
       // ── Step 5: Submit post (wait for button to be enabled, then click) ──
       // Random human-like pause before submitting (1-3s) — ดูเหมือนคนอ่านทบทวนก่อนกดโพสต์
       const preSubmitDelay = 1000 + Math.floor(Math.random() * 2000);
-      console.log(`⏱️ Pre-submit pause: ${(preSubmitDelay/1000).toFixed(1)}s`);
+      console.log(`⏱️ Pre-submit pause: ${(preSubmitDelay / 1000).toFixed(1)}s`);
       await this.delay(preSubmitDelay);
       console.log('🔄 Submitting post...');
       // Wait for Post button to become enabled
@@ -3814,7 +3857,7 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
   // Call this once before parallel batch, then pass filePaths to each tab
   async prepareImageFiles(images) {
     if (!images || images.length === 0) return [];
-    
+
     const tempDir = path.join(process.cwd(), 'temp');
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
 
@@ -3842,7 +3885,7 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
     if (filePaths.length > 0) {
       console.log(`🖼️ Prepared ${filePaths.length} image files for batch upload`);
       // Cleanup shared temp files after 5 minutes
-      setTimeout(() => { for (const fp of filePaths) { if (fp.includes('temp')) { try { fs.unlinkSync(fp); } catch (e) {} } } }, 300000);
+      setTimeout(() => { for (const fp of filePaths) { if (fp.includes('temp')) { try { fs.unlinkSync(fp); } catch (e) { } } } }, 300000);
     }
     return filePaths;
   }
@@ -3893,7 +3936,7 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
     try {
       const targetPage = page || this.page;
       if (!targetPage) return { detected: false };
-      
+
       const result = await targetPage.evaluate(() => {
         const url = window.location.href;
         const bodyText = document.body?.innerText || '';
@@ -3905,29 +3948,29 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
 
         // Check for captcha / verification
         if (bodyText.includes('ยืนยันตัวตน') || bodyText.includes('Verify your identity') ||
-            bodyText.includes('กรุณายืนยัน') || bodyText.includes('security check') ||
-            bodyText.includes('Enter the code') || bodyText.includes('ใส่รหัส')) {
+          bodyText.includes('กรุณายืนยัน') || bodyText.includes('security check') ||
+          bodyText.includes('Enter the code') || bodyText.includes('ใส่รหัส')) {
           return { detected: true, type: 'captcha', reason: 'captcha/verification prompt' };
         }
 
         // Check for temporary block / restriction
         if (bodyText.includes('ถูกจำกัด') || bodyText.includes('restricted') ||
-            bodyText.includes('ถูกบล็อก') || bodyText.includes('temporarily blocked') ||
-            bodyText.includes('ลองอีกครั้งในภายหลัง') || bodyText.includes('try again later') ||
-            bodyText.includes('ไม่สามารถโพสต์ได้') || bodyText.includes("can't post")) {
+          bodyText.includes('ถูกบล็อก') || bodyText.includes('temporarily blocked') ||
+          bodyText.includes('ลองอีกครั้งในภายหลัง') || bodyText.includes('try again later') ||
+          bodyText.includes('ไม่สามารถโพสต์ได้') || bodyText.includes("can't post")) {
           return { detected: true, type: 'blocked', reason: 'account temporarily blocked/restricted' };
         }
 
         // Check for rate limit
         if (bodyText.includes('โพสต์เร็วเกินไป') || bodyText.includes('posting too fast') ||
-            bodyText.includes('รอสักครู่') || bodyText.includes('slow down') ||
-            bodyText.includes('You\'re posting too fast')) {
+          bodyText.includes('รอสักครู่') || bodyText.includes('slow down') ||
+          bodyText.includes('You\'re posting too fast')) {
           return { detected: true, type: 'rate_limit', reason: 'posting too fast' };
         }
 
         // Check for session expired
         if (bodyText.includes('เซสชันหมดอายุ') || bodyText.includes('session expired') ||
-            document.querySelector('input[name="email"]')) {
+          document.querySelector('input[name="email"]')) {
           return { detected: true, type: 'session_expired', reason: 'session expired / logged out' };
         }
 
@@ -3975,6 +4018,14 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
     this.totalSteps = groups.length;
     this.currentStep = 0;
 
+    // Reset log buffer and set start time
+    this.logs = [];
+    this.startTime = Date.now();
+    this.endTime = null;
+    this.generatedCaptions = Array.isArray(captions) && captions.length > 0
+      ? captions
+      : (caption ? [caption] : []);
+
     // Initialize tasks
     this.tasks = groups.map((group, index) => ({
       id: `task-${index}`,
@@ -4002,6 +4053,9 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
     console.log(`⏱️ Delay between batches: ${batchDelayLabel}`);
     console.log(`📦 Package: ${userPackage}`);
     console.log(`🖼️ Images received: ${images ? images.length : 0}`);
+    this.addLog(`🚀 เริ่ม Automation: ${groups.length} กลุ่ม (batch ${batchRangeLabel})`, 'start');
+    this.addLog(`🌐 Browser: ${browser} | ⏱️ Delay: ${batchDelayLabel}`, 'info');
+    this.addLog(`📦 Package: ${userPackage} | 🖼️ รูป: ${images ? images.length : 0}`, 'info');
     if (captionAssignments) {
       console.log(`📝 Using ${Object.keys(captionAssignments).length} caption assignments`);
     }
@@ -4014,6 +4068,8 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
         } catch (initError) {
           console.error('❌ Browser init error:', initError.message);
           this.isRunning = false;
+          this.endTime = Date.now();
+          this.addLog(`❌ เปิด Browser ไม่สำเร็จ: ${initError.message}`, 'error');
           return { success: false, error: `ไม่สามารถเปิด Browser ได้: ${initError.message}`, tasks: this.tasks };
         }
       }
@@ -4027,6 +4083,8 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
         this.tasks = [];
         this.currentStep = 0;
         this.totalSteps = 0;
+        this.endTime = Date.now();
+        this.addLog('❌ ยังไม่ได้ Login Facebook', 'error');
         return { success: false, error: 'ยังไม่ได้ Login', errorType: 'login_required', message: 'กรุณา Login Facebook ในหน้าต่างที่เปิดอยู่', tasks: [] };
       }
 
@@ -4063,11 +4121,13 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
         console.log(`📦 Batch ${batchIdx + 1}: ${batchTasks.length} groups [${cursor + 1}-${cursor + batchSize}/${this.tasks.length}] (PARALLEL)`);
         batchTasks.forEach((t, i) => console.log(`   ${batchStart + i + 1}. ${t.groupName}`));
         console.log(`══════════════════════════════════════`);
+        this.addLog(`📦 Batch ${batchIdx + 1}: ${batchTasks.length} กลุ่ม [${cursor + 1}-${cursor + batchSize}/${this.tasks.length}]`, 'info');
 
         // ── CHECKPOINT CHECK before each batch ──
         const checkpoint = await this.detectCheckpoint();
         if (checkpoint.detected) {
           console.log(`🚨 ${checkpoint.type} detected — stopping automation`);
+          this.addLog(`🚨 ${checkpoint.type} detected — หยุด automation`, 'error');
           for (const task of batchTasks) {
             task.status = 'failed';
             task.message = `⚠️ Facebook ${checkpoint.type}: ${checkpoint.reason}`;
@@ -4112,13 +4172,15 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
           // Navigate
           task.message = 'กำลังเปิดกลุ่ม...';
           console.log(`   🔄 [${globalIdx}/${this.tasks.length}] Opening: ${task.groupName}`);
+          this.addLog(`🔄 [${globalIdx}/${this.tasks.length}] เปิดกลุ่ม: ${task.groupName}`, 'info');
           try {
             await tab.goto(task.groupUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
           } catch (e) {
             task.status = 'failed';
             task.message = 'เปิดกลุ่มไม่สำเร็จ';
             console.log(`   ❌ [${globalIdx}] Nav failed: ${task.groupName} — ${e.message}`);
-            if (taskIdx > 0) { try { await tab.close(); } catch {} }
+            this.addLog(`❌ [${globalIdx}] เปิดกลุ่มไม่ได้: ${task.groupName}`, 'error');
+            if (taskIdx > 0) { try { await tab.close(); } catch { } }
             activeTabs.delete(taskIdx);
             completedCount++;
             return;
@@ -4141,26 +4203,30 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
               task.postUrl = result.postUrl;
               if (result.pendingApproval) {
                 console.log(`   🕓 [${globalIdx}] Pending approval: ${result.actualGroupName || task.groupName}`);
+                this.addLog(`🕓 [${globalIdx}] รออนุมัติ: ${result.actualGroupName || task.groupName}`, 'warn');
               } else {
                 console.log(`   ✅ [${globalIdx}] Posted: ${result.actualGroupName || task.groupName}`);
+                this.addLog(`✅ [${globalIdx}] โพสต์สำเร็จ: ${result.actualGroupName || task.groupName}`, 'success');
               }
               if (this.onPostResult) this.onPostResult(property?.id, task.groupId, result.actualGroupName || task.groupName, true);
             } else {
               task.status = 'failed';
               task.message = result.error || 'โพสต์ไม่สำเร็จ';
               console.log(`   ❌ [${globalIdx}] Failed: ${task.groupName} — ${result.error}`);
+              this.addLog(`❌ [${globalIdx}] ล้มเหลว: ${task.groupName} — ${result.error}`, 'error');
               if (this.onPostResult) this.onPostResult(property?.id, task.groupId, task.groupName, false);
             }
           } catch (err) {
             task.status = 'failed';
             task.message = err.message || 'เกิดข้อผิดพลาด';
             console.log(`   ❌ [${globalIdx}] Error: ${task.groupName} — ${err.message}`);
+            this.addLog(`❌ [${globalIdx}] Error: ${task.groupName} — ${err.message}`, 'error');
             if (this.onPostResult) this.onPostResult(property?.id, task.groupId, task.groupName, false);
           }
 
           // Close tab (keep main page)
           if (taskIdx > 0) {
-            try { await tab.close(); } catch {}
+            try { await tab.close(); } catch { }
           }
           activeTabs.delete(taskIdx);
           completedCount++;
@@ -4185,9 +4251,9 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
             try {
               // Use Promise.allSettled to catch errors without crashing
               const settled = await Promise.race(
-                workers.filter(Boolean).map((w, i) => 
+                workers.filter(Boolean).map((w, i) =>
                   w.then(result => ({ status: 'fulfilled', result, index: i }))
-                   .catch(error => ({ status: 'rejected', error, index: i }))
+                    .catch(error => ({ status: 'rejected', error, index: i }))
                 )
               );
               // If rejected, log but continue - the processGroup handles its own errors
@@ -4234,6 +4300,7 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
         }
 
         console.log(`\n✅ Batch ${batchIdx + 1} completed (${completedCount} groups, ×${CONCURRENT} parallel)`);
+        this.addLog(`✅ Batch ${batchIdx + 1} เสร็จ (${completedCount} กลุ่ม)`, 'success');
 
         // Advance cursor
         cursor += batchSize;
@@ -4246,13 +4313,15 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
             // Seconds mode: user's value + random 2-5 seconds jitter
             const jitter = 2000 + Math.floor(Math.random() * 3000); // 2-5s
             delayMs = (delaySeconds * 1000) + jitter;
-            console.log(`\n⏳ Waiting ${delaySeconds}s + ${(jitter/1000).toFixed(1)}s jitter = ${(delayMs/1000).toFixed(1)}s before next batch...`);
+            console.log(`\n⏳ Waiting ${delaySeconds}s + ${(jitter / 1000).toFixed(1)}s jitter = ${(delayMs / 1000).toFixed(1)}s before next batch...`);
+            this.addLog(`⏳ รอ ${(delayMs / 1000).toFixed(0)}s ก่อน batch ถัดไป...`, 'warn');
           } else {
             // Minutes mode (marketplace): user's value + random ±30s
             delayMs = ((delayMinutes || 3) * 60 + (Math.random() * 60 - 30)) * 1000;
             console.log(`\n⏳ Waiting ~${delayMinutes || 3} min before next batch...`);
+            this.addLog(`⏳ รอ ~${delayMinutes || 3} นาทีก่อน batch ถัดไป...`, 'warn');
           }
-          
+
           // Wait in 5-second chunks so pause/stop can interrupt
           const chunks = Math.ceil(delayMs / 5000);
           for (let c = 0; c < chunks; c++) {
@@ -4265,11 +4334,13 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
 
       this.isRunning = false;
       this.currentTask = null;
+      this.endTime = Date.now();
 
       const completed = this.tasks.filter(t => t.status === 'completed').length;
       const failed = this.tasks.filter(t => t.status === 'failed').length;
 
       console.log(`\n✅ Automation completed: ${completed} success, ${failed} failed out of ${this.tasks.length}`);
+      this.addLog(`🏁 Automation เสร็จสิ้น: สำเร็จ ${completed}, ล้มเหลว ${failed} จาก ${this.tasks.length} กลุ่ม`, 'success');
 
       return {
         success: true,
@@ -4281,6 +4352,8 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
 
     } catch (error) {
       this.isRunning = false;
+      this.endTime = Date.now();
+      this.addLog(`❌ Automation error: ${error.message}`, 'error');
       console.error('Automation error:', error);
       return { success: false, error: error.message, tasks: this.tasks };
     }
@@ -4296,18 +4369,24 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
       currentTask: this.currentTask,
       tasks: this.tasks,
       browserConnected: this.isBrowserConnected(),
+      logs: this.logs,
+      startTime: this.startTime,
+      endTime: this.endTime,
+      generatedCaptions: this.generatedCaptions,
     };
   }
 
   // Pause automation
   pause() {
     this.isPaused = true;
+    this.addLog('⏸️ Pause automation', 'warn');
     console.log('⏸️ Automation paused');
   }
 
   // Resume automation
   resume() {
     this.isPaused = false;
+    this.addLog('▶️ Resume automation', 'info');
     console.log('▶️ Automation resumed');
   }
 
@@ -4315,20 +4394,28 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
   async stop() {
     this.isRunning = false;
     this.isPaused = false;
-    this.tasks = [];
-    this.currentStep = 0;
-    this.totalSteps = 0;
-    
+    this.endTime = Date.now();
+
+    if (this.tasks.length > 0) {
+      for (const task of this.tasks) {
+        if (task.status === 'pending' || task.status === 'in_progress') {
+          task.status = 'failed';
+          task.message = '🛑 หยุดโดยผู้ใช้';
+        }
+      }
+    }
+    this.addLog('🛑 ผู้ใช้หยุด automation', 'warn');
+
     // Close browser when stopped
     if (this.browser) {
       try {
         await this.browser.close();
         this.browser = null;
         this.page = null;
-      } catch (e) {}
+      } catch (e) { }
     }
-    
-    console.log('🛑 Automation stopped and reset');
+
+    console.log('🛑 Automation stopped');
   }
 }
 

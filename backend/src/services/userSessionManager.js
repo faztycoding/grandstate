@@ -5,6 +5,7 @@ import { PostScheduler } from './scheduler.js';
 
 const MAX_CONCURRENT_BROWSERS = 10;
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes inactivity
+const PRESENCE_TIMEOUT_MS = 45 * 1000; // 45s without heartbeat = offline
 
 /**
  * UserSessionManager — manages per-user worker instances + browser pool
@@ -34,6 +35,42 @@ class UserSessionManager {
     const session = this.sessions.get(userId);
     session.lastActivity = Date.now();
     return session;
+  }
+
+  touchPresence(userId) {
+    const session = this.getSession(userId);
+    session.lastPresenceAt = Date.now();
+    return session;
+  }
+
+  markOffline(userId) {
+    const session = this.sessions.get(userId);
+    if (!session) return;
+    session.lastPresenceAt = 0;
+    session.lastActivity = Date.now();
+  }
+
+  getPresenceStats() {
+    const now = Date.now();
+    let activeUsers = 0;
+    let onlineUsers = 0;
+    let automationUsers = 0;
+
+    for (const [, session] of this.sessions) {
+      const hasLivePresence = !!session.lastPresenceAt && (now - session.lastPresenceAt <= PRESENCE_TIMEOUT_MS);
+      const hasRunningAutomation = !!(session.groupWorker.isRunning || session.marketplaceWorker.isRunning);
+
+      if (hasLivePresence) onlineUsers++;
+      if (hasRunningAutomation) automationUsers++;
+      if (hasLivePresence || hasRunningAutomation) activeUsers++;
+    }
+
+    return {
+      activeUsers,
+      onlineUsers,
+      automationUsers,
+      presenceTimeoutMs: PRESENCE_TIMEOUT_MS,
+    };
   }
 
   _createSession(userId) {
@@ -85,6 +122,7 @@ class UserSessionManager {
       postingTracker,
       scheduler,
       lastActivity: Date.now(),
+      lastPresenceAt: Date.now(),
       createdAt: Date.now(),
     };
   }
@@ -126,15 +164,19 @@ class UserSessionManager {
   }
 
   getStats() {
+    const presence = this.getPresenceStats();
     return {
       totalSessions: this.sessions.size,
       activeBrowsers: this.activeBrowsers,
       maxBrowsers: MAX_CONCURRENT_BROWSERS,
+      ...presence,
       sessions: Array.from(this.sessions.entries()).map(([uid, s]) => ({
         userId: uid.substring(0, 8) + '...',
+        isOnline: !!s.lastPresenceAt && (Date.now() - s.lastPresenceAt <= PRESENCE_TIMEOUT_MS),
         isRunning: s.groupWorker.isRunning || s.marketplaceWorker.isRunning,
         hasBrowser: !!(s.groupWorker.browser && s.groupWorker.browser.isConnected()),
         lastActivity: new Date(s.lastActivity).toISOString(),
+        lastPresenceAt: s.lastPresenceAt ? new Date(s.lastPresenceAt).toISOString() : null,
       })),
     };
   }

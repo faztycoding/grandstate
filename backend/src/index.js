@@ -37,6 +37,7 @@ const apiLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
   max: 60, // 60 requests per minute per IP
   message: { success: false, error: 'Too many requests, please try again later' },
+  skip: (req) => req.path === '/session/active-users' || req.path === '/session/presence',
 });
 app.use('/api/', apiLimiter);
 
@@ -57,6 +58,39 @@ const auth = [authMiddleware, attachSession];
 // Health endpoint (no auth required)
 app.get('/api/ping', (req, res) => {
   res.json({ success: true, message: 'Grand$tate API is running', sessions: sessionManager.getStats() });
+});
+
+// Presence heartbeat (auth required)
+// online=true  => touch presence
+// online=false => mark user as offline immediately
+app.post('/api/session/presence', ...auth, (req, res) => {
+  try {
+    const isOnline = req.body?.online !== false;
+    if (isOnline) {
+      sessionManager.touchPresence(req.userId);
+    } else {
+      sessionManager.markOffline(req.userId);
+    }
+
+    res.json({
+      success: true,
+      online: isOnline,
+      ...sessionManager.getPresenceStats(),
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Active users count for sidebar display
+app.get('/api/session/active-users', ...auth, (req, res) => {
+  try {
+    // A successful authenticated poll implies user is online right now
+    sessionManager.touchPresence(req.userId);
+    res.json({ success: true, ...sessionManager.getPresenceStats() });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 // Debug: check user data in DB (service key bypasses RLS)

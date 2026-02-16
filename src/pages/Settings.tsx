@@ -212,15 +212,13 @@ export default function Settings() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmNewPassword('');
-    } catch (err: any) {
-      toast.error(err.message || (isEn ? 'Failed to change password' : 'เปลี่ยนรหัสผ่านไม่สำเร็จ'));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      toast.error(message || (isEn ? 'Failed to change password' : 'เปลี่ยนรหัสผ่านไม่สำเร็จ'));
     } finally {
       setIsChangingPassword(false);
     }
   };
-
-  // Claude API Key
-  const [claudeApiKey, setClaudeApiKey] = useState(() => localStorage.getItem('claudeApiKey') || '');
 
   // Default browser
   const [defaultBrowser, setDefaultBrowser] = useState<'chrome' | 'firefox' | 'edge'>(() =>
@@ -245,7 +243,7 @@ export default function Settings() {
   const handleSave = () => {
     localStorage.setItem('profile_name', profileName);
     localStorage.setItem('profile_email', profileEmail);
-    localStorage.setItem('claudeApiKey', claudeApiKey);
+    localStorage.removeItem('claudeApiKey');
     localStorage.setItem('defaultBrowser', defaultBrowser);
     window.dispatchEvent(new Event('profile-updated'));
     toast.success(t.common.success);
@@ -587,35 +585,6 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Claude API Key */}
-        <Card className="card-elevated">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Key className="w-5 h-5 text-accent" />
-              {s.claudeApiKey}
-            </CardTitle>
-            <CardDescription>
-              {s.claudeApiKeyDesc}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-2">
-              <Label>{s.claudeApiKey}</Label>
-              <Input
-                type="password"
-                value={claudeApiKey}
-                onChange={(e) => setClaudeApiKey(e.target.value)}
-                placeholder={s.claudeApiKeyPlaceholder}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {s.claudeApiKeyHint}
-            </p>
-          </CardContent>
-        </Card>
-
-
 
         {/* Theme & Appearance */}
         <Card className="card-elevated">

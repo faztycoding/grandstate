@@ -538,10 +538,6 @@ export const translations = {
 
     // Settings
     settingsPage: {
-      claudeApiKey: 'Claude API Key',
-      claudeApiKeyDesc: 'ใช้สำหรับสร้าง AI Caption อัตโนมัติ',
-      claudeApiKeyPlaceholder: 'sk-ant-...',
-      claudeApiKeyHint: 'รับ API Key ได้ที่ console.anthropic.com',
       browserSettings: 'ตั้งค่าเบราว์เซอร์',
       browserSettingsDesc: 'เลือกเบราว์เซอร์สำหรับ Automation',
       defaultBrowser: 'เบราว์เซอร์เริ่มต้น',
@@ -1112,10 +1108,6 @@ export const translations = {
 
     // Settings
     settingsPage: {
-      claudeApiKey: 'Claude API Key',
-      claudeApiKeyDesc: 'Used for automatic AI Caption generation',
-      claudeApiKeyPlaceholder: 'sk-ant-...',
-      claudeApiKeyHint: 'Get your API Key at console.anthropic.com',
       browserSettings: 'Browser Settings',
       browserSettingsDesc: 'Select browser for Automation',
       defaultBrowser: 'Default Browser',

@@ -84,6 +84,10 @@ interface LogEntry {
 
 type AutomationMode = 'group' | 'marketplace';
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
 // Caption styles will be set dynamically in component using translations
 
 export default function Automation() {
@@ -193,8 +197,9 @@ export default function Automation() {
       setNewGroupName('');
       setNewGroupUrl('');
       setIsAddGroupOpen(false);
-    } catch (err: any) {
-      toast.error('เพิ่มกลุ่มไม่สำเร็จ: ' + (err.message || ''));
+    } catch (err) {
+      const message = getErrorMessage(err, '');
+      toast.error(message ? `เพิ่มกลุ่มไม่สำเร็จ: ${message}` : 'เพิ่มกลุ่มไม่สำเร็จ');
     }
   };
 
@@ -203,7 +208,7 @@ export default function Automation() {
       await deleteGroup(groupId);
       setSelectedGroups(prev => prev.filter(id => id !== groupId));
       toast.success(`${t.automation.groupDeleted}: "${groupName}"`);
-    } catch (err: any) {
+    } catch {
       toast.error('ลบกลุ่มไม่สำเร็จ');
     }
   };
@@ -294,7 +299,6 @@ export default function Automation() {
           delaySeconds: delayBetweenPosts,
           browser: selectedBrowser,
           userPackage,
-          claudeApiKey: localStorage.getItem('claudeApiKey') || undefined,
         }),
       });
 
@@ -351,9 +355,9 @@ export default function Automation() {
 
       // Start polling for status updates
       pollAutomationStatus(postingMode);
-    } catch (error: any) {
+    } catch (error) {
       toast.error(t.automation.automationError, {
-        description: error.message || t.automation.checkBackend,
+        description: getErrorMessage(error, t.automation.checkBackend),
       });
       // Auto reset UI state
       setAutomation({ isRunning: false, isPaused: false, currentStep: 0, totalSteps: 0, tasks: [] });
@@ -1299,8 +1303,8 @@ export default function Automation() {
                     } else {
                       toast.error(data.error || 'Failed to schedule');
                     }
-                  } catch (err: any) {
-                    toast.error(err.message || 'Schedule failed');
+                  } catch (err) {
+                    toast.error(getErrorMessage(err, 'Schedule failed'));
                   }
                   setShowConfirmDialog(false);
                   setScheduleMode(false);

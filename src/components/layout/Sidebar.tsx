@@ -4,6 +4,8 @@ import {
   Zap,
   Building2,
   LogOut,
+  Activity,
+  Radio,
   ChevronLeft,
   ChevronRight,
   Settings,
@@ -19,11 +21,12 @@ import {
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
-import { useState, createContext, useContext } from 'react';
+import { useState, createContext, useContext, useEffect, useCallback } from 'react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { useLicenseAuth } from '@/hooks/useLicenseAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { apiFetch } from '@/lib/config';
 
 // Context for mobile sidebar toggle
 interface MobileSidebarContextType {
@@ -47,11 +50,119 @@ const navigationItems = [
   { key: 'settings' as const, href: '/settings', icon: Settings },
 ];
 
-function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
+interface ActiveUsersState {
+  activeUsers: number;
+  onlineUsers: number;
+  automationUsers: number;
+}
+
+interface PresencePayload extends Partial<ActiveUsersState> {
+  success?: boolean;
+}
+
+const HEARTBEAT_INTERVAL_MS = 15000;
+
+function useActiveUsersPresence() {
+  const [activeUserStats, setActiveUserStats] = useState<ActiveUsersState>({
+    activeUsers: 0,
+    onlineUsers: 0,
+    automationUsers: 0,
+  });
+  const [hasLoadedPresence, setHasLoadedPresence] = useState(false);
+
+  const applyPresencePayload = useCallback((payload: PresencePayload) => {
+    if (!payload?.success) return;
+
+    setActiveUserStats({
+      activeUsers: Number(payload.activeUsers) || 0,
+      onlineUsers: Number(payload.onlineUsers) || 0,
+      automationUsers: Number(payload.automationUsers) || 0,
+    });
+    setHasLoadedPresence(true);
+  }, []);
+
+  const fetchPresence = useCallback(async () => {
+    try {
+      const response = await apiFetch('/api/session/active-users');
+      const data = await response.json();
+      applyPresencePayload(data);
+    } catch {
+      // Keep last known stats if polling fails temporarily
+    }
+  }, [applyPresencePayload]);
+
+  const markOffline = useCallback(async () => {
+    try {
+      await apiFetch('/api/session/presence', {
+        method: 'POST',
+        keepalive: true,
+        body: JSON.stringify({ online: false }),
+      });
+    } catch {
+      // Best-effort only
+    }
+  }, []);
+
+  useEffect(() => {
+    let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void fetchPresence();
+      }
+    };
+
+    const handlePageHide = () => {
+      void markOffline();
+    };
+
+    void fetchPresence();
+    heartbeatTimer = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void fetchPresence();
+      }
+    }, HEARTBEAT_INTERVAL_MS);
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', handlePageHide);
+
+    return () => {
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
+    };
+  }, [fetchPresence, markOffline]);
+
+  return {
+    activeUserStats,
+    hasLoadedPresence,
+    markOffline,
+  };
+}
+
+interface SidebarContentProps {
+  collapsed: boolean;
+  onNavigate?: () => void;
+  activeUserStats: ActiveUsersState;
+  hasLoadedPresence: boolean;
+  markOffline: () => Promise<void>;
+}
+
+function SidebarContent({
+  collapsed,
+  onNavigate,
+  activeUserStats,
+  hasLoadedPresence,
+  markOffline,
+}: SidebarContentProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { user, signOut } = useLicenseAuth();
+
+  const activeUsersLabel = language === 'th' ? 'ผู้ใช้งานในระบบ' : 'ACTIVE USERS';
+  const onlineLabel = language === 'th' ? 'ออนไลน์' : 'online';
+  const automationLabel = language === 'th' ? 'กำลังรันออโต้' : 'automation';
 
   return (
     <>
@@ -95,6 +206,64 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       {/* Version + User section */}
       <div className="p-3 border-t border-sidebar-border space-y-2">
         {!collapsed && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: 'easeOut' }}
+            className="px-2"
+          >
+            <div className="relative overflow-hidden rounded-xl border border-sidebar-border/80 bg-sidebar-accent/60 px-3 py-2.5 shadow-[0_0_20px_hsl(var(--sidebar-ring)/0.15)]">
+              <motion.div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-sidebar-primary/20 to-transparent"
+                animate={{ x: ['-120%', '120%'] }}
+                transition={{ duration: 2.6, repeat: Infinity, ease: 'linear' }}
+              />
+
+              <div className="relative flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[9px] uppercase tracking-[0.2em] text-sidebar-foreground/50 font-semibold">
+                    {activeUsersLabel}
+                  </p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <motion.p
+                      key={hasLoadedPresence ? activeUserStats.activeUsers : -1}
+                      initial={{ opacity: 0, y: 6, scale: 0.9 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ duration: 0.24, ease: 'easeOut' }}
+                      className="text-xl font-black leading-none bg-gradient-to-r from-sidebar-primary via-sidebar-foreground to-sidebar-primary bg-clip-text text-transparent"
+                    >
+                      {hasLoadedPresence ? activeUserStats.activeUsers.toLocaleString() : '...'}
+                    </motion.p>
+                    <motion.span
+                      animate={{ scale: [1, 1.15, 1], opacity: [0.55, 1, 0.55] }}
+                      transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                      className="text-sidebar-primary"
+                    >
+                      <Radio className="w-4 h-4" />
+                    </motion.span>
+                  </div>
+                  <p className="text-[10px] text-sidebar-foreground/55 mt-0.5">
+                    {hasLoadedPresence
+                      ? `${activeUserStats.onlineUsers} ${onlineLabel} • ${activeUserStats.automationUsers} ${automationLabel}`
+                      : language === 'th' ? 'กำลังซิงค์สถานะ...' : 'syncing status...'}
+                  </p>
+                </div>
+
+                <motion.div
+                  animate={{ rotate: [0, 4, 0, -4, 0] }}
+                  transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+                  className="relative"
+                >
+                  <span className="absolute inset-0 rounded-full bg-sidebar-primary/20 blur-md" />
+                  <Activity className="relative w-5 h-5 text-sidebar-primary" />
+                </motion.div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {!collapsed && (
           <div className="px-2 py-2 text-center">
             <p className="text-[10px] uppercase tracking-[0.2em] text-sidebar-foreground/40 font-medium">Powered by</p>
             <p className="text-sm font-bold bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 bg-clip-text text-transparent tracking-wide">
@@ -104,7 +273,11 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
           </div>
         )}
         {collapsed && (
-          <div className="text-center py-1">
+          <div className="text-center py-1 space-y-1">
+            <div className="inline-flex items-center justify-center gap-1 px-1.5 py-0.5 rounded-full bg-sidebar-accent/80 border border-sidebar-border">
+              <Radio className="w-2.5 h-2.5 text-sidebar-primary" />
+              <span className="text-[9px] font-semibold text-sidebar-foreground/80">{hasLoadedPresence ? activeUserStats.activeUsers : '•'}</span>
+            </div>
             <p className="text-[9px] font-bold bg-gradient-to-r from-amber-400 to-yellow-300 bg-clip-text text-transparent">G$</p>
           </div>
         )}
@@ -120,6 +293,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
             collapsed && 'justify-center'
           )}
           onClick={async () => {
+            await markOffline();
             await signOut();
             localStorage.removeItem('fb_connected');
             localStorage.removeItem('fb_user_name');
@@ -139,6 +313,7 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const isMobile = useIsMobile();
   const { open, setOpen } = useMobileSidebar();
+  const { activeUserStats, hasLoadedPresence, markOffline } = useActiveUsersPresence();
 
   // Mobile: Sheet drawer
   if (isMobile) {
@@ -158,7 +333,13 @@ export function Sidebar() {
                 <X className="w-5 h-5" />
               </Button>
             </div>
-            <SidebarContent collapsed={false} onNavigate={() => setOpen(false)} />
+            <SidebarContent
+              collapsed={false}
+              onNavigate={() => setOpen(false)}
+              activeUserStats={activeUserStats}
+              hasLoadedPresence={hasLoadedPresence}
+              markOffline={markOffline}
+            />
           </div>
         </SheetContent>
       </Sheet>
@@ -199,7 +380,12 @@ export function Sidebar() {
           {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </Button>
       </div>
-      <SidebarContent collapsed={collapsed} />
+      <SidebarContent
+        collapsed={collapsed}
+        activeUserStats={activeUserStats}
+        hasLoadedPresence={hasLoadedPresence}
+        markOffline={markOffline}
+      />
     </motion.aside>
   );
 }

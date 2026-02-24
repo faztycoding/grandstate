@@ -17,6 +17,8 @@ import {
     Timer,
     ListChecks,
     MessageSquareText,
+    Users,
+    Hourglass,
 } from 'lucide-react';
 
 interface TaskStatus {
@@ -102,6 +104,7 @@ export function TaskProgressPopup({
     const [isMinimized, setIsMinimized] = useState(false);
     const [activeTab, setActiveTab] = useState<TabType>('tasks');
     const [elapsed, setElapsed] = useState('0:00');
+    const [countdown, setCountdown] = useState(queueEstimate || 0);
     const logEndRef = useRef<HTMLDivElement>(null);
     const logContainerRef = useRef<HTMLDivElement>(null);
     const [autoScroll, setAutoScroll] = useState(true);
@@ -111,6 +114,19 @@ export function TaskProgressPopup({
         t => t.status === 'completed' || t.status === 'pending_approval' || t.status === 'failed'
     );
     const hasContent = isRunning || isDone || tasks.length > 0;
+
+    // Live countdown for queue estimate
+    useEffect(() => {
+        setCountdown(queueEstimate || 0);
+    }, [queueEstimate]);
+
+    useEffect(() => {
+        if (!queuePosition || queuePosition <= 0 || countdown <= 0) return;
+        const id = setInterval(() => {
+            setCountdown(prev => (prev > 0 ? prev - 1 : 0));
+        }, 1000);
+        return () => clearInterval(id);
+    }, [queuePosition, countdown]);
 
     // Elapsed time timer
     useEffect(() => {
@@ -232,7 +248,67 @@ export function TaskProgressPopup({
 
                 {!isMinimized && (
                     <>
-                        {/* Progress */}
+                        {/* Queue Waiting Panel — shown instead of progress when in queue */}
+                        {queuePosition && queuePosition > 0 ? (
+                            <div className="px-4 py-5 bg-gradient-to-br from-amber-500/5 via-orange-500/5 to-yellow-500/5 border-b border-amber-500/20">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="relative flex-shrink-0">
+                                        <div className="w-12 h-12 rounded-full bg-amber-500/15 border-2 border-amber-500/30 flex items-center justify-center">
+                                            <Hourglass className="w-6 h-6 text-amber-500 animate-pulse" />
+                                        </div>
+                                        <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center">
+                                            <span className="text-[10px] font-bold text-white">{queuePosition}</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="font-semibold text-sm text-amber-600 dark:text-amber-400">รอในคิว — ลำดับที่ {queuePosition}</p>
+                                        <p className="text-xs text-muted-foreground mt-0.5">ระบบจะเริ่ม Automation อัตโนมัติเมื่อถึงคิว</p>
+                                    </div>
+                                </div>
+
+                                {/* Position dots */}
+                                <div className="flex items-center gap-1.5 mb-4">
+                                    {Array.from({ length: Math.max(queuePosition, 5) }).map((_, i) => (
+                                        <div
+                                            key={i}
+                                            className={cn(
+                                                'h-1.5 rounded-full transition-all',
+                                                i < queuePosition - 1
+                                                    ? 'flex-1 bg-muted/40'
+                                                    : i === queuePosition - 1
+                                                        ? 'flex-1 bg-amber-500 animate-pulse'
+                                                        : 'w-3 bg-muted/20'
+                                            )}
+                                        />
+                                    ))}
+                                </div>
+
+                                {/* Stats row */}
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="bg-card/60 rounded-lg border border-border px-3 py-2 flex items-center gap-2">
+                                        <Users className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                                        <div>
+                                            <p className="text-[10px] text-muted-foreground">คิวของคุณ</p>
+                                            <p className="text-sm font-bold">#{queuePosition}</p>
+                                        </div>
+                                    </div>
+                                    <div className="bg-card/60 rounded-lg border border-border px-3 py-2 flex items-center gap-2">
+                                        <Timer className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                                        <div>
+                                            <p className="text-[10px] text-muted-foreground">รอประมาณ</p>
+                                            <p className="text-sm font-bold font-mono">
+                                                {countdown > 0
+                                                    ? countdown >= 60
+                                                        ? `${Math.floor(countdown / 60)}:${String(countdown % 60).padStart(2, '0')} นาที`
+                                                        : `${countdown} วินาที`
+                                                    : 'เกือบถึงแล้ว...'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                        /* Normal Progress */
                         <div className="px-4 py-2 border-b border-border">
                             <>
                             {(() => {
@@ -251,6 +327,7 @@ export function TaskProgressPopup({
                             </>
                             <Progress value={progressPercent} className="h-2" />
                         </div>
+                        )}
 
                         {/* Tabs */}
                         <div className="flex border-b border-border">
@@ -274,8 +351,8 @@ export function TaskProgressPopup({
                             ))}
                         </div>
 
-                        {/* Tab Content */}
-                        <div className="max-h-[300px] overflow-y-auto">
+                        {/* Tab Content — hide when in queue */}
+                        <div className={cn("max-h-[300px] overflow-y-auto", queuePosition && queuePosition > 0 ? 'opacity-40 pointer-events-none' : '')}>
                             {/* Tasks Tab */}
                             {activeTab === 'tasks' && (
                                 <div className="divide-y divide-border">

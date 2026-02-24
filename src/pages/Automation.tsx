@@ -1110,7 +1110,61 @@ export default function Automation() {
             </CardContent>
           </Card>
 
-          {/* Task Progress — handled by floating TaskProgressPopup at bottom-right */}
+          {/* Queue Status Banner — shown inline when user is waiting in queue */}
+          {queuePosition && queuePosition > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-yellow-500/5 p-4"
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <div className="relative flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-amber-500/20 border-2 border-amber-500/40 flex items-center justify-center">
+                    <Clock className="w-5 h-5 text-amber-500 animate-pulse" />
+                  </div>
+                  <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center">
+                    {queuePosition}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm text-amber-600 dark:text-amber-400">
+                    📋 รอในคิว — ลำดับที่ #{queuePosition}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    ระบบจะเริ่ม Automation อัตโนมัติเมื่อถึงคิวของคุณ ไม่ต้องรอหน้านี้
+                  </p>
+                </div>
+                <div className="flex-shrink-0 text-right">
+                  <p className="text-[10px] text-muted-foreground">รอประมาณ</p>
+                  <p className="text-lg font-bold font-mono text-amber-500">
+                    {queueEstimate > 0
+                      ? queueEstimate >= 60
+                        ? `~${Math.ceil(queueEstimate / 60)} นาที`
+                        : `~${queueEstimate} วิ`
+                      : 'เกือบถึงแล้ว'}
+                  </p>
+                </div>
+              </div>
+              {/* Queue position progress bar */}
+              <div className="flex items-center gap-1.5">
+                {Array.from({ length: Math.min(Math.max(queuePosition + 2, 5), 10) }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      'h-1.5 flex-1 rounded-full transition-all duration-300',
+                      i < queuePosition - 1
+                        ? 'bg-muted/30'
+                        : i === queuePosition - 1
+                          ? 'bg-amber-500 animate-pulse'
+                          : 'bg-muted/15'
+                    )}
+                  />
+                ))}
+                <span className="text-[10px] text-muted-foreground ml-1 flex-shrink-0">#{queuePosition}</span>
+              </div>
+            </motion.div>
+          )}
 
           {/* Scheduled Posts — shows only when there are schedules */}
           <ScheduledPostsCard />

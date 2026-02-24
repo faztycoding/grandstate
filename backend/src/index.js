@@ -588,7 +588,14 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
 // Captions are auto-generated on backend based on group count
 app.post('/api/group-automation/start', ...auth, async (req, res) => {
   try {
-    const { property, groups, images, delayMinutes, delaySeconds, claudeApiKey, browser, userPackage } = req.body;
+    const { property, groups, images, delayMinutes, delaySeconds, claudeApiKey, browser, userPackage, fbSlot } = req.body;
+
+    // Switch to the correct FB session slot if specified
+    if (typeof fbSlot === 'number' && fbSlot >= 0) {
+      req.groupWorker.setProfileSlot(fbSlot);
+      sessionManager.setActiveSlot(req.userId, fbSlot);
+      console.log(`🔗 [Automation] Using FB session slot ${fbSlot}`);
+    }
 
     if (!property) {
       return res.status(400).json({ success: false, error: 'Property is required' });
@@ -1079,21 +1086,44 @@ app.get('/api/facebook/status', ...auth, async (req, res) => {
   }
 });
 
-// Disconnect a specific Facebook session slot
+// Disconnect a specific Facebook session slot — actually logout
 app.post('/api/facebook/disconnect', ...auth, async (req, res) => {
   try {
-    const slot = parseInt(req.body.slot ?? req.body.slot ?? sessionManager.getActiveSlot(req.userId));
+    const slot = parseInt(req.body.slot ?? sessionManager.getActiveSlot(req.userId));
     console.log(`🔌 [FB] Disconnect slot ${slot} (user ${req.userId.substring(0, 8)})`);
 
-    // If disconnecting the active slot, close browser
-    if (slot === sessionManager.getActiveSlot(req.userId) && req.groupWorker.browser) {
+    const isActiveSlot = slot === sessionManager.getActiveSlot(req.userId);
+
+    // If this is the active slot and browser is open → clear FB cookies then close
+    if (isActiveSlot && req.groupWorker.browser && req.groupWorker.page) {
+      try {
+        // Navigate to Facebook and clear cookies to truly logout
+        const client = await req.groupWorker.page.target().createCDPSession();
+        await client.send('Network.clearBrowserCookies');
+        await client.send('Network.clearBrowserCache');
+        console.log('🍪 Cleared Facebook cookies & cache');
+      } catch (e) {
+        console.log('⚠️ Cookie clear failed (non-fatal):', e.message);
+      }
       await req.groupWorker.close();
       sessionManager.registerBrowserClose();
+    } else {
+      // Not the active slot — delete the profile directory cookies
+      const profileDir = path.join(process.cwd(), 'profiles', req.userId, `fb-session-${slot}`);
+      const cookiesPath = path.join(profileDir, 'Default', 'Cookies');
+      const cookiesJournalPath = path.join(profileDir, 'Default', 'Cookies-journal');
+      try {
+        const fs = await import('fs');
+        if (fs.existsSync(cookiesPath)) { fs.unlinkSync(cookiesPath); console.log(`🍪 Deleted cookies for slot ${slot}`); }
+        if (fs.existsSync(cookiesJournalPath)) fs.unlinkSync(cookiesJournalPath);
+      } catch (e) {
+        console.log('⚠️ Profile cookie delete failed (non-fatal):', e.message);
+      }
     }
 
     // Clear session metadata
     sessionManager.clearFbSession(req.userId, slot);
-    res.json({ success: true, message: `ยกเลิกการเชื่อมต่อ Session ${slot + 1} แล้ว`, slot });
+    res.json({ success: true, message: `Logout Session ${slot + 1} สำเร็จ`, slot });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

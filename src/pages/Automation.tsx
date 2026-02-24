@@ -95,7 +95,7 @@ export default function Automation() {
   const location = useLocation();
   const { properties } = useSupabaseProperties();
   const { groups, activeGroups, addGroup, deleteGroup, toggleGroupActive } = useSupabaseGroups();
-  const { isConnected, isChecking, user } = useFacebookConnection();
+  const { isConnected, isChecking, user, sessions: fbSessions, connectedCount: fbConnectedCount } = useFacebookConnection();
   const { t, language } = useLanguage();
 
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
@@ -111,6 +111,7 @@ export default function Automation() {
     return (localStorage.getItem('userPackage') as 'free' | 'agent' | 'elite') || 'elite';
   });
   const [postingMode, setPostingMode] = useState<'group' | 'marketplace'>('marketplace'); // Default to marketplace
+  const [selectedFbSlot, setSelectedFbSlot] = useState<number>(0);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [scheduleMode, setScheduleMode] = useState(false);
   const [scheduleDateTime, setScheduleDateTime] = useState('');
@@ -304,6 +305,7 @@ export default function Automation() {
           delaySeconds: delayBetweenPosts,
           browser: selectedBrowser,
           userPackage,
+          fbSlot: selectedFbSlot,
         }),
       });
 
@@ -901,8 +903,8 @@ export default function Automation() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Facebook Connection Status */}
-              {!isConnected && !isChecking && (
+              {/* Facebook Session Selector */}
+              {!isConnected && !isChecking && fbConnectedCount === 0 && (
                 <div className="p-4 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800">
                   <div className="flex items-start gap-3">
                     <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
@@ -920,19 +922,45 @@ export default function Automation() {
                 </div>
               )}
 
-              {isConnected && (
-                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
-                  <div className="flex items-center gap-3">
-                    {user?.profilePic ? (
-                      <img src={user.profilePic} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                    ) : (
-                      <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
-                    )}
-                    <div>
-                      <p className="font-medium text-green-700 dark:text-green-400">{t.automation.connectedAs}</p>
-                      <p className="text-xs text-muted-foreground">{user?.name || 'Facebook User'}</p>
+              {(isConnected || fbConnectedCount > 0) && (
+                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                      <p className="font-medium text-sm text-green-700 dark:text-green-400">{t.automation.connectedAs}</p>
                     </div>
+                    <Badge variant="outline" className="text-[10px]">{fbConnectedCount} session{fbConnectedCount > 1 ? 's' : ''}</Badge>
                   </div>
+                  {/* Session selector — show connected accounts */}
+                  {fbSessions.filter(s => s && s.name).length > 0 && (
+                    <div className="flex gap-2 flex-wrap">
+                      {fbSessions.map((s, i) => {
+                        if (!s || !s.name) return null;
+                        const isSelected = selectedFbSlot === i;
+                        return (
+                          <button key={i} onClick={() => setSelectedFbSlot(i)}
+                            className={cn("flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-left",
+                              isSelected ? "border-green-500 bg-green-100 dark:bg-green-900/30 ring-1 ring-green-500/30" : "border-border hover:border-green-300 bg-background"
+                            )}>
+                            {s.profilePic ? (
+                              <img src={s.profilePic} alt="" className="w-6 h-6 rounded-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                            ) : (
+                              <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center"><span className="text-white text-[10px] font-bold">{s.name?.charAt(0)}</span></div>
+                            )}
+                            <div className="min-w-0">
+                              <p className="text-xs font-medium truncate">{s.name}</p>
+                              <p className="text-[10px] text-muted-foreground">Slot {i + 1}</p>
+                            </div>
+                            {isSelected && <Check className="w-3.5 h-3.5 text-green-600 flex-shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {/* Fallback if no session metadata yet */}
+                  {fbSessions.filter(s => s && s.name).length === 0 && user && (
+                    <p className="text-xs text-muted-foreground">{user.name || 'Facebook User'}</p>
+                  )}
                 </div>
               )}
 

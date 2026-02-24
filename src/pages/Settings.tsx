@@ -515,13 +515,13 @@ export default function Settings() {
                   {Array.from({ length: pkgLimits.fbAccounts }, (_, i) => (
                     <div key={i} className={cn(
                       "w-3 h-3 rounded-full border-2 transition-all",
-                      i < (isConnected ? 1 : 0)
+                      i < fbConnectedCount
                         ? "bg-green-500 border-green-500 shadow-sm shadow-green-500/30"
                         : "border-muted-foreground/30 bg-transparent"
                     )} />
                   ))}
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-1">{isConnected ? 1 : 0}/{pkgLimits.fbAccounts} sessions ({pkgTheme.label})</p>
+                <p className="text-[10px] text-muted-foreground mt-1">{fbConnectedCount}/{pkgLimits.fbAccounts} sessions ({pkgTheme.label})</p>
               </div>
             </div>
           </CardHeader>
@@ -660,12 +660,23 @@ export default function Settings() {
               </div>
             </div>
 
-            {/* Info */}
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/30 text-xs">
-              <Info className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 mt-0.5" />
-              <p className="text-muted-foreground leading-relaxed">
-                {t.settings.connectionInfo} แพ็คเกจ {pkgTheme.label} รองรับ {pkgLimits.fbAccounts} FB session{pkgLimits.fbAccounts > 1 ? 's' : ''}
-              </p>
+            {/* Trust Signals + Info */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-3 p-2.5 rounded-lg bg-green-50/50 dark:bg-green-950/10 border border-green-100 dark:border-green-900/30">
+                <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
+                  <Key className="w-3 h-3 text-green-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-[10px] font-medium text-green-700 dark:text-green-400">Session เข้ารหัสในเครื่อง</p>
+                  <p className="text-[9px] text-muted-foreground">เราไม่เก็บรหัสผ่าน Facebook ของคุณ — ใช้ browser profile ที่เข้ารหัสบน server</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/30 text-xs">
+                <Info className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                <p className="text-muted-foreground leading-relaxed">
+                  {t.settings.connectionInfo} แพ็คเกจ {pkgTheme.label} รองรับ {pkgLimits.fbAccounts} FB session{pkgLimits.fbAccounts > 1 ? 's' : ''} • Logout จะล้าง cookies ออกจริง
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>

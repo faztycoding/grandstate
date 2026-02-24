@@ -10,7 +10,7 @@
  * - ผู้ใช้เห็นตำแหน่งคิวและเวลาโดยประมาณ
  */
 
-const MAX_CONCURRENT = parseInt(process.env.MAX_CONCURRENT_AUTOMATIONS || '3', 10);
+const MAX_CONCURRENT = parseInt(process.env.MAX_CONCURRENT_AUTOMATIONS || '10', 10);
 const QUEUE_TIMEOUT_MS = 30 * 60 * 1000; // 30 min max wait in queue
 
 class AutomationQueue {

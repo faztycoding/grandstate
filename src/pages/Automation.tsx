@@ -1118,6 +1118,32 @@ export default function Automation() {
               exit={{ opacity: 0, y: -10 }}
               className="rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-yellow-500/5 p-4"
             >
+              {/* Facebook User Info */}
+              {(fbSessions[selectedFbSlot]?.name || user) && (
+                <div className="flex items-center gap-3 mb-3 p-2 rounded-lg bg-card/40 border border-border/50">
+                  {(fbSessions[selectedFbSlot]?.profilePic || user?.profilePic) ? (
+                    <img 
+                      src={fbSessions[selectedFbSlot]?.profilePic || user?.profilePic} 
+                      alt={fbSessions[selectedFbSlot]?.name || user?.name} 
+                      className="w-8 h-8 rounded-full object-cover border border-background"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
+                      {(fbSessions[selectedFbSlot]?.name || user?.name)?.charAt(0)?.toUpperCase() || 'F'}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{fbSessions[selectedFbSlot]?.name || user?.name || 'Facebook User'}</p>
+                    <p className="text-xs text-muted-foreground">กำลังรอคิว...</p>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <div className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center">
+                      <span className="text-[10px] font-bold text-white">{queuePosition}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center gap-3 mb-3">
                 <div className="relative flex-shrink-0">
                   <div className="w-10 h-10 rounded-full bg-amber-500/20 border-2 border-amber-500/40 flex items-center justify-center">
@@ -1208,6 +1234,7 @@ export default function Automation() {
         endTime={automationEndTime}
         queuePosition={queuePosition}
         queueEstimate={queueEstimate}
+        fbUser={fbSessions[selectedFbSlot]?.name ? { name: fbSessions[selectedFbSlot].name!, profilePic: fbSessions[selectedFbSlot].profilePic! } : user}
         onStop={stopAutomation}
         onPause={pauseAutomation}
         onDismiss={() => {

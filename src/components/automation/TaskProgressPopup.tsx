@@ -51,6 +51,7 @@ interface TaskProgressPopupProps {
     endTime: number | null;
     queuePosition?: number | null;
     queueEstimate?: number;
+    fbUser?: { name: string; profilePic?: string } | null;
     onStop: () => void;
     onPause: () => void;
     onDismiss: () => void;
@@ -97,6 +98,7 @@ export function TaskProgressPopup({
     endTime,
     queuePosition,
     queueEstimate,
+    fbUser,
     onStop,
     onPause,
     onDismiss,
@@ -251,14 +253,42 @@ export function TaskProgressPopup({
                         {/* Queue Waiting Panel — shown instead of progress when in queue */}
                         {queuePosition && queuePosition > 0 ? (
                             <div className="px-4 py-5 bg-gradient-to-br from-amber-500/5 via-orange-500/5 to-yellow-500/5 border-b border-amber-500/20">
+                                {/* Facebook User Info */}
+                                {fbUser && (
+                                    <div className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-card/40 border border-border/50">
+                                        {fbUser.profilePic ? (
+                                            <img 
+                                                src={fbUser.profilePic} 
+                                                alt={fbUser.name} 
+                                                className="w-10 h-10 rounded-full object-cover border-2 border-background"
+                                            />
+                                        ) : (
+                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold">
+                                                {fbUser.name?.charAt(0)?.toUpperCase() || 'F'}
+                                            </div>
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium truncate">{fbUser.name || 'Facebook User'}</p>
+                                            <p className="text-xs text-muted-foreground">กำลังรอคิว...</p>
+                                        </div>
+                                        <div className="flex-shrink-0">
+                                            <div className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center">
+                                                <span className="text-[10px] font-bold text-white">{queuePosition}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="flex items-center gap-3 mb-4">
                                     <div className="relative flex-shrink-0">
                                         <div className="w-12 h-12 rounded-full bg-amber-500/15 border-2 border-amber-500/30 flex items-center justify-center">
                                             <Hourglass className="w-6 h-6 text-amber-500 animate-pulse" />
                                         </div>
-                                        <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center">
-                                            <span className="text-[10px] font-bold text-white">{queuePosition}</span>
-                                        </div>
+                                        {!fbUser && (
+                                            <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center">
+                                                <span className="text-[10px] font-bold text-white">{queuePosition}</span>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="flex-1">
                                         <p className="font-semibold text-sm text-amber-600 dark:text-amber-400">รอในคิว — ลำดับที่ {queuePosition}</p>

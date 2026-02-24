@@ -26,6 +26,7 @@ import {
   Wifi,
   Key,
   Monitor,
+  X,
   Trash2,
   Download,
   Info,
@@ -72,12 +73,15 @@ export default function Settings() {
   const pkgLimits = getPackageLimits(pkg);
   const PkgIcon = pkgTheme.icon;
 
-  // Facebook connection
+  // Facebook connection (multi-session)
   const {
     isConnected,
     isConnecting,
     isChecking,
     user,
+    sessions: fbSessions,
+    connectedCount: fbConnectedCount,
+    connectingSlot,
     connect,
     confirmLogin,
     autoLogin,
@@ -85,8 +89,10 @@ export default function Settings() {
     checkStatus
   } = useFacebookConnection();
 
-  const handleDisconnect = async () => {
-    const result = await disconnect();
+  const [connectSlot, setConnectSlot] = useState(0);
+
+  const handleDisconnect = async (slot?: number) => {
+    const result = await disconnect(slot);
     if (result.success) {
       toast.info(result.message);
     }
@@ -140,7 +146,8 @@ export default function Settings() {
   const [fbPassword, setFbPassword] = useState('');
   const [isAutoLogging, setIsAutoLogging] = useState(false);
 
-  const handleConnectFacebook = async () => {
+  const handleConnectFacebook = async (slot: number = 0) => {
+    setConnectSlot(slot);
     setLoginStep('opening');
     setShowLoginPopup(true);
     setLoginUserName('');
@@ -148,7 +155,7 @@ export default function Settings() {
     setFbEmail('');
     setFbPassword('');
 
-    const result = await connect();
+    const result = await connect(slot);
     if (result.success) {
       setLoginStep('waiting');
     } else {
@@ -559,7 +566,7 @@ export default function Settings() {
                     </div>
                   </div>
                   {/* Disconnect */}
-                  <Button variant="ghost" size="sm" onClick={handleDisconnect} className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 h-8 px-2.5">
+                  <Button variant="ghost" size="sm" onClick={() => handleDisconnect()} className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 h-8 px-2.5">
                     <Unlink className="w-3.5 h-3.5 mr-1.5" />
                     <span className="text-xs">{t.settings.disconnect}</span>
                   </Button>
@@ -591,7 +598,7 @@ export default function Settings() {
                         <p className="text-xs text-muted-foreground mt-0.5">{t.settings.clickToConnect}</p>
                       </div>
                       <Button
-                        onClick={handleConnectFacebook}
+                        onClick={() => handleConnectFacebook(0)}
                         className="w-full h-11 rounded-xl bg-gradient-to-r from-[#1877F2] to-[#0D47A1] hover:from-[#1565C0] hover:to-[#0B3D91] text-white font-semibold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all"
                       >
                         <Facebook className="w-4 h-4 mr-2" />
@@ -603,26 +610,50 @@ export default function Settings() {
               </div>
             )}
 
-            {/* Session Slots Detail */}
+            {/* Session Slots Detail — Interactive per-slot */}
             <div className="p-3 rounded-xl bg-muted/40 space-y-2">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-medium flex items-center gap-1.5"><Monitor className="w-3.5 h-3.5" /> FB Sessions</p>
+                <p className="text-xs font-medium flex items-center gap-1.5"><Monitor className="w-3.5 h-3.5" /> FB Sessions ({fbConnectedCount}/{pkgLimits.fbAccounts})</p>
                 <Badge variant="outline" className="text-[10px] h-5">{pkgTheme.label}</Badge>
               </div>
-              <div className="flex gap-2">
+              <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(pkgLimits.fbAccounts, 5)}, 1fr)` }}>
                 {Array.from({ length: pkgLimits.fbAccounts }, (_, i) => {
-                  const isActive = i < (isConnected ? 1 : 0);
+                  const session = fbSessions[i];
+                  const hasUser = session && session.name;
                   return (
                     <div key={i} className={cn(
-                      "flex-1 p-2 rounded-lg border text-center transition-all",
-                      isActive
-                        ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
-                        : "bg-background border-dashed border-muted-foreground/20"
-                    )}>
-                      <div className={cn("w-5 h-5 mx-auto rounded-full flex items-center justify-center mb-1", isActive ? "bg-green-500" : "bg-muted")}>
-                        {isActive ? <Check className="w-3 h-3 text-white" /> : <Facebook className="w-3 h-3 text-muted-foreground/50" />}
-                      </div>
-                      <p className="text-[10px] font-medium">{isActive ? 'Active' : 'ว่าง'}</p>
+                      "p-2 rounded-lg border text-center transition-all cursor-pointer group relative",
+                      hasUser
+                        ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800 hover:border-green-400"
+                        : "bg-background border-dashed border-muted-foreground/20 hover:border-[#1877F2]/40"
+                    )}
+                    onClick={() => hasUser ? undefined : handleConnectFacebook(i)}
+                    >
+                      {/* Avatar or empty icon */}
+                      {hasUser && session.profilePic ? (
+                        <img src={session.profilePic} alt={session.name || ''} className="w-8 h-8 mx-auto rounded-full object-cover ring-2 ring-green-500/30 mb-1" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                      ) : hasUser ? (
+                        <div className="w-8 h-8 mx-auto rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-1 ring-2 ring-green-500/30">
+                          <span className="text-white text-xs font-bold">{session.name?.charAt(0) || 'F'}</span>
+                        </div>
+                      ) : (
+                        <div className="w-8 h-8 mx-auto rounded-full bg-muted flex items-center justify-center mb-1 group-hover:bg-[#1877F2]/10 transition-colors">
+                          <Facebook className="w-4 h-4 text-muted-foreground/40 group-hover:text-[#1877F2] transition-colors" />
+                        </div>
+                      )}
+                      {/* Name or empty label */}
+                      <p className="text-[10px] font-medium truncate leading-tight">{hasUser ? session.name : 'ว่าง'}</p>
+                      <p className="text-[8px] text-muted-foreground">Slot {i + 1}</p>
+                      {/* Disconnect overlay on hover */}
+                      {hasUser && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDisconnect(i); }}
+                          className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                          title={`ยกเลิก Session ${i + 1}`}
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
+                      )}
                     </div>
                   );
                 })}
@@ -919,7 +950,7 @@ export default function Settings() {
           {/* Footer */}
           <div className="px-6 pb-5 flex gap-2">
             {loginStep === 'error' && (
-              <Button onClick={handleConnectFacebook} className="flex-1 h-11 rounded-xl bg-[#1877F2] hover:bg-[#1565C0] shadow-lg shadow-blue-500/20">
+              <Button onClick={() => handleConnectFacebook(connectSlot)} className="flex-1 h-11 rounded-xl bg-[#1877F2] hover:bg-[#1565C0] shadow-lg shadow-blue-500/20">
                 <RefreshCw className="w-4 h-4 mr-2" /> ลองใหม่
               </Button>
             )}

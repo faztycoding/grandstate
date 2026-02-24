@@ -129,7 +129,37 @@ class UserSessionManager {
       lastActivity: Date.now(),
       lastPresenceAt: Date.now(),
       createdAt: Date.now(),
+      // Multi-session FB: array of connected FB accounts (indexed by slot)
+      // Each entry: { slot, name, profilePic, connectedAt } or null if empty
+      fbSessions: [],
+      activeSlot: 0, // which slot the groupWorker is currently using
     };
+  }
+
+  // ── FB Session helpers ──
+  getFbSessions(userId) {
+    const session = this.getSession(userId);
+    return session.fbSessions;
+  }
+
+  setFbSession(userId, slot, data) {
+    const session = this.getSession(userId);
+    session.fbSessions[slot] = data ? { slot, ...data, connectedAt: data.connectedAt || new Date().toISOString() } : null;
+  }
+
+  clearFbSession(userId, slot) {
+    const session = this.getSession(userId);
+    session.fbSessions[slot] = null;
+  }
+
+  getActiveSlot(userId) {
+    const session = this.getSession(userId);
+    return session.activeSlot || 0;
+  }
+
+  setActiveSlot(userId, slot) {
+    const session = this.getSession(userId);
+    session.activeSlot = slot;
   }
 
   canStartBrowser() {

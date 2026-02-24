@@ -1,10 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '@/lib/config';
 
-interface FacebookUser {
+export interface FacebookUser {
   name: string;
   profilePic?: string;
   connectedAt: string;
+}
+
+export interface FbSessionSlot {
+  slot: number;
+  name: string | null;
+  profilePic: string | null;
+  connectedAt: string | null;
 }
 
 interface FacebookConnectionState {
@@ -13,6 +20,11 @@ interface FacebookConnectionState {
   isChecking: boolean;
   user: FacebookUser | null;
   error: string | null;
+  // Multi-session
+  sessions: FbSessionSlot[];
+  activeSlot: number;
+  connectedCount: number;
+  connectingSlot: number | null;
 }
 
 export function useFacebookConnection() {
@@ -22,41 +34,37 @@ export function useFacebookConnection() {
     isChecking: true,
     user: null,
     error: null,
+    sessions: [],
+    activeSlot: 0,
+    connectedCount: 0,
+    connectingSlot: null,
   });
 
-  // Check connection status on mount
+  // Check connection status on mount — returns ALL session slots
   const checkStatus = useCallback(async () => {
     setState(prev => ({ ...prev, isChecking: true, error: null }));
-    
+
     try {
       const response = await apiFetch('/api/facebook/status');
       const data = await response.json();
-      
-      if (data.success && data.connected) {
-        setState({
-          isConnected: true,
-          isConnecting: false,
+
+      if (data.success) {
+        setState(prev => ({
+          ...prev,
+          isConnected: data.connected ?? false,
+          isConnecting: prev.connectingSlot !== null ? prev.isConnecting : false,
           isChecking: false,
-          user: data.user,
+          user: data.user || null,
           error: null,
-        });
+          sessions: Array.isArray(data.sessions) ? data.sessions : [],
+          activeSlot: data.activeSlot ?? 0,
+          connectedCount: data.connectedCount ?? 0,
+        }));
       } else {
-        setState({
-          isConnected: false,
-          isConnecting: false,
-          isChecking: false,
-          user: null,
-          error: null,
-        });
+        setState(prev => ({ ...prev, isChecking: false, error: null }));
       }
-    } catch (error) {
-      setState({
-        isConnected: false,
-        isConnecting: false,
-        isChecking: false,
-        user: null,
-        error: null,
-      });
+    } catch {
+      setState(prev => ({ ...prev, isChecking: false, error: null }));
     }
   }, []);
 
@@ -64,56 +72,50 @@ export function useFacebookConnection() {
     checkStatus();
   }, [checkStatus]);
 
-  // Connect to Facebook (opens browser)
-  const connect = useCallback(async () => {
-    setState(prev => ({ ...prev, isConnecting: true, error: null }));
-    
+  // Connect a specific slot (opens browser for that slot)
+  const connect = useCallback(async (slot: number = 0) => {
+    setState(prev => ({ ...prev, isConnecting: true, connectingSlot: slot, error: null }));
+
     try {
       const response = await apiFetch('/api/facebook/connect', {
         method: 'POST',
+        body: JSON.stringify({ slot }),
       });
       const data = await response.json();
-      
+
       if (data.success) {
-        // Browser is now open, user needs to login
-        setState(prev => ({ ...prev, isConnecting: true }));
-        return { success: true, message: 'กรุณา Login Facebook ในหน้าต่างที่เปิดมา' };
+        setState(prev => ({ ...prev, isConnecting: true, activeSlot: slot }));
+        return { success: true, message: 'กรุณา Login Facebook ในหน้าต่างที่เปิดมา', slot };
       } else {
-        setState(prev => ({ ...prev, isConnecting: false, error: data.error }));
+        setState(prev => ({ ...prev, isConnecting: false, connectingSlot: null, error: data.error }));
         return { success: false, message: data.error };
       }
     } catch (error: any) {
-      setState(prev => ({ ...prev, isConnecting: false, error: error.message }));
+      setState(prev => ({ ...prev, isConnecting: false, connectingSlot: null, error: error.message }));
       return { success: false, message: error.message };
     }
   }, []);
 
-  // Confirm login (after user logs in manually)
+  // Confirm login (after user logs in manually) — saves to active slot
   const confirmLogin = useCallback(async () => {
     try {
-      const response = await apiFetch('/api/facebook/confirm-login', {
-        method: 'POST',
-      });
+      const response = await apiFetch('/api/facebook/confirm-login', { method: 'POST' });
       const data = await response.json();
-      
+
       if (data.success && data.connected) {
-        setState({
-          isConnected: true,
-          isConnecting: false,
-          isChecking: false,
-          user: data.user,
-          error: null,
-        });
-        return { success: true, message: data.message, user: data.user };
+        // Refresh all sessions to get updated slot data
+        await checkStatus();
+        setState(prev => ({ ...prev, isConnecting: false, connectingSlot: null }));
+        return { success: true, message: data.message, user: data.user, slot: data.slot };
       } else {
         return { success: false, message: data.message };
       }
     } catch (error: any) {
       return { success: false, message: error.message };
     }
-  }, []);
+  }, [checkStatus]);
 
-  // Auto-login to Facebook (VPS headless mode)
+  // Auto-login (VPS headless mode) — uses active slot
   const autoLogin = useCallback(async (email: string, password: string) => {
     try {
       const response = await apiFetch('/api/facebook/auto-login', {
@@ -121,9 +123,29 @@ export function useFacebookConnection() {
         body: JSON.stringify({ email, password }),
       });
       const data = await response.json();
-      
+
       if (data.success) {
-        // Login succeeded, check status to get user info
+        await checkStatus();
+        setState(prev => ({ ...prev, isConnecting: false, connectingSlot: null }));
+        return { success: true, message: data.message, slot: data.slot };
+      } else {
+        return { success: false, message: data.error };
+      }
+    } catch (error: any) {
+      return { success: false, message: error.message };
+    }
+  }, [checkStatus]);
+
+  // Disconnect a specific slot
+  const disconnect = useCallback(async (slot?: number) => {
+    try {
+      const response = await apiFetch('/api/facebook/disconnect', {
+        method: 'POST',
+        body: JSON.stringify({ slot: slot ?? state.activeSlot }),
+      });
+      const data = await response.json();
+
+      if (data.success) {
         await checkStatus();
         return { success: true, message: data.message };
       } else {
@@ -132,32 +154,7 @@ export function useFacebookConnection() {
     } catch (error: any) {
       return { success: false, message: error.message };
     }
-  }, [checkStatus]);
-
-  // Disconnect from Facebook
-  const disconnect = useCallback(async () => {
-    try {
-      const response = await apiFetch('/api/facebook/disconnect', {
-        method: 'POST',
-      });
-      const data = await response.json();
-      
-      if (data.success) {
-        setState({
-          isConnected: false,
-          isConnecting: false,
-          isChecking: false,
-          user: null,
-          error: null,
-        });
-        return { success: true, message: data.message };
-      } else {
-        return { success: false, message: data.error };
-      }
-    } catch (error: any) {
-      return { success: false, message: error.message };
-    }
-  }, []);
+  }, [checkStatus, state.activeSlot]);
 
   return {
     ...state,

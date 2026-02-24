@@ -82,6 +82,16 @@ export class GroupPostingWorker {
     this.onPostResult = cb;
   }
 
+  // Switch browser profile to a specific FB session slot
+  setProfileSlot(slot) {
+    this.userDataDir = path.join(process.cwd(), 'profiles', this.userId, `fb-session-${slot}`);
+    this.activeSlot = slot;
+  }
+
+  getProfileSlot() {
+    return this.activeSlot ?? 0;
+  }
+
   // Initialize Anthropic client for caption generation
   initAnthropicClient(apiKey) {
     const key = apiKey || process.env.ANTHROPIC_API_KEY;

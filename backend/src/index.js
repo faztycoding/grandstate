@@ -368,6 +368,51 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
         }
       }
 
+      // ── Mixed: "276K สมาชิก" (Latin K/M + Thai word)
+      if (!memberCount) {
+        match = bodyText.match(/([\d.]+)\s*[Kk]\s*(?:คน\s*)?สมาชิก/);
+        if (match) {
+          memberCount = Math.round(parseFloat(match[1]) * 1000);
+        }
+      }
+
+      // ── Mixed: "1.2M สมาชิก" (Latin M + Thai word)
+      if (!memberCount) {
+        match = bodyText.match(/([\d.]+)\s*[Mm]\s*(?:คน\s*)?สมาชิก/);
+        if (match) {
+          memberCount = Math.round(parseFloat(match[1]) * 1000000);
+        }
+      }
+
+      // ======= FIND LAST ACTIVITY =======
+      let lastActivity = undefined;
+      // Thai: "อัปเดต X วันที่ผ่านมา" / "อัปเดตเมื่อ X ชม. ที่ผ่านมา" etc.
+      const lastActivityPatterns = [
+        /อัปเดต(?:เมื่อ)?\s*(\d+)\s*(นาที|ชั่วโมง|ชม\.|วัน|สัปดาห์|เดือน|ปี)\s*ที่ผ่านมา/,
+        /อัปเดต(?:ล่าสุด)?\s*(\d+)\s*(นาที|ชั่วโมง|ชม\.|วัน|สัปดาห์|เดือน|ปี)/,
+        /Updated?\s*(\d+)\s*(minute|hour|day|week|month|year)s?\s*ago/i,
+      ];
+      const activityUnits = {
+        'นาที': 'minutes', 'ชั่วโมง': 'hours', 'ชม.': 'hours',
+        'วัน': 'days', 'สัปดาห์': 'weeks', 'เดือน': 'months', 'ปี': 'years',
+        'minute': 'minutes', 'hour': 'hours', 'day': 'days',
+        'week': 'weeks', 'month': 'months', 'year': 'years',
+      };
+      for (const pat of lastActivityPatterns) {
+        const m = bodyText.match(pat);
+        if (m) {
+          const num = parseInt(m[1]);
+          const unit = activityUnits[m[2]] || m[2];
+          lastActivity = `${num} ${unit} ago`;
+          break;
+        }
+      }
+      // Also try: "อัปเดตวันนี้" / "Updated today" / "อัปเดตเมื่อวาน" / "Updated yesterday"
+      if (!lastActivity) {
+        if (/อัปเดต.*วันนี้|Updated.*today/i.test(bodyText)) lastActivity = 'today';
+        else if (/อัปเดต.*เมื่อวาน|Updated.*yesterday/i.test(bodyText)) lastActivity = 'yesterday';
+      }
+
       // ======= FIND POSTS TODAY & LAST MONTH FROM ACTIVITY SECTION =======
       let postsToday;
       let postsLastMonth;
@@ -419,6 +464,9 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
         new RegExp(`${countToken}\\s*new\\s*posts?\\s*today`, 'i'),
         new RegExp(`โพสต์ใหม่ในวันนี้\\s*[:\\-]?\\s*${countToken}`, 'i'),
         new RegExp(`new\\s*posts?\\s*today\\s*[:\\-]?\\s*${countToken}`, 'i'),
+        // Header bar format: "X - โพสต์วันนี้" with dash separator
+        new RegExp(`${countToken}\\s*[\\-–]\\s*โพสต์(?:ใหม่)?(?:ใน)?วันนี้`, 'i'),
+        new RegExp(`${countToken}\\s*[\\-–]\\s*new\\s*posts?\\s*today`, 'i'),
       ];
 
       const monthPatterns = [
@@ -433,6 +481,10 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
         new RegExp(`${countToken}\\s*posts?\\s*in\\s*the\\s*last\\s*30\\s*days`, 'i'),
         new RegExp(`โพสต์ในเดือนที่ผ่านมา\\s*[:\\-]?\\s*${countToken}`, 'i'),
         new RegExp(`posts?\\s*in\\s*the\\s*last\\s*month\\s*[:\\-]?\\s*${countToken}`, 'i'),
+        // Header bar format: "X - โพสต์/เดือน" with dash separator
+        new RegExp(`${countToken}\\s*[\\-–]\\s*โพสต์\\s*\\/\\s*เดือน`, 'i'),
+        new RegExp(`${countToken}\\s*[\\-–]\\s*โพสต์ต่อเดือน`, 'i'),
+        new RegExp(`${countToken}\\s*[\\-–]\\s*posts?\\s*\\/\\s*month`, 'i'),
       ];
 
       const extractMetricFromText = (text, patterns) => {
@@ -498,7 +550,7 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
         name = name.replace(/^\(\d+\)\s*/, '').trim();
       }
 
-      return { name, memberCount, postsToday, postsLastMonth, debugTexts };
+      return { name, memberCount, postsToday, postsLastMonth, lastActivity, debugTexts };
     });
 
     // Debug logging
@@ -506,7 +558,7 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
       console.log(`🔍 Debug: Found ${groupInfo.debugTexts.length} span texts with numbers + 'post/โพสต์':`);
       console.log(groupInfo.debugTexts.slice(0, 10)); // Show first 10 matches
     }
-    console.log(`📊 Scraped: ${groupInfo.name?.substring(0, 40)} | Members: ${groupInfo.memberCount} | Today: ${groupInfo.postsToday} | Month: ${groupInfo.postsLastMonth}`);
+    console.log(`📊 Scraped: ${groupInfo.name?.substring(0, 40)} | Members: ${groupInfo.memberCount} | Today: ${groupInfo.postsToday} | Month: ${groupInfo.postsLastMonth} | Activity: ${groupInfo.lastActivity || '-'}`);
 
     // Browser stays open for reuse by this user's session
 
@@ -517,6 +569,7 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
         memberCount: groupInfo.memberCount || 0,
         postsToday: typeof groupInfo.postsToday === 'number' ? groupInfo.postsToday : undefined,
         postsLastMonth: typeof groupInfo.postsLastMonth === 'number' ? groupInfo.postsLastMonth : undefined,
+        lastActivity: groupInfo.lastActivity || null,
         url: url,
         lastUpdated: new Date().toISOString()
       }

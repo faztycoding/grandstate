@@ -104,33 +104,38 @@ export default function Settings() {
   const [loginUserName, setLoginUserName] = useState('');
   const loginPollRef = useRef<NodeJS.Timeout | null>(null);
   const pollCountRef = useRef(0);
+  const [loginError, setLoginError] = useState('');
+  const [fbEmail, setFbEmail] = useState('');
+  const [fbPassword, setFbPassword] = useState('');
+  const [isAutoLogging, setIsAutoLogging] = useState(false);
 
-  // Auto-detect login: poll every 1.5 seconds when popup is open
+  // Auto-detect login: poll every 5 seconds when popup is open (NOT during auto-login)
   useEffect(() => {
-    if (showLoginPopup && loginStep === 'waiting' && !loginPollRef.current) {
+    if (showLoginPopup && loginStep === 'waiting' && !isAutoLogging && !loginPollRef.current) {
       pollCountRef.current = 0;
       loginPollRef.current = setInterval(async () => {
         pollCountRef.current++;
-        setLoginStep('checking');
         try {
           const result = await confirmLogin();
           if (result.success) {
-            // Login detected!
             if (loginPollRef.current) clearInterval(loginPollRef.current);
             loginPollRef.current = null;
             setLoginUserName(result.user?.name || 'Facebook User');
             setLoginStep('success');
-            // Auto-close after 2 seconds
             setTimeout(() => {
               setShowLoginPopup(false);
             }, 2000);
-          } else {
-            setLoginStep('waiting');
           }
         } catch {
-          setLoginStep('waiting');
+          // Silent fail
         }
-      }, 1500);
+      }, 5000);
+    }
+
+    // Stop polling when auto-login starts
+    if (isAutoLogging && loginPollRef.current) {
+      clearInterval(loginPollRef.current);
+      loginPollRef.current = null;
     }
 
     return () => {
@@ -139,12 +144,7 @@ export default function Settings() {
         loginPollRef.current = null;
       }
     };
-  }, [showLoginPopup, loginStep, confirmLogin]);
-
-  const [loginError, setLoginError] = useState('');
-  const [fbEmail, setFbEmail] = useState('');
-  const [fbPassword, setFbPassword] = useState('');
-  const [isAutoLogging, setIsAutoLogging] = useState(false);
+  }, [showLoginPopup, loginStep, confirmLogin, isAutoLogging]);
 
   const handleConnectFacebook = async (slot: number = 0) => {
     setConnectSlot(slot);

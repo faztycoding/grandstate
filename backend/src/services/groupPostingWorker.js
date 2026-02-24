@@ -2798,18 +2798,44 @@ export class GroupPostingWorker {
     }
   }
 
-  // Check if user is logged in to Facebook
+  // Quick login check — does NOT navigate, just checks current page state
+  async checkLoginQuick() {
+    try {
+      if (!this.browser || !this.browser.isConnected() || !this.page) return false;
+      const url = this.page.url();
+      // If on facebook.com (not login page), likely logged in
+      if (url.includes('facebook.com') && !url.includes('/login') && !url.includes('m.facebook.com/login')) {
+        const isLoggedIn = await this.page.evaluate(() => {
+          // No login form visible = logged in
+          return !document.querySelector('input[name="email"]') &&
+            !document.querySelector('button[name="login"]') &&
+            !document.querySelector('#m_login_email');
+        }).catch(() => false);
+        return isLoggedIn;
+      }
+      return false;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  // Check if user is logged in to Facebook (navigates to FB — use only when safe)
   async checkLogin() {
     try {
-      // Check if browser is still connected
       if (!this.browser || !this.browser.isConnected()) {
         console.log('⚠️ Browser not connected');
         return false;
       }
+      if (!this.page) return false;
 
+      // First try quick check without navigation
+      const quickResult = await this.checkLoginQuick();
+      if (quickResult) return true;
+
+      // If quick check inconclusive, navigate
       await this.page.goto('https://www.facebook.com', {
-        waitUntil: 'networkidle2',
-        timeout: 30000,
+        waitUntil: 'domcontentloaded',
+        timeout: 20000,
       });
 
       await this.delay(2000);

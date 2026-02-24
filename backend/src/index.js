@@ -962,84 +962,153 @@ app.post('/api/facebook/auto-login', ...auth, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
-      return res.status(400).json({ success: false, error: 'กรุณากรอก Email และ Password' });
+      return res.json({ success: false, error: 'กรุณากรอก Email และ Password' });
     }
     if (!req.groupWorker.browser || !req.groupWorker.page) {
-      return res.status(400).json({ success: false, error: 'Browser ยังไม่เปิด กรุณากด "เชื่อมต่อ" ก่อน' });
+      return res.json({ success: false, error: 'Browser ยังไม่เปิด กรุณากด "เชื่อมต่อ" ก่อน' });
     }
 
     const page = req.groupWorker.page;
-    console.log('🔑 Auto-login: navigating to m.facebook.com...');
-    await page.goto('https://m.facebook.com/', { waitUntil: 'networkidle2', timeout: 30000 });
-    await new Promise(r => setTimeout(r, 2000));
+    console.log('🔑 Auto-login: navigating to facebook.com...');
 
-    const preLoginUrl = page.url();
+    // Navigate to login page
+    await page.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await new Promise(r => setTimeout(r, 3000));
 
-    // Handle cookie consent
+    // Check if already logged in
+    const alreadyLoggedIn = await page.evaluate(() => {
+      return !document.querySelector('input[name="email"]') && !document.querySelector('#email');
+    }).catch(() => false);
+
+    if (alreadyLoggedIn) {
+      const activeSlot = sessionManager.getActiveSlot(req.userId);
+      try {
+        const userInfo = await scrapeFbUserInfo(page);
+        sessionManager.setFbSession(req.userId, activeSlot, { name: userInfo.name || 'Facebook User', profilePic: userInfo.profilePic || '' });
+      } catch (e) { }
+      return res.json({ success: true, message: 'Login สำเร็จ! (session ยังอยู่)', slot: activeSlot });
+    }
+
+    // Handle cookie consent dialogs
     try {
-      const cookieBtn = await page.$('button[data-cookiebanner="accept_button"]') || await page.$('button[title="Allow all cookies"]') || await page.$('button[value="1"][name="accept"]');
-      if (cookieBtn) { await cookieBtn.click(); await new Promise(r => setTimeout(r, 1000)); }
+      const cookieSelectors = [
+        'button[data-cookiebanner="accept_button"]',
+        'button[title="Allow all cookies"]',
+        'button[title="อนุญาตคุกกี้ทั้งหมด"]',
+        'button[value="1"][name="accept"]',
+        '[data-testid="cookie-policy-manage-dialog-accept-button"]',
+      ];
+      for (const sel of cookieSelectors) {
+        const btn = await page.$(sel);
+        if (btn) { await btn.click().catch(() => {}); await new Promise(r => setTimeout(r, 1500)); break; }
+      }
     } catch (e) { }
 
-    // Find and fill email
-    const emailSelectors = ['#m_login_email', '#email', 'input[name="email"]', 'input[type="email"]', 'input[type="text"]'];
+    // Find and fill email — wait for the field to appear
+    const emailSelectors = ['#email', 'input[name="email"]', '#m_login_email', 'input[type="email"]'];
     let emailInput = null;
-    for (const sel of emailSelectors) { emailInput = await page.$(sel); if (emailInput) break; }
+    for (const sel of emailSelectors) {
+      try { emailInput = await page.waitForSelector(sel, { timeout: 5000, visible: true }); if (emailInput) break; } catch (e) { }
+    }
+    if (!emailInput) {
+      // Try one more time — maybe page hasn't fully loaded
+      await new Promise(r => setTimeout(r, 3000));
+      for (const sel of emailSelectors) { emailInput = await page.$(sel); if (emailInput) break; }
+    }
     if (!emailInput) return res.json({ success: false, error: 'ไม่พบช่องกรอก Email — Facebook อาจ block หน้า Login' });
-    await emailInput.click({ clickCount: 3 });
-    await emailInput.type(email, { delay: 30 });
+
+    // Clear and type email
+    await emailInput.click({ clickCount: 3 }).catch(() => {});
+    await new Promise(r => setTimeout(r, 300));
+    await emailInput.type(email, { delay: 50 });
+    await new Promise(r => setTimeout(r, 500));
 
     // Find and fill password
-    const passSelectors = ['#m_login_password', '#pass', 'input[name="pass"]', 'input[type="password"]'];
+    const passSelectors = ['#pass', 'input[name="pass"]', '#m_login_password', 'input[type="password"]'];
     let passInput = null;
     for (const sel of passSelectors) { passInput = await page.$(sel); if (passInput) break; }
     if (!passInput) return res.json({ success: false, error: 'ไม่พบช่องกรอก Password' });
-    await passInput.click({ clickCount: 3 });
-    await passInput.type(password, { delay: 30 });
+    await passInput.click({ clickCount: 3 }).catch(() => {});
+    await new Promise(r => setTimeout(r, 300));
+    await passInput.type(password, { delay: 50 });
+    await new Promise(r => setTimeout(r, 500));
 
-    // Click login button
-    const btnSelectors = ['button[name="login"]', '#loginbutton', 'input[name="login"]', 'button[type="submit"]', 'input[type="submit"]'];
-    let loginBtn = null;
-    for (const sel of btnSelectors) { loginBtn = await page.$(sel); if (loginBtn) break; }
-    if (loginBtn) { await loginBtn.click(); } else { await passInput.press('Enter'); }
+    // Click login button — try multiple approaches
+    const btnSelectors = ['button[name="login"]', '#loginbutton', 'button[type="submit"]', 'input[name="login"]', 'button[data-testid="royal_login_button"]'];
+    let clicked = false;
+    for (const sel of btnSelectors) {
+      try {
+        const btn = await page.$(sel);
+        if (btn) {
+          // Use evaluate click to avoid "not clickable" error
+          await page.evaluate(el => el.click(), btn);
+          clicked = true;
+          console.log(`🔑 Clicked login button: ${sel}`);
+          break;
+        }
+      } catch (e) { }
+    }
+    if (!clicked) {
+      // Fallback: press Enter on password field
+      try { await passInput.press('Enter'); clicked = true; } catch (e) { }
+    }
+    if (!clicked) return res.json({ success: false, error: 'ไม่สามารถกดปุ่ม Login ได้' });
 
-    await new Promise(r => setTimeout(r, 6000));
+    // Wait for navigation after login
+    console.log('🔑 Waiting for login response...');
+    await new Promise(r => setTimeout(r, 8000));
+
     const postLoginUrl = page.url();
-    const isLoggedIn = await req.groupWorker.checkLogin();
+
+    // Check various outcomes
+    if (postLoginUrl.includes('checkpoint') || postLoginUrl.includes('two_step_verification')) {
+      return res.json({ success: false, error: 'Facebook ต้องการยืนยันตัวตน — เช็ค Email/SMS แล้วลองใหม่' });
+    }
+
+    // Check if logged in now
+    const isLoggedIn = await page.evaluate(() => {
+      return !document.querySelector('input[name="email"]') &&
+        !document.querySelector('#email') &&
+        !document.querySelector('button[name="login"]');
+    }).catch(() => false);
 
     if (isLoggedIn) {
-      await page.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      // Navigate to homepage to scrape user info
+      await page.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {});
+      await new Promise(r => setTimeout(r, 3000));
 
-      // Save session metadata for this slot
       const activeSlot = sessionManager.getActiveSlot(req.userId);
-      const userInfo = await scrapeFbUserInfo(page);
-      sessionManager.setFbSession(req.userId, activeSlot, { name: userInfo.name || 'Facebook User', profilePic: userInfo.profilePic || '' });
-
-      res.json({ success: true, message: 'Login สำเร็จ!', slot: activeSlot });
-    } else if (postLoginUrl.includes('checkpoint') || postLoginUrl.includes('two_step_verification')) {
-      res.json({ success: false, error: 'Facebook ต้องการยืนยันตัวตน — เช็ค Email/SMS แล้วลองใหม่' });
-    } else if (postLoginUrl.includes('login') || postLoginUrl === preLoginUrl) {
-      const errorMsg = await page.evaluate(() => {
-        const errEl = document.querySelector('#login_error, .login_error_box, [data-sigil="m_login_notice"]');
-        return errEl ? errEl.textContent?.trim() : '';
-      });
-      res.json({ success: false, error: errorMsg || 'Email หรือ Password ไม่ถูกต้อง' });
-    } else {
-      await page.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded', timeout: 15000 });
-      await new Promise(r => setTimeout(r, 2000));
-      const finalCheck = await req.groupWorker.checkLogin();
-      if (finalCheck) {
-        const activeSlot = sessionManager.getActiveSlot(req.userId);
+      try {
         const userInfo = await scrapeFbUserInfo(page);
         sessionManager.setFbSession(req.userId, activeSlot, { name: userInfo.name || 'Facebook User', profilePic: userInfo.profilePic || '' });
-        res.json({ success: true, message: 'Login สำเร็จ!', slot: activeSlot });
-      } else {
-        res.json({ success: false, error: 'Login ไม่สำเร็จ — ลองอีกครั้ง' });
-      }
+      } catch (e) { }
+      return res.json({ success: true, message: 'Login สำเร็จ!', slot: activeSlot });
     }
+
+    // Check for error messages on the page
+    const errorMsg = await page.evaluate(() => {
+      const errEl = document.querySelector('#login_error, .login_error_box, [data-sigil="m_login_notice"], [role="alert"]');
+      return errEl ? errEl.textContent?.trim() : '';
+    }).catch(() => '');
+
+    if (errorMsg) {
+      return res.json({ success: false, error: errorMsg });
+    }
+
+    // Final check — maybe redirected to a different FB page
+    if (postLoginUrl.includes('facebook.com') && !postLoginUrl.includes('login')) {
+      const activeSlot = sessionManager.getActiveSlot(req.userId);
+      try {
+        const userInfo = await scrapeFbUserInfo(page);
+        sessionManager.setFbSession(req.userId, activeSlot, { name: userInfo.name || 'Facebook User', profilePic: userInfo.profilePic || '' });
+      } catch (e) { }
+      return res.json({ success: true, message: 'Login สำเร็จ!', slot: activeSlot });
+    }
+
+    res.json({ success: false, error: 'Email หรือ Password ไม่ถูกต้อง' });
   } catch (error) {
     console.error('Auto-login error:', error.message);
-    res.status(500).json({ success: false, error: `Login ผิดพลาด: ${error.message}` });
+    res.json({ success: false, error: `Login ผิดพลาด: ${error.message}` });
   }
 });
 
@@ -1050,20 +1119,24 @@ app.get('/api/facebook/status', ...auth, async (req, res) => {
     const activeSlot = sessionManager.getActiveSlot(req.userId);
 
     // Live-check the ACTIVE slot only if browser is open
+    // IMPORTANT: Use checkLoginQuick() to avoid navigating during login flow
     let liveConnected = false;
     let liveUser = null;
-    if (req.groupWorker.browser) {
-      const isLoggedIn = await Promise.race([
-        req.groupWorker.checkLogin(),
-        new Promise(resolve => setTimeout(() => resolve(false), 10000)),
-      ]);
-      if (isLoggedIn) {
-        liveConnected = true;
-        const userInfo = await scrapeFbUserInfo(req.groupWorker.page);
-        liveUser = { name: userInfo.name || 'Facebook User', profilePic: userInfo.profilePic || '', connectedAt: new Date().toISOString() };
-        // Update stored metadata for active slot
-        sessionManager.setFbSession(req.userId, activeSlot, liveUser);
-      }
+    if (req.groupWorker.browser && req.groupWorker.page) {
+      try {
+        const isLoggedIn = await Promise.race([
+          req.groupWorker.checkLoginQuick(),
+          new Promise(resolve => setTimeout(() => resolve(false), 5000)),
+        ]);
+        if (isLoggedIn) {
+          liveConnected = true;
+          try {
+            const userInfo = await scrapeFbUserInfo(req.groupWorker.page);
+            liveUser = { name: userInfo.name || 'Facebook User', profilePic: userInfo.profilePic || '', connectedAt: new Date().toISOString() };
+            sessionManager.setFbSession(req.userId, activeSlot, liveUser);
+          } catch (e) { /* scrape failed, non-fatal */ }
+        }
+      } catch (e) { /* check failed, non-fatal */ }
     }
 
     // Build response: backward-compatible (connected/user) + new multi-session fields
@@ -1130,13 +1203,14 @@ app.post('/api/facebook/disconnect', ...auth, async (req, res) => {
 });
 
 // Confirm Facebook login (after user logs in manually) — saves to active slot
+// IMPORTANT: Uses checkLoginQuick() to avoid navigating away from login page
 app.post('/api/facebook/confirm-login', ...auth, async (req, res) => {
   try {
-    if (!req.groupWorker.browser) {
-      return res.status(400).json({ success: false, error: 'Browser not open' });
+    if (!req.groupWorker.browser || !req.groupWorker.page) {
+      return res.json({ success: false, connected: false, message: 'Browser not ready' });
     }
 
-    const isLoggedIn = await req.groupWorker.checkLogin();
+    const isLoggedIn = await req.groupWorker.checkLoginQuick();
     const activeSlot = sessionManager.getActiveSlot(req.userId);
 
     if (isLoggedIn) {

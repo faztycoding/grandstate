@@ -180,6 +180,76 @@ class UserSessionManager {
       })),
     };
   }
+
+  /**
+   * Detailed stats for admin dashboard — includes per-user automation info
+   */
+  getAdminStats() {
+    const now = Date.now();
+    let totalAutomationRuns = 0;
+    let totalTasksCompleted = 0;
+    let totalTasksFailed = 0;
+    let totalTasksPending = 0;
+    const userDetails = [];
+
+    for (const [uid, session] of this.sessions) {
+      const gw = session.groupWorker;
+      const mw = session.marketplaceWorker;
+      const tracker = session.postingTracker;
+      const todayStats = tracker.getTodayStats();
+
+      const isOnline = !!session.lastPresenceAt && (now - session.lastPresenceAt <= PRESENCE_TIMEOUT_MS);
+      const isRunningGroup = !!gw.isRunning;
+      const isRunningMarketplace = !!mw.isRunning;
+
+      // Count tasks from current/last automation run
+      const groupTasks = gw.tasks || [];
+      const gwCompleted = groupTasks.filter(t => t.status === 'completed' || t.status === 'pending_approval').length;
+      const gwFailed = groupTasks.filter(t => t.status === 'failed').length;
+      const gwPending = groupTasks.filter(t => t.status === 'pending' || t.status === 'posting').length;
+
+      totalTasksCompleted += gwCompleted;
+      totalTasksFailed += gwFailed;
+      totalTasksPending += gwPending;
+      totalAutomationRuns += todayStats.automationRuns || 0;
+
+      userDetails.push({
+        userId: uid.substring(0, 8) + '...',
+        isOnline,
+        isRunningGroup,
+        isRunningMarketplace,
+        hasBrowser: !!(gw.browser && gw.browser.isConnected()),
+        todayPosts: todayStats.postsCount || 0,
+        todaySuccess: todayStats.successCount || 0,
+        todayFailed: todayStats.failedCount || 0,
+        automationRuns: todayStats.automationRuns || 0,
+        currentTasks: {
+          total: groupTasks.length,
+          completed: gwCompleted,
+          failed: gwFailed,
+          pending: gwPending,
+        },
+        lastActivity: new Date(session.lastActivity).toISOString(),
+      });
+    }
+
+    const presence = this.getPresenceStats();
+
+    return {
+      totalSessions: this.sessions.size,
+      activeBrowsers: this.activeBrowsers,
+      maxBrowsers: MAX_CONCURRENT_BROWSERS,
+      ...presence,
+      automation: {
+        totalRunsToday: totalAutomationRuns,
+        currentlyRunning: presence.automationUsers,
+        totalTasksCompleted,
+        totalTasksFailed,
+        totalTasksPending,
+      },
+      users: userDetails,
+    };
+  }
 }
 
 export const sessionManager = new UserSessionManager();

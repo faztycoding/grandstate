@@ -1,24 +1,20 @@
 
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { ADMIN_SECRET, isAdminEmail } from '@/lib/config';
+import { useNavigate } from 'react-router-dom';
+import { isAdminEmail, apiFetch } from '@/lib/config';
 import { User } from '@supabase/supabase-js';
-import { motion } from 'framer-motion';
 import {
     Users,
     Key,
     DollarSign,
-    Package,
     Search,
     Plus,
     Trash2,
-    Edit,
     RefreshCw,
     Crown,
     Star,
     Rocket,
     Check,
-    X,
     Copy,
     Calendar,
     Monitor,
@@ -31,6 +27,11 @@ import {
     Loader2,
     BarChart3,
     PieChart,
+    Activity,
+    Zap,
+    Wifi,
+    WifiOff,
+    Radio,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -118,6 +119,45 @@ export default function AdminDashboard() {
         totalRevenue: 0,
     });
 
+    // Live stats from backend (active users + automation)
+    interface LiveUser {
+        userId: string;
+        isOnline: boolean;
+        isRunningGroup: boolean;
+        isRunningMarketplace: boolean;
+        hasBrowser: boolean;
+        todayPosts: number;
+        todaySuccess: number;
+        todayFailed: number;
+        automationRuns: number;
+        currentTasks: { total: number; completed: number; failed: number; pending: number };
+        lastActivity: string;
+    }
+    interface LiveStats {
+        totalSessions: number;
+        activeUsers: number;
+        onlineUsers: number;
+        automationUsers: number;
+        activeBrowsers: number;
+        maxBrowsers: number;
+        automation: {
+            totalRunsToday: number;
+            currentlyRunning: number;
+            totalTasksCompleted: number;
+            totalTasksFailed: number;
+            totalTasksPending: number;
+        };
+        queue?: {
+            maxConcurrent: number;
+            runningCount: number;
+            queueLength: number;
+            running: { userId: string; groupCount: number; runningSec: number }[];
+            queue: { position: number; userId: string; groupCount: number; waitingSec: number }[];
+        };
+        users: LiveUser[];
+    }
+    const [liveStats, setLiveStats] = useState<LiveStats | null>(null);
+
     // Admin auth state
     const [adminUser, setAdminUser] = useState<User | null>(null);
     const [adminEmail, setAdminEmail] = useState('');
@@ -126,15 +166,11 @@ export default function AdminDashboard() {
     const [adminLoggingIn, setAdminLoggingIn] = useState(false);
     const [checkingSession, setCheckingSession] = useState(true);
 
-    // Check URL secret
-    const { secret } = useParams<{ secret: string }>();
-    const isAuthorized = !!ADMIN_SECRET && secret === ADMIN_SECRET;
+    // Admin tab navigation
+    type AdminTab = 'overview' | 'users' | 'licenses' | 'system';
+    const [activeTab, setActiveTab] = useState<AdminTab>('overview');
 
     useEffect(() => {
-        if (!isAuthorized) {
-            navigate('/');
-            return;
-        }
         // Check existing Supabase session
         supabase.auth.getUser().then(({ data: { user } }) => {
             if (user && isAdminEmail(user.email)) {
@@ -142,7 +178,7 @@ export default function AdminDashboard() {
             }
             setCheckingSession(false);
         });
-    }, [isAuthorized, navigate]);
+    }, [navigate]);
 
     const handleAdminLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -178,6 +214,25 @@ export default function AdminDashboard() {
     // Fetch licenses after admin is authenticated
     useEffect(() => {
         if (adminUser) fetchLicenses();
+    }, [adminUser]);
+
+    // Poll live stats (active users + automation) every 10s
+    useEffect(() => {
+        if (!adminUser) return;
+
+        const fetchLiveStats = async () => {
+            try {
+                const res = await apiFetch('/api/admin/stats');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success) setLiveStats(data);
+                }
+            } catch { /* silent */ }
+        };
+
+        fetchLiveStats();
+        const interval = setInterval(fetchLiveStats, 10_000);
+        return () => clearInterval(interval);
     }, [adminUser]);
 
     const fetchLicenses = async () => {
@@ -416,9 +471,6 @@ export default function AdminDashboard() {
         return expiry > now && expiry <= sevenDays;
     };
 
-    // Show nothing if URL secret is wrong (will redirect)
-    if (!isAuthorized) return null;
-
     // Checking existing session
     if (checkingSession) {
         return (
@@ -474,697 +526,325 @@ export default function AdminDashboard() {
         );
     }
 
+    const adminTabs: { key: AdminTab; label: string; icon: React.ReactNode }[] = [
+        { key: 'overview', label: 'ภาพรวม', icon: <BarChart3 className="w-4 h-4" /> },
+        { key: 'users', label: 'ผู้ใช้งาน', icon: <Users className="w-4 h-4" /> },
+        { key: 'licenses', label: 'License Keys', icon: <Key className="w-4 h-4" /> },
+        { key: 'system', label: 'ระบบ & Queue', icon: <Monitor className="w-4 h-4" /> },
+    ];
+
     return (
-        <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-4 md:p-6">
-            <div className="max-w-7xl mx-auto space-y-6">
-                {/* Header */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
-                            <Shield className="w-6 h-6 md:w-8 md:h-8 text-accent" />
-                            Admin Dashboard
-                        </h1>
-                        <p className="text-sm text-muted-foreground">จัดการ License Keys และผู้ใช้งาน</p>
+        <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
+            {/* Top Header */}
+            <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b">
+                <div className="max-w-7xl mx-auto px-4 md:px-6">
+                    <div className="flex items-center justify-between h-14">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center">
+                                <Shield className="w-4 h-4 text-white" />
+                            </div>
+                            <div>
+                                <h1 className="text-base font-bold leading-none">Grand$tate Admin</h1>
+                                <p className="text-[11px] text-muted-foreground">{adminUser?.email}</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {liveStats && (
+                                <div className="hidden sm:flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                    {liveStats.onlineUsers} online • {liveStats.automation.currentlyRunning} automation
+                                </div>
+                            )}
+                            <Button variant="outline" size="sm" onClick={exportToCSV}>
+                                <Download className="w-4 h-4" />
+                            </Button>
+                            <Button size="sm" onClick={() => setShowCreateModal(true)}>
+                                <Plus className="w-4 h-4 sm:mr-1" />
+                                <span className="hidden sm:inline">License</span>
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-red-500 hover:text-red-600">
+                                <LogOut className="w-4 h-4" />
+                            </Button>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <Button variant="outline" size="sm" onClick={exportToCSV}>
-                            <Download className="w-4 h-4 sm:mr-2" />
-                            <span className="hidden sm:inline">Export CSV</span>
-                        </Button>
-                        <Button size="sm" onClick={() => setShowCreateModal(true)}>
-                            <Plus className="w-4 h-4 sm:mr-2" />
-                            <span className="hidden sm:inline">สร้าง License ใหม่</span>
-                        </Button>
-                        <Button variant="destructive" size="sm" onClick={handleLogout}>
-                            <LogOut className="w-4 h-4 sm:mr-2" />
-                            <span className="hidden sm:inline">ออกจากระบบ</span>
-                        </Button>
+                    {/* Tab Navigation */}
+                    <div className="flex gap-1 -mb-px overflow-x-auto">
+                        {adminTabs.map(tab => (
+                            <button
+                                key={tab.key}
+                                onClick={() => setActiveTab(tab.key)}
+                                className={cn(
+                                    "flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
+                                    activeTab === tab.key
+                                        ? "border-accent text-accent"
+                                        : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
+                                )}
+                            >
+                                {tab.icon}
+                                {tab.label}
+                                {tab.key === 'users' && liveStats && (
+                                    <Badge variant="secondary" className="text-[10px] h-4 px-1 ml-0.5">{liveStats.activeUsers}</Badge>
+                                )}
+                                {tab.key === 'system' && liveStats?.queue && liveStats.queue.queueLength > 0 && (
+                                    <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 text-[10px] h-4 px-1 ml-0.5">{liveStats.queue.queueLength}</Badge>
+                                )}
+                            </button>
+                        ))}
                     </div>
                 </div>
+            </div>
 
-                {/* Stats Cards */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-                    <Card>
-                        <CardContent className="pt-6">
-                            <div className="flex items-center gap-4">
-                                <div className="p-3 rounded-xl bg-blue-100">
-                                    <Key className="w-6 h-6 text-blue-600" />
-                                </div>
-                                <div>
-                                    <p className="text-sm text-muted-foreground">License ทั้งหมด</p>
-                                    <p className="text-2xl font-bold">{stats.totalLicenses}</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardContent className="pt-6">
-                            <div className="flex items-center gap-4">
-                                <div className="p-3 rounded-xl bg-green-100">
-                                    <Check className="w-6 h-6 text-green-600" />
-                                </div>
-                                <div>
-                                    <p className="text-sm text-muted-foreground">ใช้งานอยู่</p>
-                                    <p className="text-2xl font-bold">{stats.activeLicenses}</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardContent className="pt-6">
-                            <div className="flex items-center gap-4">
-                                <div className="p-3 rounded-xl bg-amber-100">
-                                    <Clock className="w-6 h-6 text-amber-600" />
-                                </div>
-                                <div>
-                                    <p className="text-sm text-muted-foreground">ใกล้หมดอายุ</p>
-                                    <p className="text-2xl font-bold">{stats.expiringLicenses}</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardContent className="pt-6">
-                            <div className="flex items-center gap-4">
-                                <div className="p-3 rounded-xl bg-purple-100">
-                                    <DollarSign className="w-6 h-6 text-purple-600" />
-                                </div>
-                                <div>
-                                    <p className="text-sm text-muted-foreground">รายได้รวม (ประมาณ)</p>
-                                    <p className="text-2xl font-bold">฿{stats.totalRevenue.toLocaleString()}</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+            <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+
+            {/* ═══════════════ TAB: OVERVIEW ═══════════════ */}
+            {activeTab === 'overview' && (<>
+                {/* Quick Stats */}
+                <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+                    <Card><CardContent className="pt-5 pb-4"><div className="flex items-center gap-3"><div className="p-2.5 rounded-xl bg-blue-100 dark:bg-blue-900/30"><Key className="w-5 h-5 text-blue-600" /></div><div><p className="text-xs text-muted-foreground">License ทั้งหมด</p><p className="text-xl font-bold">{stats.totalLicenses}</p></div></div></CardContent></Card>
+                    <Card><CardContent className="pt-5 pb-4"><div className="flex items-center gap-3"><div className="p-2.5 rounded-xl bg-green-100 dark:bg-green-900/30"><Check className="w-5 h-5 text-green-600" /></div><div><p className="text-xs text-muted-foreground">ใช้งานอยู่</p><p className="text-xl font-bold">{stats.activeLicenses}</p></div></div></CardContent></Card>
+                    <Card><CardContent className="pt-5 pb-4"><div className="flex items-center gap-3"><div className="p-2.5 rounded-xl bg-amber-100 dark:bg-amber-900/30"><Clock className="w-5 h-5 text-amber-600" /></div><div><p className="text-xs text-muted-foreground">ใกล้หมดอายุ</p><p className="text-xl font-bold">{stats.expiringLicenses}</p></div></div></CardContent></Card>
+                    <Card><CardContent className="pt-5 pb-4"><div className="flex items-center gap-3"><div className="p-2.5 rounded-xl bg-purple-100 dark:bg-purple-900/30"><DollarSign className="w-5 h-5 text-purple-600" /></div><div><p className="text-xs text-muted-foreground">รายได้รวม</p><p className="text-xl font-bold">฿{stats.totalRevenue.toLocaleString()}</p></div></div></CardContent></Card>
+                    <Card><CardContent className="pt-5 pb-4"><div className="flex items-center gap-3"><div className="p-2.5 rounded-xl bg-emerald-100 dark:bg-emerald-900/30"><Wifi className="w-5 h-5 text-emerald-600" /></div><div><p className="text-xs text-muted-foreground">ออนไลน์</p><p className="text-xl font-bold">{liveStats?.onlineUsers ?? '—'}</p></div></div></CardContent></Card>
+                    <Card><CardContent className="pt-5 pb-4"><div className="flex items-center gap-3"><div className="p-2.5 rounded-xl bg-orange-100 dark:bg-orange-900/30"><Zap className="w-5 h-5 text-orange-600" /></div><div><p className="text-xs text-muted-foreground">Automation</p><p className="text-xl font-bold">{liveStats?.automation.currentlyRunning ?? '—'}</p></div></div></CardContent></Card>
                 </div>
 
-                {/* Analytics Charts */}
+                {/* Charts */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Package Distribution */}
                     <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <PieChart className="w-5 h-5" />
-                                สัดส่วนแพ็คเกจ
-                            </CardTitle>
-                        </CardHeader>
+                        <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><PieChart className="w-4 h-4" /> สัดส่วนแพ็คเกจ</CardTitle></CardHeader>
                         <CardContent>
-                            <div className="space-y-4">
-                                {(() => {
-                                    const freeCount = licenses.filter(l => l.package === 'free').length;
-                                    const agentCount = licenses.filter(l => l.package === 'agent').length;
-                                    const eliteCount = licenses.filter(l => l.package === 'elite').length;
-                                    const total = licenses.length || 1;
-
-                                    return (
-                                        <>
-                                            <div className="space-y-2">
-                                                <div className="flex justify-between text-sm">
-                                                    <span className="flex items-center gap-2">
-                                                        <Rocket className="w-4 h-4 text-emerald-500" />
-                                                        Rookie
-                                                    </span>
-                                                    <span>{freeCount} ({Math.round(freeCount / total * 100)}%)</span>
-                                                </div>
-                                                <div className="h-3 bg-muted rounded-full overflow-hidden">
-                                                    <div
-                                                        className="h-full bg-emerald-500 rounded-full transition-all"
-                                                        style={{ width: `${freeCount / total * 100}%` }}
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <div className="flex justify-between text-sm">
-                                                    <span className="flex items-center gap-2">
-                                                        <Star className="w-4 h-4 text-amber-500" />
-                                                        Top Agent
-                                                    </span>
-                                                    <span>{agentCount} ({Math.round(agentCount / total * 100)}%)</span>
-                                                </div>
-                                                <div className="h-3 bg-muted rounded-full overflow-hidden">
-                                                    <div
-                                                        className="h-full bg-amber-500 rounded-full transition-all"
-                                                        style={{ width: `${agentCount / total * 100}%` }}
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <div className="flex justify-between text-sm">
-                                                    <span className="flex items-center gap-2">
-                                                        <Crown className="w-4 h-4 text-purple-500" />
-                                                        Elite
-                                                    </span>
-                                                    <span>{eliteCount} ({Math.round(eliteCount / total * 100)}%)</span>
-                                                </div>
-                                                <div className="h-3 bg-muted rounded-full overflow-hidden">
-                                                    <div
-                                                        className="h-full bg-purple-500 rounded-full transition-all"
-                                                        style={{ width: `${eliteCount / total * 100}%` }}
-                                                    />
-                                                </div>
-                                            </div>
-                                        </>
-                                    );
-                                })()}
-                            </div>
+                            {(() => { const fc = licenses.filter(l => l.package === 'free').length; const ac = licenses.filter(l => l.package === 'agent').length; const ec = licenses.filter(l => l.package === 'elite').length; const t = licenses.length || 1; return (<div className="space-y-3">{[{label:'Rookie',count:fc,color:'bg-emerald-500',icon:<Rocket className="w-3.5 h-3.5 text-emerald-500"/>},{label:'Top Agent',count:ac,color:'bg-amber-500',icon:<Star className="w-3.5 h-3.5 text-amber-500"/>},{label:'Elite',count:ec,color:'bg-purple-500',icon:<Crown className="w-3.5 h-3.5 text-purple-500"/>}].map(p=>(<div key={p.label} className="space-y-1"><div className="flex justify-between text-sm"><span className="flex items-center gap-1.5">{p.icon} {p.label}</span><span>{p.count} ({Math.round(p.count/t*100)}%)</span></div><div className="h-2.5 bg-muted rounded-full overflow-hidden"><div className={cn("h-full rounded-full",p.color)} style={{width:`${p.count/t*100}%`}}/></div></div>))}</div>);})()}
                         </CardContent>
                     </Card>
-
-                    {/* Revenue by Package */}
+                    {/* Revenue */}
                     <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <BarChart3 className="w-5 h-5" />
-                                รายได้ตามแพ็คเกจ
-                            </CardTitle>
-                        </CardHeader>
+                        <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><DollarSign className="w-4 h-4" /> รายได้ตามแพ็คเกจ</CardTitle></CardHeader>
                         <CardContent>
-                            <div className="space-y-4">
-                                {(() => {
-                                    const agentRevenue = licenses.filter(l => l.package === 'agent').length * 1390;
-                                    const eliteRevenue = licenses.filter(l => l.package === 'elite').length * 2990;
-                                    const maxRevenue = Math.max(agentRevenue, eliteRevenue, 1);
-
-                                    return (
-                                        <>
-                                            <div className="space-y-2">
-                                                <div className="flex justify-between text-sm">
-                                                    <span className="flex items-center gap-2">
-                                                        <Star className="w-4 h-4 text-amber-500" />
-                                                        Top Agent (฿1,390)
-                                                    </span>
-                                                    <span className="font-semibold">฿{agentRevenue.toLocaleString()}</span>
-                                                </div>
-                                                <div className="h-6 bg-muted rounded-lg overflow-hidden">
-                                                    <div
-                                                        className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-lg transition-all flex items-center justify-end pr-2"
-                                                        style={{ width: `${agentRevenue / maxRevenue * 100}%` }}
-                                                    >
-                                                        {agentRevenue > 0 && (
-                                                            <span className="text-xs font-medium text-white">
-                                                                {licenses.filter(l => l.package === 'agent').length} ใบ
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <div className="flex justify-between text-sm">
-                                                    <span className="flex items-center gap-2">
-                                                        <Crown className="w-4 h-4 text-purple-500" />
-                                                        Elite (฿2,990)
-                                                    </span>
-                                                    <span className="font-semibold">฿{eliteRevenue.toLocaleString()}</span>
-                                                </div>
-                                                <div className="h-6 bg-muted rounded-lg overflow-hidden">
-                                                    <div
-                                                        className="h-full bg-gradient-to-r from-purple-400 to-purple-500 rounded-lg transition-all flex items-center justify-end pr-2"
-                                                        style={{ width: `${eliteRevenue / maxRevenue * 100}%` }}
-                                                    >
-                                                        {eliteRevenue > 0 && (
-                                                            <span className="text-xs font-medium text-white">
-                                                                {licenses.filter(l => l.package === 'elite').length} ใบ
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="pt-4 border-t mt-4">
-                                                <div className="flex justify-between items-center">
-                                                    <span className="text-muted-foreground">รายได้รวมทั้งหมด</span>
-                                                    <span className="text-2xl font-bold text-green-600">
-                                                        ฿{(agentRevenue + eliteRevenue).toLocaleString()}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </>
-                                    );
-                                })()}
-                            </div>
+                            {(() => { const ar = licenses.filter(l => l.package === 'agent').length * 1390; const er = licenses.filter(l => l.package === 'elite').length * 2990; const mx = Math.max(ar, er, 1); return (<div className="space-y-3"><div className="space-y-1"><div className="flex justify-between text-sm"><span className="flex items-center gap-1.5"><Star className="w-3.5 h-3.5 text-amber-500"/>Top Agent (฿1,390)</span><span className="font-semibold">฿{ar.toLocaleString()}</span></div><div className="h-5 bg-muted rounded-lg overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-lg" style={{width:`${ar/mx*100}%`}}/></div></div><div className="space-y-1"><div className="flex justify-between text-sm"><span className="flex items-center gap-1.5"><Crown className="w-3.5 h-3.5 text-purple-500"/>Elite (฿2,990)</span><span className="font-semibold">฿{er.toLocaleString()}</span></div><div className="h-5 bg-muted rounded-lg overflow-hidden"><div className="h-full bg-gradient-to-r from-purple-400 to-purple-500 rounded-lg" style={{width:`${er/mx*100}%`}}/></div></div><div className="pt-3 border-t mt-3 flex justify-between items-center"><span className="text-muted-foreground">รายได้รวมทั้งหมด</span><span className="text-xl font-bold text-green-600">฿{(ar+er).toLocaleString()}</span></div></div>);})()}
                         </CardContent>
                     </Card>
                 </div>
 
-                {/* Expiring Soon Alert */}
-                {(() => {
-                    const now = new Date();
-                    const sevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-                    const expiringLicenses = licenses.filter(l => {
-                        const expiry = new Date(l.expires_at);
-                        return l.is_active && expiry > now && expiry <= sevenDays;
-                    });
-
-                    if (expiringLicenses.length === 0) return null;
-
-                    return (
-                        <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
-                            <CardHeader className="pb-2">
-                                <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
-                                    <AlertCircle className="w-5 h-5" />
-                                    ⚠️ License ใกล้หมดอายุ ({expiringLicenses.length} รายการ)
-                                </CardTitle>
-                                <CardDescription className="text-amber-600 dark:text-amber-500">
-                                    License เหล่านี้จะหมดอายุภายใน 7 วัน - พิจารณาติดต่อลูกค้าเพื่อต่ออายุ
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-2">
-                                    {expiringLicenses.slice(0, 5).map(license => {
-                                        const daysLeft = Math.ceil(
-                                            (new Date(license.expires_at).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-                                        );
-                                        return (
-                                            <div
-                                                key={license.id}
-                                                className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border"
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <code className="text-sm font-mono bg-muted px-2 py-1 rounded">
-                                                        {license.license_key}
-                                                    </code>
-                                                    <span className="text-sm text-muted-foreground">
-                                                        {license.owner_name || 'ไม่ระบุชื่อ'}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <Badge className={cn(
-                                                        daysLeft <= 2 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
-                                                    )}>
-                                                        เหลือ {daysLeft} วัน
-                                                    </Badge>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        onClick={() => extendLicense(license.id, 30)}
-                                                    >
-                                                        <Calendar className="w-3 h-3 mr-1" />
-                                                        +30 วัน
-                                                    </Button>
-                                                    {license.owner_contact && (
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            onClick={() => copyToClipboard(license.owner_contact || '')}
-                                                        >
-                                                            <Copy className="w-3 h-3" />
-                                                        </Button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                    {expiringLicenses.length > 5 && (
-                                        <p className="text-sm text-amber-600 text-center pt-2">
-                                            และอีก {expiringLicenses.length - 5} รายการ...
-                                        </p>
-                                    )}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    );
-                })()}
+                {/* Expiring Soon */}
+                {(() => { const now = new Date(); const sd = new Date(now.getTime() + 7*24*60*60*1000); const exp = licenses.filter(l => { const e = new Date(l.expires_at); return l.is_active && e > now && e <= sd; }); if (!exp.length) return null; return (<Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20"><CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-base"><AlertCircle className="w-4 h-4"/>⚠️ License ใกล้หมดอายุ ({exp.length})</CardTitle></CardHeader><CardContent><div className="space-y-2">{exp.slice(0,5).map(l=>{const dl=Math.ceil((new Date(l.expires_at).getTime()-now.getTime())/(1000*60*60*24));return(<div key={l.id} className="flex items-center justify-between p-2.5 bg-white dark:bg-gray-800 rounded-lg border"><div className="flex items-center gap-2"><code className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded">{l.license_key}</code><span className="text-xs text-muted-foreground">{l.owner_name||'ไม่ระบุชื่อ'}</span></div><div className="flex items-center gap-2"><Badge className={cn(dl<=2?'bg-red-100 text-red-700':'bg-amber-100 text-amber-700','text-[10px]')}>เหลือ {dl} วัน</Badge><Button size="sm" variant="outline" className="h-7 text-xs" onClick={()=>extendLicense(l.id,30)}>+30 วัน</Button></div></div>);})}</div></CardContent></Card>);})()}
 
                 {/* Monthly Report */}
                 <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <TrendingUp className="w-5 h-5" />
-                            รายงานรายเดือน (6 เดือนล่าสุด)
-                        </CardTitle>
-                        <CardDescription>
-                            สรุปยอดสร้าง License และรายได้ในแต่ละเดือน
-                        </CardDescription>
-                    </CardHeader>
+                    <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="w-4 h-4"/>รายงานรายเดือน (6 เดือนล่าสุด)</CardTitle></CardHeader>
                     <CardContent>
-                        {(() => {
-                            // Calculate monthly data for last 6 months
-                            const months: { month: string; count: number; revenue: number; }[] = [];
-                            const now = new Date();
-
-                            for (let i = 5; i >= 0; i--) {
-                                const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-                                const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
-
-                                const monthLicenses = licenses.filter(l => {
-                                    const created = new Date(l.created_at);
-                                    return created >= date && created <= monthEnd;
-                                });
-
-                                const revenue = monthLicenses.reduce((sum, l) => {
-                                    if (l.package === 'agent') return sum + 1390;
-                                    if (l.package === 'elite') return sum + 2990;
-                                    return sum;
-                                }, 0);
-
-                                months.push({
-                                    month: date.toLocaleDateString('th-TH', { month: 'short', year: '2-digit' }),
-                                    count: monthLicenses.length,
-                                    revenue,
-                                });
-                            }
-
-                            const maxCount = Math.max(...months.map(m => m.count), 1);
-                            const maxRevenue = Math.max(...months.map(m => m.revenue), 1);
-
-                            return (
-                                <div className="space-y-6">
-                                    {/* License Count Chart */}
-                                    <div>
-                                        <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-                                            <Key className="w-4 h-4" />
-                                            จำนวน License ที่สร้าง
-                                        </h4>
-                                        <div className="flex items-end gap-2 h-32">
-                                            {months.map((m, idx) => (
-                                                <div key={idx} className="flex-1 flex flex-col items-center gap-1">
-                                                    <span className="text-xs font-medium">{m.count}</span>
-                                                    <div
-                                                        className="w-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-t transition-all"
-                                                        style={{
-                                                            height: `${(m.count / maxCount) * 100}%`,
-                                                            minHeight: m.count > 0 ? '8px' : '2px',
-                                                        }}
-                                                    />
-                                                    <span className="text-xs text-muted-foreground">{m.month}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Revenue Chart */}
-                                    <div className="pt-4 border-t">
-                                        <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-                                            <DollarSign className="w-4 h-4" />
-                                            รายได้ (บาท)
-                                        </h4>
-                                        <div className="flex items-end gap-2 h-32">
-                                            {months.map((m, idx) => (
-                                                <div key={idx} className="flex-1 flex flex-col items-center gap-1">
-                                                    <span className="text-xs font-medium">
-                                                        {m.revenue > 0 ? `฿${(m.revenue / 1000).toFixed(1)}k` : '-'}
-                                                    </span>
-                                                    <div
-                                                        className="w-full bg-gradient-to-t from-green-500 to-emerald-400 rounded-t transition-all"
-                                                        style={{
-                                                            height: `${(m.revenue / maxRevenue) * 100}%`,
-                                                            minHeight: m.revenue > 0 ? '8px' : '2px',
-                                                        }}
-                                                    />
-                                                    <span className="text-xs text-muted-foreground">{m.month}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Summary */}
-                                    <div className="grid grid-cols-3 gap-4 pt-4 border-t">
-                                        <div className="text-center p-3 bg-muted rounded-lg">
-                                            <p className="text-2xl font-bold text-blue-600">
-                                                {months.reduce((s, m) => s + m.count, 0)}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">License ทั้งหมด</p>
-                                        </div>
-                                        <div className="text-center p-3 bg-muted rounded-lg">
-                                            <p className="text-2xl font-bold text-green-600">
-                                                ฿{months.reduce((s, m) => s + m.revenue, 0).toLocaleString()}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">รายได้รวม 6 เดือน</p>
-                                        </div>
-                                        <div className="text-center p-3 bg-muted rounded-lg">
-                                            <p className="text-2xl font-bold text-purple-600">
-                                                ฿{Math.round(months.reduce((s, m) => s + m.revenue, 0) / 6).toLocaleString()}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">เฉลี่ย/เดือน</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })()}
+                        {(() => { const months: {month:string;count:number;revenue:number}[] = []; const now = new Date(); for(let i=5;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);const me=new Date(now.getFullYear(),now.getMonth()-i+1,0);const ml=licenses.filter(l=>{const c=new Date(l.created_at);return c>=d&&c<=me;});const rv=ml.reduce((s,l)=>l.package==='agent'?s+1390:l.package==='elite'?s+2990:s,0);months.push({month:d.toLocaleDateString('th-TH',{month:'short',year:'2-digit'}),count:ml.length,revenue:rv});}const mc=Math.max(...months.map(m=>m.count),1);const mr=Math.max(...months.map(m=>m.revenue),1); return (<div className="space-y-4"><div><h4 className="text-xs font-medium mb-2 flex items-center gap-1.5"><Key className="w-3.5 h-3.5"/>จำนวน License</h4><div className="flex items-end gap-2 h-24">{months.map((m,i)=>(<div key={i} className="flex-1 flex flex-col items-center gap-0.5"><span className="text-[10px] font-medium">{m.count}</span><div className="w-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-t transition-all" style={{height:`${(m.count/mc)*100}%`,minHeight:m.count>0?'6px':'2px'}}/><span className="text-[10px] text-muted-foreground">{m.month}</span></div>))}</div></div><div className="pt-3 border-t"><h4 className="text-xs font-medium mb-2 flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5"/>รายได้ (บาท)</h4><div className="flex items-end gap-2 h-24">{months.map((m,i)=>(<div key={i} className="flex-1 flex flex-col items-center gap-0.5"><span className="text-[10px] font-medium">{m.revenue>0?`฿${(m.revenue/1000).toFixed(1)}k`:'-'}</span><div className="w-full bg-gradient-to-t from-green-500 to-emerald-400 rounded-t transition-all" style={{height:`${(m.revenue/mr)*100}%`,minHeight:m.revenue>0?'6px':'2px'}}/><span className="text-[10px] text-muted-foreground">{m.month}</span></div>))}</div></div></div>);})()}
                     </CardContent>
                 </Card>
+            </>)}
 
+            {/* ═══════════════ TAB: USERS (Live) ═══════════════ */}
+            {activeTab === 'users' && (<>
+                <Card>
+                    <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center gap-2">
+                            <Radio className="w-5 h-5 text-red-500 animate-pulse" />
+                            ผู้ใช้งานในระบบ (Real-time)
+                            <Badge variant="outline" className="ml-2 text-xs font-normal">อัพเดททุก 10 วินาที</Badge>
+                        </CardTitle>
+                        <CardDescription>ดูสถานะผู้ใช้ทุกคนแบบ real-time — ออนไลน์, Automation, โพสต์วันนี้</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {!liveStats ? (
+                            <div className="flex items-center justify-center py-12 text-muted-foreground gap-2"><Loader2 className="w-5 h-5 animate-spin" />กำลังเชื่อมต่อ Backend...</div>
+                        ) : (
+                            <div className="space-y-4">
+                                {/* Summary Cards */}
+                                <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                                    <div className="p-3 rounded-xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800"><div className="flex items-center gap-1.5 mb-1"><Wifi className="w-3.5 h-3.5 text-green-600"/><span className="text-[11px] font-medium text-green-700 dark:text-green-400">ออนไลน์</span></div><p className="text-2xl font-bold text-green-700 dark:text-green-300">{liveStats.onlineUsers}</p></div>
+                                    <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800"><div className="flex items-center gap-1.5 mb-1"><Users className="w-3.5 h-3.5 text-blue-600"/><span className="text-[11px] font-medium text-blue-700 dark:text-blue-400">ใช้งานรวม</span></div><p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{liveStats.activeUsers}</p></div>
+                                    <div className="p-3 rounded-xl bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800"><div className="flex items-center gap-1.5 mb-1"><Zap className={cn("w-3.5 h-3.5 text-orange-600",liveStats.automation.currentlyRunning>0&&"animate-pulse")}/><span className="text-[11px] font-medium text-orange-700 dark:text-orange-400">Automation</span></div><p className="text-2xl font-bold text-orange-700 dark:text-orange-300">{liveStats.automation.currentlyRunning}</p></div>
+                                    <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800"><div className="flex items-center gap-1.5 mb-1"><Activity className="w-3.5 h-3.5 text-purple-600"/><span className="text-[11px] font-medium text-purple-700 dark:text-purple-400">สั่งการวันนี้</span></div><p className="text-2xl font-bold text-purple-700 dark:text-purple-300">{liveStats.automation.totalRunsToday}</p></div>
+                                    <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700"><div className="flex items-center gap-1.5 mb-1"><Monitor className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400"/><span className="text-[11px] font-medium text-gray-700 dark:text-gray-400">Browsers</span></div><p className="text-2xl font-bold text-gray-700 dark:text-gray-300">{liveStats.activeBrowsers}/{liveStats.maxBrowsers}</p></div>
+                                </div>
+
+                                {/* Tasks Summary */}
+                                {(liveStats.automation.totalTasksCompleted > 0 || liveStats.automation.totalTasksFailed > 0 || liveStats.automation.totalTasksPending > 0) && (
+                                    <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 text-sm">
+                                        <span className="text-muted-foreground whitespace-nowrap">Tasks:</span>
+                                        <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">✅ {liveStats.automation.totalTasksCompleted} สำเร็จ</Badge>
+                                        <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">❌ {liveStats.automation.totalTasksFailed} ล้มเหลว</Badge>
+                                        {liveStats.automation.totalTasksPending > 0 && <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">⏳ {liveStats.automation.totalTasksPending} กำลังทำ</Badge>}
+                                    </div>
+                                )}
+
+                                {/* Per-User Table */}
+                                {liveStats.users.length > 0 ? (
+                                    <div className="border rounded-lg overflow-hidden">
+                                        <Table>
+                                            <TableHeader><TableRow className="bg-muted/30">
+                                                <TableHead className="text-xs">User ID</TableHead>
+                                                <TableHead className="text-xs">สถานะ</TableHead>
+                                                <TableHead className="text-xs">Automation</TableHead>
+                                                <TableHead className="text-xs">โพสต์วันนี้</TableHead>
+                                                <TableHead className="text-xs">สั่งการ</TableHead>
+                                                <TableHead className="text-xs">Tasks</TableHead>
+                                            </TableRow></TableHeader>
+                                            <TableBody>
+                                                {liveStats.users.map(u => (
+                                                    <TableRow key={u.userId}>
+                                                        <TableCell className="font-mono text-xs">{u.userId}</TableCell>
+                                                        <TableCell>{u.isOnline ? <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px]"><Wifi className="w-3 h-3 mr-1"/>Online</Badge> : <Badge variant="secondary" className="text-[10px]"><WifiOff className="w-3 h-3 mr-1"/>Offline</Badge>}</TableCell>
+                                                        <TableCell>{u.isRunningGroup || u.isRunningMarketplace ? <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 text-[10px]"><Zap className="w-3 h-3 mr-1 animate-pulse"/>{u.isRunningGroup&&'Groups'}{u.isRunningGroup&&u.isRunningMarketplace&&' + '}{u.isRunningMarketplace&&'Marketplace'}</Badge> : <span className="text-xs text-muted-foreground">—</span>}</TableCell>
+                                                        <TableCell><div className="text-xs"><span className="font-semibold">{u.todayPosts}</span><span className="text-muted-foreground ml-1">({u.todaySuccess}✅ {u.todayFailed}❌)</span></div></TableCell>
+                                                        <TableCell><span className="text-xs font-semibold">{u.automationRuns} ครั้ง</span></TableCell>
+                                                        <TableCell>{u.currentTasks.total > 0 ? <div className="flex items-center gap-1"><div className="w-16 h-2 bg-muted rounded-full overflow-hidden"><div className="h-full bg-green-500 rounded-full" style={{width:`${((u.currentTasks.completed+u.currentTasks.failed)/u.currentTasks.total)*100}%`}}/></div><span className="text-[10px] text-muted-foreground">{u.currentTasks.completed+u.currentTasks.failed}/{u.currentTasks.total}</span></div> : <span className="text-xs text-muted-foreground">—</span>}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                ) : (
+                                    <p className="text-center text-sm text-muted-foreground py-8">ยังไม่มีผู้ใช้ในระบบขณะนี้</p>
+                                )}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </>)}
+
+            {/* ═══════════════ TAB: LICENSES ═══════════════ */}
+            {activeTab === 'licenses' && (<>
                 {/* Filters */}
                 <Card>
                     <CardContent className="pt-6">
-                        <div className="flex flex-col md:flex-row gap-4">
-                            <div className="flex-1">
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                    <Input
-                                        placeholder="ค้นหา License Key, ชื่อ, หรืออีเมล..."
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="pl-10"
-                                    />
-                                </div>
-                            </div>
-                            <Select value={filterPackage} onValueChange={setFilterPackage}>
-                                <SelectTrigger className="w-[180px]">
-                                    <SelectValue placeholder="แพ็คเกจ" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">ทั้งหมด</SelectItem>
-                                    <SelectItem value="free">Rookie (Free)</SelectItem>
-                                    <SelectItem value="agent">Top Agent</SelectItem>
-                                    <SelectItem value="elite">Elite</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <Select value={filterStatus} onValueChange={setFilterStatus}>
-                                <SelectTrigger className="w-[180px]">
-                                    <SelectValue placeholder="สถานะ" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">ทั้งหมด</SelectItem>
-                                    <SelectItem value="active">ใช้งานอยู่</SelectItem>
-                                    <SelectItem value="inactive">หมดอายุ</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <Button variant="outline" onClick={fetchLicenses}>
-                                <RefreshCw className={cn("w-4 h-4 mr-2", isLoading && "animate-spin")} />
-                                รีเฟรช
-                            </Button>
+                        <div className="flex flex-col md:flex-row gap-3">
+                            <div className="flex-1 relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"/><Input placeholder="ค้นหา License Key, ชื่อ, อีเมล..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10"/></div>
+                            <Select value={filterPackage} onValueChange={setFilterPackage}><SelectTrigger className="w-[160px]"><SelectValue placeholder="แพ็คเกจ"/></SelectTrigger><SelectContent><SelectItem value="all">ทั้งหมด</SelectItem><SelectItem value="free">Rookie</SelectItem><SelectItem value="agent">Top Agent</SelectItem><SelectItem value="elite">Elite</SelectItem></SelectContent></Select>
+                            <Select value={filterStatus} onValueChange={setFilterStatus}><SelectTrigger className="w-[160px]"><SelectValue placeholder="สถานะ"/></SelectTrigger><SelectContent><SelectItem value="all">ทั้งหมด</SelectItem><SelectItem value="active">ใช้งานอยู่</SelectItem><SelectItem value="inactive">หมดอายุ</SelectItem></SelectContent></Select>
+                            <Button variant="outline" onClick={fetchLicenses}><RefreshCw className={cn("w-4 h-4 mr-2",isLoading&&"animate-spin")}/>รีเฟรช</Button>
                         </div>
                     </CardContent>
                 </Card>
 
-                {/* License List */}
+                {/* License Table */}
                 <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Key className="w-5 h-5 text-primary" />
-                            License Keys ({filteredLicenses.length})
-                        </CardTitle>
-                    </CardHeader>
+                    <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2"><Key className="w-5 h-5 text-primary"/>License Keys ({filteredLicenses.length})</CardTitle></CardHeader>
                     <CardContent>
                         <ScrollArea className="h-[500px]">
                           <div className="overflow-x-auto">
                             <Table className="min-w-[700px]">
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>License Key</TableHead>
-                                        <TableHead>แพ็คเกจ</TableHead>
-                                        <TableHead>เจ้าของ</TableHead>
-                                        <TableHead>FB Sessions</TableHead>
-                                        <TableHead>วันหมดอายุ</TableHead>
-                                        <TableHead>สถานะ</TableHead>
-                                        <TableHead className="text-right">จัดการ</TableHead>
-                                    </TableRow>
-                                </TableHeader>
+                                <TableHeader><TableRow>
+                                    <TableHead>License Key</TableHead><TableHead>แพ็คเกจ</TableHead><TableHead>เจ้าของ</TableHead><TableHead>FB Sessions</TableHead><TableHead>วันหมดอายุ</TableHead><TableHead>สถานะ</TableHead><TableHead className="text-right">จัดการ</TableHead>
+                                </TableRow></TableHeader>
                                 <TableBody>
                                     {filteredLicenses.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
-                                                <Key className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                                                ไม่พบ License Key
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : (
-                                        filteredLicenses.map((license) => {
-                                            const expired = isExpired(license.expires_at);
-                                            const expiringSoon = isExpiringSoon(license.expires_at);
-
-                                            return (
-                                                <TableRow key={license.id}>
-                                                    <TableCell className="font-mono">{license.license_key}</TableCell>
-                                                    <TableCell>
-                                                        <Badge variant={license.package === 'elite' ? 'default' : 'secondary'}>
-                                                            {packageLabels[license.package]}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <div>
-                                                            <div className="font-medium">{license.owner_name || '-'}</div>
-                                                            <div className="text-xs text-muted-foreground">{license.owner_contact}</div>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {license.max_fb_sessions} sessions
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <div className={cn(
-                                                            "flex items-center gap-2",
-                                                            expired ? "text-red-500 font-medium" :
-                                                                expiringSoon ? "text-amber-500 font-medium" : ""
-                                                        )}>
-                                                            {formatDate(license.expires_at)}
-                                                            {expiringSoon && !expired && (
-                                                                <AlertCircle className="w-4 h-4" />
-                                                            )}
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Badge variant={license.is_active && !expired ? 'outline' : 'destructive'} className={cn(license.is_active && !expired && "border-green-500 text-green-500")}>
-                                                            {license.is_active && !expired ? 'Active' : 'Inactive'}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell className="text-right">
-                                                        <div className="flex justify-end gap-2">
-                                                            <Button
-                                                                size="sm"
-                                                                variant="outline"
-                                                                onClick={() => navigator.clipboard.writeText(license.license_key)}
-                                                            >
-                                                                <Copy className="w-4 h-4" />
-                                                            </Button>
-                                                            <Button
-                                                                size="sm"
-                                                                variant="outline"
-                                                                onClick={() => extendLicense(license.id, 30)}
-                                                            >
-                                                                <Calendar className="w-4 h-4 text-green-600" />
-                                                            </Button>
-                                                            <Button
-                                                                size="sm"
-                                                                variant="ghost"
-                                                                className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                                                                onClick={() => setDeleteTarget({ id: license.id, key: license.license_key })}
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </Button>
-                                                        </div>
-                                                    </TableCell>
-                                                </TableRow>
-                                            );
-                                        })
-                                    )}
+                                        <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground"><Key className="w-12 h-12 mx-auto mb-4 opacity-20"/>ไม่พบ License Key</TableCell></TableRow>
+                                    ) : filteredLicenses.map(license => {
+                                        const expired = isExpired(license.expires_at);
+                                        const expiringSoon = isExpiringSoon(license.expires_at);
+                                        return (
+                                            <TableRow key={license.id}>
+                                                <TableCell className="font-mono text-sm">{license.license_key}</TableCell>
+                                                <TableCell><Badge variant={license.package === 'elite' ? 'default' : 'secondary'}>{packageLabels[license.package]}</Badge></TableCell>
+                                                <TableCell><div><div className="font-medium text-sm">{license.owner_name || '-'}</div><div className="text-xs text-muted-foreground">{license.owner_contact}</div></div></TableCell>
+                                                <TableCell>{license.max_fb_sessions} sessions</TableCell>
+                                                <TableCell><div className={cn("flex items-center gap-1.5 text-sm",expired?"text-red-500 font-medium":expiringSoon?"text-amber-500 font-medium":"")}>{formatDate(license.expires_at)}{expiringSoon&&!expired&&<AlertCircle className="w-3.5 h-3.5"/>}</div></TableCell>
+                                                <TableCell><Badge variant={license.is_active&&!expired?'outline':'destructive'} className={cn(license.is_active&&!expired&&"border-green-500 text-green-500")}>{license.is_active&&!expired?'Active':'Inactive'}</Badge></TableCell>
+                                                <TableCell className="text-right"><div className="flex justify-end gap-1.5">
+                                                    <Button size="sm" variant="outline" className="h-7 w-7 p-0" onClick={()=>navigator.clipboard.writeText(license.license_key)}><Copy className="w-3.5 h-3.5"/></Button>
+                                                    <Button size="sm" variant="outline" className="h-7 w-7 p-0" onClick={()=>extendLicense(license.id,30)}><Calendar className="w-3.5 h-3.5 text-green-600"/></Button>
+                                                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={()=>setDeleteTarget({id:license.id,key:license.license_key})}><Trash2 className="w-3.5 h-3.5"/></Button>
+                                                </div></TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
                                 </TableBody>
                             </Table>
                           </div>
                         </ScrollArea>
                     </CardContent>
                 </Card>
-            </div>
+            </>)}
+
+            {/* ═══════════════ TAB: SYSTEM & QUEUE ═══════════════ */}
+            {activeTab === 'system' && (<>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {/* Queue Status */}
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center gap-2"><Zap className="w-5 h-5 text-orange-500"/>Automation Queue</CardTitle>
+                            <CardDescription>จำกัด automation พร้อมกันเพื่อให้ VPS เสถียร</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {liveStats?.queue ? (
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-4">
+                                        <div className="text-center"><p className="text-3xl font-bold">{liveStats.queue.runningCount}</p><p className="text-xs text-muted-foreground">กำลังรัน</p></div>
+                                        <div className="text-2xl text-muted-foreground">/</div>
+                                        <div className="text-center"><p className="text-3xl font-bold">{liveStats.queue.maxConcurrent}</p><p className="text-xs text-muted-foreground">สูงสุด</p></div>
+                                        <div className="ml-auto text-center"><p className="text-3xl font-bold text-amber-600">{liveStats.queue.queueLength}</p><p className="text-xs text-muted-foreground">รอคิว</p></div>
+                                    </div>
+                                    {/* Slot Bar */}
+                                    <div className="flex gap-1">{Array.from({length:liveStats.queue.maxConcurrent},(_,i)=>(<div key={i} className={cn("flex-1 h-3 rounded-full",i<liveStats.queue.runningCount?"bg-green-500 animate-pulse":"bg-muted")}/>))}</div>
+
+                                    {liveStats.queue.running.length > 0 && (<div className="space-y-1.5"><p className="text-xs font-medium text-muted-foreground">▶ Running</p>{liveStats.queue.running.map((r,i)=>(<div key={i} className="flex items-center justify-between text-xs p-2 bg-green-50 dark:bg-green-950/20 rounded-lg"><span className="font-mono">{r.userId}</span><span>{r.groupCount} กลุ่ม • {Math.floor(r.runningSec/60)}:{String(r.runningSec%60).padStart(2,'0')}</span></div>))}</div>)}
+                                    {liveStats.queue.queue.length > 0 && (<div className="space-y-1.5"><p className="text-xs font-medium text-muted-foreground">⏳ Waiting</p>{liveStats.queue.queue.map((q,i)=>(<div key={i} className="flex items-center justify-between text-xs p-2 bg-amber-50 dark:bg-amber-950/20 rounded-lg"><span>#{q.position} <span className="font-mono">{q.userId}</span></span><span>{q.groupCount} กลุ่ม • รอ {Math.floor(q.waitingSec/60)}:{String(q.waitingSec%60).padStart(2,'0')}</span></div>))}</div>)}
+                                    {liveStats.queue.running.length===0 && liveStats.queue.queue.length===0 && <p className="text-center text-sm text-muted-foreground py-4">ไม่มี automation ในระบบตอนนี้</p>}
+                                </div>
+                            ) : <div className="flex items-center justify-center py-8 text-muted-foreground gap-2"><Loader2 className="w-5 h-5 animate-spin"/>กำลังโหลด...</div>}
+                        </CardContent>
+                    </Card>
+
+                    {/* System Health */}
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center gap-2"><Monitor className="w-5 h-5 text-blue-500"/>สถานะระบบ</CardTitle>
+                            <CardDescription>ทรัพยากรและการเชื่อมต่อ</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <div className="flex justify-between text-sm"><span>Browser Pool</span><span className="font-semibold">{liveStats?.activeBrowsers ?? 0}/{liveStats?.maxBrowsers ?? 10}</span></div>
+                                    <div className="h-3 bg-muted rounded-full overflow-hidden"><div className="h-full bg-blue-500 rounded-full transition-all" style={{width:`${((liveStats?.activeBrowsers??0)/(liveStats?.maxBrowsers||10))*100}%`}}/></div>
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between text-sm"><span>Sessions</span><span className="font-semibold">{liveStats?.totalSessions ?? 0}</span></div>
+                                    <div className="flex justify-between text-sm"><span>Online Users</span><span className="font-semibold text-green-600">{liveStats?.onlineUsers ?? 0}</span></div>
+                                    <div className="flex justify-between text-sm"><span>Automation Users</span><span className="font-semibold text-orange-600">{liveStats?.automationUsers ?? 0}</span></div>
+                                </div>
+                                <div className="pt-3 border-t space-y-2">
+                                    <div className="flex justify-between text-sm"><span>Tasks Completed Today</span><span className="font-semibold text-green-600">{liveStats?.automation.totalTasksCompleted ?? 0}</span></div>
+                                    <div className="flex justify-between text-sm"><span>Tasks Failed Today</span><span className="font-semibold text-red-600">{liveStats?.automation.totalTasksFailed ?? 0}</span></div>
+                                    <div className="flex justify-between text-sm"><span>Automation Runs Today</span><span className="font-semibold">{liveStats?.automation.totalRunsToday ?? 0}</span></div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </>)}
+
+            </div>{/* end max-w container */}
 
             {/* Create License Modal */}
             <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>สร้าง License Key ใหม่</DialogTitle>
-                        <DialogDescription>
-                            สร้างคีย์ใหม่สำหรับลูกค้า กำหนดแพ็คเกจและวันหมดอายุ
-                        </DialogDescription>
+                        <DialogDescription>สร้างคีย์ใหม่สำหรับลูกค้า กำหนดแพ็คเกจและวันหมดอายุ</DialogDescription>
                     </DialogHeader>
-
                     <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                            <Label>แพ็คเกจ</Label>
-                            <Select
-                                value={newLicense.package}
-                                onValueChange={(val) => setNewLicense({ ...newLicense, package: val })}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="agent">Top Agent (฿1,390)</SelectItem>
-                                    <SelectItem value="elite">Elite (฿2,990)</SelectItem>
-                                    <SelectItem value="free">Rookie (Free)</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="grid gap-2">
-                            <Label>ระยะเวลา (วัน)</Label>
-                            <Select
-                                value={newLicense.durationDays.toString()}
-                                onValueChange={(val) => setNewLicense({ ...newLicense, durationDays: parseInt(val) })}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="30">30 วัน (1 เดือน)</SelectItem>
-                                    <SelectItem value="90">90 วัน (3 เดือน)</SelectItem>
-                                    <SelectItem value="180">180 วัน (6 เดือน)</SelectItem>
-                                    <SelectItem value="365">365 วัน (1 ปี)</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="grid gap-2">
-                            <Label>ชื่อลูกค้า (Optional)</Label>
-                            <Input
-                                value={newLicense.ownerName}
-                                onChange={(e) => setNewLicense({ ...newLicense, ownerName: e.target.value })}
-                                placeholder="เช่น คุณสมชาย A."
-                            />
-                        </div>
-
-                        <div className="grid gap-2">
-                            <Label>ช่องทางติดต่อ (Optional)</Label>
-                            <Input
-                                value={newLicense.ownerContact}
-                                onChange={(e) => setNewLicense({ ...newLicense, ownerContact: e.target.value })}
-                                placeholder="Email, Line ID, หรือเบอร์โทร"
-                            />
-                        </div>
-
-                        <div className="grid gap-2">
-                            <Label>หมายเหตุ (Optional)</Label>
-                            <Input
-                                value={newLicense.note}
-                                onChange={(e) => setNewLicense({ ...newLicense, note: e.target.value })}
-                                placeholder="บันทึกเพิ่มเติม..."
-                            />
-                        </div>
+                        <div className="grid gap-2"><Label>แพ็คเกจ</Label><Select value={newLicense.package} onValueChange={val=>setNewLicense({...newLicense,package:val})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="agent">Top Agent (฿1,390)</SelectItem><SelectItem value="elite">Elite (฿2,990)</SelectItem><SelectItem value="free">Rookie (Free)</SelectItem></SelectContent></Select></div>
+                        <div className="grid gap-2"><Label>ระยะเวลา (วัน)</Label><Select value={newLicense.durationDays.toString()} onValueChange={val=>setNewLicense({...newLicense,durationDays:parseInt(val)})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="30">30 วัน (1 เดือน)</SelectItem><SelectItem value="90">90 วัน (3 เดือน)</SelectItem><SelectItem value="180">180 วัน (6 เดือน)</SelectItem><SelectItem value="365">365 วัน (1 ปี)</SelectItem></SelectContent></Select></div>
+                        <div className="grid gap-2"><Label>ชื่อลูกค้า (Optional)</Label><Input value={newLicense.ownerName} onChange={e=>setNewLicense({...newLicense,ownerName:e.target.value})} placeholder="เช่น คุณสมชาย A."/></div>
+                        <div className="grid gap-2"><Label>ช่องทางติดต่อ (Optional)</Label><Input value={newLicense.ownerContact} onChange={e=>setNewLicense({...newLicense,ownerContact:e.target.value})} placeholder="Email, Line ID, หรือเบอร์โทร"/></div>
+                        <div className="grid gap-2"><Label>หมายเหตุ (Optional)</Label><Input value={newLicense.note} onChange={e=>setNewLicense({...newLicense,note:e.target.value})} placeholder="บันทึกเพิ่มเติม..."/></div>
                     </div>
-
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowCreateModal(false)}>ยกเลิก</Button>
-                        <Button onClick={handleCreateLicense}>ยืนยันการสร้าง</Button>
-                    </DialogFooter>
+                    <DialogFooter><Button variant="outline" onClick={()=>setShowCreateModal(false)}>ยกเลิก</Button><Button onClick={handleCreateLicense}>ยืนยันการสร้าง</Button></DialogFooter>
                 </DialogContent>
             </Dialog>
 
-            {/* Delete Confirmation Dialog */}
-            <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+            {/* Delete Confirmation */}
+            <Dialog open={!!deleteTarget} onOpenChange={open=>!open&&setDeleteTarget(null)}>
                 <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-red-600">
-                            <Trash2 className="w-5 h-5" />
-                            ยืนยันการลบ License
-                        </DialogTitle>
-                        <DialogDescription>
-                            คุณต้องการลบ License Key นี้หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้
-                        </DialogDescription>
-                    </DialogHeader>
-                    {deleteTarget && (
-                        <div className="py-3">
-                            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800">
-                                <p className="font-mono text-sm font-semibold text-center">{deleteTarget.key}</p>
-                            </div>
-                        </div>
-                    )}
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setDeleteTarget(null)}>ยกเลิก</Button>
-                        <Button
-                            variant="destructive"
-                            onClick={() => deleteTarget && deleteLicense(deleteTarget.id)}
-                        >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            ลบ License
-                        </Button>
-                    </DialogFooter>
+                    <DialogHeader><DialogTitle className="flex items-center gap-2 text-red-600"><Trash2 className="w-5 h-5"/>ยืนยันการลบ License</DialogTitle><DialogDescription>การกระทำนี้ไม่สามารถย้อนกลับได้</DialogDescription></DialogHeader>
+                    {deleteTarget&&<div className="py-3"><div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800"><p className="font-mono text-sm font-semibold text-center">{deleteTarget.key}</p></div></div>}
+                    <DialogFooter><Button variant="outline" onClick={()=>setDeleteTarget(null)}>ยกเลิก</Button><Button variant="destructive" onClick={()=>deleteTarget&&deleteLicense(deleteTarget.id)}><Trash2 className="w-4 h-4 mr-2"/>ลบ License</Button></DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>

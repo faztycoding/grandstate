@@ -129,6 +129,11 @@ export default function Automation() {
   const [automationStartTime, setAutomationStartTime] = useState<number | null>(null);
   const [automationEndTime, setAutomationEndTime] = useState<number | null>(null);
 
+  // Queue state
+  const [queuePosition, setQueuePosition] = useState<number | null>(null);
+  const [queueEstimate, setQueueEstimate] = useState<number>(0);
+  const queuePollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   // Health Check — fetches real data from backend postingTracker
   const { result: healthResult, clearHistory, refetch: refetchHealth } = useHealthCheck();
 
@@ -340,6 +345,36 @@ export default function Automation() {
         setGeneratedCaptions(result.generatedCaptions);
       }
 
+      // Handle QUEUED response — user must wait in line
+      if (result.queued) {
+        setQueuePosition(result.position);
+        setQueueEstimate(result.estimatedWaitSec || 0);
+        toast.info(`📋 คิวที่ ${result.position}`, {
+          description: `รอประมาณ ${Math.ceil((result.estimatedWaitSec || 300) / 60)} นาที — ระบบจะเริ่มอัตโนมัติเมื่อถึงคิว`,
+          duration: 6000,
+        });
+        // Keep running state true so UI shows "waiting"
+        setAutomation(prev => ({
+          ...prev,
+          isRunning: true,
+          totalSteps: groupsData.length,
+          tasks: groupsData.map((g, i) => ({
+            id: `task-${i}`,
+            groupId: g.id,
+            groupName: g.name,
+            groupUrl: g.url,
+            status: 'pending' as const,
+          })),
+        }));
+        setAutomationStartTime(Date.now());
+        // Poll queue status until it's our turn
+        startQueuePolling(postingMode);
+        return;
+      }
+
+      // Started immediately — no queue
+      setQueuePosition(null);
+
       // Store startup status metadata so popup is accurate immediately
       setAutomation(prev => ({
         ...prev,
@@ -366,6 +401,45 @@ export default function Automation() {
       setAutomationEndTime(null);
     }
   };
+
+  // Queue polling — polls queue status until it's user's turn, then switches to automation polling
+  const startQueuePolling = useCallback((mode: AutomationMode) => {
+    if (queuePollingRef.current) clearInterval(queuePollingRef.current);
+
+    queuePollingRef.current = setInterval(async () => {
+      try {
+        const res = await apiFetch('/api/group-automation/queue-status');
+        const data = await res.json();
+
+        if (data.success) {
+          if (data.status === 'running' || data.isRunning) {
+            // Our turn! Stop queue polling, start automation polling
+            setQueuePosition(null);
+            if (queuePollingRef.current) clearInterval(queuePollingRef.current);
+            queuePollingRef.current = null;
+            toast.success('🚀 ถึงคิวคุณแล้ว! กำลังเริ่ม Automation...', { duration: 3000 });
+            pollAutomationStatus(mode);
+          } else if (data.status === 'queued') {
+            setQueuePosition(data.position);
+            setQueueEstimate(data.estimatedWaitSec || 0);
+          } else if (data.status === 'idle') {
+            // No longer in queue and not running — was cancelled or timed out
+            setQueuePosition(null);
+            if (queuePollingRef.current) clearInterval(queuePollingRef.current);
+            queuePollingRef.current = null;
+            setAutomation(prev => ({ ...prev, isRunning: false }));
+          }
+        }
+      } catch { /* silent */ }
+    }, 3000);
+  }, []);
+
+  // Cleanup queue polling on unmount
+  useEffect(() => {
+    return () => {
+      if (queuePollingRef.current) clearInterval(queuePollingRef.current);
+    };
+  }, []);
 
   // Polling interval ref — prevents stacking intervals
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -523,6 +597,12 @@ export default function Automation() {
       clearInterval(pollingRef.current);
       pollingRef.current = null;
     }
+    // Clear queue polling too
+    if (queuePollingRef.current) {
+      clearInterval(queuePollingRef.current);
+      queuePollingRef.current = null;
+    }
+    setQueuePosition(null);
 
     const stopPath = postingMode === 'marketplace'
       ? '/api/marketplace-automation/stop'
@@ -1044,6 +1124,8 @@ export default function Automation() {
         logs={automationLogs}
         startTime={automationStartTime}
         endTime={automationEndTime}
+        queuePosition={queuePosition}
+        queueEstimate={queueEstimate}
         onStop={stopAutomation}
         onPause={pauseAutomation}
         onDismiss={() => {
@@ -1052,6 +1134,7 @@ export default function Automation() {
           setAutomationLogs([]);
           setAutomationStartTime(null);
           setAutomationEndTime(null);
+          setQueuePosition(null);
         }}
       />
 

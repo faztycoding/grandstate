@@ -4,6 +4,7 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { authMiddleware } from './middleware/auth.js';
 import { sessionManager } from './services/userSessionManager.js';
+import { automationQueue } from './services/automationQueue.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -88,6 +89,17 @@ app.get('/api/session/active-users', ...auth, (req, res) => {
     // A successful authenticated poll implies user is online right now
     sessionManager.touchPresence(req.userId);
     res.json({ success: true, ...sessionManager.getPresenceStats() });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Admin stats — detailed active users + automation + queue info
+app.get('/api/admin/stats', ...auth, (req, res) => {
+  try {
+    const adminStats = sessionManager.getAdminStats();
+    const queueStats = automationQueue.getQueueStats();
+    res.json({ success: true, ...adminStats, queue: queueStats });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -519,7 +531,7 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
 // Group Posting Automation Endpoints
 // ====================================
 
-// Start group posting automation
+// Start group posting automation (with queue system for VPS stability)
 // Captions are auto-generated on backend based on group count
 app.post('/api/group-automation/start', ...auth, async (req, res) => {
   try {
@@ -548,7 +560,7 @@ app.post('/api/group-automation/start', ...auth, async (req, res) => {
       req.groupWorker.initAnthropicClient(claudeApiKey);
     }
 
-    // Auto-generate captions based on group count
+    // Auto-generate captions based on group count (this happens BEFORE queue)
     const groupCount = groups.length;
     let requiredCaptions;
     if (groupCount <= 10) requiredCaptions = 1;
@@ -583,8 +595,7 @@ app.post('/api/group-automation/start', ...auth, async (req, res) => {
       captionAssignments[g.id] = generatedCaptions[idx];
     });
 
-    // Start automation in BACKGROUND — don't await, so frontend can poll immediately
-    req.groupWorker.startAutomation({
+    const automationConfig = {
       property,
       groups,
       caption: generatedCaptions[0],
@@ -596,16 +607,38 @@ app.post('/api/group-automation/start', ...auth, async (req, res) => {
       captionStyle,
       browser: browser || 'chrome',
       userPackage: userPackage || 'free',
-    }).then(result => {
-      console.log('✅ Group automation finished:', result.success ? 'SUCCESS' : 'FAILED');
-    }).catch(err => {
-      console.error('❌ Group automation error:', err.message);
-    });
+    };
 
-    const status = req.groupWorker.getStatus();
+    // Use queue system — either starts immediately or enqueues
+    const groupWorker = req.groupWorker;
+    const queueResult = await automationQueue.tryStartOrEnqueue(
+      req.userId,
+      (cfg) => groupWorker.startAutomation(cfg),
+      automationConfig,
+    );
+
+    if (queueResult.queued) {
+      // User is in the queue — not started yet
+      console.log(`📋 User ${req.userId.substring(0, 8)} queued at position ${queueResult.position}`);
+      return res.json({
+        success: true,
+        queued: true,
+        position: queueResult.position,
+        estimatedWaitSec: queueResult.estimatedWaitSec,
+        message: `คิวที่ ${queueResult.position} — รอประมาณ ${Math.ceil(queueResult.estimatedWaitSec / 60)} นาที`,
+        totalGroups: groups.length,
+        generatedCaptions,
+      });
+    }
+
+    // Started immediately — return status
+    // Small delay so worker initializes tasks
+    await new Promise(r => setTimeout(r, 200));
+    const status = groupWorker.getStatus();
 
     res.json({
       success: true,
+      queued: false,
       message: `เริ่ม automation แล้ว — ${groups.length} กลุ่ม`,
       totalGroups: groups.length,
       generatedCaptions,
@@ -624,11 +657,42 @@ app.post('/api/group-automation/start', ...auth, async (req, res) => {
   }
 });
 
-// Get automation status
+// Get automation status (includes queue info)
 app.get('/api/group-automation/status', ...auth, (req, res) => {
   try {
     const status = req.groupWorker.getStatus();
-    res.json({ success: true, ...status });
+    const queueStatus = automationQueue.getUserQueueStatus(req.userId);
+    res.json({ success: true, ...status, queue: queueStatus });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Queue status for this user
+app.get('/api/group-automation/queue-status', ...auth, (req, res) => {
+  try {
+    const queueStatus = automationQueue.getUserQueueStatus(req.userId);
+    const workerStatus = req.groupWorker.getStatus();
+    res.json({ success: true, ...queueStatus, isRunning: workerStatus.isRunning });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Cancel queue position (before automation starts)
+app.post('/api/group-automation/cancel-queue', ...auth, (req, res) => {
+  try {
+    const removed = automationQueue.cancelQueue(req.userId);
+    res.json({ success: true, removed, message: removed ? 'ออกจากคิวแล้ว' : 'ไม่ได้อยู่ในคิว' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Admin: full queue stats
+app.get('/api/admin/queue', ...auth, (req, res) => {
+  try {
+    res.json({ success: true, ...automationQueue.getQueueStats() });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -654,10 +718,15 @@ app.post('/api/group-automation/resume', ...auth, (req, res) => {
   }
 });
 
-// Stop automation
+// Stop automation (also removes from queue + notifies queue system)
 app.post('/api/group-automation/stop', ...auth, async (req, res) => {
   try {
+    // Remove from queue if waiting
+    automationQueue.cancelQueue(req.userId);
+    // Stop the worker
     await req.groupWorker.stop();
+    // Notify queue that this slot is free
+    automationQueue._onJobComplete(req.userId, false);
     res.json({ success: true, message: 'Automation stopped' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });

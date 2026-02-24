@@ -47,6 +47,8 @@ interface TaskProgressPopupProps {
     logs: LogEntry[];
     startTime: number | null;
     endTime: number | null;
+    queuePosition?: number | null;
+    queueEstimate?: number;
     onStop: () => void;
     onPause: () => void;
     onDismiss: () => void;
@@ -91,6 +93,8 @@ export function TaskProgressPopup({
     logs,
     startTime,
     endTime,
+    queuePosition,
+    queueEstimate,
     onStop,
     onPause,
     onDismiss,
@@ -180,17 +184,21 @@ export function TaskProgressPopup({
                     onClick={() => setIsMinimized(!isMinimized)}
                 >
                     <div className="flex items-center gap-2">
-                        {isRunning ? (
+                        {queuePosition && queuePosition > 0 ? (
+                            <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                        ) : isRunning ? (
                             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                         ) : isDone ? (
                             <div className="w-2 h-2 rounded-full bg-blue-500" />
                         ) : null}
                         <span className="font-semibold text-sm">
-                            {isDone
-                                ? (pendingApprovalTasks > 0 ? '✅ โพสต์เสร็จ (บางกลุ่มรออนุมัติ)' : '✅ เสร็จสิ้น')
-                                : isPaused
-                                    ? '⏸️ หยุดชั่วคราว'
-                                    : '🚀 กำลังโพสต์อัตโนมัติ'}
+                            {queuePosition && queuePosition > 0
+                                ? `📋 รอคิวที่ ${queuePosition} — ~${Math.ceil((queueEstimate || 300) / 60)} นาที`
+                                : isDone
+                                    ? (pendingApprovalTasks > 0 ? '✅ โพสต์เสร็จ (บางกลุ่มรออนุมัติ)' : '✅ เสร็จสิ้น')
+                                    : isPaused
+                                        ? '⏸️ หยุดชั่วคราว'
+                                        : '🚀 กำลังโพสต์อัตโนมัติ'}
                         </span>
 
                         {/* Elapsed Time */}

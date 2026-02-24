@@ -54,8 +54,8 @@ const App = () => (
               <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
 
-              {/* Admin route - uses secret URL token */}
-              <Route path="/admin/:secret" element={<AdminDashboard />} />
+              {/* Admin route */}
+              <Route path="/adminfaz" element={<AdminDashboard />} />
 
               {/* Redirects for old routes */}
               <Route path="/dashboard" element={<Navigate to="/automation" replace />} />

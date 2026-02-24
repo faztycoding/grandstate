@@ -180,10 +180,24 @@ export default function Settings() {
     setShowLoginPopup(false);
   };
 
-  // Profile state
-  const [profileName, setProfileName] = useState(() => localStorage.getItem('profile_name') || '');
-  const [profileEmail, setProfileEmail] = useState(() => localStorage.getItem('profile_email') || '');
+  // Profile state — synced with Supabase auth metadata
+  const [displayName, setDisplayName] = useState(() => localStorage.getItem('profile_display_name') || '');
+  const [lineId, setLineId] = useState(() => localStorage.getItem('profile_line_id') || '');
   const [profileAvatar, setProfileAvatar] = useState(() => localStorage.getItem('profile_avatar') || '');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  // Load profile from Supabase metadata on mount
+  useEffect(() => {
+    const loadProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.user_metadata) {
+        const meta = user.user_metadata;
+        if (meta.display_name) { setDisplayName(meta.display_name); localStorage.setItem('profile_display_name', meta.display_name); }
+        if (meta.line_id) { setLineId(meta.line_id); localStorage.setItem('profile_line_id', meta.line_id); }
+      }
+    };
+    loadProfile();
+  }, []);
 
   // Change Password state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -240,13 +254,28 @@ export default function Settings() {
     reader.readAsDataURL(file);
   };
 
-  const handleSave = () => {
-    localStorage.setItem('profile_name', profileName);
-    localStorage.setItem('profile_email', profileEmail);
-    localStorage.removeItem('claudeApiKey');
-    localStorage.setItem('defaultBrowser', defaultBrowser);
-    window.dispatchEvent(new Event('profile-updated'));
-    toast.success(t.common.success);
+  const handleSave = async () => {
+    setIsSavingProfile(true);
+    try {
+      // Save to Supabase auth metadata
+      const { error } = await supabase.auth.updateUser({
+        data: { display_name: displayName, line_id: lineId }
+      });
+      if (error) throw error;
+
+      // Save to localStorage for fast access
+      localStorage.setItem('profile_display_name', displayName);
+      localStorage.setItem('profile_line_id', lineId);
+      localStorage.removeItem('claudeApiKey');
+      localStorage.setItem('defaultBrowser', defaultBrowser);
+      window.dispatchEvent(new Event('profile-updated'));
+      toast.success(t.common.success);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'บันทึกไม่สำเร็จ';
+      toast.error(msg);
+    } finally {
+      setIsSavingProfile(false);
+    }
   };
 
   const handleClearHistory = () => {
@@ -257,7 +286,7 @@ export default function Settings() {
 
   const handleExportData = () => {
     const data = {
-      profile: { name: profileName, email: profileEmail },
+      profile: { name: displayName, lineId },
       properties: JSON.parse(localStorage.getItem('properties') || '[]'),
       groups: JSON.parse(localStorage.getItem('groups') || '[]'),
       postHistory: JSON.parse(localStorage.getItem('healthcheck_post_history') || '[]'),
@@ -409,10 +438,10 @@ export default function Settings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="w-5 h-5 text-accent" />
-              {t.settings.profile}
+              {isEn ? 'Profile' : 'โปรไฟล์'}
             </CardTitle>
             <CardDescription>
-              {t.settings.profileDesc}
+              {isEn ? 'Your display name and contact info — synced to cloud' : 'ชื่อแสดงผลและช่องทางติดต่อ — ซิงค์กับระบบ'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -420,7 +449,7 @@ export default function Settings() {
               <Avatar className="w-20 h-20 cursor-pointer" onClick={() => profileFileRef.current?.click()}>
                 <AvatarImage src={profileAvatar} />
                 <AvatarFallback className="bg-primary text-primary-foreground text-xl">
-                  {profileName ? profileName.split(' ').map(n => n[0]).join('') : 'U'}
+                  {displayName ? displayName.split(' ').map(n => n[0]).join('').substring(0, 2) : 'U'}
                 </AvatarFallback>
               </Avatar>
               <div>
@@ -439,14 +468,17 @@ export default function Settings() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>{t.settings.fullName}</Label>
-                <Input value={profileName} onChange={(e) => setProfileName(e.target.value)} placeholder={t.settings.fullName} />
+                <Label>{isEn ? 'Display Name' : 'ชื่อที่แสดง'}</Label>
+                <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder={isEn ? 'Your name' : 'ชื่อของคุณ'} />
               </div>
               <div className="space-y-2">
-                <Label>{t.settings.email}</Label>
-                <Input type="email" value={profileEmail} onChange={(e) => setProfileEmail(e.target.value)} placeholder="email@example.com" />
+                <Label>Line ID</Label>
+                <Input value={lineId} onChange={(e) => setLineId(e.target.value)} placeholder="@yourlineid" />
               </div>
             </div>
+            {authUser?.email && (
+              <p className="text-xs text-muted-foreground">{isEn ? 'Login email' : 'อีเมลที่ใช้เข้าสู่ระบบ'}: {authUser.email}</p>
+            )}
           </CardContent>
         </Card>
 

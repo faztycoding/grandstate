@@ -37,10 +37,14 @@ class UserSessionManager {
     return session;
   }
 
-  touchPresence(userId, email) {
+  touchPresence(userId, email, userMeta) {
     const session = this.getSession(userId);
     session.lastPresenceAt = Date.now();
     if (email) session.email = email;
+    if (userMeta) {
+      if (userMeta.display_name) session.displayName = userMeta.display_name;
+      if (userMeta.line_id) session.lineId = userMeta.line_id;
+    }
     return session;
   }
 
@@ -218,7 +222,8 @@ class UserSessionManager {
         userId: uid.substring(0, 8) + '...',
         fullUserId: uid,
         email: session.email || null,
-        displayName: session.email ? session.email.split('@')[0] : uid.substring(0, 8),
+        displayName: session.displayName || (session.email ? session.email.split('@')[0] : uid.substring(0, 8)),
+        lineId: session.lineId || null,
         isOnline,
         isRunningGroup,
         isRunningMarketplace,

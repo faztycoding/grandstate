@@ -34,6 +34,7 @@ export async function authMiddleware(req, res, next) {
 
     req.userId = user.id;
     req.userEmail = user.email;
+    req.userMeta = user.user_metadata || {};
     next();
   } catch (err) {
     console.error('Auth middleware error:', err.message);

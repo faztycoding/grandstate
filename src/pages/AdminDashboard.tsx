@@ -126,6 +126,7 @@ export default function AdminDashboard() {
         fullUserId?: string;
         email?: string | null;
         displayName?: string;
+        lineId?: string | null;
         isOnline: boolean;
         isRunningGroup: boolean;
         isRunningMarketplace: boolean;
@@ -711,8 +712,11 @@ export default function AdminDashboard() {
                                                                 </div>
                                                                 <div className="min-w-0">
                                                                     <p className="text-sm font-medium truncate">{u.displayName || u.userId}</p>
-                                                                    {u.email && <p className="text-[10px] text-muted-foreground truncate">{u.email}</p>}
-                                                                    {!u.email && <p className="text-[10px] text-muted-foreground font-mono">{u.userId}</p>}
+                                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                                        {u.email && <p className="text-[10px] text-muted-foreground truncate">{u.email}</p>}
+                                                                        {!u.email && <p className="text-[10px] text-muted-foreground font-mono">{u.userId}</p>}
+                                                                        {u.lineId && <span className="text-[10px] text-green-600 dark:text-green-400 font-medium">LINE: {u.lineId}</span>}
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </TableCell>

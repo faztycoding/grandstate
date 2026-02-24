@@ -228,22 +228,61 @@ class AutomationQueue {
    * Full queue stats for admin panel
    */
   getQueueStats() {
+    const now = Date.now();
+    const successJobs = this.history.filter(h => h.success);
+    const failedJobs = this.history.filter(h => !h.success);
+    const avgDuration = this.history.length > 0
+      ? Math.round(this.history.reduce((s, h) => s + h.durationSec, 0) / this.history.length)
+      : 0;
+
     return {
       maxConcurrent: this.maxConcurrent,
       runningCount: this.running.size,
       queueLength: this.queue.length,
+      queueTimeoutMin: Math.round(QUEUE_TIMEOUT_MS / 60000),
+      // Running jobs detail
       running: Array.from(this.running.entries()).map(([uid, info]) => ({
         userId: uid.substring(0, 8) + '...',
+        fullUserId: uid,
         groupCount: info.groupCount,
-        runningSec: Math.round((Date.now() - info.startedAt) / 1000),
+        startedAt: info.startedAt,
+        runningSec: Math.round((now - info.startedAt) / 1000),
       })),
+      // Waiting queue detail
       queue: this.queue.map((q, i) => ({
         position: i + 1,
         userId: q.userId.substring(0, 8) + '...',
+        fullUserId: q.userId,
         groupCount: q.config?.groups?.length || 0,
-        waitingSec: Math.round((Date.now() - q.enqueuedAt) / 1000),
+        enqueuedAt: q.enqueuedAt,
+        waitingSec: Math.round((now - q.enqueuedAt) / 1000),
+        estimatedWaitSec: this._estimateWait(i + 1),
       })),
-      recentHistory: this.history.slice(-10),
+      // Aggregate stats
+      stats: {
+        totalCompleted: successJobs.length,
+        totalFailed: failedJobs.length,
+        totalProcessed: this.history.length,
+        successRate: this.history.length > 0
+          ? Math.round((successJobs.length / this.history.length) * 100)
+          : 0,
+        avgDurationSec: avgDuration,
+        avgDurationFormatted: avgDuration > 0
+          ? `${Math.floor(avgDuration / 60)}:${String(avgDuration % 60).padStart(2, '0')}`
+          : '—',
+        longestJobSec: this.history.length > 0
+          ? Math.max(...this.history.map(h => h.durationSec))
+          : 0,
+        shortestJobSec: this.history.length > 0
+          ? Math.min(...this.history.map(h => h.durationSec))
+          : 0,
+      },
+      // Recent history (last 20)
+      recentHistory: this.history.slice(-20).reverse().map(h => ({
+        ...h,
+        completedAtFormatted: new Date(h.completedAt).toLocaleTimeString('th-TH', { hour12: false }),
+        durationFormatted: `${Math.floor(h.durationSec / 60)}:${String(h.durationSec % 60).padStart(2, '0')}`,
+      })),
     };
   }
 }

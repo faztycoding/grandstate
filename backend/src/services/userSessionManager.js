@@ -37,9 +37,10 @@ class UserSessionManager {
     return session;
   }
 
-  touchPresence(userId) {
+  touchPresence(userId, email) {
     const session = this.getSession(userId);
     session.lastPresenceAt = Date.now();
+    if (email) session.email = email;
     return session;
   }
 
@@ -215,6 +216,9 @@ class UserSessionManager {
 
       userDetails.push({
         userId: uid.substring(0, 8) + '...',
+        fullUserId: uid,
+        email: session.email || null,
+        displayName: session.email ? session.email.split('@')[0] : uid.substring(0, 8),
         isOnline,
         isRunningGroup,
         isRunningMarketplace,

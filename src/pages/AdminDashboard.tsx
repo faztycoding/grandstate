@@ -61,6 +61,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -122,6 +123,9 @@ export default function AdminDashboard() {
     // Live stats from backend (active users + automation)
     interface LiveUser {
         userId: string;
+        fullUserId?: string;
+        email?: string | null;
+        displayName?: string;
         isOnline: boolean;
         isRunningGroup: boolean;
         isRunningMarketplace: boolean;
@@ -151,8 +155,20 @@ export default function AdminDashboard() {
             maxConcurrent: number;
             runningCount: number;
             queueLength: number;
-            running: { userId: string; groupCount: number; runningSec: number }[];
-            queue: { position: number; userId: string; groupCount: number; waitingSec: number }[];
+            queueTimeoutMin: number;
+            running: { userId: string; groupCount: number; runningSec: number; startedAt: number }[];
+            queue: { position: number; userId: string; groupCount: number; waitingSec: number; estimatedWaitSec: number }[];
+            stats: {
+                totalCompleted: number;
+                totalFailed: number;
+                totalProcessed: number;
+                successRate: number;
+                avgDurationSec: number;
+                avgDurationFormatted: string;
+                longestJobSec: number;
+                shortestJobSec: number;
+            };
+            recentHistory: { userId: string; groupCount: number; durationSec: number; durationFormatted: string; success: boolean; completedAtFormatted: string }[];
         };
         users: LiveUser[];
     }
@@ -678,7 +694,7 @@ export default function AdminDashboard() {
                                     <div className="border rounded-lg overflow-hidden">
                                         <Table>
                                             <TableHeader><TableRow className="bg-muted/30">
-                                                <TableHead className="text-xs">User ID</TableHead>
+                                                <TableHead className="text-xs">ผู้ใช้</TableHead>
                                                 <TableHead className="text-xs">สถานะ</TableHead>
                                                 <TableHead className="text-xs">Automation</TableHead>
                                                 <TableHead className="text-xs">โพสต์วันนี้</TableHead>
@@ -688,7 +704,18 @@ export default function AdminDashboard() {
                                             <TableBody>
                                                 {liveStats.users.map(u => (
                                                     <TableRow key={u.userId}>
-                                                        <TableCell className="font-mono text-xs">{u.userId}</TableCell>
+                                                        <TableCell>
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-accent/30 to-orange-400/30 flex items-center justify-center text-[10px] font-bold text-accent shrink-0">
+                                                                    {(u.displayName || u.userId)?.[0]?.toUpperCase() || '?'}
+                                                                </div>
+                                                                <div className="min-w-0">
+                                                                    <p className="text-sm font-medium truncate">{u.displayName || u.userId}</p>
+                                                                    {u.email && <p className="text-[10px] text-muted-foreground truncate">{u.email}</p>}
+                                                                    {!u.email && <p className="text-[10px] text-muted-foreground font-mono">{u.userId}</p>}
+                                                                </div>
+                                                            </div>
+                                                        </TableCell>
                                                         <TableCell>{u.isOnline ? <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px]"><Wifi className="w-3 h-3 mr-1"/>Online</Badge> : <Badge variant="secondary" className="text-[10px]"><WifiOff className="w-3 h-3 mr-1"/>Offline</Badge>}</TableCell>
                                                         <TableCell>{u.isRunningGroup || u.isRunningMarketplace ? <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 text-[10px]"><Zap className="w-3 h-3 mr-1 animate-pulse"/>{u.isRunningGroup&&'Groups'}{u.isRunningGroup&&u.isRunningMarketplace&&' + '}{u.isRunningMarketplace&&'Marketplace'}</Badge> : <span className="text-xs text-muted-foreground">—</span>}</TableCell>
                                                         <TableCell><div className="text-xs"><span className="font-semibold">{u.todayPosts}</span><span className="text-muted-foreground ml-1">({u.todaySuccess}✅ {u.todayFailed}❌)</span></div></TableCell>
@@ -764,59 +791,147 @@ export default function AdminDashboard() {
 
             {/* ═══════════════ TAB: SYSTEM & QUEUE ═══════════════ */}
             {activeTab === 'system' && (<>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {/* Queue Status */}
-                    <Card>
-                        <CardHeader className="pb-3">
-                            <CardTitle className="flex items-center gap-2"><Zap className="w-5 h-5 text-orange-500"/>Automation Queue</CardTitle>
-                            <CardDescription>จำกัด automation พร้อมกันเพื่อให้ VPS เสถียร</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            {liveStats?.queue ? (
+                {!liveStats?.queue ? (
+                    <div className="flex items-center justify-center py-16 text-muted-foreground gap-2"><Loader2 className="w-5 h-5 animate-spin"/>กำลังเชื่อมต่อ Backend...</div>
+                ) : (<div className="space-y-4">
+                    {/* Row 1: Queue Slots + Aggregate Stats */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        {/* Live Queue Slots */}
+                        <Card className="lg:col-span-2">
+                            <CardHeader className="pb-3">
+                                <CardTitle className="flex items-center gap-2"><Zap className="w-5 h-5 text-orange-500"/>Queue Slots (Live)</CardTitle>
+                                <CardDescription>จำกัด {liveStats.queue.maxConcurrent} automation พร้อมกัน • timeout {liveStats.queue.queueTimeoutMin} นาที</CardDescription>
+                            </CardHeader>
+                            <CardContent>
                                 <div className="space-y-4">
-                                    <div className="flex items-center gap-4">
-                                        <div className="text-center"><p className="text-3xl font-bold">{liveStats.queue.runningCount}</p><p className="text-xs text-muted-foreground">กำลังรัน</p></div>
-                                        <div className="text-2xl text-muted-foreground">/</div>
-                                        <div className="text-center"><p className="text-3xl font-bold">{liveStats.queue.maxConcurrent}</p><p className="text-xs text-muted-foreground">สูงสุด</p></div>
-                                        <div className="ml-auto text-center"><p className="text-3xl font-bold text-amber-600">{liveStats.queue.queueLength}</p><p className="text-xs text-muted-foreground">รอคิว</p></div>
+                                    {/* Big numbers */}
+                                    <div className="flex items-center gap-6">
+                                        <div className="text-center"><p className="text-4xl font-bold">{liveStats.queue.runningCount}</p><p className="text-xs text-muted-foreground">กำลังรัน</p></div>
+                                        <div className="text-3xl text-muted-foreground font-light">/</div>
+                                        <div className="text-center"><p className="text-4xl font-bold text-muted-foreground">{liveStats.queue.maxConcurrent}</p><p className="text-xs text-muted-foreground">slots สูงสุด</p></div>
+                                        <div className="ml-auto text-center px-4 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800"><p className="text-3xl font-bold text-amber-600">{liveStats.queue.queueLength}</p><p className="text-xs text-amber-600/70">รอคิว</p></div>
                                     </div>
-                                    {/* Slot Bar */}
-                                    <div className="flex gap-1">{Array.from({length:liveStats.queue.maxConcurrent},(_,i)=>(<div key={i} className={cn("flex-1 h-3 rounded-full",i<liveStats.queue.runningCount?"bg-green-500 animate-pulse":"bg-muted")}/>))}</div>
+                                    {/* Slot visualization */}
+                                    <div className="flex gap-1.5">{Array.from({length:liveStats.queue.maxConcurrent},(_,i)=>(<div key={i} className={cn("flex-1 h-4 rounded-lg transition-all",i<liveStats.queue.runningCount?"bg-gradient-to-t from-green-600 to-green-400 shadow-sm shadow-green-500/30":"bg-muted")}/>))}</div>
+                                    <div className="text-[11px] text-muted-foreground flex justify-between"><span>Slot 1</span><span>Slot {liveStats.queue.maxConcurrent}</span></div>
+                                </div>
+                            </CardContent>
+                        </Card>
 
-                                    {liveStats.queue.running.length > 0 && (<div className="space-y-1.5"><p className="text-xs font-medium text-muted-foreground">▶ Running</p>{liveStats.queue.running.map((r,i)=>(<div key={i} className="flex items-center justify-between text-xs p-2 bg-green-50 dark:bg-green-950/20 rounded-lg"><span className="font-mono">{r.userId}</span><span>{r.groupCount} กลุ่ม • {Math.floor(r.runningSec/60)}:{String(r.runningSec%60).padStart(2,'0')}</span></div>))}</div>)}
-                                    {liveStats.queue.queue.length > 0 && (<div className="space-y-1.5"><p className="text-xs font-medium text-muted-foreground">⏳ Waiting</p>{liveStats.queue.queue.map((q,i)=>(<div key={i} className="flex items-center justify-between text-xs p-2 bg-amber-50 dark:bg-amber-950/20 rounded-lg"><span>#{q.position} <span className="font-mono">{q.userId}</span></span><span>{q.groupCount} กลุ่ม • รอ {Math.floor(q.waitingSec/60)}:{String(q.waitingSec%60).padStart(2,'0')}</span></div>))}</div>)}
-                                    {liveStats.queue.running.length===0 && liveStats.queue.queue.length===0 && <p className="text-center text-sm text-muted-foreground py-4">ไม่มี automation ในระบบตอนนี้</p>}
+                        {/* Aggregate Stats */}
+                        <Card>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="flex items-center gap-2 text-base"><BarChart3 className="w-4 h-4"/>สถิติ Queue</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between text-sm"><span className="text-muted-foreground">Jobs สำเร็จ</span><span className="font-semibold text-green-600">{liveStats.queue.stats.totalCompleted}</span></div>
+                                    <div className="flex justify-between text-sm"><span className="text-muted-foreground">Jobs ล้มเหลว</span><span className="font-semibold text-red-600">{liveStats.queue.stats.totalFailed}</span></div>
+                                    <div className="flex justify-between text-sm"><span className="text-muted-foreground">Success Rate</span><span className="font-semibold">{liveStats.queue.stats.successRate}%</span></div>
+                                    <Separator />
+                                    <div className="flex justify-between text-sm"><span className="text-muted-foreground">เวลาเฉลี่ย</span><span className="font-semibold font-mono">{liveStats.queue.stats.avgDurationFormatted}</span></div>
+                                    <div className="flex justify-between text-sm"><span className="text-muted-foreground">นานสุด</span><span className="font-mono text-xs">{Math.floor(liveStats.queue.stats.longestJobSec/60)}:{String(liveStats.queue.stats.longestJobSec%60).padStart(2,'0')}</span></div>
+                                    <div className="flex justify-between text-sm"><span className="text-muted-foreground">เร็วสุด</span><span className="font-mono text-xs">{Math.floor(liveStats.queue.stats.shortestJobSec/60)}:{String(liveStats.queue.stats.shortestJobSec%60).padStart(2,'0')}</span></div>
+                                    <Separator />
+                                    <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total Processed</span><span className="font-semibold">{liveStats.queue.stats.totalProcessed}</span></div>
                                 </div>
-                            ) : <div className="flex items-center justify-center py-8 text-muted-foreground gap-2"><Loader2 className="w-5 h-5 animate-spin"/>กำลังโหลด...</div>}
-                        </CardContent>
-                    </Card>
+                            </CardContent>
+                        </Card>
+                    </div>
 
-                    {/* System Health */}
-                    <Card>
-                        <CardHeader className="pb-3">
-                            <CardTitle className="flex items-center gap-2"><Monitor className="w-5 h-5 text-blue-500"/>สถานะระบบ</CardTitle>
-                            <CardDescription>ทรัพยากรและการเชื่อมต่อ</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                <div className="space-y-2">
-                                    <div className="flex justify-between text-sm"><span>Browser Pool</span><span className="font-semibold">{liveStats?.activeBrowsers ?? 0}/{liveStats?.maxBrowsers ?? 10}</span></div>
-                                    <div className="h-3 bg-muted rounded-full overflow-hidden"><div className="h-full bg-blue-500 rounded-full transition-all" style={{width:`${((liveStats?.activeBrowsers??0)/(liveStats?.maxBrowsers||10))*100}%`}}/></div>
+                    {/* Row 2: Running Jobs + Waiting Queue */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {/* Running Jobs */}
+                        <Card>
+                            <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"/>▶ Running ({liveStats.queue.running.length})</CardTitle></CardHeader>
+                            <CardContent>
+                                {liveStats.queue.running.length > 0 ? (
+                                    <div className="space-y-2">{liveStats.queue.running.map((r,i) => (
+                                        <div key={i} className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center text-[10px] font-bold text-green-700">{i+1}</div>
+                                                <div><p className="text-sm font-medium font-mono">{r.userId}</p><p className="text-[10px] text-muted-foreground">{r.groupCount} กลุ่ม</p></div>
+                                            </div>
+                                            <div className="text-right"><p className="text-sm font-mono font-semibold">{Math.floor(r.runningSec/60)}:{String(r.runningSec%60).padStart(2,'0')}</p><p className="text-[10px] text-muted-foreground">runtime</p></div>
+                                        </div>
+                                    ))}</div>
+                                ) : <p className="text-center text-sm text-muted-foreground py-6">ไม่มี automation กำลังรัน</p>}
+                            </CardContent>
+                        </Card>
+
+                        {/* Waiting Queue */}
+                        <Card>
+                            <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><Clock className="w-4 h-4 text-amber-500"/>⏳ รอคิว ({liveStats.queue.queue.length})</CardTitle></CardHeader>
+                            <CardContent>
+                                {liveStats.queue.queue.length > 0 ? (
+                                    <div className="space-y-2">{liveStats.queue.queue.map((q,i) => (
+                                        <div key={i} className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center text-[10px] font-bold text-amber-700">#{q.position}</div>
+                                                <div><p className="text-sm font-medium font-mono">{q.userId}</p><p className="text-[10px] text-muted-foreground">{q.groupCount} กลุ่ม</p></div>
+                                            </div>
+                                            <div className="text-right"><p className="text-sm font-mono">{Math.floor(q.waitingSec/60)}:{String(q.waitingSec%60).padStart(2,'0')}</p><p className="text-[10px] text-muted-foreground">รอแล้ว ~{Math.ceil(q.estimatedWaitSec/60)} นาที</p></div>
+                                        </div>
+                                    ))}</div>
+                                ) : <p className="text-center text-sm text-muted-foreground py-6">ไม่มีคนรอคิว</p>}
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Row 3: System Health + Recent History */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {/* System Health */}
+                        <Card>
+                            <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-base"><Monitor className="w-4 h-4 text-blue-500"/>สถานะระบบ</CardTitle></CardHeader>
+                            <CardContent>
+                                <div className="space-y-3">
+                                    <div className="space-y-1.5">
+                                        <div className="flex justify-between text-sm"><span>Browser Pool</span><span className="font-semibold">{liveStats.activeBrowsers}/{liveStats.maxBrowsers}</span></div>
+                                        <div className="h-3 bg-muted rounded-full overflow-hidden"><div className="h-full bg-blue-500 rounded-full transition-all" style={{width:`${(liveStats.activeBrowsers/(liveStats.maxBrowsers||10))*100}%`}}/></div>
+                                    </div>
+                                    <Separator />
+                                    <div className="grid grid-cols-2 gap-2 text-sm">
+                                        <div className="flex justify-between"><span className="text-muted-foreground">Sessions</span><span className="font-semibold">{liveStats.totalSessions}</span></div>
+                                        <div className="flex justify-between"><span className="text-muted-foreground">Online</span><span className="font-semibold text-green-600">{liveStats.onlineUsers}</span></div>
+                                        <div className="flex justify-between"><span className="text-muted-foreground">Automation</span><span className="font-semibold text-orange-600">{liveStats.automationUsers}</span></div>
+                                        <div className="flex justify-between"><span className="text-muted-foreground">Runs Today</span><span className="font-semibold">{liveStats.automation.totalRunsToday}</span></div>
+                                    </div>
+                                    <Separator />
+                                    <div className="grid grid-cols-2 gap-2 text-sm">
+                                        <div className="flex justify-between"><span className="text-muted-foreground">Tasks ✅</span><span className="font-semibold text-green-600">{liveStats.automation.totalTasksCompleted}</span></div>
+                                        <div className="flex justify-between"><span className="text-muted-foreground">Tasks ❌</span><span className="font-semibold text-red-600">{liveStats.automation.totalTasksFailed}</span></div>
+                                    </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between text-sm"><span>Sessions</span><span className="font-semibold">{liveStats?.totalSessions ?? 0}</span></div>
-                                    <div className="flex justify-between text-sm"><span>Online Users</span><span className="font-semibold text-green-600">{liveStats?.onlineUsers ?? 0}</span></div>
-                                    <div className="flex justify-between text-sm"><span>Automation Users</span><span className="font-semibold text-orange-600">{liveStats?.automationUsers ?? 0}</span></div>
-                                </div>
-                                <div className="pt-3 border-t space-y-2">
-                                    <div className="flex justify-between text-sm"><span>Tasks Completed Today</span><span className="font-semibold text-green-600">{liveStats?.automation.totalTasksCompleted ?? 0}</span></div>
-                                    <div className="flex justify-between text-sm"><span>Tasks Failed Today</span><span className="font-semibold text-red-600">{liveStats?.automation.totalTasksFailed ?? 0}</span></div>
-                                    <div className="flex justify-between text-sm"><span>Automation Runs Today</span><span className="font-semibold">{liveStats?.automation.totalRunsToday ?? 0}</span></div>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Recent History */}
+                        <Card>
+                            <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-base"><Activity className="w-4 h-4 text-purple-500"/>ประวัติ Queue ล่าสุด</CardTitle></CardHeader>
+                            <CardContent>
+                                {liveStats.queue.recentHistory.length > 0 ? (
+                                    <ScrollArea className="h-[220px]">
+                                        <div className="space-y-1.5">
+                                            {liveStats.queue.recentHistory.map((h,i) => (
+                                                <div key={i} className="flex items-center justify-between text-xs p-2 rounded-lg bg-muted/40 hover:bg-muted/70 transition-colors">
+                                                    <div className="flex items-center gap-2">
+                                                        {h.success ? <div className="w-1.5 h-1.5 rounded-full bg-green-500"/> : <div className="w-1.5 h-1.5 rounded-full bg-red-500"/>}
+                                                        <span className="font-mono">{h.userId}</span>
+                                                        <span className="text-muted-foreground">{h.groupCount} กลุ่ม</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-mono">{h.durationFormatted}</span>
+                                                        <span className="text-muted-foreground">{h.completedAtFormatted}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </ScrollArea>
+                                ) : <p className="text-center text-sm text-muted-foreground py-6">ยังไม่มีประวัติ — จะแสดงเมื่อมี automation เสร็จ</p>}
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>)}
             </>)}
 
             </div>{/* end max-w container */}

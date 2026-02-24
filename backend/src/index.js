@@ -68,7 +68,7 @@ app.post('/api/session/presence', ...auth, (req, res) => {
   try {
     const isOnline = req.body?.online !== false;
     if (isOnline) {
-      sessionManager.touchPresence(req.userId);
+      sessionManager.touchPresence(req.userId, req.userEmail);
     } else {
       sessionManager.markOffline(req.userId);
     }
@@ -87,7 +87,7 @@ app.post('/api/session/presence', ...auth, (req, res) => {
 app.get('/api/session/active-users', ...auth, (req, res) => {
   try {
     // A successful authenticated poll implies user is online right now
-    sessionManager.touchPresence(req.userId);
+    sessionManager.touchPresence(req.userId, req.userEmail);
     res.json({ success: true, ...sessionManager.getPresenceStats() });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });

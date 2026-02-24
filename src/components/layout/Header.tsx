@@ -71,9 +71,9 @@ export function Header({ title, subtitle }: HeaderProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const updateProfileFromStorage = () => {
-    setProfileName(localStorage.getItem('profile_name') || '');
+    setProfileName(localStorage.getItem('profile_display_name') || localStorage.getItem('profile_name') || '');
     setProfileAvatar(localStorage.getItem('profile_avatar') || '');
-    setProfileEmail(localStorage.getItem('profile_email') || '');
+    setProfileEmail(localStorage.getItem('profile_line_id') || localStorage.getItem('profile_email') || '');
   };
 
   useEffect(() => {
@@ -251,7 +251,9 @@ export function Header({ title, subtitle }: HeaderProps) {
                     localStorage.removeItem('fb_user_name');
                     localStorage.removeItem('fb_user_profilePic');
                     localStorage.removeItem('profile_name');
+                    localStorage.removeItem('profile_display_name');
                     localStorage.removeItem('profile_email');
+                    localStorage.removeItem('profile_line_id');
                     localStorage.removeItem('profile_avatar');
                     window.location.href = '/auth?logout=true';
                   }}

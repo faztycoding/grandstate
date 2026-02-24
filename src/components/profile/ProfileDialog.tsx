@@ -95,7 +95,7 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
     useEffect(() => {
         if (open) {
             // Load profile data
-            const savedName = localStorage.getItem('profile_name') || '';
+            const savedName = localStorage.getItem('profile_display_name') || localStorage.getItem('profile_name') || '';
             const savedAvatar = localStorage.getItem('profile_avatar') || '';
             setProfileName(savedName);
             setProfileAvatar(savedAvatar);
@@ -159,7 +159,7 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
             return;
         }
         setProfileName(tempName);
-        localStorage.setItem('profile_name', tempName);
+        localStorage.setItem('profile_display_name', tempName);
         window.dispatchEvent(new Event('profile-updated')); // Sync with Header
         setIsEditingName(false);
         toast.success('บันทึกชื่อเรียบร้อย');

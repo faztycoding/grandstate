@@ -21,11 +21,14 @@ function getSupabase() {
 export async function authMiddleware(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // Support token from query param for SSE (EventSource can't send custom headers)
+    const token = (authHeader && authHeader.startsWith('Bearer '))
+      ? authHeader.split(' ')[1]
+      : req.query?.token;
+
+    if (!token) {
       return res.status(401).json({ success: false, error: 'Missing authorization token' });
     }
-
-    const token = authHeader.split(' ')[1];
     const { data: { user }, error } = await getSupabase().auth.getUser(token);
 
     if (error || !user) {

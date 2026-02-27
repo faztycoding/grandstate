@@ -279,6 +279,11 @@ export default function Automation() {
       description: `${t.automation.postingTo} ${tasks.length} ${t.automation.groups}`,
     });
 
+    // Request notification permission so we can alert when done (even if tab is background)
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
     // Prepare groups data with URLs
     const groupsData = selectedGroups.map(groupId => {
       const group = groups.find(g => g.id === groupId);
@@ -536,9 +541,18 @@ export default function Automation() {
               if (failed > 0) {
                 summaryParts.push(`${t.automation.failedCount} ${failed} ${t.automation.groups}`);
               }
+              const summaryText = summaryParts.join(', ');
               toast.success(t.automation.automationDone, {
-                description: summaryParts.join(', '),
+                description: summaryText,
               });
+
+              // Browser push notification (works even if tab is in background)
+              if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+                new Notification('Grand$tate — โพสต์เสร็จแล้ว!', {
+                  body: summaryText,
+                  icon: '/favicon.ico',
+                });
+              }
             }
           }
         }

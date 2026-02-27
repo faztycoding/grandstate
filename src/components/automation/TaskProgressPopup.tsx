@@ -19,6 +19,7 @@ import {
     MessageSquareText,
     Users,
     Hourglass,
+    Cloud,
 } from 'lucide-react';
 
 interface TaskStatus {
@@ -340,6 +341,13 @@ export function TaskProgressPopup({
                         ) : (
                         /* Normal Progress */
                         <div className="px-4 py-2 border-b border-border">
+                            {/* Server-side info banner */}
+                            {isRunning && (
+                                <div className="flex items-center gap-2 mb-2 px-2.5 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-[11px] text-blue-600 dark:text-blue-400">
+                                    <Cloud className="w-3.5 h-3.5 flex-shrink-0" />
+                                    <span>ระบบรันบน Server — คุณปิดหน้านี้หรือปิดเครื่องได้ กลับมาดูผลทีหลัง</span>
+                                </div>
+                            )}
                             <>
                             {(() => {
                                 const resolvedTasks = completedTasks + pendingApprovalTasks + failedTasks;

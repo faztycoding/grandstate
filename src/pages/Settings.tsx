@@ -64,8 +64,11 @@ export default function Settings() {
   const s = t.settingsPage;
   const navigate = useNavigate();
   const { paletteId, setPaletteId, isDark, toggleDark } = useAppTheme();
-  const { user: authUser, license: authLicense } = useLicenseAuth();
+  const { user: authUser, license: authLicense, activateLicense, isValidating } = useLicenseAuth();
   const profileFileRef = useRef<HTMLInputElement>(null);
+  const [licenseKeyInput, setLicenseKeyInput] = useState('');
+  const [licenseError, setLicenseError] = useState<string | null>(null);
+  const [licenseSuccess, setLicenseSuccess] = useState(false);
 
   // Package info
   const pkg = getUserPackage();
@@ -381,7 +384,7 @@ export default function Settings() {
                   </div>
                 )}
               </div>
-              {authLicense && (
+              {authLicense ? (
                 <div className="flex items-center justify-between pt-2 border-t">
                   <div>
                     <p className="text-xs text-muted-foreground">License Key</p>
@@ -391,6 +394,38 @@ export default function Settings() {
                     <p className="text-xs text-muted-foreground">{isEn ? 'Expires' : 'หมดอายุ'}</p>
                     <p className="text-sm">{authLicense.expiresAt.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
                   </div>
+                </div>
+              ) : (
+                <div className="pt-2 border-t space-y-2">
+                  <p className="text-xs text-muted-foreground">{isEn ? 'Have a license key? Enter it to upgrade your plan.' : 'มี License Key? กรอกเพื่ออัพเกรดแพ็คเกจ'}</p>
+                  <div className="flex gap-2">
+                    <Input
+                      value={licenseKeyInput}
+                      onChange={(e) => { setLicenseKeyInput(e.target.value.toUpperCase()); setLicenseError(null); setLicenseSuccess(false); }}
+                      placeholder="GSXXX-XXXXX-XXXXX-XXXXX"
+                      className="font-mono text-sm"
+                      maxLength={23}
+                    />
+                    <Button
+                      size="sm"
+                      disabled={isValidating || licenseKeyInput.length < 20}
+                      onClick={async () => {
+                        setLicenseError(null);
+                        const result = await activateLicense(licenseKeyInput);
+                        if (result.valid) {
+                          setLicenseSuccess(true);
+                          setLicenseKeyInput('');
+                          window.location.reload();
+                        } else {
+                          setLicenseError(result.error || (isEn ? 'Invalid key' : 'คีย์ไม่ถูกต้อง'));
+                        }
+                      }}
+                    >
+                      {isValidating ? <Loader2 className="w-4 h-4 animate-spin" /> : (isEn ? 'Activate' : 'เปิดใช้งาน')}
+                    </Button>
+                  </div>
+                  {licenseError && <p className="text-xs text-red-500">{licenseError}</p>}
+                  {licenseSuccess && <p className="text-xs text-green-500">{isEn ? 'License activated!' : 'เปิดใช้งานสำเร็จ!'}</p>}
                 </div>
               )}
             </CardContent>

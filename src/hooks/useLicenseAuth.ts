@@ -311,7 +311,8 @@ export function useLicenseAuth() {
     // ── Derived state ──
     const isAuthenticated = !!user;
     const isLicenseActive = !!license;
-    const isFullyReady = isAuthenticated && isLicenseActive;
+    // Free tier: login is enough — license key only needed for paid plans
+    const isFullyReady = isAuthenticated;
     const currentPackage = license?.package || 'free';
     const limits = packageLimits[currentPackage];
 

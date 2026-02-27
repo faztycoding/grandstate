@@ -79,13 +79,8 @@ export default function Auth() {
     }
   }, [searchParams, signOut]);
 
-  // If user is authenticated but no license → show activation
-  // (skip if just logged out)
-  useEffect(() => {
-    if (isAuthenticated && !isLicenseActive && view !== 'activate' && searchParams.get('logout') !== 'true') {
-      setView('activate');
-    }
-  }, [isAuthenticated, isLicenseActive, view, searchParams]);
+  // If user is authenticated → redirect to app (free tier by default)
+  // License activation is optional — available in Settings for upgrading
 
   // If fully ready → redirect to app
   useEffect(() => {
@@ -549,8 +544,8 @@ export default function Auth() {
           {(view === 'signin' || view === 'signup') && (
             <>
               <p className="mt-6 text-center text-sm text-muted-foreground">
-                ต้องการ License Key?{' '}
-                <a href="https://line.me/ti/p/@897hrloe" target="_blank" rel="noopener noreferrer"
+                ต้องการอัพเกรดแพ็คเกจ?{' '}
+                <a href="https://line.me/ti/p/@grandstate" target="_blank" rel="noopener noreferrer"
                   className="text-accent hover:underline font-medium">ติดต่อทาง LINE</a>
               </p>
               <div className="mt-4 pt-4 border-t border-dashed">

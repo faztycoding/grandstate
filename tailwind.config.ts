@@ -77,8 +77,8 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['"IBM Plex Sans"', '"IBM Plex Sans Thai"', 'system-ui', '-apple-system', 'sans-serif'],
+        display: ['"IBM Plex Sans"', '"IBM Plex Sans Thai"', 'system-ui', '-apple-system', 'sans-serif'],
       },
       boxShadow: {
         'sm': 'var(--shadow-sm)',

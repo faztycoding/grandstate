@@ -1103,7 +1103,7 @@ export default function Automation() {
                     {/* Coming Soon Badge - Premium style */}
                     <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 px-2.5 py-1 bg-gradient-to-r from-slate-600 to-slate-700 dark:from-slate-500 dark:to-slate-600 text-white text-[9px] font-bold rounded-md shadow-md flex items-center gap-1 whitespace-nowrap">
                       <span className="text-[10px]">🔗</span>
-                      <span>COMING SOON</span>
+                      <span>UNDER DEVELOPMENT</span>
                     </div>
                   </div>
                   <button

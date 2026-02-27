@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiFetch } from '@/lib/config';
 
 export interface FacebookUser {
@@ -44,6 +44,9 @@ export function useFacebookConnection() {
     connectingSlot: null,
   });
 
+  // Auto-timeout: reset connecting state after 120s to prevent permanent hangs
+  const connectingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Check connection status on mount — returns ALL session slots
   const checkStatus = useCallback(async () => {
     setState(prev => ({ ...prev, isChecking: true, error: null }));
@@ -54,17 +57,32 @@ export function useFacebookConnection() {
       const data = await response.json();
 
       if (data.success) {
-        setState(prev => ({
-          ...prev,
-          isConnected: data.connected ?? false,
-          isConnecting: prev.connectingSlot !== null ? prev.isConnecting : false,
-          isChecking: false,
-          user: data.user || null,
-          error: null,
-          sessions: Array.isArray(data.sessions) ? data.sessions : [],
-          activeSlot: data.activeSlot ?? 0,
-          connectedCount: data.connectedCount ?? 0,
-        }));
+        const sessions: FbSessionSlot[] = Array.isArray(data.sessions) ? data.sessions : [];
+        setState(prev => {
+          // Smart reset: if the connecting slot now has a user OR was disconnected, stop connecting
+          let stillConnecting = prev.isConnecting;
+          let stillConnectingSlot = prev.connectingSlot;
+          if (prev.connectingSlot !== null) {
+            const slotData = sessions[prev.connectingSlot];
+            // If slot now has a name (login succeeded) or slot doesn't exist → reset
+            if (slotData?.name || !slotData) {
+              stillConnecting = false;
+              stillConnectingSlot = null;
+            }
+          }
+          return {
+            ...prev,
+            isConnected: data.connected ?? false,
+            isConnecting: stillConnecting,
+            connectingSlot: stillConnectingSlot,
+            isChecking: false,
+            user: data.user || null,
+            error: null,
+            sessions,
+            activeSlot: data.activeSlot ?? 0,
+            connectedCount: data.connectedCount ?? 0,
+          };
+        });
       } else {
         setState(prev => ({ ...prev, isChecking: false, error: null }));
       }
@@ -81,6 +99,17 @@ export function useFacebookConnection() {
   const connect = useCallback(async (slot: number = 0) => {
     setState(prev => ({ ...prev, isConnecting: true, connectingSlot: slot, error: null }));
 
+    // Set auto-timeout to prevent permanent hang
+    if (connectingTimeoutRef.current) clearTimeout(connectingTimeoutRef.current);
+    connectingTimeoutRef.current = setTimeout(() => {
+      setState(prev => {
+        if (prev.isConnecting && prev.connectingSlot === slot) {
+          return { ...prev, isConnecting: false, connectingSlot: null, error: 'หมดเวลาเชื่อมต่อ — กรุณาลองใหม่' };
+        }
+        return prev;
+      });
+    }, 120_000); // 120s timeout
+
     try {
       const response = await apiFetch('/api/facebook/connect', {
         method: 'POST',
@@ -93,10 +122,12 @@ export function useFacebookConnection() {
         setState(prev => ({ ...prev, isConnecting: true, activeSlot: slot }));
         return { success: true, message: 'กรุณา Login Facebook ในหน้าต่างที่เปิดมา', slot };
       } else {
+        if (connectingTimeoutRef.current) { clearTimeout(connectingTimeoutRef.current); connectingTimeoutRef.current = null; }
         setState(prev => ({ ...prev, isConnecting: false, connectingSlot: null, error: data.error }));
         return { success: false, message: data.error };
       }
     } catch (error: any) {
+      if (connectingTimeoutRef.current) { clearTimeout(connectingTimeoutRef.current); connectingTimeoutRef.current = null; }
       setState(prev => ({ ...prev, isConnecting: false, connectingSlot: null, error: error.message }));
       return { success: false, message: error.message };
     }
@@ -146,15 +177,23 @@ export function useFacebookConnection() {
 
   // Disconnect a specific slot
   const disconnect = useCallback(async (slot?: number) => {
+    const targetSlot = slot ?? state.activeSlot;
     try {
       const response = await apiFetch('/api/facebook/disconnect', {
         method: 'POST',
-        body: JSON.stringify({ slot: slot ?? state.activeSlot }),
+        body: JSON.stringify({ slot: targetSlot }),
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
 
       if (data.success) {
+        // Always reset connecting state for the disconnected slot
+        if (connectingTimeoutRef.current) { clearTimeout(connectingTimeoutRef.current); connectingTimeoutRef.current = null; }
+        setState(prev => ({
+          ...prev,
+          isConnecting: prev.connectingSlot === targetSlot ? false : prev.isConnecting,
+          connectingSlot: prev.connectingSlot === targetSlot ? null : prev.connectingSlot,
+        }));
         await checkStatus();
         return { success: true, message: data.message };
       } else {

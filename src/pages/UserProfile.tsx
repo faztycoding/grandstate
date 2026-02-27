@@ -180,7 +180,7 @@ export default function UserProfile() {
                                         </Badge>
                                     </div>
                                     <p className="text-muted-foreground">
-                                        {license.ownerName || 'ผู้ใช้งาน Grand$tate'}
+                                        {license.ownerName || 'ผู้ใช้งาน GrandState'}
                                     </p>
                                 </div>
                                 <Button variant="outline" onClick={() => navigate('/pricing')}>

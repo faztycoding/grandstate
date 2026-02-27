@@ -29,8 +29,8 @@
   <line x1="46" y1="28" x2="46" y2="70" stroke="#e0e0e0" stroke-width="0.5" opacity="0.2"/>
   <line x1="54" y1="28" x2="54" y2="70" stroke="#e0e0e0" stroke-width="0.5" opacity="0.2"/>
 
-  <!-- Dollar sign — GOLD -->
-  <text x="50" y="58" text-anchor="middle" font-size="32" font-weight="bold" font-family="Georgia, serif" fill="#f7b500">$</text>
+  <!-- G letter — Purple accent -->
+  <text x="50" y="58" text-anchor="middle" font-size="28" font-weight="bold" font-family="Inter, IBM Plex Sans, sans-serif" fill="#a855f7">G</text>
 
   <!-- Decorative arc beneath buildings -->
   <path d="M15 75 Q50 68 85 75" stroke="#e0e0e0" stroke-width="1" fill="none" opacity="0.3"/>

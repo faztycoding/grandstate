@@ -95,7 +95,7 @@ export default function TermsOfService() {
             {isEn ? 'Terms of Service' : 'ข้อตกลงและเงื่อนไขการใช้บริการ'}
           </h1>
           <p className="text-muted-foreground max-w-xl mx-auto">
-            {isEn ? 'Terms of Service' : 'Terms of Service'} — Grand$tate
+            {isEn ? 'Terms of Service' : 'Terms of Service'} — GrandState
           </p>
           <div className="flex items-center justify-center gap-3 mt-4">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent/10 text-accent text-xs font-semibold">
@@ -119,8 +119,8 @@ export default function TermsOfService() {
                 <h4 className="font-semibold text-sm mb-1">{isEn ? 'Important Notice' : 'หมายเหตุสำคัญ'}</h4>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   {isEn
-                    ? 'Grand$tate is a marketing support tool designed to help real estate agents save time on social media posting. It is NOT a guarantee against platform restrictions. Users are responsible for complying with Facebook\'s Community Standards and Terms of Service at all times.'
-                    : 'Grand$tate เป็นเครื่องมือช่วยเหลือด้านการตลาดที่ออกแบบมาเพื่อช่วยให้ตัวแทนอสังหาริมทรัพย์ประหยัดเวลาในการโพสต์บนสื่อสังคมออนไลน์ ระบบไม่ได้รับประกันว่าจะป้องกันการถูกจำกัดจากแพลตฟอร์มได้ 100% ผู้ใช้มีหน้าที่ปฏิบัติตามมาตรฐานชุมชนและข้อกำหนดของ Facebook ด้วยตนเอง'}
+                    ? 'GrandState is a marketing support tool designed to help real estate agents save time on social media posting. It is NOT a guarantee against platform restrictions. Users are responsible for complying with Facebook\'s Community Standards and Terms of Service at all times.'
+                    : 'GrandState เป็นเครื่องมือช่วยเหลือด้านการตลาดที่ออกแบบมาเพื่อช่วยให้ตัวแทนอสังหาริมทรัพย์ประหยัดเวลาในการโพสต์บนสื่อสังคมออนไลน์ ระบบไม่ได้รับประกันว่าจะป้องกันการถูกจำกัดจากแพลตฟอร์มได้ 100% ผู้ใช้มีหน้าที่ปฏิบัติตามมาตรฐานชุมชนและข้อกำหนดของ Facebook ด้วยตนเอง'}
                 </p>
               </div>
             </div>
@@ -132,13 +132,13 @@ export default function TermsOfService() {
           <Section icon={ScrollText} number="1" title={isEn ? 'General Agreement' : 'ข้อตกลงทั่วไป'} delay={0.25}>
             <p>
               {isEn
-                ? 'By accessing and using Grand$tate, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service. If you do not agree, please discontinue use immediately.'
-                : 'การเข้าใช้งาน Grand$tate หมายความว่าท่านได้อ่าน ทำความเข้าใจ และยอมรับข้อตกลงเหล่านี้ หากท่านไม่ยอมรับ โปรดหยุดการใช้งานทันที'}
+                ? 'By accessing and using GrandState, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service. If you do not agree, please discontinue use immediately.'
+                : 'การเข้าใช้งาน GrandState หมายความว่าท่านได้อ่าน ทำความเข้าใจ และยอมรับข้อตกลงเหล่านี้ หากท่านไม่ยอมรับ โปรดหยุดการใช้งานทันที'}
             </p>
             <p>
               {isEn
-                ? 'Grand$tate is a real estate marketing assistant tool that helps automate the process of posting property listings to Facebook Groups and Marketplace. It acts as a productivity aid — the user retains full responsibility for all content posted through the platform.'
-                : 'Grand$tate เป็นเครื่องมือช่วยเหลือด้านการตลาดอสังหาริมทรัพย์ ที่ช่วยทำให้กระบวนการโพสต์ประกาศอสังหาฯ ไปยัง Facebook Groups และ Marketplace เป็นไปโดยอัตโนมัติ ทำหน้าที่เป็นตัวช่วยเพิ่มประสิทธิภาพ — ผู้ใช้เป็นผู้รับผิดชอบเนื้อหาทั้งหมดที่โพสต์ผ่านแพลตฟอร์ม'}
+                ? 'GrandState is a real estate marketing assistant tool that helps automate the process of posting property listings to Facebook Groups and Marketplace. It acts as a productivity aid — the user retains full responsibility for all content posted through the platform.'
+                : 'GrandState เป็นเครื่องมือช่วยเหลือด้านการตลาดอสังหาริมทรัพย์ ที่ช่วยทำให้กระบวนการโพสต์ประกาศอสังหาฯ ไปยัง Facebook Groups และ Marketplace เป็นไปโดยอัตโนมัติ ทำหน้าที่เป็นตัวช่วยเพิ่มประสิทธิภาพ — ผู้ใช้เป็นผู้รับผิดชอบเนื้อหาทั้งหมดที่โพสต์ผ่านแพลตฟอร์ม'}
             </p>
           </Section>
 
@@ -165,7 +165,7 @@ export default function TermsOfService() {
           </Section>
 
           <Section icon={Scale} number="3" title={isEn ? 'User Responsibilities' : 'ความรับผิดชอบของผู้ใช้'} delay={0.35} accent="text-blue-500">
-            <p>{isEn ? 'As a user of Grand$tate, you agree to:' : 'ในฐานะผู้ใช้งาน Grand$tate ท่านตกลงว่า:'}</p>
+            <p>{isEn ? 'As a user of GrandState, you agree to:' : 'ในฐานะผู้ใช้งาน GrandState ท่านตกลงว่า:'}</p>
             <ul className="space-y-2 mt-2">
               <li className="flex items-start gap-2">
                 <span className="w-5 h-5 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5 text-blue-500 text-xs font-bold">1</span>
@@ -212,8 +212,8 @@ export default function TermsOfService() {
                 <li className="flex items-start gap-2">
                   <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
                   <span>{isEn
-                    ? 'Grand$tate is a TOOL designed to assist with posting — it does not guarantee any specific outcomes on Facebook.'
-                    : 'Grand$tate เป็นเครื่องมือที่ออกแบบมาเพื่อช่วยเหลือในการโพสต์ — ไม่ได้รับประกันผลลัพธ์ใดๆ บน Facebook'}</span>
+                    ? 'GrandState is a TOOL designed to assist with posting — it does not guarantee any specific outcomes on Facebook.'
+                    : 'GrandState เป็นเครื่องมือที่ออกแบบมาเพื่อช่วยเหลือในการโพสต์ — ไม่ได้รับประกันผลลัพธ์ใดๆ บน Facebook'}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
@@ -224,8 +224,8 @@ export default function TermsOfService() {
                 <li className="flex items-start gap-2">
                   <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
                   <span>{isEn
-                    ? 'Users posting excessively or in violation of group rules may face consequences from Facebook — Grand$tate provides tools, but the user decides how to use them.'
-                    : 'ผู้ใช้ที่โพสต์มากเกินไปหรือละเมิดกฎกลุ่มอาจได้รับผลกระทบจาก Facebook — Grand$tate ให้เครื่องมือ แต่ผู้ใช้เป็นผู้ตัดสินใจว่าจะใช้อย่างไร'}</span>
+                    ? 'Users posting excessively or in violation of group rules may face consequences from Facebook — GrandState provides tools, but the user decides how to use them.'
+                    : 'ผู้ใช้ที่โพสต์มากเกินไปหรือละเมิดกฎกลุ่มอาจได้รับผลกระทบจาก Facebook — GrandState ให้เครื่องมือ แต่ผู้ใช้เป็นผู้ตัดสินใจว่าจะใช้อย่างไร'}</span>
                 </li>
               </ul>
             </div>

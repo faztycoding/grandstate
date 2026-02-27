@@ -378,7 +378,7 @@ export default function Pricing() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Award className="w-5 h-5 text-accent" />
-              {isEn ? 'Why choose Grand$tate?' : 'ทำไมต้อง Grand$tate?'}
+              {isEn ? 'Why choose GrandState?' : 'ทำไมต้อง GrandState?'}
             </CardTitle>
           </CardHeader>
           <CardContent>

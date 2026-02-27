@@ -7,7 +7,7 @@ interface LogoProps {
 
 export function GrandStateLogo({ className, heroMode = false }: LogoProps) {
   const buildingColor = heroMode ? '#ffffff' : 'currentColor';
-  const dollarColor = '#f7b500';
+  const accentColor = heroMode ? '#c084fc' : '#a855f7';
 
   return (
     <svg
@@ -47,18 +47,18 @@ export function GrandStateLogo({ className, heroMode = false }: LogoProps) {
       <line x1="46" y1="28" x2="46" y2="70" stroke={buildingColor} strokeWidth="0.5" opacity="0.2" />
       <line x1="54" y1="28" x2="54" y2="70" stroke={buildingColor} strokeWidth="0.5" opacity="0.2" />
 
-      {/* Dollar sign — GOLD */}
+      {/* G letter — Purple accent */}
       <text
         x="50"
         y="58"
         textAnchor="middle"
-        fontSize="32"
+        fontSize="28"
         fontWeight="bold"
-        fontFamily="'Georgia', serif"
-        fill={dollarColor}
-        style={{ filter: 'drop-shadow(0 1px 3px rgba(247,181,0,0.5))' }}
+        fontFamily="'Inter', 'IBM Plex Sans', sans-serif"
+        fill={accentColor}
+        style={{ filter: 'drop-shadow(0 1px 3px rgba(168,85,247,0.4))' }}
       >
-        $
+        G
       </text>
 
       {/* Decorative arc beneath buildings */}

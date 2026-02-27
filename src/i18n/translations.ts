@@ -491,7 +491,7 @@ export const translations = {
 
     // Onboarding
     onboarding: {
-      welcomeTitle: 'ยินดีต้อนรับสู่ Grand$tate!',
+      welcomeTitle: 'ยินดีต้อนรับสู่ GrandState!',
       welcomeDesc: 'ระบบช่วยโพสต์อสังหาริมทรัพย์ลง Facebook อัตโนมัติ ประหยัดเวลา เพิ่มยอดขาย',
       stepsOverview: '4 ขั้นตอนง่ายๆ เริ่มต้นใช้งาน',
       step1Title: 'เพิ่มสินทรัพย์',
@@ -570,7 +570,7 @@ export const translations = {
 
     // Admin Dashboard
     admin: {
-      title: 'Grand$tate Admin',
+      title: 'GrandState Admin',
       checking: 'กำลังตรวจสอบ...',
       loginTitle: 'Admin Login',
       loginDesc: 'ล็อกอินเพื่อจัดการ License Keys',
@@ -799,7 +799,7 @@ export const translations = {
 
     // Onboarding
     onboarding: {
-      welcomeTitle: 'Welcome to Grand$tate!',
+      welcomeTitle: 'Welcome to GrandState!',
       welcomeDesc: 'Automated real estate posting to Facebook. Save time, increase sales.',
       stepsOverview: '4 easy steps to get started',
       step1Title: 'Add Properties',
@@ -1279,7 +1279,7 @@ export const translations = {
 
     // Admin Dashboard
     admin: {
-      title: 'Grand$tate Admin',
+      title: 'GrandState Admin',
       checking: 'Checking...',
       loginTitle: 'Admin Login',
       loginDesc: 'Login to manage License Keys',

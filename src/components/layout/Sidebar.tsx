@@ -269,8 +269,8 @@ function SidebarContent({
         {!collapsed && (
           <div className="px-2 py-2 text-center">
             <GrandStateLogo className="w-7 h-7 mx-auto mb-0.5" />
-            <p className="text-sm font-bold bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 bg-clip-text text-transparent tracking-wide">
-              Grand<span className="text-amber-400">$</span>tate
+            <p className="text-sm font-bold bg-gradient-to-r from-purple-400 via-violet-300 to-purple-400 bg-clip-text text-transparent tracking-wide">
+              GrandState
             </p>
             <p className="text-[9px] text-sidebar-foreground/30 tracking-widest">VERSION 2.0</p>
           </div>
@@ -328,7 +328,7 @@ export function Sidebar() {
             <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
               <Link to="/automation" className="flex items-center gap-3" onClick={() => setOpen(false)}>
                 <GrandStateLogo heroMode className="w-10 h-10 drop-shadow-lg" />
-                <span className="font-bold text-lg text-sidebar-foreground">Grand<span className="text-amber-500">$</span>tate</span>
+                <span className="font-bold text-lg text-sidebar-foreground">GrandState</span>
               </Link>
               <Button variant="ghost" size="icon-sm" onClick={() => setOpen(false)} className="text-sidebar-foreground">
                 <X className="w-5 h-5" />
@@ -366,7 +366,7 @@ export function Sidebar() {
               exit={{ opacity: 0 }}
               className="font-bold text-lg text-sidebar-foreground"
             >
-              Grand<span className="text-amber-500">$</span>tate
+              GrandState
             </motion.span>
           )}
         </Link>

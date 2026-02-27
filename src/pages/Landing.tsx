@@ -830,7 +830,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ═══════════════ BENEFITS — Why Grand$tate ═══════════════ */}
+      {/* ═══════════════ BENEFITS — Why GrandState ═══════════════ */}
       <section className="py-20 px-6 relative overflow-hidden">
         <div className="absolute inset-0 bg-muted/30" />
         <div className="absolute inset-0 data-circuit opacity-10" />
@@ -843,7 +843,7 @@ export default function Landing() {
               transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
             >
               <Badge className="mb-4 bg-accent/10 text-accent border-accent/20" variant="outline">
-                {isEn ? 'Why Grand$tate?' : 'ทำไมต้อง Grand$tate?'}
+                {isEn ? 'Why GrandState?' : 'ทำไมต้อง GrandState?'}
               </Badge>
               <h2 className="text-3xl md:text-4xl font-bold mb-6">
                 {isEn ? 'Focus on Selling' : 'มุ่งเน้นขาย'}<br />
@@ -851,8 +851,8 @@ export default function Landing() {
               </h2>
               <p className="text-muted-foreground text-lg mb-8">
                 {isEn
-                  ? 'Stop wasting time copy-pasting to groups. Grand$tate works for you while you focus on closing deals.'
-                  : 'หยุดเสียเวลานั่ง copy-paste ทีละกลุ่ม Grand$tate ทำงานแทนคุณ ขณะที่คุณโฟกัสกับการปิดดีลและดูแลลูกค้า'}
+                  ? 'Stop wasting time copy-pasting to groups. GrandState works for you while you focus on closing deals.'
+                  : 'หยุดเสียเวลานั่ง copy-paste ทีละกลุ่ม GrandState ทำงานแทนคุณ ขณะที่คุณโฟกัสกับการปิดดีลและดูแลลูกค้า'}
               </p>
               <ul className="space-y-3">
                 {benefits.map((benefit, index) => (
@@ -1154,7 +1154,7 @@ export default function Landing() {
           </div>
           <div className="border-t pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground">
-              {isEn ? '© 2026 Grand$tate — for professional real estate agents' : '© 2026 Grand$tate — สำหรับนายหน้าอสังหาริมทรัพย์มืออาชีพ'}
+              {isEn ? '© 2026 GrandState — for professional real estate agents' : '© 2026 GrandState — สำหรับนายหน้าอสังหาริมทรัพย์มืออาชีพ'}
             </p>
             <p className="text-xs text-muted-foreground/50">Version 2.0</p>
           </div>

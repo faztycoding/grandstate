@@ -311,7 +311,7 @@
 }
 
 /* ═══════════════════════════════════════════════════
-   GRAND$TATE PREMIUM LANDING ANIMATIONS
+   GrandState PREMIUM LANDING ANIMATIONS
    ═══════════════════════════════════════════════════ */
 
 /* Vortex rotation */
@@ -427,8 +427,10 @@
   .btn-glass::before {
     content: '';
     position: absolute;
-    inset: -2px;
-    border-radius: inherit;
+    top: 0;
+    left: -2px;
+    width: 104%;
+    height: 100%;
     background: conic-gradient(from 0deg, transparent, hsl(var(--accent) / 0.6), transparent, transparent);
     opacity: 0;
     transition: opacity 0.4s;
@@ -483,7 +485,7 @@
 }
 
 /* ═══════════════════════════════════════════════════
-   GRAND$TATE PROFESSIONAL ANIMATION SYSTEM
+   GrandState PROFESSIONAL ANIMATION SYSTEM
    ═══════════════════════════════════════════════════ */
 
 /* Page entrance animation */
@@ -617,8 +619,8 @@
 
 /* Subtle breathing glow for important elements */
 @keyframes breatheGlow {
-  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--accent) / 0); }
-  50%      { box-shadow: 0 0 20px 4px hsl(var(--accent) / 0.15); }
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50%      { opacity: 0.8; transform: scale(1.15); }
 }
 .breathe-glow {
   animation: breatheGlow 3s ease-in-out infinite;

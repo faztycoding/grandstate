@@ -354,7 +354,7 @@ export function SupportTicketDialog({ open, onOpenChange }: SupportTicketDialogP
               {/* Bottom HUD decorations */}
               <div className="h-px bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent" />
               <div className="flex items-center justify-between px-4 py-2 bg-black/30">
-                <span className="text-[9px] font-mono text-cyan-500/30">GRAND$TATE://SUPPORT</span>
+                <span className="text-[9px] font-mono text-cyan-500/30">GRANDSTATE://SUPPORT</span>
                 <span className="text-[9px] font-mono text-cyan-500/30">v2.0</span>
               </div>
             </motion.div>

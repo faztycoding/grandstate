@@ -43,7 +43,7 @@ export default function Help() {
   return (
     <DashboardLayout 
       title={isEn ? 'Help Center' : 'ศูนย์ช่วยเหลือ'} 
-      subtitle={isEn ? 'Everything you need to get the most out of Grand$tate' : 'ทุกสิ่งที่คุณต้องรู้เพื่อใช้งาน Grand$tate อย่างเต็มประสิทธิภาพ'}
+      subtitle={isEn ? 'Everything you need to get the most out of GrandState' : 'ทุกสิ่งที่คุณต้องรู้เพื่อใช้งาน GrandState อย่างเต็มประสิทธิภาพ'}
     >
       <div className="max-w-4xl mx-auto space-y-8">
 
@@ -220,7 +220,7 @@ export default function Help() {
                 { q: 'What is the difference between Marketplace and Group Post mode?', a: 'Marketplace mode creates a listing on Facebook Marketplace and shares it to your selected groups — great for reaching both Marketplace browsers and group members. Group Post mode posts directly to each group individually, with full support for buy/sell group forms.' },
                 { q: 'How many groups can I post to per day?', a: 'It depends on your package. Higher tiers allow more daily posts. Check the Pricing page for details on each package.' },
                 { q: 'What is the Claude API Key used for?', a: 'The Claude API Key enables AI-powered caption generation. It creates unique, professional captions for your property posts. Without it, you can still write captions manually. Get your key at console.anthropic.com.' },
-                { q: 'Is my Facebook account safe?', a: 'Grand$tate includes a Health Check system that monitors your posting behavior and provides safety recommendations. We recommend following the suggested posting limits and maintaining a healthy score.' },
+                { q: 'Is my Facebook account safe?', a: 'GrandState includes a Health Check system that monitors your posting behavior and provides safety recommendations. We recommend following the suggested posting limits and maintaining a healthy score.' },
                 { q: 'What if something goes wrong during automation?', a: 'The system tracks progress for each group in real-time. If interrupted, successfully posted groups keep their posts. You can restart for remaining groups anytime.' },
                 { q: 'Can I schedule posts for later?', a: 'Yes! When starting automation, you can toggle "Schedule for later" and pick a date & time. The system will automatically run at the scheduled time.' },
                 { q: 'Is my data private?', a: 'All data is stored locally on your device. Your Facebook session is managed locally, and your password is never stored by the app. Claude API keys are sent only to Anthropic\'s API directly.' },
@@ -265,8 +265,8 @@ export default function Help() {
                 </AccordionTrigger>
                 <AccordionContent className="text-xs text-muted-foreground leading-relaxed">
                   {isEn
-                    ? 'Grand$tate is a posting assistance tool. The developer is not responsible if your Facebook account is restricted, suspended, or banned. The app provides Health Check monitoring and recommendations, but the user assumes all responsibility for posting behavior and account safety.'
-                    : 'Grand$tate เป็นเครื่องมือช่วยโพสต์ ผู้พัฒนาไม่รับผิดชอบหากบัญชี Facebook ถูกจำกัด ระงับ หรือแบน แอปมีระบบ Health Check คอยตรวจสอบและแนะนำ แต่ผู้ใช้รับผิดชอบพฤติกรรมการโพสต์และความปลอดภัยของบัญชีตนเอง'}
+                    ? 'GrandState is a posting assistance tool. The developer is not responsible if your Facebook account is restricted, suspended, or banned. The app provides Health Check monitoring and recommendations, but the user assumes all responsibility for posting behavior and account safety.'
+                    : 'GrandState เป็นเครื่องมือช่วยโพสต์ ผู้พัฒนาไม่รับผิดชอบหากบัญชี Facebook ถูกจำกัด ระงับ หรือแบน แอปมีระบบ Health Check คอยตรวจสอบและแนะนำ แต่ผู้ใช้รับผิดชอบพฤติกรรมการโพสต์และความปลอดภัยของบัญชีตนเอง'}
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="terms">

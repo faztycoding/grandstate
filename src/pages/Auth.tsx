@@ -274,12 +274,12 @@ export default function Auth() {
 
       <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
         className="relative z-10 w-full max-w-[420px] px-5">
-        {/* Grand$tate Logo */}
+        {/* GrandState Logo */}
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15, type: 'spring' }}
           className="text-center mb-8">
           <div className="inline-flex items-center gap-3">
             <GrandStateLogo heroMode className="w-12 h-12 drop-shadow-[0_0_12px_rgba(247,181,0,0.3)]" />
-            <span className="text-[26px] font-bold text-white tracking-wide">Grand<span className="text-amber-400 font-serif">$</span>tate</span>
+            <span className="text-[26px] font-bold text-white tracking-wide">GrandState</span>
           </div>
         </motion.div>
 
@@ -557,7 +557,7 @@ export default function Auth() {
 
         {/* Footer */}
         <p className="mt-6 text-center text-[11px] text-white/15">
-          {isEn ? '© 2026 Grand$tate — for professional agents' : '© 2026 Grand$tate — สำหรับนายหน้ามืออาชีพ'}
+          {isEn ? '© 2026 GrandState — for professional agents' : '© 2026 GrandState — สำหรับนายหน้ามืออาชีพ'}
         </p>
       </motion.div>
     </div>

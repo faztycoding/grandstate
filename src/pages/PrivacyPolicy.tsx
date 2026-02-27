@@ -97,7 +97,7 @@ export default function PrivacyPolicy() {
             {isEn ? 'Privacy Policy' : 'นโยบายความเป็นส่วนตัว'}
           </h1>
           <p className="text-muted-foreground max-w-xl mx-auto">
-            {isEn ? 'Privacy Policy' : 'Privacy Policy'} — Grand$tate
+            {isEn ? 'Privacy Policy' : 'Privacy Policy'} — GrandState
           </p>
           <div className="flex items-center justify-center gap-3 mt-4">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-xs font-semibold">
@@ -121,8 +121,8 @@ export default function PrivacyPolicy() {
                 <h4 className="font-semibold text-sm mb-1">{isEn ? 'Your Data is Safe with Us' : 'ข้อมูลของคุณปลอดภัยกับเรา'}</h4>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   {isEn
-                    ? 'Grand$tate is committed to protecting your privacy. We collect only the minimum data necessary to provide our services, and we NEVER sell your personal information to third parties.'
-                    : 'Grand$tate มุ่งมั่นในการปกป้องความเป็นส่วนตัวของท่าน เราเก็บรวบรวมข้อมูลเท่าที่จำเป็นต่อการให้บริการเท่านั้น และเราไม่ขายข้อมูลส่วนตัวของท่านให้บุคคลที่สามเด็ดขาด'}
+                    ? 'GrandState is committed to protecting your privacy. We collect only the minimum data necessary to provide our services, and we NEVER sell your personal information to third parties.'
+                    : 'GrandState มุ่งมั่นในการปกป้องความเป็นส่วนตัวของท่าน เราเก็บรวบรวมข้อมูลเท่าที่จำเป็นต่อการให้บริการเท่านั้น และเราไม่ขายข้อมูลส่วนตัวของท่านให้บุคคลที่สามเด็ดขาด'}
                 </p>
               </div>
             </div>
@@ -275,8 +275,8 @@ export default function PrivacyPolicy() {
           <Section icon={RefreshCw} number="7" title={isEn ? 'Policy Updates' : 'การเปลี่ยนแปลงนโยบาย'} delay={0.55}>
             <p>
               {isEn
-                ? 'We may update this Privacy Policy from time to time. When we make significant changes, we will notify you via email or in-app notification. Continued use of Grand$tate after changes constitutes acceptance of the updated policy.'
-                : 'เราอาจปรับปรุงนโยบายความเป็นส่วนตัวนี้เป็นครั้งคราว เมื่อมีการเปลี่ยนแปลงที่สำคัญ เราจะแจ้งให้ท่านทราบผ่านอีเมลหรือการแจ้งเตือนในแอป การใช้งาน Grand$tate ต่อหลังจากมีการเปลี่ยนแปลงถือว่าท่านยอมรับนโยบายที่อัปเดตแล้ว'}
+                ? 'We may update this Privacy Policy from time to time. When we make significant changes, we will notify you via email or in-app notification. Continued use of GrandState after changes constitutes acceptance of the updated policy.'
+                : 'เราอาจปรับปรุงนโยบายความเป็นส่วนตัวนี้เป็นครั้งคราว เมื่อมีการเปลี่ยนแปลงที่สำคัญ เราจะแจ้งให้ท่านทราบผ่านอีเมลหรือการแจ้งเตือนในแอป การใช้งาน GrandState ต่อหลังจากมีการเปลี่ยนแปลงถือว่าท่านยอมรับนโยบายที่อัปเดตแล้ว'}
             </p>
           </Section>
         </div>

@@ -559,7 +559,7 @@ export default function Automation() {
 
               // Browser push notification (works even if tab is in background)
               if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-                new Notification('Grand$tate — โพสต์เสร็จแล้ว!', {
+                new Notification('GrandState — โพสต์เสร็จแล้ว!', {
                   body: summaryText,
                   icon: '/favicon.ico',
                 });

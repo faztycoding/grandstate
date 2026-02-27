@@ -378,6 +378,13 @@ export default function AdminDashboard() {
         }
     }, [adminUser, fetchLicenseActivations, fetchUserLicenses, fetchAllUsers]);
 
+    // Auto-refresh allUsers every 30s when on users tab
+    useEffect(() => {
+        if (!adminUser || activeTab !== 'users') return;
+        const interval = setInterval(() => { fetchAllUsers(); fetchUserLicenses(); }, 30_000);
+        return () => clearInterval(interval);
+    }, [adminUser, activeTab, fetchAllUsers, fetchUserLicenses]);
+
     // Connected to SSE stream (Real-time Elon Musk Level)
     useEffect(() => {
         if (!adminUser) return;
@@ -961,28 +968,32 @@ export default function AdminDashboard() {
                                                 const isExpanded = expandedUser === u.fullUserId;
                                                 return (
                                                 <div key={u.userId} className={cn(
-                                                    "rounded-xl border transition-all",
+                                                    "rounded-xl border transition-all hover:shadow-sm",
+                                                    u.banned ? "bg-red-50/50 dark:bg-red-950/10 border-red-300 dark:border-red-800/50 opacity-60" :
                                                     isRunning ? "bg-orange-50/50 dark:bg-orange-950/10 border-orange-200 dark:border-orange-800/50" : "bg-card border-border"
                                                 )}>
-                                                    {/* Main row — clickable to expand */}
-                                                    <div className="p-3 cursor-pointer" onClick={() => setExpandedUser(isExpanded ? null : (u.fullUserId || null))}>
+                                                    {/* Main row — clickable to expand management panel */}
+                                                    <div className="p-3 cursor-pointer group/card" onClick={() => setExpandedUser(isExpanded ? null : (u.fullUserId || null))}>
                                                     <div className="flex items-center gap-3">
                                                         {/* Avatar + Status dot */}
                                                         <div className="relative flex-shrink-0">
-                                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent/20 to-orange-400/20 flex items-center justify-center text-sm font-bold text-accent">
-                                                                {(u.displayName || u.email || u.userId)?.[0]?.toUpperCase() || '?'}
+                                                            <div className={cn("w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold",
+                                                                u.banned ? "bg-red-100 dark:bg-red-900/30 text-red-600" : "bg-gradient-to-br from-accent/20 to-orange-400/20 text-accent"
+                                                            )}>
+                                                                {u.banned ? '🚫' : (u.displayName || u.email || u.userId)?.[0]?.toUpperCase() || '?'}
                                                             </div>
-                                                            <div className={cn(
+                                                            {!u.banned && <div className={cn(
                                                                 "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background",
                                                                 u.isOnline ? "bg-green-500" : "bg-gray-400"
-                                                            )} />
+                                                            )} />}
                                                         </div>
 
                                                         {/* Name + Email + Package badge */}
                                                         <div className="flex-1 min-w-0">
                                                             <div className="flex items-center gap-2">
-                                                                <p className="text-sm font-semibold truncate">{u.displayName || u.email?.split('@')[0] || u.userId}</p>
-                                                                {u.isOnline && <span className="text-[9px] font-medium text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-1.5 py-0.5 rounded-full">Online</span>}
+                                                                <p className={cn("text-sm font-semibold truncate", u.banned && "line-through text-red-500")}>{u.displayName || u.email?.split('@')[0] || u.userId}</p>
+                                                                {u.banned && <span className="text-[9px] font-bold text-red-600 bg-red-100 dark:bg-red-900/30 px-1.5 py-0.5 rounded-full">BANNED</span>}
+                                                                {!u.banned && u.isOnline && <span className="text-[9px] font-medium text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-1.5 py-0.5 rounded-full">Online</span>}
                                                                 <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase",
                                                                     userPkg === 'elite' ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" :
                                                                     userPkg === 'agent' ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" :
@@ -1069,12 +1080,21 @@ export default function AdminDashboard() {
                                                                 <div className="p-2.5 rounded-lg bg-muted/50 space-y-1.5">
                                                                     <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">จัดการ</p>
                                                                     <div className="flex items-center gap-2">
-                                                                        <Button size="sm" variant="outline"
-                                                                            className="h-6 px-2 text-[10px] text-red-600 border-red-200 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-950/20"
-                                                                            disabled={banningUser === u.fullUserId}
-                                                                            onClick={(e) => { e.stopPropagation(); handleBanUser(u.fullUserId!, u.displayName || u.userId, true); }}>
-                                                                            {banningUser === u.fullUserId ? <Loader2 className="w-3 h-3 animate-spin" /> : '🚫 แบน'}
-                                                                        </Button>
+                                                                        {u.banned ? (
+                                                                            <Button size="sm" variant="outline"
+                                                                                className="h-7 px-3 text-xs text-green-600 border-green-200 hover:bg-green-50 dark:border-green-800 dark:hover:bg-green-950/20"
+                                                                                disabled={banningUser === u.fullUserId}
+                                                                                onClick={(e) => { e.stopPropagation(); handleBanUser(u.fullUserId!, u.displayName || u.userId, false); }}>
+                                                                                {banningUser === u.fullUserId ? <Loader2 className="w-3 h-3 animate-spin" /> : '✅ ปลดแบน'}
+                                                                            </Button>
+                                                                        ) : (
+                                                                            <Button size="sm" variant="outline"
+                                                                                className="h-7 px-3 text-xs text-red-600 border-red-200 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-950/20"
+                                                                                disabled={banningUser === u.fullUserId}
+                                                                                onClick={(e) => { e.stopPropagation(); handleBanUser(u.fullUserId!, u.displayName || u.userId, true); }}>
+                                                                                {banningUser === u.fullUserId ? <Loader2 className="w-3 h-3 animate-spin" /> : '🚫 แบนผู้ใช้'}
+                                                                            </Button>
+                                                                        )}
                                                                         {u.todayPosts > 0 && (
                                                                             <span className="text-[10px] text-muted-foreground">✅{u.todaySuccess} ❌{u.todayFailed}</span>
                                                                         )}

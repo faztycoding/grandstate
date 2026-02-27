@@ -213,6 +213,20 @@ export default function AdminDashboard() {
         } catch { toast.error('Failed'); } finally { setBanningUser(null); }
     };
 
+    // User management: delete user + all data
+    const [deletingUser, setDeletingUser] = useState<string | null>(null);
+    const handleDeleteUser = async (fullUserId: string, displayName: string) => {
+        const msg = `⚠️ ลบ "${displayName}" ถาวร!\n\nข้อมูลทั้งหมดจะถูกลบ:\n• บัญชีผู้ใช้\n• ทรัพย์สินทั้งหมด\n• กลุ่ม Facebook ทั้งหมด\n• License key\n\nดำเนินการ?`;
+        if (!confirm(msg)) return;
+        if (!confirm(`ยืนยันอีกครั้ง — ลบ "${displayName}" จริงๆ? กู้คืนไม่ได้!`)) return;
+        setDeletingUser(fullUserId);
+        try {
+            const res = await apiFetch('/api/admin/delete-user', { method: 'POST', body: JSON.stringify({ targetUserId: fullUserId }) });
+            const data = await res.json();
+            if (data.success) { toast.success(data.message); } else { toast.error(data.error); }
+        } catch { toast.error('Failed to delete user'); } finally { setDeletingUser(null); }
+    };
+
     // User management: change package
     const [changingPkgUser, setChangingPkgUser] = useState<string | null>(null);
     const handleChangePackage = async (fullUserId: string, newPkg: string) => {
@@ -1199,6 +1213,12 @@ export default function AdminDashboard() {
                                                                                 {banningUser === u.fullUserId ? <Loader2 className="w-3 h-3 animate-spin" /> : '🚫 แบนผู้ใช้'}
                                                                             </Button>
                                                                         )}
+                                                                        <Button size="sm" variant="outline"
+                                                                            className="h-7 px-3 text-xs text-rose-600 border-rose-300 hover:bg-rose-50 dark:border-rose-800 dark:hover:bg-rose-950/20"
+                                                                            disabled={deletingUser === u.fullUserId}
+                                                                            onClick={(e) => { e.stopPropagation(); handleDeleteUser(u.fullUserId!, u.displayName || u.userId); }}>
+                                                                            {deletingUser === u.fullUserId ? <Loader2 className="w-3 h-3 animate-spin" /> : '🗑️ ลบข้อมูล'}
+                                                                        </Button>
                                                                         {u.todayPosts > 0 && (
                                                                             <span className="text-[10px] text-muted-foreground">✅{u.todaySuccess} ❌{u.todayFailed}</span>
                                                                         )}

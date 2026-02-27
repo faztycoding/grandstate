@@ -990,6 +990,56 @@ app.post('/api/admin/ban-user', ...adminAuth, async (req, res) => {
   }
 });
 
+// Admin: delete user and all their data
+app.post('/api/admin/delete-user', ...adminAuth, async (req, res) => {
+  try {
+    const { targetUserId } = req.body;
+    if (!targetUserId) return res.status(400).json({ success: false, error: 'targetUserId required' });
+
+    const { createClient } = await import('@supabase/supabase-js');
+    const supa = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+
+    const shortId = targetUserId.substring(0, 8);
+
+    // 1. Force-stop any running automation
+    const session = sessionManager.getSession(targetUserId);
+    if (session?.groupWorker?.isRunning) {
+      await session.groupWorker.stop();
+      automationQueue._onJobComplete(targetUserId, false);
+    }
+    if (session?.marketplaceWorker?.isRunning) {
+      await session.marketplaceWorker.stop();
+    }
+
+    // 2. Delete from public tables (cascade will handle most, but be explicit)
+    const tables = ['facebook_groups', 'properties', 'license_keys'];
+    const deleted = {};
+    for (const table of tables) {
+      const { data, error } = await supa.from(table).delete().eq('user_id', targetUserId).select('id');
+      deleted[table] = data?.length || 0;
+      if (error) console.log(`   ⚠️ Delete ${table}: ${error.message}`);
+    }
+
+    // 3. Delete from public.users
+    const { error: userErr } = await supa.from('users').delete().eq('id', targetUserId);
+    if (userErr) console.log(`   ⚠️ Delete users: ${userErr.message}`);
+
+    // 4. Delete auth user (this cascades everything via FK)
+    const { error: authErr } = await supa.auth.admin.deleteUser(targetUserId);
+    if (authErr) throw authErr;
+
+    console.log(`🗑️ [Admin] User ${shortId} DELETED — groups:${deleted.facebook_groups}, properties:${deleted.properties}, licenses:${deleted.license_keys}`);
+    res.json({
+      success: true,
+      message: `ลบผู้ใช้ ${shortId} สำเร็จ — กลุ่ม:${deleted.facebook_groups}, ทรัพย์:${deleted.properties}`,
+      deleted,
+    });
+  } catch (error) {
+    console.error('Delete user error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Admin: change user package (update or create license)
 app.post('/api/admin/change-package', ...adminAuth, async (req, res) => {
   try {

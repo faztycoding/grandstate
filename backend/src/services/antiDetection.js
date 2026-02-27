@@ -385,29 +385,86 @@ export async function humanMouseMovement(page) {
 
 /**
  * Pre-post warm-up activity — makes the session look like a real user
- * Scrolls feed, hovers on posts, maybe clicks "See More"
+ * Browses 2-3 feed posts (6-7s each), random 10-15% chance to Like a post,
+ * scrolls feed, hovers on posts — builds genuine trust signal
  */
 export async function prePostWarmup(page) {
   console.log('🔥 Running pre-post warm-up (human activity simulation)...');
   try {
-    // Step 1: Scroll down the feed naturally
-    await humanScroll(page, { minScrolls: 3, maxScrolls: 6, direction: 'down' });
-    
-    // Step 2: Pause like reading a post (1-3s)
-    const readPause = gaussianDelay(2000, 800, 800, 4000);
-    await new Promise(r => setTimeout(r, readPause));
-    
-    // Step 3: Random mouse movement (hovering over content)
-    await humanMouseMovement(page);
-    
-    // Step 4: Scroll back up a bit
+    // Step 1: Navigate to Facebook feed if not already there
+    const currentUrl = page.url();
+    if (!currentUrl.includes('facebook.com')) {
+      await page.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await new Promise(r => setTimeout(r, gaussianDelay(2000, 500, 1500, 3000)));
+    }
+
+    // Step 2: Browse 2-3 feed posts — scroll to each, spend 6-7s viewing
+    const feedPostCount = 2 + Math.floor(Math.random() * 2); // 2-3 posts
+    let likeCount = 0;
+    console.log(`   📰 Browsing ${feedPostCount} feed posts...`);
+
+    for (let p = 0; p < feedPostCount; p++) {
+      // Scroll down to reveal next post
+      await humanScroll(page, { minScrolls: 2, maxScrolls: 3, direction: 'down' });
+
+      // Read the post — spend 5-8 seconds (Gaussian around 6.5s)
+      const readTime = gaussianDelay(6500, 1000, 5000, 8500);
+      console.log(`   👁️ Reading feed post ${p + 1}/${feedPostCount} (~${(readTime / 1000).toFixed(1)}s)...`);
+
+      // During reading: move mouse around the post area naturally
+      await humanMouseMovement(page);
+      await new Promise(r => setTimeout(r, readTime * 0.4));
+
+      // Hover mouse over content (as if reading)
+      await page.mouse.move(
+        300 + Math.floor(Math.random() * 400),
+        350 + Math.floor(Math.random() * 200),
+        { steps: 5 + Math.floor(Math.random() * 8) }
+      );
+      await new Promise(r => setTimeout(r, readTime * 0.6));
+
+      // ── 10-15% chance to Like this post ──
+      const likeChance = 0.10 + Math.random() * 0.05; // 10-15%
+      if (Math.random() < likeChance) {
+        try {
+          const liked = await page.evaluate(() => {
+            // Find visible Like buttons in feed (aria-label contains "Like" or "ถูกใจ")
+            const likeButtons = document.querySelectorAll('[aria-label*="Like"], [aria-label*="ถูกใจ"]');
+            // Find one that's not already pressed (not yet liked)
+            for (const btn of likeButtons) {
+              const rect = btn.getBoundingClientRect();
+              // Must be visible in viewport
+              if (rect.top > 100 && rect.top < window.innerHeight - 100 && rect.width > 0) {
+                const pressed = btn.getAttribute('aria-pressed');
+                if (pressed !== 'true') {
+                  btn.click();
+                  return true;
+                }
+              }
+            }
+            return false;
+          });
+
+          if (liked) {
+            likeCount++;
+            console.log(`   ❤️ Liked a feed post (warm-up activity)`);
+            // Natural pause after liking (0.5-1.5s)
+            await new Promise(r => setTimeout(r, gaussianDelay(800, 300, 400, 1500)));
+          }
+        } catch (e) {
+          // Like failed — non-critical, continue
+        }
+      }
+    }
+
+    // Step 3: Scroll back up a bit (like going back to top)
     await humanScroll(page, { minScrolls: 1, maxScrolls: 2, direction: 'up' });
-    
-    // Step 5: Final brief pause
-    const finalPause = gaussianDelay(1000, 400, 500, 2000);
+
+    // Step 4: Final brief pause before starting actual work
+    const finalPause = gaussianDelay(1500, 500, 800, 2500);
     await new Promise(r => setTimeout(r, finalPause));
-    
-    console.log('✅ Warm-up complete');
+
+    console.log(`✅ Warm-up complete (browsed ${feedPostCount} posts, liked ${likeCount})`);
   } catch (e) {
     console.log('⚠️ Warm-up skipped:', e.message);
   }

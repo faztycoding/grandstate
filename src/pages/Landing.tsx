@@ -381,7 +381,7 @@ export default function Landing() {
             <span className={`font-bold text-lg md:text-xl transition-colors duration-500 ${scrolled ? 'text-foreground' : 'text-white'}`}>Grand$tate</span>
           </Link>
           <div className="flex items-center gap-2 md:gap-4">
-            <LanguageSwitcher />
+            <LanguageSwitcher heroMode={!scrolled} />
             <Button variant="ghost" size="sm" asChild className={`hidden sm:inline-flex transition-colors duration-500 ${scrolled ? '' : 'text-white/80 hover:text-white hover:bg-white/10'}`}>
               <Link to="/auth">{isEn ? 'Sign In' : 'เข้าสู่ระบบ'}</Link>
             </Button>

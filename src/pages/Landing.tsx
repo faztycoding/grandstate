@@ -384,95 +384,146 @@ export default function Landing() {
         </div>
       </header>
 
-      {/* ═══════════════ HERO — Quantum Entry ═══════════════ */}
-      <section className="relative min-h-[100vh] flex items-center justify-center px-6 overflow-hidden">
-        {/* Particle canvas background */}
-        <ParticleCanvas />
-        {/* Glow Vortex */}
-        <GlowVortex />
-        {/* Data circuit grid */}
-        <div className="absolute inset-0 data-circuit opacity-30" />
-        {/* Floating parallax blobs */}
-        <motion.div
-          className="absolute top-1/4 left-[10%] w-72 h-72 md:w-96 md:h-96 bg-accent/15 rounded-full blur-3xl"
-          animate={{ x: [0, 40, 0], y: [0, -30, 0], scale: [1, 1.15, 1] }}
-          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
-        />
-        <motion.div
-          className="absolute bottom-1/4 right-[10%] w-72 h-72 md:w-96 md:h-96 bg-purple-500/15 rounded-full blur-3xl"
-          animate={{ x: [0, -35, 0], y: [0, 30, 0], scale: [1, 1.2, 1] }}
-          transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
-        />
+      {/* ═══════════════ HERO — Cinematic Video Background ═══════════════ */}
+      <section className="relative min-h-[100vh] flex items-center justify-center overflow-hidden">
+        {/* Full-screen video background */}
+        <video
+          autoPlay muted loop playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+          poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1920' height='1080'%3E%3Crect fill='%23111827'/%3E%3C/svg%3E"
+        >
+          <source src="https://assets.website-files.com/6212e7201b7300b545f9620c/632c6ab96010264be580f403_chicago-transcode.mp4" type="video/mp4" />
+        </video>
+
+        {/* Cinematic overlays — multi-layer gradient */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80 z-[1]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-amber-900/20 via-transparent to-purple-900/20 z-[1]" />
+        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-background to-transparent z-[2]" />
+
+        {/* Particle overlay on top of video */}
+        <div className="absolute inset-0 z-[2]"><ParticleCanvas /></div>
+
+        {/* Subtle vignette */}
+        <div className="absolute inset-0 z-[1]" style={{ boxShadow: 'inset 0 0 200px 60px rgba(0,0,0,0.5)' }} />
 
         {/* Hero content */}
-        <div className="container mx-auto text-center relative z-10">
+        <div className="container mx-auto px-6 text-center relative z-10 pt-20">
           <motion.div
-            initial={{ opacity: 0, y: 40, scale: 0.95 }}
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
           >
+            {/* Top badge */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.3, duration: 0.5 }}
+              initial={{ opacity: 0, scale: 0.8, y: -10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.6 }}
             >
-              <Badge className="mb-6 bg-accent/10 text-accent border-accent/20 backdrop-blur-sm text-sm px-4 py-1" variant="outline">
-                {isEn ? '🇹🇭 Built for Thai Real Estate Agents' : '🇹🇭 สำหรับนายหน้าอสังหาฯ ไทยโดยเฉพาะ'}
+              <Badge className="mb-8 bg-white/10 text-white/90 border-white/20 backdrop-blur-md text-sm px-5 py-1.5 shadow-lg" variant="outline">
+                🇹🇭 {isEn ? 'Built for Thai Real Estate Agents' : 'สำหรับนายหน้าอสังหาฯ ไทยโดยเฉพาะ'}
               </Badge>
             </motion.div>
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight tracking-tight">
+
+            {/* Main heading — cinematic */}
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-extrabold mb-6 leading-[0.95] tracking-tight text-white drop-shadow-2xl">
               <motion.span
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4, duration: 0.6 }}
+                initial={{ opacity: 0, y: 30, filter: 'blur(10px)' }}
+                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                transition={{ delay: 0.5, duration: 0.8 }}
                 className="block"
               >
-                {isEn ? 'Auto-Post Real Estate' : 'โพสต์อสังหาฯ อัตโนมัติ'}
+                {isEn ? 'Auto-Post' : 'โพสต์อสังหาฯ'}
               </motion.span>
               <motion.span
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6, duration: 0.6 }}
-                className="block gradient-text"
+                initial={{ opacity: 0, y: 30, filter: 'blur(10px)' }}
+                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                transition={{ delay: 0.7, duration: 0.8 }}
+                className="block"
+                style={{ background: 'linear-gradient(135deg, #f7b500, #f59e0b, #d97706, #f7b500)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', filter: 'drop-shadow(0 2px 8px rgba(247,181,0,0.4))' }}
+              >
+                {isEn ? 'Real Estate' : 'อัตโนมัติ'}
+              </motion.span>
+              <motion.span
+                initial={{ opacity: 0, y: 30, filter: 'blur(10px)' }}
+                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                transition={{ delay: 0.9, duration: 0.8 }}
+                className="block text-3xl md:text-4xl lg:text-5xl font-bold mt-3 text-white/80"
               >
                 {isEn ? 'Smarter. Faster. Safer.' : 'ฉลาดกว่า เร็วกว่า ปลอดภัยกว่า'}
               </motion.span>
             </h1>
+
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.8, duration: 0.6 }}
-              className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10"
+              transition={{ delay: 1.1, duration: 0.8 }}
+              className="text-lg md:text-xl text-white/60 max-w-2xl mx-auto mb-12 leading-relaxed"
             >
               {isEn
                 ? 'Auto-post properties to Facebook Groups + Marketplace with AI captions. Save time, boost sales.'
-                : 'ระบบช่วยโพสต์อสังหาริมทรัพย์ไปยัง Facebook Groups + Marketplace อัตโนมัติ พร้อม AI สร้างแคปชั่น ประหยัดเวลา เพิ่มยอดขาย'}
+                : 'ระบบช่วยโพสต์อสังหาริมทรัพย์ไปยัง Facebook Groups + Marketplace\nอัตโนมัติ พร้อม AI สร้างแคปชั่น ประหยัดเวลา เพิ่มยอดขาย'}
             </motion.p>
+
+            {/* CTA buttons — glassmorphism on dark */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1, duration: 0.5 }}
+              transition={{ delay: 1.3, duration: 0.6 }}
               className="flex flex-col sm:flex-row gap-4 justify-center"
             >
-              <Link to="/auth" className="btn-glass inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl text-base font-semibold text-accent shadow-xl hover:shadow-accent/20">
+              <Link to="/auth" className="inline-flex items-center justify-center gap-2 px-10 py-4 rounded-2xl text-base font-bold bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-2xl shadow-amber-500/30 hover:shadow-amber-500/50 hover:scale-105 transition-all duration-300">
                 {isEn ? 'Start Free' : 'เริ่มต้นใช้งานฟรี'}
                 <ArrowRight className="w-5 h-5" />
               </Link>
-              <Link to="/pricing" className="btn-glass inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl text-base font-semibold">
+              <Link to="/pricing" className="inline-flex items-center justify-center gap-2 px-10 py-4 rounded-2xl text-base font-semibold bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 hover:scale-105 transition-all duration-300 shadow-lg">
                 {isEn ? 'View Plans' : 'ดูแพ็กเกจ'}
                 <Crown className="w-5 h-5" />
               </Link>
+            </motion.div>
+
+            {/* Floating glass stat mini-cards below CTA */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.6, duration: 0.7 }}
+              className="mt-16 flex flex-wrap justify-center gap-3 md:gap-4"
+            >
+              {[
+                { val: '750+', lab: isEn ? 'Posts/Day' : 'โพสต์/วัน', icon: '⚡' },
+                { val: 'AI', lab: isEn ? 'Captions' : 'แคปชั่น', icon: '🧠' },
+                { val: '10x', lab: isEn ? 'Faster' : 'เร็วขึ้น', icon: '🚀' },
+                { val: '24/7', lab: isEn ? 'Auto' : 'อัตโนมัติ', icon: '⏰' },
+              ].map((s, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 1.8 + i * 0.1 }}
+                  className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl px-5 py-3 text-center min-w-[100px] hover:bg-white/10 transition-all duration-300"
+                >
+                  <span className="text-lg block mb-0.5">{s.icon}</span>
+                  <p className="text-white font-bold text-lg">{s.val}</p>
+                  <p className="text-white/50 text-[11px]">{s.lab}</p>
+                </motion.div>
+              ))}
             </motion.div>
           </motion.div>
 
           {/* Scroll indicator */}
           <motion.div
             className="absolute bottom-8 left-1/2 -translate-x-1/2"
-            animate={{ y: [0, 8, 0] }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+            animate={{ y: [0, 10, 0] }}
+            transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
           >
-            <div className="w-6 h-10 rounded-full border-2 border-muted-foreground/30 flex justify-center pt-2">
-              <div className="w-1 h-2.5 rounded-full bg-accent/60" />
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-white/40 text-[10px] uppercase tracking-widest">{isEn ? 'Scroll' : 'เลื่อนลง'}</span>
+              <div className="w-6 h-10 rounded-full border-2 border-white/20 flex justify-center pt-2">
+                <motion.div
+                  className="w-1 h-2.5 rounded-full bg-amber-400/80"
+                  animate={{ y: [0, 6, 0], opacity: [1, 0.3, 1] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                />
+              </div>
             </div>
           </motion.div>
         </div>
@@ -546,34 +597,124 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ═══════════════ NEURAL FLOW — AI Core Visualization ═══════════════ */}
-      <section className="py-20 px-6 relative overflow-hidden">
-        <div className="container mx-auto">
+      {/* ═══════════════ NEURAL FLOW — AI Core (Mysterious) ═══════════════ */}
+      <section className="py-24 px-6 relative overflow-hidden bg-gradient-to-b from-background via-black/5 to-background dark:from-background dark:via-purple-950/10 dark:to-background">
+        {/* Subtle radial glow */}
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 50%, hsl(270 60% 50% / 0.06) 0%, transparent 60%)' }} />
+        <div className="absolute inset-0 data-circuit opacity-10" />
+
+        <div className="container mx-auto relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mb-10"
+            className="text-center mb-14"
           >
-            <Badge className="mb-4 bg-purple-500/10 text-purple-500 border-purple-500/20" variant="outline">
-              <Cpu className="w-3 h-3 mr-1" />
-              {isEn ? 'The Neural Flow' : 'ระบบประมวลผล AI'}
-            </Badge>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              {isEn ? 'Intelligent Automation Engine' : 'เครื่องยนต์อัตโนมัติอัจฉริยะ'}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
+              <Badge className="mb-4 bg-purple-500/10 text-purple-500 border-purple-500/20 backdrop-blur-sm" variant="outline">
+                <Cpu className="w-3 h-3 mr-1" />
+                {isEn ? 'Classified Technology' : 'เทคโนโลยีเฉพาะ'}
+              </Badge>
+            </motion.div>
+            <h2 className="text-3xl md:text-5xl font-extrabold mb-4">
+              {isEn ? 'The AI Behind ' : 'เบื้องหลัง '}
+              <span style={{ background: 'linear-gradient(135deg, #a855f7, #6366f1, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                {isEn ? 'Everything' : 'ทุกสิ่ง'}
+              </span>
             </h2>
-            <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-              {isEn ? 'AI Core processes your properties, generates captions, and distributes to hundreds of groups simultaneously.' : 'AI Core ประมวลผลทรัพย์สินของคุณ สร้างแคปชั่น และกระจายโพสต์ไปยังกลุ่มนับร้อยพร้อมกัน'}
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              {isEn
+                ? 'Our proprietary AI Core processes, generates, and distributes — all in milliseconds. Some things are better left unseen.'
+                : 'AI Core ประมวลผล สร้างแคปชั่น และกระจายโพสต์ในเสี้ยววินาที บางสิ่ง... ดีกว่าไม่ต้องเห็น'}
             </p>
           </motion.div>
+
+          {/* AI Core Visualization — Mysterious */}
           <motion.div
             initial={{ opacity: 0, y: 40, scale: 0.95 }}
             whileInView={{ opacity: 1, y: 0, scale: 1 }}
             viewport={{ once: true, margin: '-80px' }}
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            className="rounded-2xl border border-accent/10 overflow-hidden shadow-2xl shadow-accent/5"
+            className="relative"
           >
-            <NeuralFlowViz />
+            <div className="rounded-3xl border border-purple-500/10 overflow-hidden shadow-2xl shadow-purple-500/5 bg-gradient-to-br from-background to-purple-950/5 dark:to-purple-950/20">
+              <NeuralFlowViz />
+
+              {/* Mysterious fog overlay on bottom half — 50% revealed, 50% hidden */}
+              <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-background via-background/95 to-transparent z-10 flex items-end justify-center pb-8">
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  className="flex flex-col items-center gap-3"
+                >
+                  <div className="flex items-center gap-2 text-muted-foreground/60">
+                    <Lock className="w-4 h-4" />
+                    <span className="text-sm font-medium tracking-wide">{isEn ? 'Full architecture classified' : 'สถาปัตยกรรมเต็มรูปแบบ — ปกปิด'}</span>
+                  </div>
+                  <Link to="/auth" className="text-xs text-purple-500 hover:text-purple-400 transition-colors font-medium">
+                    {isEn ? 'Sign up to explore →' : 'สมัครเพื่อสัมผัส →'}
+                  </Link>
+                </motion.div>
+              </div>
+            </div>
+
+            {/* Floating capability badges around the visualization */}
+            <div className="hidden md:block">
+              {[
+                { label: isEn ? 'Caption AI' : 'AI แคปชั่น', x: '-left-4 top-1/4', delay: 0.2, color: 'from-amber-500/20 to-amber-500/5 border-amber-500/20' },
+                { label: isEn ? 'Auto-Post' : 'โพสต์อัตโนมัติ', x: '-right-4 top-1/3', delay: 0.4, color: 'from-emerald-500/20 to-emerald-500/5 border-emerald-500/20' },
+                { label: isEn ? 'Smart Queue' : 'คิวอัจฉริยะ', x: '-left-2 bottom-1/3', delay: 0.6, color: 'from-blue-500/20 to-blue-500/5 border-blue-500/20' },
+                { label: isEn ? 'Data Sync' : 'ซิงค์ข้อมูล', x: '-right-2 bottom-1/4', delay: 0.8, color: 'from-purple-500/20 to-purple-500/5 border-purple-500/20' },
+              ].map((badge, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: badge.delay, duration: 0.5 }}
+                  className={`absolute ${badge.x} z-20`}
+                >
+                  <div className={`bg-gradient-to-br ${badge.color} backdrop-blur-xl rounded-xl px-4 py-2 border text-xs font-semibold shadow-lg`}>
+                    {badge.label}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Mystery metrics row */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.3 }}
+            className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-4"
+          >
+            {[
+              { label: isEn ? 'Processing Speed' : 'ความเร็วประมวลผล', value: '<0.3s', icon: Zap },
+              { label: isEn ? 'Concurrent Posts' : 'โพสต์พร้อมกัน', value: '∞', icon: Globe },
+              { label: isEn ? 'AI Models' : 'โมเดล AI', value: '█████', redacted: true, icon: Cpu },
+              { label: isEn ? 'Architecture' : 'สถาปัตยกรรม', value: '██████', redacted: true, icon: Lock },
+            ].map((m, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 15 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.4 + i * 0.1 }}
+                className="rounded-xl border border-border/50 p-4 text-center bg-background/50 backdrop-blur-sm hover:border-purple-500/20 transition-colors group"
+              >
+                <m.icon className="w-5 h-5 mx-auto mb-2 text-purple-500/60 group-hover:text-purple-500 transition-colors" />
+                <p className={`text-xl font-bold ${m.redacted ? 'text-muted-foreground/30 select-none blur-[2px]' : 'text-foreground'}`}>{m.value}</p>
+                <p className="text-xs text-muted-foreground mt-1">{m.label}</p>
+              </motion.div>
+            ))}
           </motion.div>
         </div>
       </section>

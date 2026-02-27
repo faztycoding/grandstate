@@ -20,6 +20,7 @@ import {
   MessageCircle,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 const features = [
   {
@@ -27,6 +28,7 @@ const features = [
     title: 'จัดการทรัพย์สิน',
     titleEn: 'Property Management',
     description: 'เพิ่มข้อมูล ราคา รูปภาพ สิ่งอำนวยความสะดวก ครบจบในที่เดียว ข้อมูล Sync ข้ามอุปกรณ์ผ่าน Cloud',
+    descriptionEn: 'Add details, pricing, photos & amenities in one place. Data syncs across devices via Cloud.',
     gradient: 'from-blue-500 to-cyan-500',
   },
   {
@@ -34,6 +36,7 @@ const features = [
     title: 'AI สร้างแคปชั่น',
     titleEn: 'AI Caption Generator',
     description: 'Claude AI สร้างแคปชั่นภาษาไทยหลากหลายสไตล์ ไม่ซ้ำกัน เหมือนพิมพ์เอง ไม่โดนแบน',
+    descriptionEn: 'Claude AI generates unique Thai captions in various styles — looks human-written, no bans.',
     gradient: 'from-violet-500 to-purple-500',
   },
   {
@@ -41,6 +44,7 @@ const features = [
     title: 'จัดการกลุ่ม Facebook',
     titleEn: 'Group Management',
     description: 'เพิ่มกลุ่มด้วย URL ดึงข้อมูลอัตโนมัติ แบ่ง Active/Inactive จัดการกลุ่มได้สูงสุด 750 กลุ่ม',
+    descriptionEn: 'Add groups by URL, auto-fetch info, manage Active/Inactive — up to 750 groups.',
     gradient: 'from-amber-500 to-orange-500',
   },
   {
@@ -48,6 +52,7 @@ const features = [
     title: 'โพสต์อัตโนมัติ',
     titleEn: 'Auto Posting',
     description: 'โพสต์ลงกลุ่ม Facebook + Marketplace อัตโนมัติ มี delay แบบมนุษย์ ป้องกันตรวจจับ',
+    descriptionEn: 'Auto-post to Facebook Groups + Marketplace with human-like delays to avoid detection.',
     gradient: 'from-emerald-500 to-teal-500',
   },
   {
@@ -55,6 +60,7 @@ const features = [
     title: 'ตั้งเวลาโพสต์',
     titleEn: 'Smart Scheduling',
     description: 'ตั้งเวลาล่วงหน้า ระบบโพสต์ให้อัตโนมัติตามเวลาที่กำหนด ไม่ต้องเฝ้าหน้าจอ',
+    descriptionEn: 'Schedule ahead — system posts automatically at your chosen time, no babysitting.',
     gradient: 'from-pink-500 to-rose-500',
   },
   {
@@ -62,15 +68,16 @@ const features = [
     title: 'Marketplace',
     titleEn: 'Facebook Marketplace',
     description: 'ลงประกาศ Marketplace พร้อมเลือกกลุ่มอัตโนมัติ ครอบคลุมผู้ซื้อมากขึ้น 10 เท่า',
+    descriptionEn: 'List on Marketplace with auto group selection — reach 10x more buyers.',
     gradient: 'from-indigo-500 to-blue-500',
   },
 ];
 
 const stats = [
-  { number: '750+', label: 'โพสต์ / วัน', sublabel: 'แพ็กเกจ Elite' },
-  { number: '10x', label: 'ประหยัดเวลา', sublabel: 'เทียบกับโพสต์มือ' },
-  { number: '24/7', label: 'ทำงานอัตโนมัติ', sublabel: 'ตั้งเวลาได้' },
-  { number: '100%', label: 'ข้อมูลแยก', sublabel: 'ปลอดภัยต่อ user' },
+  { number: '750+', label: 'โพสต์ / วัน', labelEn: 'Posts / Day', sublabel: 'แพ็กเกจ Elite', sublabelEn: 'Elite package' },
+  { number: '10x', label: 'ประหยัดเวลา', labelEn: 'Time Saved', sublabel: 'เทียบกับโพสต์มือ', sublabelEn: 'vs manual posting' },
+  { number: '24/7', label: 'ทำงานอัตโนมัติ', labelEn: 'Auto Posting', sublabel: 'ตั้งเวลาได้', sublabelEn: 'with scheduling' },
+  { number: '100%', label: 'ข้อมูลแยก', labelEn: 'Data Isolated', sublabel: 'ปลอดภัยต่อ user', sublabelEn: 'per-user security' },
 ];
 
 const packages = [
@@ -80,7 +87,7 @@ const packages = [
     price: 'ฟรี',
     period: '',
     color: 'from-emerald-500 to-teal-500',
-    features: ['10 โพสต์/วัน', '10 กลุ่ม', '5 ทรัพย์สิน', 'โพสต์กลุ่ม'],
+    features: ['10 โพสต์/วัน', '10 กลุ่ม', '10 ทรัพย์สิน', 'โพสต์กลุ่ม'],
   },
   {
     name: 'Top Agent',
@@ -102,15 +109,18 @@ const packages = [
 ];
 
 const benefits = [
-  { text: 'ประหยัดเวลา 3-4 ชม./วัน ไม่ต้องนั่งโพสต์เอง', icon: Clock },
-  { text: 'เข้าถึงผู้ซื้อมากขึ้น 10 เท่าผ่าน Groups + Marketplace', icon: Users },
-  { text: 'AI สร้างแคปชั่นภาษาไทย ไม่ซ้ำ ไม่โดนแบน', icon: Sparkles },
-  { text: 'ข้อมูลแยกต่อ user ปลอดภัย 100% ไม่ปนกัน', icon: Lock },
-  { text: 'สถิติวิเคราะห์ ดูผลโพสต์แบบ real-time', icon: BarChart3 },
-  { text: 'ทีมซัพพอร์ตตอบเร็ว ผ่าน LINE', icon: MessageCircle },
+  { text: 'ประหยัดเวลา 3-4 ชม./วัน ไม่ต้องนั่งโพสต์เอง', textEn: 'Save 3-4 hours/day — no manual posting', icon: Clock },
+  { text: 'เข้าถึงผู้ซื้อมากขึ้น 10 เท่าผ่าน Groups + Marketplace', textEn: 'Reach 10x more buyers via Groups + Marketplace', icon: Users },
+  { text: 'AI สร้างแคปชั่นภาษาไทย ไม่ซ้ำ ไม่โดนแบน', textEn: 'AI generates unique Thai captions — no bans', icon: Sparkles },
+  { text: 'ข้อมูลแยกต่อ user ปลอดภัย 100% ไม่ปนกัน', textEn: '100% data isolation per user — fully secure', icon: Lock },
+  { text: 'สถิติวิเคราะห์ ดูผลโพสต์แบบ real-time', textEn: 'Real-time analytics & posting insights', icon: BarChart3 },
+  { text: 'ทีมซัพพอร์ตตอบเร็ว ผ่าน LINE', textEn: 'Fast support via LINE', icon: MessageCircle },
 ];
 
 export default function Landing() {
+  const { language } = useLanguage();
+  const isEn = language === 'en';
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -124,12 +134,12 @@ export default function Landing() {
           </Link>
           <div className="flex items-center gap-2 md:gap-4">
             <Button variant="ghost" size="sm" asChild className="hidden sm:inline-flex">
-              <Link to="/auth">เข้าสู่ระบบ</Link>
+              <Link to="/auth">{isEn ? 'Sign In' : 'เข้าสู่ระบบ'}</Link>
             </Button>
             <Button variant="accent" size="sm" asChild>
               <Link to="/auth">
-                <span className="sm:hidden">เข้าสู่ระบบ</span>
-                <span className="hidden sm:inline">เริ่มต้นใช้งาน</span>
+                <span className="sm:hidden">{isEn ? 'Sign In' : 'เข้าสู่ระบบ'}</span>
+                <span className="hidden sm:inline">{isEn ? 'Get Started' : 'เริ่มต้นใช้งาน'}</span>
                 <ArrowRight className="w-4 h-4 ml-1 md:ml-2" />
               </Link>
             </Button>
@@ -150,26 +160,27 @@ export default function Landing() {
             transition={{ duration: 0.5 }}
           >
             <Badge className="mb-6 bg-accent/10 text-accent border-accent/20" variant="outline">
-              🇹🇭 สำหรับนายหน้าอสังหาฯ ไทยโดยเฉพาะ
+              {isEn ? '🇹🇭 Built for Thai Real Estate Agents' : '🇹🇭 สำหรับนายหน้าอสังหาฯ ไทยโดยเฉพาะ'}
             </Badge>
             <h1 className="text-4xl md:text-5xl lg:text-7xl font-bold mb-6 leading-tight">
-              โพสต์อสังหาฯ อัตโนมัติ<br />
-              <span className="gradient-text">ฉลาดกว่า เร็วกว่า ปลอดภัยกว่า</span>
+              {isEn ? 'Auto-Post Real Estate' : 'โพสต์อสังหาฯ อัตโนมัติ'}<br />
+              <span className="gradient-text">{isEn ? 'Smarter. Faster. Safer.' : 'ฉลาดกว่า เร็วกว่า ปลอดภัยกว่า'}</span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
-              ระบบช่วยโพสต์อสังหาริมทรัพย์ไปยัง Facebook Groups + Marketplace อัตโนมัติ
-              พร้อม AI สร้างแคปชั่น ประหยัดเวลา เพิ่มยอดขาย
+              {isEn
+                ? 'Auto-post properties to Facebook Groups + Marketplace with AI captions. Save time, boost sales.'
+                : 'ระบบช่วยโพสต์อสังหาริมทรัพย์ไปยัง Facebook Groups + Marketplace อัตโนมัติ พร้อม AI สร้างแคปชั่น ประหยัดเวลา เพิ่มยอดขาย'}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="xl" variant="accent" asChild>
                 <Link to="/auth">
-                  เริ่มต้นใช้งานฟรี
+                  {isEn ? 'Start Free' : 'เริ่มต้นใช้งานฟรี'}
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Link>
               </Button>
               <Button size="xl" variant="outline" asChild>
                 <Link to="/pricing">
-                  ดูแพ็กเกจ
+                  {isEn ? 'View Plans' : 'ดูแพ็กเกจ'}
                   <Crown className="w-5 h-5 ml-2" />
                 </Link>
               </Button>
@@ -192,8 +203,8 @@ export default function Landing() {
                 className="text-center"
               >
                 <p className="text-3xl md:text-4xl font-bold gradient-text">{stat.number}</p>
-                <p className="font-semibold mt-1">{stat.label}</p>
-                <p className="text-sm text-muted-foreground">{stat.sublabel}</p>
+                <p className="font-semibold mt-1">{isEn ? stat.labelEn : stat.label}</p>
+                <p className="text-sm text-muted-foreground">{isEn ? stat.sublabelEn : stat.sublabel}</p>
               </motion.div>
             ))}
           </div>
@@ -210,13 +221,13 @@ export default function Landing() {
             className="text-center mb-14"
           >
             <Badge className="mb-4 bg-accent/10 text-accent border-accent/20" variant="outline">
-              ฟีเจอร์ครบครัน
+              {isEn ? 'Full-Featured' : 'ฟีเจอร์ครบครัน'}
             </Badge>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              ทุกเครื่องมือที่นายหน้าต้องการ
+              {isEn ? 'Every Tool an Agent Needs' : 'ทุกเครื่องมือที่นายหน้าต้องการ'}
             </h2>
             <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-              ครบจบในแอปเดียว จัดการทรัพย์สิน กลุ่ม โพสต์ สถิติ ทั้งหมดในที่เดียว
+              {isEn ? 'All-in-one app: properties, groups, posting, analytics — everything in one place.' : 'ครบจบในแอปเดียว จัดการทรัพย์สิน กลุ่ม โพสต์ สถิติ ทั้งหมดในที่เดียว'}
             </p>
           </motion.div>
 
@@ -234,9 +245,9 @@ export default function Landing() {
                     <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-4 shadow-lg`}>
                       <feature.icon className="w-6 h-6 text-white" />
                     </div>
-                    <h3 className="text-lg font-semibold mb-1">{feature.title}</h3>
-                    <p className="text-xs text-muted-foreground/60 mb-2">{feature.titleEn}</p>
-                    <p className="text-muted-foreground text-sm">{feature.description}</p>
+                    <h3 className="text-lg font-semibold mb-1">{isEn ? feature.titleEn : feature.title}</h3>
+                    {!isEn && <p className="text-xs text-muted-foreground/60 mb-2">{feature.titleEn}</p>}
+                    <p className="text-muted-foreground text-sm">{isEn ? feature.descriptionEn : feature.description}</p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -255,15 +266,16 @@ export default function Landing() {
               viewport={{ once: true }}
             >
               <Badge className="mb-4 bg-accent/10 text-accent border-accent/20" variant="outline">
-                ทำไมต้อง Grand$tate?
+                {isEn ? 'Why Grand$tate?' : 'ทำไมต้อง Grand$tate?'}
               </Badge>
               <h2 className="text-3xl md:text-4xl font-bold mb-6">
-                มุ่งเน้นขาย<br />
-                <span className="text-accent">ปล่อยให้ระบบโพสต์ให้</span>
+                {isEn ? 'Focus on Selling' : 'มุ่งเน้นขาย'}<br />
+                <span className="text-accent">{isEn ? 'Let the system post for you' : 'ปล่อยให้ระบบโพสต์ให้'}</span>
               </h2>
               <p className="text-muted-foreground text-lg mb-8">
-                หยุดเสียเวลานั่ง copy-paste ทีละกลุ่ม Grand$tate ทำงานแทนคุณ
-                ขณะที่คุณโฟกัสกับการปิดดีลและดูแลลูกค้า
+                {isEn
+                  ? 'Stop wasting time copy-pasting to groups. Grand$tate works for you while you focus on closing deals.'
+                  : 'หยุดเสียเวลานั่ง copy-paste ทีละกลุ่ม Grand$tate ทำงานแทนคุณ ขณะที่คุณโฟกัสกับการปิดดีลและดูแลลูกค้า'}
               </p>
               <ul className="space-y-4">
                 {benefits.map((benefit, index) => (
@@ -278,7 +290,7 @@ export default function Landing() {
                     <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
                       <benefit.icon className="w-4 h-4 text-accent" />
                     </div>
-                    <span className="font-medium text-sm">{benefit.text}</span>
+                    <span className="font-medium text-sm">{isEn ? benefit.textEn : benefit.text}</span>
                   </motion.li>
                 ))}
               </ul>
@@ -327,13 +339,13 @@ export default function Landing() {
             className="text-center mb-14"
           >
             <Badge className="mb-4 bg-accent/10 text-accent border-accent/20" variant="outline">
-              แพ็กเกจ
+              {isEn ? 'Packages' : 'แพ็กเกจ'}
             </Badge>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              เลือกแพ็กเกจที่เหมาะกับคุณ
+              {isEn ? 'Choose the Right Plan' : 'เลือกแพ็กเกจที่เหมาะกับคุณ'}
             </h2>
             <p className="text-muted-foreground text-lg">
-              เริ่มต้นฟรี อัพเกรดเมื่อพร้อม
+              {isEn ? 'Start free, upgrade when ready.' : 'เริ่มต้นฟรี อัพเกรดเมื่อพร้อม'}
             </p>
           </motion.div>
 
@@ -355,7 +367,7 @@ export default function Landing() {
                       <pkg.icon className="w-6 h-6 text-white" />
                     </div>
                     <h3 className="text-lg font-bold">{pkg.name}</h3>
-                    {pkg.popular && <Badge className="mt-1 bg-accent/10 text-accent text-xs">ยอดนิยม</Badge>}
+                    {pkg.popular && <Badge className="mt-1 bg-accent/10 text-accent text-xs">{isEn ? 'Popular' : 'ยอดนิยม'}</Badge>}
                     <div className="mt-3 mb-4">
                       <span className="text-3xl font-bold">{pkg.price === 'ฟรี' ? 'ฟรี' : `฿${pkg.price}`}</span>
                       {pkg.period && <span className="text-muted-foreground text-sm">{pkg.period}</span>}
@@ -370,7 +382,7 @@ export default function Landing() {
                     </ul>
                     <Button className="w-full mt-6" variant={pkg.popular ? 'accent' : 'outline'} asChild>
                       <Link to="/auth">
-                        {pkg.price === 'ฟรี' ? 'เริ่มต้นฟรี' : 'สมัครเลย'}
+                        {pkg.price === 'ฟรี' ? (isEn ? 'Start Free' : 'เริ่มต้นฟรี') : (isEn ? 'Get Started' : 'สมัครเลย')}
                       </Link>
                     </Button>
                   </CardContent>
@@ -394,11 +406,12 @@ export default function Landing() {
               <Shield className="w-8 h-8 text-white" />
             </div>
             <h2 className="text-2xl md:text-3xl font-bold mb-4">
-              ปลอดภัยระดับ Enterprise
+              {isEn ? 'Enterprise-Grade Security' : 'ปลอดภัยระดับ Enterprise'}
             </h2>
             <p className="text-muted-foreground mb-6">
-              ข้อมูลทุกอย่างเข้ารหัสและแยกต่อผู้ใช้ ไม่มีทางปนกัน Browser session แยก
-              ข้อมูลโพสต์แยก API ป้องกันด้วย JWT Authentication
+              {isEn
+                ? 'All data is encrypted and isolated per user. Browser sessions, posting data, and APIs are secured with JWT Authentication.'
+                : 'ข้อมูลทุกอย่างเข้ารหัสและแยกต่อผู้ใช้ ไม่มีทางปนกัน Browser session แยก ข้อมูลโพสต์แยก API ป้องกันด้วย JWT Authentication'}
             </p>
             <div className="flex flex-wrap justify-center gap-3">
               {['JWT Auth', 'SSL/HTTPS', 'Data Isolation', 'Rate Limiting', 'Stealth Mode'].map((tag) => (
@@ -417,22 +430,22 @@ export default function Landing() {
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(247,181,0,0.1)_0%,transparent_50%)]" />
             <CardContent className="p-10 md:p-14 text-center relative z-10">
               <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                พร้อมเพิ่มยอดขายอสังหาฯ หรือยัง?
+                {isEn ? 'Ready to boost your real estate sales?' : 'พร้อมเพิ่มยอดขายอสังหาฯ หรือยัง?'}
               </h2>
               <p className="text-lg text-white/70 mb-8 max-w-xl mx-auto">
-                เริ่มต้นฟรีวันนี้ ไม่ต้องผูกบัตร สมัครใช้งานได้เลย
+                {isEn ? 'Start free today. No credit card required.' : 'เริ่มต้นฟรีวันนี้ ไม่ต้องผูกบัตร สมัครใช้งานได้เลย'}
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button size="xl" variant="accent" asChild>
                   <Link to="/auth">
-                    เริ่มต้นใช้งานฟรี
+                    {isEn ? 'Start Free' : 'เริ่มต้นใช้งานฟรี'}
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </Link>
                 </Button>
                 <Button size="xl" variant="outline" className="border-white/30 text-white hover:bg-white/10" asChild>
                   <a href="https://line.me/ti/p/@grandstate" target="_blank" rel="noopener noreferrer">
                     <MessageCircle className="w-5 h-5 mr-2" />
-                    ติดต่อทาง LINE
+                    {isEn ? 'Contact via LINE' : 'ติดต่อทาง LINE'}
                   </a>
                 </Button>
               </div>
@@ -453,29 +466,29 @@ export default function Landing() {
                 <span className="font-bold text-lg">Grand$tate</span>
               </div>
               <p className="text-sm text-muted-foreground">
-                ระบบโพสต์อสังหาริมทรัพย์อัตโนมัติ<br />
-                สำหรับนายหน้ามืออาชีพ
+                {isEn ? 'Auto real estate posting system' : 'ระบบโพสต์อสังหาริมทรัพย์อัตโนมัติ'}<br />
+                {isEn ? 'for professional agents' : 'สำหรับนายหน้ามืออาชีพ'}
               </p>
             </div>
             <div>
-              <h4 className="font-semibold mb-3">ลิงก์</h4>
+              <h4 className="font-semibold mb-3">{isEn ? 'Links' : 'ลิงก์'}</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link to="/auth" className="hover:text-foreground transition-colors">เข้าสู่ระบบ</Link></li>
-                <li><Link to="/pricing" className="hover:text-foreground transition-colors">แพ็กเกจและราคา</Link></li>
-                <li><a href="https://line.me/ti/p/@grandstate" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">ติดต่อเรา (LINE)</a></li>
+                <li><Link to="/auth" className="hover:text-foreground transition-colors">{isEn ? 'Sign In' : 'เข้าสู่ระบบ'}</Link></li>
+                <li><Link to="/pricing" className="hover:text-foreground transition-colors">{isEn ? 'Pricing' : 'แพ็กเกจและราคา'}</Link></li>
+                <li><a href="https://line.me/ti/p/@grandstate" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{isEn ? 'Contact Us (LINE)' : 'ติดต่อเรา (LINE)'}</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-3">นโยบาย</h4>
+              <h4 className="font-semibold mb-3">{isEn ? 'Legal' : 'นโยบาย'}</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link to="/privacy" className="hover:text-foreground transition-colors">นโยบายความเป็นส่วนตัว</Link></li>
-                <li><Link to="/terms" className="hover:text-foreground transition-colors">ข้อตกลงการใช้งาน</Link></li>
+                <li><Link to="/privacy" className="hover:text-foreground transition-colors">{isEn ? 'Privacy Policy' : 'นโยบายความเป็นส่วนตัว'}</Link></li>
+                <li><Link to="/terms" className="hover:text-foreground transition-colors">{isEn ? 'Terms of Service' : 'ข้อตกลงการใช้งาน'}</Link></li>
               </ul>
             </div>
           </div>
           <div className="border-t pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground">
-              © 2026 Grand$tate — สำหรับนายหน้าอสังหาริมทรัพย์มืออาชีพ
+              {isEn ? '© 2026 Grand$tate — for professional real estate agents' : '© 2026 Grand$tate — สำหรับนายหน้าอสังหาริมทรัพย์มืออาชีพ'}
             </p>
             <p className="text-xs text-muted-foreground/50">Version 2.0</p>
           </div>

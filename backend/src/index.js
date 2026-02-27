@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
 import { authMiddleware } from './middleware/auth.js';
 import { sessionManager } from './services/userSessionManager.js';
 import { automationQueue } from './services/automationQueue.js';

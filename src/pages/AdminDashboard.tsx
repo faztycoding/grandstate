@@ -1069,86 +1069,92 @@ export default function AdminDashboard() {
                                                 const isExpanded = expandedUser === u.fullUserId;
                                                 return (
                                                 <div key={u.userId} className={cn(
-                                                    "rounded-xl border transition-all hover:shadow-sm",
-                                                    u.banned ? "bg-red-50/50 dark:bg-red-950/10 border-red-300 dark:border-red-800/50 opacity-60" :
-                                                    isRunning ? "bg-orange-50/50 dark:bg-orange-950/10 border-orange-200 dark:border-orange-800/50" : "bg-card border-border"
+                                                    "rounded-xl border transition-all hover:shadow-md group/card",
+                                                    u.banned ? "bg-red-50/30 dark:bg-red-950/10 border-red-200 dark:border-red-900/50 opacity-70" :
+                                                    isRunning ? "bg-gradient-to-r from-amber-50/50 via-card to-card dark:from-amber-950/10 border-amber-200/70 dark:border-amber-800/40" :
+                                                    "bg-card border-border hover:border-amber-300/50 dark:hover:border-amber-700/30"
                                                 )}>
-                                                    {/* Main row — clickable to expand management panel */}
-                                                    <div className="p-3 cursor-pointer group/card" onClick={() => setExpandedUser(isExpanded ? null : (u.fullUserId || null))}>
-                                                    <div className="flex items-center gap-3">
-                                                        {/* Avatar + Status dot */}
+                                                    {/* Main row */}
+                                                    <div className="p-3.5 cursor-pointer" onClick={() => setExpandedUser(isExpanded ? null : (u.fullUserId || null))}>
+                                                      {/* Top: Avatar + Info + Arrow */}
+                                                      <div className="flex items-start gap-3">
+                                                        {/* Avatar */}
                                                         <div className="relative flex-shrink-0">
-                                                            <div className={cn("w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold",
-                                                                u.banned ? "bg-red-100 dark:bg-red-900/30 text-red-600" : "bg-gradient-to-br from-accent/20 to-orange-400/20 text-accent"
+                                                            <div className={cn("w-11 h-11 rounded-xl flex items-center justify-center text-sm font-bold shadow-sm",
+                                                                u.banned ? "bg-red-100 dark:bg-red-900/30 text-red-500" :
+                                                                userPkg === 'elite' ? "bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/40 dark:to-purple-800/30 text-purple-600 dark:text-purple-400" :
+                                                                userPkg === 'agent' ? "bg-gradient-to-br from-amber-100 to-amber-200 dark:from-amber-900/40 dark:to-amber-800/30 text-amber-700 dark:text-amber-400" :
+                                                                "bg-gradient-to-br from-emerald-100 to-emerald-200 dark:from-emerald-900/40 dark:to-emerald-800/30 text-emerald-600 dark:text-emerald-400"
                                                             )}>
                                                                 {u.banned ? '🚫' : (u.displayName || u.email || u.userId)?.[0]?.toUpperCase() || '?'}
                                                             </div>
-                                                            {!u.banned && <div className={cn(
-                                                                "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background",
-                                                                u.isOnline ? "bg-green-500" : "bg-gray-400"
-                                                            )} />}
+                                                            <div className={cn(
+                                                                "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-card",
+                                                                u.banned ? "bg-red-400" : u.isOnline ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
+                                                            )} />
                                                         </div>
 
-                                                        {/* Name + Email + Package badge */}
+                                                        {/* User Info */}
                                                         <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-2">
-                                                                <p className={cn("text-sm font-semibold truncate", u.banned && "line-through text-red-500")}>{u.displayName || u.email?.split('@')[0] || u.userId}</p>
-                                                                {u.banned && <span className="text-[9px] font-bold text-red-600 bg-red-100 dark:bg-red-900/30 px-1.5 py-0.5 rounded-full">BANNED</span>}
-                                                                {!u.banned && u.isOnline && <span className="text-[9px] font-medium text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-1.5 py-0.5 rounded-full">Online</span>}
-                                                                <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase",
-                                                                    userPkg === 'elite' ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" :
-                                                                    userPkg === 'agent' ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" :
-                                                                    "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
+                                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                                <p className={cn("text-[13px] font-bold truncate", u.banned && "line-through text-red-400")}>{u.displayName || u.email?.split('@')[0] || u.userId}</p>
+                                                                {u.isOnline && !u.banned && <span className="text-[8px] font-semibold text-green-600 dark:text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded-md">Online</span>}
+                                                                <span className={cn("text-[8px] font-bold px-1.5 py-0.5 rounded-md",
+                                                                    userPkg === 'elite' ? "bg-purple-500/10 text-purple-600 dark:text-purple-400" :
+                                                                    userPkg === 'agent' ? "bg-amber-500/10 text-amber-600 dark:text-amber-400" :
+                                                                    "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                                                                 )}>{userPkg === 'free' ? 'ROOKIE' : userPkg === 'agent' ? 'AGENT' : 'ELITE'}</span>
+                                                                {u.banned && <span className="text-[8px] font-bold text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded-md">BANNED</span>}
                                                             </div>
-                                                            <div className="flex items-center gap-2">
+                                                            <div className="flex items-center gap-1.5 mt-0.5">
                                                                 <p className="text-[11px] text-muted-foreground truncate">{u.email || u.userId}</p>
                                                                 {(u as any).displayId && (
-                                                                    <code className="text-[9px] font-mono font-bold bg-accent/10 text-accent px-1.5 py-0.5 rounded">{(u as any).displayId}</code>
+                                                                    <code className="text-[9px] font-mono font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">{(u as any).displayId}</code>
                                                                 )}
                                                             </div>
-                                                            {u.fullName && (
-                                                                <p className="text-[10px] text-muted-foreground/70 truncate">ชื่อ-นามสกุล: {u.fullName}</p>
-                                                            )}
+                                                            {u.fullName && <p className="text-[10px] text-muted-foreground/60 mt-0.5 truncate">{u.fullName}</p>}
                                                         </div>
 
-                                                        {/* Stats + actions */}
-                                                        <div className="flex items-center gap-2 flex-shrink-0">
-                                                            {/* Expand arrow */}
-                                                            <motion.div animate={{ rotate: isExpanded ? 90 : 0 }} transition={{ duration: 0.2 }} className="text-muted-foreground group-hover/card:text-foreground">
-                                                                <ChevronRight className="w-4 h-4" />
-                                                            </motion.div>
+                                                        {/* Right: Stats + Arrow */}
+                                                        <div className="flex items-center gap-3 flex-shrink-0">
                                                             {isRunning && (
-                                                                <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 text-[10px] gap-1">
-                                                                    <Zap className="w-3 h-3 animate-pulse" />
-                                                                    {u.isRunningGroup && u.isRunningMarketplace ? 'GRP+MKT' : u.isRunningGroup ? 'Groups' : 'MKT'}
-                                                                </Badge>
+                                                                <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                                                                    <Zap className="w-3 h-3 text-amber-500 animate-pulse" />
+                                                                    <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400">
+                                                                        {u.isRunningGroup && u.isRunningMarketplace ? 'GRP+MKT' : u.isRunningGroup ? 'Groups' : 'MKT'}
+                                                                    </span>
+                                                                    {u.fullUserId && (
+                                                                        <button className="ml-1 text-red-400 hover:text-red-500" disabled={forceStoppingUser === u.fullUserId}
+                                                                            onClick={(e) => { e.stopPropagation(); handleForceStop(u.fullUserId!, u.displayName || u.userId); }}>
+                                                                            {forceStoppingUser === u.fullUserId ? <Loader2 className="w-3 h-3 animate-spin" /> : <StopCircle className="w-3 h-3" />}
+                                                                        </button>
+                                                                    )}
+                                                                </div>
                                                             )}
-                                                            <div className="text-center px-1.5">
-                                                                <p className="text-sm font-bold tabular-nums">{u.todayPosts}</p>
-                                                                <p className="text-[9px] text-muted-foreground leading-none">โพสต์</p>
-                                                            </div>
-                                                            <div className="text-center px-1.5">
-                                                                <p className="text-sm font-bold tabular-nums">{u.automationRuns}</p>
-                                                                <p className="text-[9px] text-muted-foreground leading-none">สั่งการ</p>
+                                                            {/* Post & Run stats */}
+                                                            <div className="flex gap-3">
+                                                                <div className="text-center">
+                                                                    <p className="text-base font-bold tabular-nums leading-none">{u.todayPosts}</p>
+                                                                    <p className="text-[8px] text-muted-foreground/70 mt-0.5">โพสต์</p>
+                                                                </div>
+                                                                <div className="text-center">
+                                                                    <p className="text-base font-bold tabular-nums leading-none">{u.automationRuns}</p>
+                                                                    <p className="text-[8px] text-muted-foreground/70 mt-0.5">สั่งการ</p>
+                                                                </div>
                                                             </div>
                                                             {u.currentTasks.total > 0 && (
-                                                                <div className="w-16">
+                                                                <div className="w-14">
                                                                     <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                                                                        <div className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full transition-all" style={{ width: `${taskPct}%` }} />
+                                                                        <div className="h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full transition-all" style={{ width: `${taskPct}%` }} />
                                                                     </div>
                                                                     <span className="text-[8px] text-muted-foreground">{taskPct}%</span>
                                                                 </div>
                                                             )}
-                                                            {isRunning && u.fullUserId && (
-                                                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
-                                                                    disabled={forceStoppingUser === u.fullUserId}
-                                                                    onClick={(e) => { e.stopPropagation(); handleForceStop(u.fullUserId!, u.displayName || u.userId); }}>
-                                                                    {forceStoppingUser === u.fullUserId ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <StopCircle className="w-3.5 h-3.5" />}
-                                                                </Button>
-                                                            )}
+                                                            <motion.div animate={{ rotate: isExpanded ? 90 : 0 }} transition={{ duration: 0.2 }} className="text-muted-foreground/40 group-hover/card:text-amber-500 transition-colors">
+                                                                <ChevronRight className="w-4.5 h-4.5" />
+                                                            </motion.div>
                                                         </div>
-                                                    </div>
+                                                      </div>
                                                     </div>
 
                                                     {/* Expanded management panel */}

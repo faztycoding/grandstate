@@ -41,8 +41,16 @@ import {
   AlertCircle,
   Settings,
   Globe,
+  Shield,
+  BookOpen,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
+  Eye,
+  Timer,
+  Fingerprint,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -115,6 +123,7 @@ export default function Automation() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [scheduleMode, setScheduleMode] = useState(false);
   const [scheduleDateTime, setScheduleDateTime] = useState('');
+  const [showGuide, setShowGuide] = useState(false);
 
   // Automation state
   const [automation, setAutomation] = useState<AutomationState>({
@@ -714,16 +723,19 @@ export default function Automation() {
         {/* Left Column - Property & Groups Selection */}
         <div className="lg:col-span-2 space-y-6">
           {/* Step 1: Property Selection */}
-          <Card className="card-elevated card-hover-lift">
-            <CardHeader>
+          <Card className="card-elevated card-hover-lift relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-24 h-24 bg-gradient-to-br from-blue-500/5 to-transparent rounded-full blur-2xl pointer-events-none" />
+            <CardHeader className="relative">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center text-accent font-bold">1</div>
-                    <Building2 className="w-5 h-5 text-accent" />
-                    {t.automation.step1}
+                  <CardTitle className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-blue-500/25">1</div>
+                    <div className="flex items-center gap-1.5">
+                      <Building2 className="w-4 h-4 text-blue-500" />
+                      <span>{t.automation.step1}</span>
+                    </div>
                   </CardTitle>
-                  <CardDescription className="mt-1">
+                  <CardDescription className="mt-1 ml-12">
                     {t.automation.selectProperty}
                   </CardDescription>
                 </div>
@@ -813,16 +825,19 @@ export default function Automation() {
           </Card>
 
           {/* Step 2: Group Selection */}
-          <Card className="card-elevated card-hover-lift">
-            <CardHeader>
+          <Card className="card-elevated card-hover-lift relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-24 h-24 bg-gradient-to-br from-purple-500/5 to-transparent rounded-full blur-2xl pointer-events-none" />
+            <CardHeader className="relative">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center text-accent font-bold">2</div>
-                    <Users className="w-5 h-5 text-accent" />
-                    {t.automation.step2}
+                  <CardTitle className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500 to-fuchsia-500 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-purple-500/25">2</div>
+                    <div className="flex items-center gap-1.5">
+                      <Users className="w-4 h-4 text-purple-500" />
+                      <span>{t.automation.step2}</span>
+                    </div>
                   </CardTitle>
-                  <CardDescription className="mt-1">
+                  <CardDescription className="mt-1 ml-12">
                     {t.automation.selectGroups}
                   </CardDescription>
                 </div>
@@ -931,16 +946,20 @@ export default function Automation() {
         {/* Right Column - Actions */}
         <div className="space-y-6">
           {/* Step 3: Start Automation */}
-          <Card className="card-elevated card-hover-lift border-accent/50 bg-gradient-to-br from-accent/5 to-orange-500/5">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center text-accent font-bold">3</div>
-                <Zap className="w-5 h-5 text-accent" />
-                {t.automation.step4}
+          <Card className="card-elevated card-hover-lift relative overflow-hidden border-accent/40 bg-gradient-to-br from-accent/5 via-orange-500/5 to-rose-500/5">
+            {/* Decorative glow */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-accent/10 to-transparent rounded-full blur-2xl pointer-events-none" />
+            <CardHeader className="relative">
+              <CardTitle className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-accent to-orange-500 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-accent/25">3</div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <Zap className="w-4 h-4 text-accent" />
+                    <span>{t.automation.step4}</span>
+                  </div>
+                  <p className="text-xs font-normal text-muted-foreground mt-0.5">{t.automation.checklist}</p>
+                </div>
               </CardTitle>
-              <CardDescription>
-                {t.automation.checklist}
-              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Facebook Session Selector */}
@@ -1005,32 +1024,37 @@ export default function Automation() {
               )}
 
               {/* Checklist */}
-              <div className="p-4 rounded-lg bg-background/80 space-y-3">
-                <div className="flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-background/60 border border-border/40 space-y-2.5">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-1">เช็คลิสต์</p>
+                <div className="flex items-center gap-3 p-2.5 rounded-lg transition-colors hover:bg-muted/30">
                   <div className={cn(
-                    "w-6 h-6 rounded-full flex items-center justify-center",
-                    selectedProperty ? "bg-green-100 text-green-600" : "bg-muted text-muted-foreground"
+                    "w-7 h-7 rounded-lg flex items-center justify-center transition-all",
+                    selectedProperty
+                      ? "bg-gradient-to-br from-emerald-500 to-green-500 text-white shadow-sm shadow-emerald-500/25"
+                      : "bg-muted text-muted-foreground"
                   )}>
-                    {selectedProperty ? <Check className="w-4 h-4" /> : <span className="text-xs">1</span>}
+                    {selectedProperty ? <Check className="w-3.5 h-3.5" /> : <span className="text-[10px] font-bold">1</span>}
                   </div>
-                  <div className="flex-1">
-                    <p className={cn("text-sm font-medium", !selectedProperty && "text-muted-foreground")}>
+                  <div className="flex-1 min-w-0">
+                    <p className={cn("text-sm font-medium truncate", !selectedProperty && "text-muted-foreground")}>
                       {selectedProperty ? selectedProperty.title : t.automation.selectProperty}
                     </p>
                     {selectedProperty && (
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-[10px] text-muted-foreground">
                         {selectedProperty.images?.length || 0} {t.properties.images}
                       </p>
                     )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 p-2.5 rounded-lg transition-colors hover:bg-muted/30">
                   <div className={cn(
-                    "w-6 h-6 rounded-full flex items-center justify-center",
-                    selectedGroups.length > 0 ? "bg-green-100 text-green-600" : "bg-muted text-muted-foreground"
+                    "w-7 h-7 rounded-lg flex items-center justify-center transition-all",
+                    selectedGroups.length > 0
+                      ? "bg-gradient-to-br from-emerald-500 to-green-500 text-white shadow-sm shadow-emerald-500/25"
+                      : "bg-muted text-muted-foreground"
                   )}>
-                    {selectedGroups.length > 0 ? <Check className="w-4 h-4" /> : <span className="text-xs">2</span>}
+                    {selectedGroups.length > 0 ? <Check className="w-3.5 h-3.5" /> : <span className="text-[10px] font-bold">2</span>}
                   </div>
                   <div className="flex-1">
                     <p className={cn("text-sm font-medium", selectedGroups.length === 0 && "text-muted-foreground")}>
@@ -1038,13 +1062,14 @@ export default function Automation() {
                     </p>
                   </div>
                 </div>
-
               </div>
 
               {/* Posting Mode Toggle */}
-              <div className="p-3 rounded-lg bg-muted/50 space-y-2">
+              <div className="p-3 rounded-xl bg-gradient-to-r from-muted/60 to-muted/30 border border-border/50 space-y-2">
                 <div className="flex items-center gap-2">
-                  <Globe className="w-5 h-5 text-muted-foreground" />
+                  <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center flex-shrink-0">
+                    <Globe className="w-4 h-4 text-violet-500" />
+                  </div>
                   <p className="text-sm font-medium">โหมดโพสต์</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -1103,11 +1128,13 @@ export default function Automation() {
               </div>
 
               {/* Delay Setting */}
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                <Clock className="w-5 h-5 text-muted-foreground" />
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-muted/60 to-muted/30 border border-border/50">
+                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                  <Timer className="w-4 h-4 text-blue-500" />
+                </div>
                 <div className="flex-1">
                   <p className="text-sm font-medium">{t.automation.delay}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-[10px] text-muted-foreground">
                     ระหว่าง batch (+ สุ่ม 2-5 วินาที)
                   </p>
                 </div>
@@ -1118,17 +1145,129 @@ export default function Automation() {
                     max={120}
                     value={delayBetweenPosts}
                     onChange={(e) => setDelayBetweenPosts(Number(e.target.value))}
-                    className="w-16 h-8 text-center"
+                    className="w-16 h-8 text-center text-sm font-mono font-semibold"
                   />
-                  <span className="text-sm text-muted-foreground">วินาที</span>
+                  <span className="text-xs text-muted-foreground">วินาที</span>
                 </div>
               </div>
 
+              {/* Anti-Ban Safety Guide */}
+              <div className="rounded-xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 via-teal-500/5 to-emerald-500/5 overflow-hidden">
+                <button
+                  onClick={() => setShowGuide(!showGuide)}
+                  className="w-full flex items-center gap-3 p-3 hover:bg-emerald-500/5 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/10 flex items-center justify-center flex-shrink-0">
+                    <Shield className="w-4 h-4 text-emerald-500" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-semibold flex items-center gap-1.5">
+                      <Sparkles className="w-3 h-3 text-amber-500" />
+                      คู่มือลดโอกาสถูกตรวจจับ
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">เคล็ดลับให้โพสต์ปลอดภัยสูงสุด</p>
+                  </div>
+                  <motion.div
+                    animate={{ rotate: showGuide ? 180 : 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                  </motion.div>
+                </button>
+
+                <AnimatePresence>
+                  {showGuide && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                      className="overflow-hidden"
+                    >
+                      <div className="px-3 pb-3 space-y-2">
+                        {/* Risk Level Indicator */}
+                        <div className="p-2.5 rounded-lg bg-background/80 border border-border/50">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">ระดับความเสี่ยง</span>
+                            <Badge variant="outline" className={cn("text-[10px] font-bold",
+                              delayBetweenPosts >= 15 && selectedGroups.length <= 30
+                                ? "border-emerald-500/50 text-emerald-600 bg-emerald-500/10"
+                                : delayBetweenPosts >= 10 && selectedGroups.length <= 50
+                                  ? "border-amber-500/50 text-amber-600 bg-amber-500/10"
+                                  : "border-red-500/50 text-red-600 bg-red-500/10"
+                            )}>
+                              {delayBetweenPosts >= 15 && selectedGroups.length <= 30
+                                ? '🟢 ต่ำมาก'
+                                : delayBetweenPosts >= 10 && selectedGroups.length <= 50
+                                  ? '🟡 ปานกลาง'
+                                  : '🔴 สูง'}
+                            </Badge>
+                          </div>
+                          <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
+                            <motion.div
+                              className={cn("h-full rounded-full",
+                                delayBetweenPosts >= 15 && selectedGroups.length <= 30
+                                  ? "bg-gradient-to-r from-emerald-500 to-green-400 w-[25%]"
+                                  : delayBetweenPosts >= 10 && selectedGroups.length <= 50
+                                    ? "bg-gradient-to-r from-amber-500 to-yellow-400 w-[55%]"
+                                    : "bg-gradient-to-r from-red-500 to-orange-400 w-[85%]"
+                              )}
+                              initial={{ width: 0 }}
+                              animate={{ width: delayBetweenPosts >= 15 && selectedGroups.length <= 30 ? '25%' : delayBetweenPosts >= 10 && selectedGroups.length <= 50 ? '55%' : '85%' }}
+                              transition={{ duration: 0.5 }}
+                            />
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-1">
+                            {selectedGroups.length} กลุ่ม • delay {delayBetweenPosts}s
+                          </p>
+                        </div>
+
+                        {/* Tips Grid */}
+                        <div className="space-y-1.5">
+                          {[
+                            { icon: Timer, color: 'text-blue-500', bg: 'bg-blue-500/10', title: 'ตั้ง Delay 15-30 วินาที', desc: 'ยิ่งนาน ยิ่งปลอดภัย แนะนำ 15 วิ ขึ้นไป', safe: delayBetweenPosts >= 15 },
+                            { icon: Users, color: 'text-purple-500', bg: 'bg-purple-500/10', title: 'ไม่เกิน 30-50 กลุ่ม/วัน', desc: 'บัญชีใหม่ควรเริ่มจาก 10-20 กลุ่ม', safe: selectedGroups.length <= 50 },
+                            { icon: Eye, color: 'text-orange-500', bg: 'bg-orange-500/10', title: 'ใช้รูปภาพจริงและหลากหลาย', desc: 'รูปจริง 3-5 รูป เปลี่ยนทุกสัปดาห์' },
+                            { icon: Fingerprint, color: 'text-emerald-500', bg: 'bg-emerald-500/10', title: 'แคปชั่นหมุนเวียนอัตโนมัติ', desc: 'ระบบสร้างหลาย caption สุ่มต่างกัน ✅' },
+                            { icon: Clock, color: 'text-cyan-500', bg: 'bg-cyan-500/10', title: 'โพสต์ช่วง 8:00-22:00', desc: 'หลีกเลี่ยงช่วงดึก ดูไม่เป็นธรรมชาติ' },
+                            { icon: Shield, color: 'text-rose-500', bg: 'bg-rose-500/10', title: 'บัญชี FB อายุ 3+ เดือน', desc: 'บัญชีใหม่มากจะโดนตรวจจับง่าย' },
+                          ].map((tip, i) => (
+                            <div key={i} className="flex items-start gap-2.5 p-2 rounded-lg bg-background/60 border border-border/30 hover:border-emerald-500/20 transition-colors">
+                              <div className={cn("w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5", tip.bg)}>
+                                <tip.icon className={cn("w-3 h-3", tip.color)} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[11px] font-semibold leading-tight flex items-center gap-1">
+                                  {tip.title}
+                                  {tip.safe !== undefined && (
+                                    tip.safe
+                                      ? <CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" />
+                                      : <AlertCircle className="w-3 h-3 text-amber-500 flex-shrink-0" />
+                                  )}
+                                </p>
+                                <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">{tip.desc}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Pro tip footer */}
+                        <div className="p-2 rounded-lg bg-gradient-to-r from-amber-500/10 to-orange-500/5 border border-amber-500/20">
+                          <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-relaxed">
+                            <span className="font-bold">💡 Pro Tip:</span> เริ่มจากน้อยๆ (10 กลุ่ม delay 20s) แล้วค่อยเพิ่มเมื่อบัญชีเสถียร ระบบมี Checkpoint Detection หยุดอัตโนมัติเมื่อ Facebook เตือน
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
               {/* Action Buttons */}
-              <div className="space-y-2">
+              <div className="space-y-2 pt-1">
                 {automation.isRunning ? (
                   <Button
-                    className="w-full h-12 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg"
+                    className="w-full h-12 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white shadow-lg shadow-red-500/20 transition-all duration-300"
                     size="lg"
                     onClick={stopAutomation}
                   >
@@ -1136,15 +1275,17 @@ export default function Automation() {
                     {t.automation.stopAutomation}
                   </Button>
                 ) : (
-                  <Button
-                    className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg disabled:opacity-50 btn-shine"
-                    size="lg"
-                    onClick={() => setShowConfirmDialog(true)}
-                    disabled={!isConnected || !selectedProperty || selectedGroups.length === 0}
-                  >
-                    <Play className="w-5 h-5 mr-2" />
-                    {t.automation.startAutomation} ({selectedGroups.length} {t.automation.groups})
-                  </Button>
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <Button
+                      className="w-full h-12 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-600 hover:via-orange-600 hover:to-rose-600 text-white shadow-lg shadow-orange-500/25 disabled:opacity-50 disabled:shadow-none btn-shine relative overflow-hidden"
+                      size="lg"
+                      onClick={() => setShowConfirmDialog(true)}
+                      disabled={!isConnected || !selectedProperty || selectedGroups.length === 0}
+                    >
+                      <Play className="w-5 h-5 mr-2" />
+                      {t.automation.startAutomation} ({selectedGroups.length} {t.automation.groups})
+                    </Button>
+                  </motion.div>
                 )}
               </div>
             </CardContent>

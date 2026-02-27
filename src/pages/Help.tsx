@@ -327,7 +327,7 @@ export default function Help() {
         <div className="text-center py-3 flex flex-col items-center gap-1">
           <GrandStateLogo className="w-7 h-7" />
           <p className="text-xs font-bold bg-gradient-to-r from-accent via-amber-400 to-accent bg-clip-text text-transparent">
-            Grand<span className="text-amber-400">$</span>tate
+            GrandState
           </p>
           <p className="text-[9px] text-muted-foreground tracking-widest">v2.0</p>
         </div>

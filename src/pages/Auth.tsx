@@ -250,26 +250,52 @@ export default function Auth() {
   // ── Main Layout ──
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-[#070b14]">
-      {/* Layered background */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_50%,rgba(59,130,246,0.07)_0%,transparent_60%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_20%,rgba(247,181,0,0.05)_0%,transparent_60%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_100%,rgba(59,130,246,0.04)_0%,transparent_40%)]" />
-        {/* Grid */}
-        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
-        {/* Horizon glow */}
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-cyan-500/[0.02] to-transparent" />
-        {/* Floating gold particles */}
-        {[...Array(8)].map((_, i) => (
-          <motion.div key={i} className="absolute rounded-full bg-amber-400/30"
-            style={{ width: i % 2 === 0 ? 2 : 3, height: i % 2 === 0 ? 2 : 3, left: `${10 + i * 11}%`, top: `${15 + (i % 4) * 20}%` }}
-            animate={{ y: [-15, 15, -15], opacity: [0.15, 0.5, 0.15] }}
-            transition={{ duration: 3 + i * 0.7, repeat: Infinity, ease: 'easeInOut', delay: i * 0.3 }} />
+      {/* ── Cinematic City Video Background ── */}
+      <div className="absolute inset-0 z-0">
+        <video
+          autoPlay muted loop playsInline
+          className="absolute inset-0 w-full h-full object-cover scale-105"
+          style={{ filter: 'saturate(0.7) brightness(0.5)' }}
+          poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1920' height='1080'%3E%3Crect fill='%23070b14'/%3E%3C/svg%3E"
+        >
+          <source src="https://videos.pexels.com/video-files/3129671/3129671-uhd_2560_1440_30fps.mp4" type="video/mp4" />
+        </video>
+
+        {/* Multi-layer cinematic overlays */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#070b14]/80 via-[#070b14]/50 to-[#070b14]/90" />
+        <div className="absolute inset-0 bg-gradient-to-r from-indigo-950/40 via-transparent to-purple-950/30" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,#070b14_100%)]" />
+
+        {/* Warm amber glow — center focus */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,rgba(245,158,11,0.06)_0%,transparent_50%)]" />
+
+        {/* Horizon glow line */}
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500/20 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-[#070b14] to-transparent" />
+
+        {/* Subtle vignette */}
+        <div className="absolute inset-0" style={{ boxShadow: 'inset 0 0 200px 60px rgba(0,0,0,0.5)' }} />
+      </div>
+
+      {/* Floating gold particles over video */}
+      <div className="absolute inset-0 z-[1] pointer-events-none">
+        {[...Array(12)].map((_, i) => (
+          <motion.div key={i} className="absolute rounded-full"
+            style={{
+              width: i % 3 === 0 ? 3 : 2,
+              height: i % 3 === 0 ? 3 : 2,
+              left: `${8 + i * 7.5}%`,
+              top: `${10 + (i % 5) * 18}%`,
+              background: i % 2 === 0 ? 'rgba(245,158,11,0.4)' : 'rgba(147,197,253,0.3)',
+            }}
+            animate={{ y: [-20, 20, -20], opacity: [0.1, 0.6, 0.1] }}
+            transition={{ duration: 4 + i * 0.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.25 }} />
         ))}
-        {/* Blue accent lines */}
-        <motion.div className="absolute top-1/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-blue-500/10 to-transparent"
-          animate={{ opacity: [0.3, 0.6, 0.3] }} transition={{ duration: 4, repeat: Infinity }} />
+        {/* Accent light streaks */}
+        <motion.div className="absolute top-1/3 left-0 w-full h-px bg-gradient-to-r from-transparent via-amber-400/10 to-transparent"
+          animate={{ opacity: [0.2, 0.5, 0.2] }} transition={{ duration: 5, repeat: Infinity }} />
+        <motion.div className="absolute top-2/3 left-0 w-full h-px bg-gradient-to-r from-transparent via-blue-400/8 to-transparent"
+          animate={{ opacity: [0.15, 0.4, 0.15] }} transition={{ duration: 6, repeat: Infinity, delay: 1 }} />
       </div>
 
       <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}

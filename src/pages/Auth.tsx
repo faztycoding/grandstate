@@ -197,369 +197,371 @@ export default function Auth() {
     const pkg = packageInfo[license.package];
     const Icon = pkg.icon;
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-background via-background to-accent/5">
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-md">
-          <Card className="border-0 shadow-2xl overflow-hidden">
-            <div className={cn('h-2 bg-gradient-to-r', pkg.gradient)} />
-            <CardContent className="p-8 text-center space-y-6">
+      <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-[#070b14]">
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_50%,rgba(247,181,0,0.08)_0%,transparent_60%)]" />
+          <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
+        </div>
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="relative z-10 w-full max-w-md">
+          <div className="bg-white/[0.04] backdrop-blur-2xl border border-white/[0.08] shadow-2xl shadow-black/40 rounded-2xl overflow-hidden">
+            <div className={cn('h-1 bg-gradient-to-r', pkg.gradient)} />
+            <div className="p-8 text-center space-y-6">
               <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', delay: 0.2 }}
-                className={cn('w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br flex items-center justify-center', pkg.gradient)}>
+                className={cn('w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br flex items-center justify-center ring-1 ring-white/10 shadow-lg', pkg.gradient)}>
                 <Icon className="w-10 h-10 text-white" />
               </motion.div>
               <div>
-                <h2 className="text-2xl font-bold mb-2">{isEn ? 'Welcome!' : 'ยินดีต้อนรับ!'} 🎉</h2>
-                <p className="text-muted-foreground">
-                  {user?.email && <span className="block text-sm mb-1">{user.email}</span>}
-                  {isEn ? 'Activated' : 'เปิดใช้งานแพ็คเกจ'} <span className={cn('font-bold', pkg.color)}>{pkg.name}</span> {isEn ? 'successfully' : 'สำเร็จ'}
+                <h2 className="text-2xl font-bold text-white mb-2">{isEn ? 'Welcome!' : 'ยินดีต้อนรับ!'}</h2>
+                <p className="text-white/50">
+                  {user?.email && <span className="block text-sm text-white/30 mb-1">{user.email}</span>}
+                  {isEn ? 'Activated' : 'เปิดใช้งานแพ็คเกจ'} <span className="font-bold text-amber-400">{pkg.name}</span> {isEn ? 'successfully' : 'สำเร็จ'}
                 </p>
               </div>
-              <div className="p-4 rounded-xl bg-muted/50 space-y-2">
+              <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] space-y-2">
                 {pkg.features.map((feature, i) => (
-                  <div key={i} className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  <div key={i} className="flex items-center gap-2 text-sm text-white/70">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                     <span>{feature}</span>
                   </div>
                 ))}
               </div>
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center justify-center gap-2 text-sm text-white/30">
                 <Clock className="w-4 h-4" />
                 <span>{isEn ? 'Expires:' : 'หมดอายุ:'} {license.expiresAt.toLocaleDateString(isEn ? 'en-US' : 'th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
               </div>
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
-                <Loader2 className="w-6 h-6 animate-spin mx-auto text-accent" />
-                <p className="text-sm text-muted-foreground mt-2">{isEn ? 'Redirecting...' : 'กำลังเข้าสู่ระบบ...'}</p>
+                <Loader2 className="w-6 h-6 animate-spin mx-auto text-amber-400" />
+                <p className="text-sm text-white/30 mt-2">{isEn ? 'Redirecting...' : 'กำลังเข้าสู่ระบบ...'}</p>
               </motion.div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </motion.div>
       </div>
     );
   }
 
+  // ── Shared styles ──
+  const glassCard = "bg-white/[0.04] backdrop-blur-2xl border border-white/[0.08] shadow-2xl shadow-black/40 rounded-2xl";
+  const glassInput = "bg-white/[0.06] border-white/[0.1] text-white placeholder:text-white/30 focus:border-amber-400/50 focus:ring-amber-400/20 h-12";
+  const glassLabel = "text-white/60 text-sm font-medium";
+  const errorBox = "p-3 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-2";
+  const successBox = "p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-start gap-2";
+
   // ── Main Layout ──
   return (
-    <div className="min-h-screen flex">
-      {/* Left side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 gradient-hero relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(247,181,0,0.15)_0%,transparent_50%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(247,181,0,0.1)_0%,transparent_50%)]" />
-        <div className="relative z-10 flex flex-col justify-between p-12 text-white">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center shadow-glow">
-              <Building2 className="w-6 h-6 text-accent-foreground" />
-            </div>
-            <span className="text-2xl font-bold">Grand$tate</span>
-          </div>
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="space-y-6">
-            <h1 className="text-4xl font-bold leading-tight">
-              {isEn ? 'Auto-Post Real Estate' : 'โพสต์อสังหาฯ อัตโนมัติ'}<br />
-              <span className="gradient-text">{isEn ? 'Smarter. Faster. Safer.' : 'ฉลาดกว่า เร็วกว่า ปลอดภัยกว่า'}</span>
-            </h1>
-            <p className="text-lg text-white/70 max-w-md">
-              {isEn ? 'Auto-post properties to Facebook Groups. Save time, boost sales.' : 'ระบบช่วยโพสต์อสังหาริมทรัพย์ไปยัง Facebook Groups อัตโนมัติ ประหยัดเวลา เพิ่มยอดขาย'}
-            </p>
-            <div className="grid grid-cols-2 gap-4 pt-4">
-              {[
-                { icon: Sparkles, text: isEn ? 'AI Captions' : 'AI สร้าง Caption' },
-                { icon: Shield, text: isEn ? 'Safe & Stealth' : 'ปลอดภัย ไม่โดนแบน' },
-                { icon: Clock, text: isEn ? 'Smart Scheduling' : 'ตั้งเวลาโพสต์' },
-                { icon: Monitor, text: isEn ? 'Cloud Sync' : 'Sync ข้อมูลข้ามเครื่อง' },
-              ].map(({ icon: Ic, text }) => (
-                <div key={text} className="flex items-center gap-3 p-3 rounded-lg bg-white/10">
-                  <Ic className="w-5 h-5 text-accent" />
-                  <span className="text-sm">{text}</span>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-          <p className="text-sm text-white/50">{isEn ? '© 2026 Grand$tate — for professional agents' : '© 2026 Grand$tate — สำหรับนายหน้าอสังหาริมทรัพย์มืออาชีพ'}</p>
-        </div>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-[#070b14]">
+      {/* Layered background */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_50%,rgba(59,130,246,0.07)_0%,transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_20%,rgba(247,181,0,0.05)_0%,transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_100%,rgba(59,130,246,0.04)_0%,transparent_40%)]" />
+        {/* Grid */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
+        {/* Horizon glow */}
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-cyan-500/[0.02] to-transparent" />
+        {/* Floating gold particles */}
+        {[...Array(8)].map((_, i) => (
+          <motion.div key={i} className="absolute rounded-full bg-amber-400/30"
+            style={{ width: i % 2 === 0 ? 2 : 3, height: i % 2 === 0 ? 2 : 3, left: `${10 + i * 11}%`, top: `${15 + (i % 4) * 20}%` }}
+            animate={{ y: [-15, 15, -15], opacity: [0.15, 0.5, 0.15] }}
+            transition={{ duration: 3 + i * 0.7, repeat: Infinity, ease: 'easeInOut', delay: i * 0.3 }} />
+        ))}
+        {/* Blue accent lines */}
+        <motion.div className="absolute top-1/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-blue-500/10 to-transparent"
+          animate={{ opacity: [0.3, 0.6, 0.3] }} transition={{ duration: 4, repeat: Infinity }} />
       </div>
 
-      {/* Right side - Auth Forms */}
-      <div className="flex-1 flex items-center justify-center p-6 bg-background">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md">
-          {/* Mobile logo */}
-          <div className="lg:hidden flex items-center gap-3 justify-center mb-8">
-            <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
-              <Building2 className="w-6 h-6 text-primary-foreground" />
+      <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
+        className="relative z-10 w-full max-w-[420px] px-5">
+        {/* Grand$tate Logo */}
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15, type: 'spring' }}
+          className="text-center mb-8">
+          <div className="inline-flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/25 ring-1 ring-amber-400/30">
+              <span className="text-white text-2xl font-bold font-serif">$</span>
             </div>
-            <span className="text-2xl font-bold">Grand$tate</span>
+            <span className="text-[26px] font-bold text-white tracking-wide">Grand<span className="text-amber-400 font-serif">$</span>tate</span>
           </div>
-
-          <AnimatePresence mode="wait">
-            {/* ════════ SIGN IN ════════ */}
-            {view === 'signin' && (
-              <motion.div key="signin" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
-                <Card className="border-0 shadow-xl">
-                  <CardHeader className="text-center pb-4">
-                    <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-accent to-orange-500 flex items-center justify-center mb-4">
-                      <Mail className="w-8 h-8 text-white" />
-                    </div>
-                    <CardTitle className="text-2xl">{isEn ? 'Sign In' : 'เข้าสู่ระบบ'}</CardTitle>
-                    <CardDescription>{isEn ? 'Enter your email and password' : 'ใช้อีเมลและรหัสผ่านเพื่อเข้าสู่ระบบ'}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <form onSubmit={handleSignIn} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="email">{isEn ? 'Email' : 'อีเมล'}</Label>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input id="email" type="email" placeholder="your@email.com" value={email}
-                            onChange={e => { setEmail(e.target.value); setError(null); }}
-                            className="pl-10 h-11" required />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <Label htmlFor="password">{isEn ? 'Password' : 'รหัสผ่าน'}</Label>
-                          <button type="button" className="text-xs text-accent hover:underline" onClick={() => switchView('forgot')}>
-                            {isEn ? 'Forgot password?' : 'ลืมรหัสผ่าน?'}
-                          </button>
-                        </div>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input id="password" type={showPassword ? 'text' : 'password'} placeholder="••••••••" value={password}
-                            onChange={e => { setPassword(e.target.value); setError(null); }}
-                            className="pl-10 pr-10 h-11" required />
-                          <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                            onClick={() => setShowPassword(!showPassword)}>
-                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                          </button>
-                        </div>
-                      </div>
-
-                      {error && (
-                        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 flex items-start gap-2">
-                          <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-                        </div>
-                      )}
-                      {successMsg && (
-                        <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 flex items-start gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                          <p className="text-sm text-green-600 dark:text-green-400">{successMsg}</p>
-                        </div>
-                      )}
-
-                      <Button type="submit" className="w-full h-11 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold"
-                        disabled={isSubmitting}>
-                        {isSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isEn ? 'Signing in...' : 'กำลังเข้าสู่ระบบ...'}</> : <>{isEn ? 'Sign In' : 'เข้าสู่ระบบ'}<ArrowRight className="w-4 h-4 ml-2" /></>}
-                      </Button>
-                    </form>
-
-                    <div className="mt-6 text-center">
-                      <p className="text-sm text-muted-foreground">
-                        {isEn ? "Don't have an account?" : 'ยังไม่มีบัญชี?'}{' '}
-                        <button className="text-accent hover:underline font-medium" onClick={() => switchView('signup')}>{isEn ? 'Sign Up' : 'สมัครสมาชิก'}</button>
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-
-            {/* ════════ SIGN UP ════════ */}
-            {view === 'signup' && (
-              <motion.div key="signup" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                <Card className="border-0 shadow-xl">
-                  <CardHeader className="text-center pb-4">
-                    <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center mb-4">
-                      <User className="w-8 h-8 text-white" />
-                    </div>
-                    <CardTitle className="text-2xl">{isEn ? 'Sign Up' : 'สมัครสมาชิก'}</CardTitle>
-                    <CardDescription>{isEn ? 'Create a new account to get started' : 'สร้างบัญชีใหม่เพื่อเริ่มใช้งาน'}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <form onSubmit={handleSignUp} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="fullName">{isEn ? 'Full Name' : 'ชื่อ-นามสกุล'}</Label>
-                        <div className="relative">
-                          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input id="fullName" placeholder={isEn ? 'John Doe' : 'เช่น สมชาย ใจดี'} value={fullName}
-                            onChange={e => setFullName(e.target.value)} className="pl-10 h-11" required />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="signupEmail">{isEn ? 'Email' : 'อีเมล'}</Label>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input id="signupEmail" type="email" placeholder="your@email.com" value={email}
-                            onChange={e => { setEmail(e.target.value); setError(null); }} className="pl-10 h-11" required />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="signupPassword">{isEn ? 'Password' : 'รหัสผ่าน'}</Label>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input id="signupPassword" type={showPassword ? 'text' : 'password'} placeholder={isEn ? 'Min 6 characters' : 'อย่างน้อย 6 ตัวอักษร'} value={password}
-                            onChange={e => { setPassword(e.target.value); setError(null); }} className="pl-10 pr-10 h-11" required minLength={6} />
-                          <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                            onClick={() => setShowPassword(!showPassword)}>
-                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                          </button>
-                        </div>
-                      </div>
-
-                      {error && (
-                        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 flex items-start gap-2">
-                          <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-                        </div>
-                      )}
-
-                      <Button type="submit" className="w-full h-11 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold"
-                        disabled={isSubmitting}>
-                        {isSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isEn ? 'Creating account...' : 'กำลังสร้างบัญชี...'}</> : <>{isEn ? 'Sign Up' : 'สมัครสมาชิก'}<ArrowRight className="w-4 h-4 ml-2" /></>}
-                      </Button>
-                    </form>
-
-                    <div className="mt-6 text-center">
-                      <p className="text-sm text-muted-foreground">
-                        {isEn ? 'Already have an account?' : 'มีบัญชีแล้ว?'}{' '}
-                        <button className="text-accent hover:underline font-medium" onClick={() => switchView('signin')}>{isEn ? 'Sign In' : 'เข้าสู่ระบบ'}</button>
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-
-            {/* ════════ FORGOT PASSWORD ════════ */}
-            {view === 'forgot' && (
-              <motion.div key="forgot" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                <Card className="border-0 shadow-xl">
-                  <CardHeader className="text-center pb-4">
-                    <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center mb-4">
-                      <Lock className="w-8 h-8 text-white" />
-                    </div>
-                    <CardTitle className="text-2xl">{isEn ? 'Forgot Password' : 'ลืมรหัสผ่าน'}</CardTitle>
-                    <CardDescription>{isEn ? 'Enter your email to receive a reset link' : 'กรอกอีเมลเพื่อรับลิงก์รีเซ็ตรหัสผ่าน'}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <form onSubmit={handleForgotPassword} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="resetEmail">{isEn ? 'Email' : 'อีเมล'}</Label>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input id="resetEmail" type="email" placeholder="your@email.com" value={email}
-                            onChange={e => { setEmail(e.target.value); setError(null); }} className="pl-10 h-11" required />
-                        </div>
-                      </div>
-
-                      {error && (
-                        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 flex items-start gap-2">
-                          <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-                        </div>
-                      )}
-                      {successMsg && (
-                        <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 flex items-start gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                          <p className="text-sm text-green-600 dark:text-green-400">{successMsg}</p>
-                        </div>
-                      )}
-
-                      <Button type="submit" className="w-full h-11 bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white font-semibold"
-                        disabled={isSubmitting}>
-                        {isSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isEn ? 'Sending...' : 'กำลังส่ง...'}</> : <>{isEn ? 'Send Reset Link' : 'ส่งลิงก์รีเซ็ตรหัสผ่าน'}</>}
-                      </Button>
-                    </form>
-
-                    <div className="mt-6 text-center">
-                      <button className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1" onClick={() => switchView('signin')}>
-                        <ArrowLeft className="w-3 h-3" /> {isEn ? 'Back to Sign In' : 'กลับไปหน้าเข้าสู่ระบบ'}
-                      </button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-
-            {/* ════════ ACTIVATE LICENSE ════════ */}
-            {view === 'activate' && (
-              <motion.div key="activate" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                <Card className="border-0 shadow-xl">
-                  <CardHeader className="text-center pb-4">
-                    <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-accent to-orange-500 flex items-center justify-center mb-4">
-                      <Key className="w-8 h-8 text-white" />
-                    </div>
-                    <CardTitle className="text-2xl">{isEn ? 'Activate License' : 'เปิดใช้งาน License'}</CardTitle>
-                    <CardDescription>
-                      {user?.email && <span className="block text-xs text-accent mb-1">{user.email}</span>}
-                      {isEn ? 'Enter your License Key to get started' : 'กรอก License Key เพื่อเริ่มใช้งานระบบ'}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <form onSubmit={handleActivateLicense} className="space-y-4">
-                      <div className="space-y-2">
-                        <Input value={licenseKey} onChange={handleKeyChange} placeholder="GSXXX-XXXXX-XXXXX-XXXXX"
-                          className={cn('h-14 text-center text-lg font-mono tracking-wider', error && 'border-red-500')} maxLength={23} />
-                        <p className="text-xs text-center text-muted-foreground">{isEn ? 'Received from your administrator' : 'ได้รับ License Key จากผู้ดูแลระบบ'}</p>
-                      </div>
-
-                      {error && (
-                        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 flex items-start gap-2">
-                          <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-                        </div>
-                      )}
-
-                      <Button type="submit" className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold"
-                        disabled={isSubmitting || isValidating || licenseKey.length < 23}>
-                        {isSubmitting || isValidating
-                          ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />{isEn ? 'Verifying...' : 'กำลังตรวจสอบ...'}</>
-                          : <>{isEn ? 'Activate' : 'เปิดใช้งาน'}<ArrowRight className="w-5 h-5 ml-2" /></>}
-                      </Button>
-                    </form>
-
-                    {/* Package Cards */}
-                    <div className="mt-6 pt-6 border-t space-y-3">
-                      <p className="text-xs text-center text-muted-foreground">{isEn ? 'Supported packages' : 'แพ็คเกจที่รองรับ'}</p>
-                      <div className="grid grid-cols-3 gap-2">
-                        {Object.entries(packageInfo).map(([key, pkg]) => {
-                          const Icon = pkg.icon;
-                          return (
-                            <div key={key} className="p-3 rounded-lg bg-muted/50 text-center">
-                              <div className={cn('w-8 h-8 mx-auto rounded-lg bg-gradient-to-br flex items-center justify-center mb-2', pkg.gradient)}>
-                                <Icon className="w-4 h-4 text-white" />
-                              </div>
-                              <p className="text-xs font-medium">{pkg.name}</p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Sign out link */}
-                    <div className="mt-4 text-center">
-                      <button className="text-xs text-muted-foreground hover:text-foreground" onClick={() => { signOut(); switchView('signin'); }}>
-                        {isEn ? 'Sign out' : 'ออกจากระบบ'}
-                      </button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Contact + Admin (show only on sign-in/sign-up) */}
-          {(view === 'signin' || view === 'signup') && (
-            <>
-              <p className="mt-6 text-center text-sm text-muted-foreground">
-                {isEn ? 'Want to upgrade?' : 'ต้องการอัพเกรดแพ็คเกจ?'}{' '}
-                <a href="https://line.me/ti/p/@897hrloe" target="_blank" rel="noopener noreferrer"
-                  className="text-accent hover:underline font-medium">{isEn ? 'Contact via LINE' : 'ติดต่อทาง LINE'}</a>
-              </p>
-              <div className="mt-4 pt-4 border-t border-dashed">
-                <Button variant="ghost" className="w-full text-muted-foreground hover:text-foreground" onClick={() => navigate('/adminfaz')}>
-                  <Shield className="w-4 h-4 mr-2" />{isEn ? 'Admin Panel' : 'สำหรับผู้ดูแลระบบ'}
-                </Button>
-              </div>
-            </>
-          )}
         </motion.div>
-      </div>
+
+        <AnimatePresence mode="wait">
+          {/* ════════ SIGN IN ════════ */}
+          {view === 'signin' && (
+            <motion.div key="signin" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.3 }}>
+              <div className={glassCard}>
+                <div className="p-7 pb-0 text-center">
+                  <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-amber-400/90 to-orange-500/90 flex items-center justify-center mb-4 ring-1 ring-amber-400/20 shadow-lg shadow-amber-500/20">
+                    <Mail className="w-7 h-7 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-white mb-1">{isEn ? 'Sign In' : 'เข้าสู่ระบบ'}</h2>
+                  <p className="text-white/40 text-sm">{isEn ? 'Enter your email and password' : 'ใช้อีเมลและรหัสผ่านเพื่อเข้าสู่ระบบ'}</p>
+                </div>
+                <div className="p-7">
+                  <form onSubmit={handleSignIn} className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className={glassLabel}>{isEn ? 'Email' : 'อีเมล'}</label>
+                      <div className="relative">
+                        <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                        <Input id="email" type="email" placeholder="your@email.com" value={email}
+                          onChange={e => { setEmail(e.target.value); setError(null); }}
+                          className={cn("pl-11", glassInput)} required />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center">
+                        <label className={glassLabel}>{isEn ? 'Password' : 'รหัสผ่าน'}</label>
+                        <button type="button" className="text-xs text-amber-400/70 hover:text-amber-400 transition-colors" onClick={() => switchView('forgot')}>
+                          {isEn ? 'Forgot?' : 'ลืมรหัสผ่าน?'}
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                        <Input id="password" type={showPassword ? 'text' : 'password'} placeholder="••••••••" value={password}
+                          onChange={e => { setPassword(e.target.value); setError(null); }}
+                          className={cn("pl-11 pr-11", glassInput)} required />
+                        <button type="button" className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                          onClick={() => setShowPassword(!showPassword)}>
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {error && (
+                      <div className={errorBox}>
+                        <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-red-400">{error}</p>
+                      </div>
+                    )}
+                    {successMsg && (
+                      <div className={successBox}>
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-emerald-400">{successMsg}</p>
+                      </div>
+                    )}
+
+                    <Button type="submit" className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-bold text-base shadow-lg shadow-amber-500/25 border-0 transition-all duration-200"
+                      disabled={isSubmitting}>
+                      {isSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isEn ? 'Signing in...' : 'กำลังเข้าสู่ระบบ...'}</> : <>{isEn ? 'Sign In' : 'เข้าสู่ระบบ'}<ArrowRight className="w-4 h-4 ml-2" /></>}
+                    </Button>
+                  </form>
+
+                  <div className="mt-6 text-center">
+                    <p className="text-sm text-white/35">
+                      {isEn ? "Don't have an account?" : 'ยังไม่มีบัญชี?'}{' '}
+                      <button className="text-amber-400 hover:text-amber-300 font-medium transition-colors" onClick={() => switchView('signup')}>{isEn ? 'Sign Up' : 'สมัครสมาชิก'}</button>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ════════ SIGN UP ════════ */}
+          {view === 'signup' && (
+            <motion.div key="signup" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.3 }}>
+              <div className={glassCard}>
+                <div className="p-7 pb-0 text-center">
+                  <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-blue-500/90 to-cyan-500/90 flex items-center justify-center mb-4 ring-1 ring-blue-400/20 shadow-lg shadow-blue-500/20">
+                    <User className="w-7 h-7 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-white mb-1">{isEn ? 'Sign Up' : 'สมัครสมาชิก'}</h2>
+                  <p className="text-white/40 text-sm">{isEn ? 'Create a new account to get started' : 'สร้างบัญชีใหม่เพื่อเริ่มใช้งาน'}</p>
+                </div>
+                <div className="p-7">
+                  <form onSubmit={handleSignUp} className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className={glassLabel}>{isEn ? 'Full Name' : 'ชื่อ-นามสกุล'}</label>
+                      <div className="relative">
+                        <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                        <Input id="fullName" placeholder={isEn ? 'John Doe' : 'เช่น สมชาย ใจดี'} value={fullName}
+                          onChange={e => setFullName(e.target.value)} className={cn("pl-11", glassInput)} required />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={glassLabel}>{isEn ? 'Email' : 'อีเมล'}</label>
+                      <div className="relative">
+                        <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                        <Input id="signupEmail" type="email" placeholder="your@email.com" value={email}
+                          onChange={e => { setEmail(e.target.value); setError(null); }} className={cn("pl-11", glassInput)} required />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={glassLabel}>{isEn ? 'Password' : 'รหัสผ่าน'}</label>
+                      <div className="relative">
+                        <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                        <Input id="signupPassword" type={showPassword ? 'text' : 'password'} placeholder={isEn ? 'Min 6 characters' : 'อย่างน้อย 6 ตัวอักษร'} value={password}
+                          onChange={e => { setPassword(e.target.value); setError(null); }} className={cn("pl-11 pr-11", glassInput)} required minLength={6} />
+                        <button type="button" className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                          onClick={() => setShowPassword(!showPassword)}>
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {error && (
+                      <div className={errorBox}>
+                        <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-red-400">{error}</p>
+                      </div>
+                    )}
+
+                    <Button type="submit" className="w-full h-12 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-400 hover:to-cyan-400 text-white font-bold text-base shadow-lg shadow-blue-500/25 border-0 transition-all duration-200"
+                      disabled={isSubmitting}>
+                      {isSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isEn ? 'Creating account...' : 'กำลังสร้างบัญชี...'}</> : <>{isEn ? 'Sign Up' : 'สมัครสมาชิก'}<ArrowRight className="w-4 h-4 ml-2" /></>}
+                    </Button>
+                  </form>
+
+                  <div className="mt-6 text-center">
+                    <p className="text-sm text-white/35">
+                      {isEn ? 'Already have an account?' : 'มีบัญชีแล้ว?'}{' '}
+                      <button className="text-amber-400 hover:text-amber-300 font-medium transition-colors" onClick={() => switchView('signin')}>{isEn ? 'Sign In' : 'เข้าสู่ระบบ'}</button>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ════════ FORGOT PASSWORD ════════ */}
+          {view === 'forgot' && (
+            <motion.div key="forgot" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.3 }}>
+              <div className={glassCard}>
+                <div className="p-7 pb-0 text-center">
+                  <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-violet-500/90 to-purple-500/90 flex items-center justify-center mb-4 ring-1 ring-violet-400/20 shadow-lg shadow-violet-500/20">
+                    <Lock className="w-7 h-7 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-white mb-1">{isEn ? 'Forgot Password' : 'ลืมรหัสผ่าน'}</h2>
+                  <p className="text-white/40 text-sm">{isEn ? 'Enter your email to receive a reset link' : 'กรอกอีเมลเพื่อรับลิงก์รีเซ็ตรหัสผ่าน'}</p>
+                </div>
+                <div className="p-7">
+                  <form onSubmit={handleForgotPassword} className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className={glassLabel}>{isEn ? 'Email' : 'อีเมล'}</label>
+                      <div className="relative">
+                        <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                        <Input id="resetEmail" type="email" placeholder="your@email.com" value={email}
+                          onChange={e => { setEmail(e.target.value); setError(null); }} className={cn("pl-11", glassInput)} required />
+                      </div>
+                    </div>
+
+                    {error && (
+                      <div className={errorBox}>
+                        <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-red-400">{error}</p>
+                      </div>
+                    )}
+                    {successMsg && (
+                      <div className={successBox}>
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-emerald-400">{successMsg}</p>
+                      </div>
+                    )}
+
+                    <Button type="submit" className="w-full h-12 bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-400 hover:to-purple-400 text-white font-bold text-base shadow-lg shadow-violet-500/25 border-0 transition-all duration-200"
+                      disabled={isSubmitting}>
+                      {isSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isEn ? 'Sending...' : 'กำลังส่ง...'}</> : <>{isEn ? 'Send Reset Link' : 'ส่งลิงก์รีเซ็ตรหัสผ่าน'}</>}
+                    </Button>
+                  </form>
+
+                  <div className="mt-6 text-center">
+                    <button className="text-sm text-white/35 hover:text-white/60 inline-flex items-center gap-1.5 transition-colors" onClick={() => switchView('signin')}>
+                      <ArrowLeft className="w-3.5 h-3.5" /> {isEn ? 'Back to Sign In' : 'กลับไปหน้าเข้าสู่ระบบ'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ════════ ACTIVATE LICENSE ════════ */}
+          {view === 'activate' && (
+            <motion.div key="activate" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.3 }}>
+              <div className={glassCard}>
+                <div className="p-7 pb-0 text-center">
+                  <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-amber-400/90 to-orange-500/90 flex items-center justify-center mb-4 ring-1 ring-amber-400/20 shadow-lg shadow-amber-500/20">
+                    <Key className="w-7 h-7 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-white mb-1">{isEn ? 'Activate License' : 'เปิดใช้งาน License'}</h2>
+                  <div className="text-white/40 text-sm">
+                    {user?.email && <span className="block text-xs text-amber-400/70 mb-1">{user.email}</span>}
+                    {isEn ? 'Enter your License Key to get started' : 'กรอก License Key เพื่อเริ่มใช้งานระบบ'}
+                  </div>
+                </div>
+                <div className="p-7">
+                  <form onSubmit={handleActivateLicense} className="space-y-4">
+                    <div className="space-y-2">
+                      <Input value={licenseKey} onChange={handleKeyChange} placeholder="GSXXX-XXXXX-XXXXX-XXXXX"
+                        className={cn('h-14 text-center text-lg font-mono tracking-wider bg-white/[0.06] border-white/[0.1] text-white placeholder:text-white/25 focus:border-amber-400/50 focus:ring-amber-400/20', error && 'border-red-500/50')} maxLength={23} />
+                      <p className="text-xs text-center text-white/30">{isEn ? 'Received from your administrator' : 'ได้รับ License Key จากผู้ดูแลระบบ'}</p>
+                    </div>
+
+                    {error && (
+                      <div className={errorBox}>
+                        <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-red-400">{error}</p>
+                      </div>
+                    )}
+
+                    <Button type="submit" className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-bold text-base shadow-lg shadow-amber-500/25 border-0 transition-all duration-200"
+                      disabled={isSubmitting || isValidating || licenseKey.length < 23}>
+                      {isSubmitting || isValidating
+                        ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />{isEn ? 'Verifying...' : 'กำลังตรวจสอบ...'}</>
+                        : <>{isEn ? 'Activate' : 'เปิดใช้งาน'}<ArrowRight className="w-5 h-5 ml-2" /></>}
+                    </Button>
+                  </form>
+
+                  {/* Package Cards */}
+                  <div className="mt-6 pt-6 border-t border-white/[0.06] space-y-3">
+                    <p className="text-xs text-center text-white/30">{isEn ? 'Supported packages' : 'แพ็คเกจที่รองรับ'}</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {Object.entries(packageInfo).map(([key, pkg]) => {
+                        const Icon = pkg.icon;
+                        return (
+                          <div key={key} className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.05] text-center hover:bg-white/[0.06] transition-colors">
+                            <div className={cn('w-8 h-8 mx-auto rounded-lg bg-gradient-to-br flex items-center justify-center mb-2', pkg.gradient)}>
+                              <Icon className="w-4 h-4 text-white" />
+                            </div>
+                            <p className="text-xs font-medium text-white/60">{pkg.name}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Sign out link */}
+                  <div className="mt-4 text-center">
+                    <button className="text-xs text-white/25 hover:text-white/50 transition-colors" onClick={() => { signOut(); switchView('signin'); }}>
+                      {isEn ? 'Sign out' : 'ออกจากระบบ'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Contact + Admin (show only on sign-in/sign-up) */}
+        {(view === 'signin' || view === 'signup') && (
+          <>
+            <p className="mt-6 text-center text-sm text-white/25">
+              {isEn ? 'Want to upgrade?' : 'ต้องการอัพเกรดแพ็คเกจ?'}{' '}
+              <a href="https://line.me/ti/p/@897hrloe" target="_blank" rel="noopener noreferrer"
+                className="text-amber-400/70 hover:text-amber-400 font-medium transition-colors">{isEn ? 'Contact via LINE' : 'ติดต่อทาง LINE'}</a>
+            </p>
+            <div className="mt-3 pt-3 border-t border-white/[0.04]">
+              <Button variant="ghost" className="w-full text-white/20 hover:text-white/50 hover:bg-white/[0.03]" onClick={() => navigate('/adminfaz')}>
+                <Shield className="w-4 h-4 mr-2" />{isEn ? 'Admin Panel' : 'สำหรับผู้ดูแลระบบ'}
+              </Button>
+            </div>
+          </>
+        )}
+
+        {/* Footer */}
+        <p className="mt-6 text-center text-[11px] text-white/15">
+          {isEn ? '© 2026 Grand$tate — for professional agents' : '© 2026 Grand$tate — สำหรับนายหน้ามืออาชีพ'}
+        </p>
+      </motion.div>
     </div>
   );
 }

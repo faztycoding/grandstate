@@ -95,7 +95,12 @@ export default function Dashboard() {
 
       <div className="space-y-6">
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+        >
           <StatsCard
             title={d.totalProperties}
             value={properties.length}
@@ -122,10 +127,18 @@ export default function Dashboard() {
             icon={<ShieldCheck className="w-6 h-6" />}
             variant="accent"
           />
-        </div>
+        </motion.div>
 
         {/* Quick Actions */}
-        <Card className="card-elevated">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.5 }}
+        >
+        <Card className="card-glow overflow-hidden relative group">
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 overflow-hidden pointer-events-none">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-accent/5 to-transparent" style={{ animation: 'shimmer 3s ease-in-out infinite' }} />
+          </div>
           <CardHeader className="pb-4">
             <CardTitle>{d.quickActions}</CardTitle>
           </CardHeader>
@@ -180,6 +193,7 @@ export default function Dashboard() {
             </Link>
           </CardContent>
         </Card>
+        </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Posting Activity Chart */}
@@ -292,13 +306,13 @@ export default function Dashboard() {
             </Card>
 
             {/* Go to Automation CTA */}
-            <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white" asChild>
-              <Link to="/automation">
-                <Zap className="w-4 h-4 mr-2" />
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Link to="/automation" className="btn-glass w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold text-accent shadow-lg">
+                <Zap className="w-4 h-4" />
                 {d.startAutomation}
-                <ArrowRight className="w-4 h-4 ml-2" />
+                <ArrowRight className="w-4 h-4" />
               </Link>
-            </Button>
+            </motion.div>
           </div>
         </div>
       </div>

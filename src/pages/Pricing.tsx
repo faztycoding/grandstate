@@ -20,6 +20,8 @@ import { useLanguage } from '@/i18n/LanguageContext';
 import { cn } from '@/lib/utils';
 import { getUserPackage } from '@/hooks/usePackageLimits';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+import { ArrowRight } from 'lucide-react';
 
 interface PlanFeature {
   text: string;
@@ -174,7 +176,7 @@ export default function Pricing() {
     }
 
     // Paid plans - contact via LINE
-    window.open('https://line.me/ti/p/@grandstate', '_blank');
+    window.open('https://line.me/ti/p/@897hrloe', '_blank');
   };
 
   return (
@@ -184,8 +186,13 @@ export default function Pricing() {
     >
       <div className="max-w-6xl mx-auto space-y-8">
         {/* Header */}
-        <div className="text-center space-y-4">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 text-accent">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-center space-y-4"
+        >
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 text-accent border border-accent/20">
             <Sparkles className="w-4 h-4" />
             <span className="text-sm font-medium">
               {isEn ? 'Boost your real estate business' : 'เพิ่มยอดขายอสังหาฯ ของคุณ'}
@@ -199,28 +206,40 @@ export default function Pricing() {
               ? 'Start free and upgrade when you need more. All plans include our core features.'
               : 'เริ่มต้นใช้งานฟรี อัพเกรดเมื่อต้องการใช้งานมากขึ้น ทุกแพ็คเกจมีฟีเจอร์หลักครบครัน'}
           </p>
-        </div>
+        </motion.div>
 
         {/* Plans Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {plans.map((plan) => {
+          {plans.map((plan, index) => {
             const Icon = plan.icon;
             const features = isEn ? plan.featuresEn : plan.features;
             const isCurrentPlan = plan.id === currentPlan;
 
             return (
-              <Card
+              <motion.div
                 key={plan.id}
+                initial={{ opacity: 0, y: 40, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ delay: index * 0.12, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              >
+              <Card
                 className={cn(
-                  'relative overflow-hidden transition-all duration-300 hover:shadow-xl',
-                  plan.popular && 'border-2 border-accent shadow-lg scale-[1.02]',
+                  'relative overflow-hidden transition-all duration-500 group h-full',
+                  plan.popular && 'neon-card border-accent shadow-xl shadow-accent/10 scale-[1.03]',
+                  !plan.popular && 'card-glow hover:shadow-lg',
                   isCurrentPlan && 'ring-2 ring-green-500'
                 )}
               >
+                {/* Shimmer on hover */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 overflow-hidden pointer-events-none">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-accent/5 to-transparent" style={{ animation: 'shimmer 2.5s ease-in-out infinite' }} />
+                </div>
+
                 {/* Popular Badge */}
                 {plan.popular && (
-                  <div className="absolute top-0 right-0">
-                    <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold px-4 py-1 rounded-bl-lg">
+                  <div className="absolute top-0 right-0 z-10">
+                    <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold px-4 py-1.5 rounded-bl-xl shadow-lg">
+                      <Sparkles className="w-3 h-3 inline mr-1" />
                       {isEn ? 'POPULAR' : 'ยอดนิยม'}
                     </div>
                   </div>
@@ -228,26 +247,29 @@ export default function Pricing() {
 
                 {/* Current Plan Badge */}
                 {isCurrentPlan && (
-                  <div className="absolute top-0 left-0">
-                    <div className="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-br-lg">
+                  <div className="absolute top-0 left-0 z-10">
+                    <div className="bg-green-500 text-white text-xs font-bold px-3 py-1.5 rounded-br-xl shadow-lg">
+                      <Check className="w-3 h-3 inline mr-1" />
                       {isEn ? 'CURRENT' : 'ปัจจุบัน'}
                     </div>
                   </div>
                 )}
 
                 {/* Gradient Header */}
-                <div className={cn('h-2 bg-gradient-to-r', plan.gradient)} />
+                <div className={cn('h-1.5 bg-gradient-to-r', plan.gradient)} />
 
-                <CardHeader className="text-center pb-2">
+                <CardHeader className="text-center pb-2 relative z-10">
                   {/* Icon */}
-                  <div
+                  <motion.div
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                    transition={{ type: 'spring', stiffness: 400 }}
                     className={cn(
-                      'w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br flex items-center justify-center mb-4',
+                      'w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br flex items-center justify-center mb-4 shadow-lg',
                       plan.gradient
                     )}
                   >
                     <Icon className="w-8 h-8 text-white" />
-                  </div>
+                  </motion.div>
 
                   <CardTitle className="text-2xl">{isEn ? plan.nameEn : plan.name}</CardTitle>
                   <CardDescription>{isEn ? plan.descriptionEn : plan.description}</CardDescription>
@@ -255,7 +277,7 @@ export default function Pricing() {
                   {/* Price */}
                   <div className="pt-4">
                     {plan.price === 0 ? (
-                      <div className="text-4xl font-bold text-green-600">
+                      <div className={cn('text-4xl font-bold', plan.color)}>
                         {isEn ? 'Free' : 'ฟรี'}
                       </div>
                     ) : (
@@ -269,21 +291,25 @@ export default function Pricing() {
                   </div>
 
                   {/* Posts per day */}
-                  <Badge variant="secondary" className="mt-3">
+                  <Badge variant="secondary" className={cn('mt-3',
+                    plan.id === 'rookie' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+                    plan.id === 'agent' && 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+                    plan.id === 'elite' && 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+                  )}>
                     <Zap className="w-3 h-3 mr-1" />
                     {isEn ? plan.postsPerDayEn : plan.postsPerDay}
                   </Badge>
                 </CardHeader>
 
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 relative z-10">
                   {/* Features */}
                   <ul className="space-y-3">
-                    {features.map((feature, index) => (
+                    {features.map((feature, fIdx) => (
                       <li
-                        key={index}
+                        key={fIdx}
                         className={cn(
                           'flex items-start gap-2 text-sm',
-                          !feature.included && 'text-muted-foreground'
+                          !feature.included && 'text-muted-foreground/50'
                         )}
                       >
                         <div
@@ -291,9 +317,13 @@ export default function Pricing() {
                             'w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5',
                             feature.included
                               ? feature.highlight
-                                ? 'bg-accent text-white'
-                                : 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400'
-                              : 'bg-muted text-muted-foreground'
+                                ? cn('text-white shadow-sm',
+                                    plan.id === 'rookie' && 'bg-emerald-500',
+                                    plan.id === 'agent' && 'bg-amber-500',
+                                    plan.id === 'elite' && 'bg-purple-500',
+                                  )
+                                : 'bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-400'
+                              : 'bg-muted text-muted-foreground/30'
                           )}
                         >
                           <Check className="w-3 h-3" />
@@ -306,14 +336,12 @@ export default function Pricing() {
                   {/* CTA Button */}
                   <Button
                     className={cn(
-                      'w-full h-12 font-semibold',
-                      plan.popular
-                        ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white'
-                        : plan.id === 'elite'
-                          ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white'
-                          : ''
+                      'w-full h-12 font-semibold gap-2 transition-all duration-300',
+                      plan.id === 'rookie' && !isCurrentPlan && 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 hover:scale-[1.02]',
+                      plan.id === 'agent' && !isCurrentPlan && 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 hover:scale-[1.02]',
+                      plan.id === 'elite' && !isCurrentPlan && 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 hover:scale-[1.02]',
                     )}
-                    variant={plan.popular || plan.id === 'elite' ? 'default' : 'outline'}
+                    variant={isCurrentPlan ? 'outline' : 'default'}
                     onClick={() => handleSelectPlan(plan.id)}
                     disabled={isCurrentPlan}
                   >
@@ -328,15 +356,25 @@ export default function Pricing() {
                         : isEn
                           ? 'Contact Us — LINE'
                           : 'ติดต่อซื้อ — LINE'}
+                    {!isCurrentPlan && <ArrowRight className="w-4 h-4" />}
                   </Button>
                 </CardContent>
               </Card>
+              </motion.div>
             );
           })}
         </div>
 
         {/* FAQ / Benefits */}
-        <Card className="card-elevated">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.5 }}
+        >
+        <Card className="card-glow overflow-hidden relative group">
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 overflow-hidden pointer-events-none">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-accent/5 to-transparent" style={{ animation: 'shimmer 3s ease-in-out infinite' }} />
+          </div>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Award className="w-5 h-5 text-accent" />
@@ -345,61 +383,32 @@ export default function Pricing() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
-                  <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <p className="font-medium">
-                    {isEn ? 'Save Time' : 'ประหยัดเวลา'}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {isEn
-                      ? 'Automate posting to multiple groups in minutes'
-                      : 'โพสต์หลายกลุ่มอัตโนมัติในไม่กี่นาที'}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900 flex items-center justify-center flex-shrink-0">
-                  <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
-                </div>
-                <div>
-                  <p className="font-medium">
-                    {isEn ? 'Increase Sales' : 'เพิ่มยอดขาย'}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {isEn
-                      ? 'Reach more potential buyers with wider coverage'
-                      : 'เข้าถึงผู้ซื้อได้มากขึ้นด้วยการกระจายโพสต์'}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900 flex items-center justify-center flex-shrink-0">
-                  <Shield className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                </div>
-                <div>
-                  <p className="font-medium">
-                    {isEn ? 'Safe & Reliable' : 'ปลอดภัย & เสถียร'}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {isEn
-                      ? 'Built-in safety features to protect your account'
-                      : 'ระบบป้องกันบัญชีถูกแบนในตัว'}
-                  </p>
-                </div>
-              </div>
+              {[
+                { icon: Clock, color: 'bg-blue-100 dark:bg-blue-900/40', iconColor: 'text-blue-600 dark:text-blue-400', title: isEn ? 'Save Time' : 'ประหยัดเวลา', desc: isEn ? 'Automate posting to multiple groups in minutes' : 'โพสต์หลายกลุ่มอัตโนมัติในไม่กี่นาที' },
+                { icon: TrendingUp, color: 'bg-green-100 dark:bg-green-900/40', iconColor: 'text-green-600 dark:text-green-400', title: isEn ? 'Increase Sales' : 'เพิ่มยอดขาย', desc: isEn ? 'Reach more potential buyers with wider coverage' : 'เข้าถึงผู้ซื้อได้มากขึ้นด้วยการกระจายโพสต์' },
+                { icon: Shield, color: 'bg-purple-100 dark:bg-purple-900/40', iconColor: 'text-purple-600 dark:text-purple-400', title: isEn ? 'Safe & Reliable' : 'ปลอดภัย & เสถียร', desc: isEn ? 'Built-in safety features to protect your account' : 'ระบบป้องกันบัญชีถูกแบนในตัว' },
+              ].map((item, i) => (
+                <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6 + i * 0.1 }} className="flex items-start gap-3 p-3 rounded-xl hover:bg-muted/50 transition-colors">
+                  <motion.div whileHover={{ scale: 1.1, rotate: 5 }} className={cn('w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0', item.color)}>
+                    <item.icon className={cn('w-5 h-5', item.iconColor)} />
+                  </motion.div>
+                  <div>
+                    <p className="font-medium">{item.title}</p>
+                    <p className="text-sm text-muted-foreground">{item.desc}</p>
+                  </div>
+                </motion.div>
+              ))}
             </div>
           </CardContent>
         </Card>
+        </motion.div>
 
         {/* Contact */}
         <div className="text-center py-8">
           <p className="text-muted-foreground">
             {isEn ? 'Have questions? Contact us via' : 'มีคำถาม? ติดต่อเราได้ที่'}{' '}
             <a
-              href="https://line.me/ti/p/@grandstate"
+              href="https://line.me/ti/p/@897hrloe"
               target="_blank"
               rel="noopener noreferrer"
               className="text-accent hover:underline inline-flex items-center gap-1"

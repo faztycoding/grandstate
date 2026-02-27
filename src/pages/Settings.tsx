@@ -42,6 +42,7 @@ import {
   Lock,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useFacebookConnection } from '@/hooks/useFacebookConnection';
 import { getUserPackage, getPackageLimits } from '@/hooks/usePackageLimits';
@@ -317,7 +318,16 @@ export default function Settings() {
     <DashboardLayout title={t.settings.title} subtitle={t.settings.subtitle}>
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Package Banner */}
-        <div className={cn('relative overflow-hidden rounded-2xl bg-gradient-to-r p-5', pkgTheme.gradient)}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className={cn('relative overflow-hidden rounded-2xl bg-gradient-to-r p-5 group', pkgTheme.gradient)}
+        >
+          {/* Shimmer */}
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 overflow-hidden pointer-events-none z-20">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent" style={{ animation: 'shimmer 2.5s ease-in-out infinite' }} />
+          </div>
           <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3 sm:gap-4">
               <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
@@ -361,7 +371,7 @@ export default function Settings() {
           {/* Decorative circles */}
           <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10" />
           <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-white/5" />
-        </div>
+        </motion.div>
 
         {/* Account Info */}
         {authUser && (

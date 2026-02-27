@@ -874,7 +874,7 @@ export default function Landing() {
                     {isEn ? 'Start Free' : 'เริ่มต้นใช้งานฟรี'}
                     <ArrowRight className="w-5 h-5" />
                   </Link>
-                  <a href="https://line.me/ti/p/@grandstate" target="_blank" rel="noopener noreferrer"
+                  <a href="https://line.me/ti/p/@897hrloe" target="_blank" rel="noopener noreferrer"
                     className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl text-base font-semibold border border-white/30 text-white hover:bg-white/10 hover:scale-105 transition-all duration-300 backdrop-blur-sm">
                     <MessageCircle className="w-5 h-5" />
                     {isEn ? 'Contact via LINE' : 'ติดต่อทาง LINE'}
@@ -907,7 +907,7 @@ export default function Landing() {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><Link to="/auth" className="hover:text-foreground transition-colors">{isEn ? 'Sign In' : 'เข้าสู่ระบบ'}</Link></li>
                 <li><Link to="/pricing" className="hover:text-foreground transition-colors">{isEn ? 'Pricing' : 'แพ็กเกจและราคา'}</Link></li>
-                <li><a href="https://line.me/ti/p/@grandstate" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{isEn ? 'Contact Us (LINE)' : 'ติดต่อเรา (LINE)'}</a></li>
+                <li><a href="https://line.me/ti/p/@897hrloe" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{isEn ? 'Contact Us (LINE)' : 'ติดต่อเรา (LINE)'}</a></li>
               </ul>
             </div>
             <div>

@@ -548,7 +548,7 @@ export default function Auth() {
             <>
               <p className="mt-6 text-center text-sm text-muted-foreground">
                 {isEn ? 'Want to upgrade?' : 'ต้องการอัพเกรดแพ็คเกจ?'}{' '}
-                <a href="https://line.me/ti/p/@grandstate" target="_blank" rel="noopener noreferrer"
+                <a href="https://line.me/ti/p/@897hrloe" target="_blank" rel="noopener noreferrer"
                   className="text-accent hover:underline font-medium">{isEn ? 'Contact via LINE' : 'ติดต่อทาง LINE'}</a>
               </p>
               <div className="mt-4 pt-4 border-t border-dashed">

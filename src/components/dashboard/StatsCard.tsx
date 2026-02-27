@@ -24,10 +24,13 @@ export function StatsCard({ title, value, subtitle, icon, trend, variant = 'defa
       transition={{ duration: 0.3 }}
     >
       <Card className={cn(
-        'card-elevated overflow-hidden',
+        'card-elevated overflow-hidden relative group hover:shadow-lg transition-all duration-300',
         variant === 'primary' && 'bg-primary text-primary-foreground',
         variant === 'accent' && 'bg-accent text-accent-foreground'
       )}>
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 overflow-hidden pointer-events-none">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent" style={{ animation: 'shimmer 2.5s ease-in-out infinite' }} />
+        </div>
         <CardContent className="p-6">
           <div className="flex items-start justify-between">
             <div>
@@ -60,12 +63,16 @@ export function StatsCard({ title, value, subtitle, icon, trend, variant = 'defa
                 </div>
               )}
             </div>
-            <div className={cn(
-              'w-12 h-12 rounded-xl flex items-center justify-center',
-              variant === 'default' ? 'bg-primary/10 text-primary' : 'bg-white/20'
-            )}>
+            <motion.div
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              transition={{ type: 'spring', stiffness: 400 }}
+              className={cn(
+                'w-12 h-12 rounded-xl flex items-center justify-center shadow-sm',
+                variant === 'default' ? 'bg-primary/10 text-primary' : 'bg-white/20'
+              )}
+            >
               {icon}
-            </div>
+            </motion.div>
           </div>
         </CardContent>
       </Card>

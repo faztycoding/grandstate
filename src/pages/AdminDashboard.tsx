@@ -40,6 +40,9 @@ import {
     StopCircle,
     Store,
     Hourglass,
+    ChevronDown,
+    ChevronRight,
+    Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -210,7 +213,7 @@ export default function AdminDashboard() {
         try {
             const res = await apiFetch('/api/admin/change-package', { method: 'POST', body: JSON.stringify({ targetUserId: fullUserId, newPackage: newPkg }) });
             const data = await res.json();
-            if (data.success) { toast.success(`เปลี่ยนเป็น ${newPkg.toUpperCase()} สำเร็จ`); fetchUserLicenses(); } else { toast.error(data.error); }
+            if (data.success) { toast.success(`เปลี่ยนเป็น ${newPkg.toUpperCase()} สำเร็จ`); fetchUserLicenses(); fetchAllUsers(); } else { toast.error(data.error); }
         } catch { toast.error('Failed'); } finally { setChangingPkgUser(null); }
     };
 
@@ -868,17 +871,17 @@ export default function AdminDashboard() {
                 {/* ═══════════════ TAB: OVERVIEW ═══════════════ */}
                 {activeTab === 'overview' && (<>
                     {/* Quick Stats */}
-                    <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+                    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="grid grid-cols-2 lg:grid-cols-6 gap-3">
                         <Card><CardContent className="pt-5 pb-4"><div className="flex items-center gap-3"><div className="p-2.5 rounded-xl bg-blue-100 dark:bg-blue-900/30"><Key className="w-5 h-5 text-blue-600" /></div><div><p className="text-xs text-muted-foreground">{t.admin.totalLicenses}</p><p className="text-xl font-bold">{stats.totalLicenses}</p></div></div></CardContent></Card>
                         <Card><CardContent className="pt-5 pb-4"><div className="flex items-center gap-3"><div className="p-2.5 rounded-xl bg-green-100 dark:bg-green-900/30"><Check className="w-5 h-5 text-green-600" /></div><div><p className="text-xs text-muted-foreground">{t.admin.activeLicenses}</p><p className="text-xl font-bold">{stats.activeLicenses}</p></div></div></CardContent></Card>
                         <Card><CardContent className="pt-5 pb-4"><div className="flex items-center gap-3"><div className="p-2.5 rounded-xl bg-amber-100 dark:bg-amber-900/30"><Clock className="w-5 h-5 text-amber-600" /></div><div><p className="text-xs text-muted-foreground">{t.admin.expiringSoon}</p><p className="text-xl font-bold">{stats.expiringLicenses}</p></div></div></CardContent></Card>
                         <Card><CardContent className="pt-5 pb-4"><div className="flex items-center gap-3"><div className="p-2.5 rounded-xl bg-purple-100 dark:bg-purple-900/30"><DollarSign className="w-5 h-5 text-purple-600" /></div><div><p className="text-xs text-muted-foreground">{t.admin.totalRevenue}</p><p className="text-xl font-bold">฿{stats.totalRevenue.toLocaleString()}</p></div></div></CardContent></Card>
                         <Card><CardContent className="pt-5 pb-4"><div className="flex items-center gap-3"><div className="p-2.5 rounded-xl bg-emerald-100 dark:bg-emerald-900/30"><Wifi className="w-5 h-5 text-emerald-600" /></div><div><p className="text-xs text-muted-foreground">{t.admin.online}</p><p className="text-xl font-bold">{liveStats?.onlineUsers ?? '—'}</p></div></div></CardContent></Card>
                         <Card><CardContent className="pt-5 pb-4"><div className="flex items-center gap-3"><div className="p-2.5 rounded-xl bg-orange-100 dark:bg-orange-900/30"><Zap className="w-5 h-5 text-orange-600" /></div><div><p className="text-xs text-muted-foreground">Automation</p><p className="text-xl font-bold">{liveStats?.automation.currentlyRunning ?? '—'}</p></div></div></CardContent></Card>
-                    </div>
+                    </motion.div>
 
                     {/* Charts */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.4 }} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Package Distribution */}
                         <Card>
                             <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><PieChart className="w-4 h-4" /> {t.admin.packageDistribution}</CardTitle></CardHeader>
@@ -893,7 +896,7 @@ export default function AdminDashboard() {
                                 {(() => { const ar = licenses.filter(l => l.package === 'agent').length * 1390; const er = licenses.filter(l => l.package === 'elite').length * 2990; const mx = Math.max(ar, er, 1); return (<div className="space-y-3"><div className="space-y-1"><div className="flex justify-between text-sm"><span className="flex items-center gap-1.5"><Star className="w-3.5 h-3.5 text-amber-500" />Top Agent (฿1,390)</span><span className="font-semibold">฿{ar.toLocaleString()}</span></div><div className="h-5 bg-muted rounded-lg overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-lg" style={{ width: `${ar / mx * 100}%` }} /></div></div><div className="space-y-1"><div className="flex justify-between text-sm"><span className="flex items-center gap-1.5"><Crown className="w-3.5 h-3.5 text-purple-500" />Elite (฿2,990)</span><span className="font-semibold">฿{er.toLocaleString()}</span></div><div className="h-5 bg-muted rounded-lg overflow-hidden"><div className="h-full bg-gradient-to-r from-purple-400 to-purple-500 rounded-lg" style={{ width: `${er / mx * 100}%` }} /></div></div><div className="pt-3 border-t mt-3 flex justify-between items-center"><span className="text-muted-foreground">{t.admin.totalRevenueAll}</span><span className="text-xl font-bold text-green-600">฿{(ar + er).toLocaleString()}</span></div></div>); })()}
                             </CardContent>
                         </Card>
-                    </div>
+                    </motion.div>
 
                     {/* Expiring Soon */}
                     {(() => { const now = new Date(); const sd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); const exp = licenses.filter(l => { const e = new Date(l.expires_at); return l.is_active && e > now && e <= sd; }); if (!exp.length) return null; return (<Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20"><CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-base"><AlertCircle className="w-4 h-4" />⚠️ {t.admin.expiringLicenses} ({exp.length})</CardTitle></CardHeader><CardContent><div className="space-y-2">{exp.slice(0, 5).map(l => { const dl = Math.ceil((new Date(l.expires_at).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)); return (<div key={l.id} className="flex items-center justify-between p-2.5 bg-white dark:bg-gray-800 rounded-lg border"><div className="flex items-center gap-2"><code className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded">{l.license_key}</code><span className="text-xs text-muted-foreground">{l.owner_name || '{t.admin.noName}'}</span></div><div className="flex items-center gap-2"><Badge className={cn(dl <= 2 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700', 'text-[10px]')}>เหลือ {dl} วัน</Badge><Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => extendLicense(l.id, 30)}>+30 วัน</Button></div></div>); })}</div></CardContent></Card>); })()}
@@ -996,9 +999,9 @@ export default function AdminDashboard() {
                                                                 {!u.banned && u.isOnline && <span className="text-[9px] font-medium text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-1.5 py-0.5 rounded-full">Online</span>}
                                                                 <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase",
                                                                     userPkg === 'elite' ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" :
-                                                                    userPkg === 'agent' ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" :
-                                                                    "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-                                                                )}>{userPkg}</span>
+                                                                    userPkg === 'agent' ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" :
+                                                                    "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
+                                                                )}>{userPkg === 'free' ? 'ROOKIE' : userPkg === 'agent' ? 'AGENT' : 'ELITE'}</span>
                                                             </div>
                                                             <p className="text-[11px] text-muted-foreground truncate">{u.email || u.userId}</p>
                                                             {u.fullName && u.fullName !== u.displayName && (
@@ -1008,6 +1011,10 @@ export default function AdminDashboard() {
 
                                                         {/* Stats + actions */}
                                                         <div className="flex items-center gap-2 flex-shrink-0">
+                                                            {/* Expand arrow */}
+                                                            <motion.div animate={{ rotate: isExpanded ? 90 : 0 }} transition={{ duration: 0.2 }} className="text-muted-foreground group-hover/card:text-foreground">
+                                                                <ChevronRight className="w-4 h-4" />
+                                                            </motion.div>
                                                             {isRunning && (
                                                                 <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 text-[10px] gap-1">
                                                                     <Zap className="w-3 h-3 animate-pulse" />
@@ -1042,7 +1049,15 @@ export default function AdminDashboard() {
                                                     </div>
 
                                                     {/* Expanded management panel */}
+                                                    <AnimatePresence>
                                                     {isExpanded && u.fullUserId && (
+                                                        <motion.div
+                                                            initial={{ height: 0, opacity: 0 }}
+                                                            animate={{ height: 'auto', opacity: 1 }}
+                                                            exit={{ height: 0, opacity: 0 }}
+                                                            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                                                            className="overflow-hidden"
+                                                        >
                                                         <div className="px-3 pb-3 pt-0 border-t border-border/50 space-y-3">
                                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3">
                                                                 {/* License info */}
@@ -1065,14 +1080,25 @@ export default function AdminDashboard() {
                                                                 <div className="p-2.5 rounded-lg bg-muted/50 space-y-1.5">
                                                                     <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">เปลี่ยนแพ็กเกจ</p>
                                                                     <div className="flex gap-1">
-                                                                        {(['free', 'agent', 'elite'] as const).map(pkg => (
-                                                                            <Button key={pkg} size="sm" variant={userPkg === pkg ? 'default' : 'outline'}
-                                                                                className={cn("h-6 px-2 text-[10px]", userPkg === pkg && "pointer-events-none")}
-                                                                                disabled={changingPkgUser === u.fullUserId}
-                                                                                onClick={(e) => { e.stopPropagation(); handleChangePackage(u.fullUserId!, pkg); }}>
-                                                                                {changingPkgUser === u.fullUserId ? <Loader2 className="w-3 h-3 animate-spin" /> : pkg.toUpperCase()}
-                                                                            </Button>
-                                                                        ))}
+                                                                        {(['free', 'agent', 'elite'] as const).map(pkg => {
+                                                                            const pkgColors = {
+                                                                                free: { active: 'bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-500', inactive: 'text-emerald-600 border-emerald-300 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-700 dark:hover:bg-emerald-950/30' },
+                                                                                agent: { active: 'bg-amber-500 hover:bg-amber-600 text-white border-amber-500', inactive: 'text-amber-600 border-amber-300 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-700 dark:hover:bg-amber-950/30' },
+                                                                                elite: { active: 'bg-purple-500 hover:bg-purple-600 text-white border-purple-500', inactive: 'text-purple-600 border-purple-300 hover:bg-purple-50 dark:text-purple-400 dark:border-purple-700 dark:hover:bg-purple-950/30' },
+                                                                            };
+                                                                            const isActive = userPkg === pkg;
+                                                                            const colors = pkgColors[pkg];
+                                                                            const pkgLabels = { free: 'FREE', agent: 'AGENT', elite: 'ELITE' };
+                                                                            const pkgIcons = { free: <Rocket className="w-2.5 h-2.5" />, agent: <Star className="w-2.5 h-2.5" />, elite: <Crown className="w-2.5 h-2.5" /> };
+                                                                            return (
+                                                                                <Button key={pkg} size="sm" variant="outline"
+                                                                                    className={cn("h-7 px-2.5 text-[10px] font-bold gap-1 transition-all", isActive ? colors.active : colors.inactive, isActive && "pointer-events-none shadow-sm")}
+                                                                                    disabled={changingPkgUser === u.fullUserId}
+                                                                                    onClick={(e) => { e.stopPropagation(); handleChangePackage(u.fullUserId!, pkg); }}>
+                                                                                    {changingPkgUser === u.fullUserId ? <Loader2 className="w-3 h-3 animate-spin" /> : <>{pkgIcons[pkg]} {pkgLabels[pkg]}</>}
+                                                                                </Button>
+                                                                            );
+                                                                        })}
                                                                     </div>
                                                                 </div>
 
@@ -1103,7 +1129,9 @@ export default function AdminDashboard() {
                                                                 </div>
                                                             </div>
                                                         </div>
+                                                        </motion.div>
                                                     )}
+                                                    </AnimatePresence>
                                                 </div>
                                                 );
                                             })}

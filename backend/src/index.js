@@ -730,12 +730,15 @@ app.post('/api/group-automation/start', ...auth, async (req, res) => {
     const groupWorker = req.groupWorker;
     const session = sessionManager.getSession(req.userId);
     const displayName = session?.displayName || session?.email?.split('@')[0] || req.userId.substring(0, 8);
+    const activeSlot = session?.activeSlot || 0;
+    const fbSession = session?.fbSessions?.[activeSlot];
+    const fbAccount = fbSession?.name || null;
 
     const queueResult = await automationQueue.tryStartOrEnqueue(
       req.userId,
       (cfg) => groupWorker.startAutomation(cfg),
       automationConfig,
-      { worker: groupWorker, displayName, automationType: 'group' }
+      { worker: groupWorker, displayName, email: session?.email || null, fbAccount, propertyTitle: property?.title || null, automationType: 'group' }
     );
 
     if (queueResult.queued) {
@@ -1432,6 +1435,9 @@ app.post('/api/marketplace-automation/start', ...auth, async (req, res) => {
     // Use queue system for Marketplace
     const session = sessionManager.getSession(req.userId);
     const displayName = session?.displayName || session?.email?.split('@')[0] || req.userId.substring(0, 8);
+    const mktActiveSlot = session?.activeSlot || 0;
+    const mktFbSession = session?.fbSessions?.[mktActiveSlot];
+    const mktFbAccount = mktFbSession?.name || null;
 
     const automationConfig = {
       property,
@@ -1450,7 +1456,7 @@ app.post('/api/marketplace-automation/start', ...auth, async (req, res) => {
       req.userId,
       (cfg) => req.marketplaceWorker.startMarketplaceAutomation(cfg),
       automationConfig,
-      { worker: req.marketplaceWorker, displayName, automationType: 'marketplace' }
+      { worker: req.marketplaceWorker, displayName, email: session?.email || null, fbAccount: mktFbAccount, propertyTitle: property?.title || null, automationType: 'marketplace' }
     );
 
     if (queueResult.queued) {

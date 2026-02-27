@@ -152,6 +152,9 @@ class AutomationQueue {
       groupCount: config.groups?.length || 0,
       worker: extraContext.worker,
       displayName: extraContext.displayName,
+      email: extraContext.email || null,
+      fbAccount: extraContext.fbAccount || null,
+      propertyTitle: extraContext.propertyTitle || null,
       automationType,
     };
     this.running.set(userId, jobInfo);
@@ -426,6 +429,9 @@ class AutomationQueue {
           userId: uid.substring(0, 8) + '...',
           fullUserId: uid,
           displayName: info.displayName || uid.substring(0, 8),
+          email: info.email || null,
+          fbAccount: info.fbAccount || null,
+          propertyTitle: info.propertyTitle || null,
           groupCount: info.groupCount,
           startedAt: info.startedAt,
           runningSec: Math.round((now - info.startedAt) / 1000),

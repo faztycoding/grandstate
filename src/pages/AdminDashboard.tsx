@@ -39,6 +39,7 @@ import {
     XCircle,
     StopCircle,
     Store,
+    Hourglass,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -244,7 +245,7 @@ export default function AdminDashboard() {
             runningCount: number;
             queueLength: number;
             queueTimeoutMin: number;
-            running: { userId: string; fullUserId: string; displayName?: string; groupCount: number; runningSec: number; startedAt: number; automationType?: string; progress?: any }[];
+            running: { userId: string; fullUserId: string; displayName?: string; email?: string; fbAccount?: string; propertyTitle?: string; groupCount: number; runningSec: number; startedAt: number; automationType?: string; progress?: any }[];
             queue: { position: number; userId: string; fullUserId: string; displayName?: string; groupCount: number; waitingSec: number; estimatedWaitSec: number; enqueuedAt: number; automationType?: string }[];
             stats: {
                 totalCompleted: number;
@@ -1121,47 +1122,124 @@ export default function AdminDashboard() {
                                     </div>
                                 </div>
 
-                                {/* Slot Grid — Circular gear-tooth styled slots */}
-                                <div className="grid grid-cols-5 md:grid-cols-10 gap-1.5 md:gap-2">
+                                {/* Slot Grid — Industrial Machine Cards */}
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                                     {Array.from({ length: liveStats.queue.maxConcurrent }, (_, i) => {
                                         const isActive = i < liveStats.queue!.runningCount;
                                         const runJob = isActive ? liveStats.queue!.running[i] : null;
+                                        const progressPct = runJob?.progress ? Math.round((runJob.progress.currentStep / Math.max(runJob.progress.totalSteps, 1)) * 100) : 0;
+                                        const runMin = runJob ? Math.floor(runJob.runningSec / 60) : 0;
+                                        const runSec = runJob ? runJob.runningSec % 60 : 0;
                                         return (
-                                            <Tooltip key={i}>
-                                                <TooltipTrigger asChild>
-                                                    <div className="relative group/slot">
-                                                        <div className={cn(
-                                                            "h-10 md:h-12 rounded-xl flex flex-col items-center justify-center transition-all duration-500 border relative overflow-hidden",
-                                                            isActive
-                                                                ? "bg-gradient-to-b from-emerald-500/90 to-emerald-700 border-emerald-400/40 shadow-lg shadow-emerald-500/20 ring-1 ring-emerald-400/20"
-                                                                : "bg-white/[0.02] border-white/[0.06] hover:border-white/[0.15] hover:bg-white/[0.04]"
-                                                        )}>
-                                                            {/* Slot inner glow when active */}
-                                                            {isActive && <div className="absolute inset-0 bg-gradient-to-t from-transparent via-emerald-400/10 to-emerald-300/20" />}
-                                                            <span className={cn("text-[10px] font-bold tabular-nums leading-none relative z-10", isActive ? "text-white" : "text-slate-600")}>{i + 1}</span>
-                                                            {runJob && <span className="text-[7px] text-emerald-200/80 truncate max-w-full px-1 leading-none mt-0.5 hidden md:inline relative z-10">{runJob.displayName?.split(' ')[0] || ''}</span>}
+                                            <motion.div
+                                                key={i}
+                                                initial={{ opacity: 0, scale: 0.9 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                transition={{ delay: i * 0.04 }}
+                                                className={cn(
+                                                    "relative rounded-xl border overflow-hidden transition-all duration-500 group/slot",
+                                                    isActive
+                                                        ? "bg-gradient-to-br from-slate-800/80 via-slate-900 to-slate-800/80 border-emerald-500/30 shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-400/10"
+                                                        : "bg-white/[0.015] border-white/[0.06] hover:border-white/[0.12]"
+                                                )}
+                                            >
+                                                {/* Active slot scan line */}
+                                                {isActive && <div className="absolute inset-0 bg-gradient-to-b from-emerald-400/5 via-transparent to-transparent animate-pulse" />}
+
+                                                <div className="relative z-10 p-2.5 min-h-[88px] flex flex-col justify-between">
+                                                    {/* Slot header */}
+                                                    <div className="flex items-center justify-between mb-1.5">
+                                                        <div className="flex items-center gap-1.5">
+                                                            {/* Spinning gear for active, static for idle */}
+                                                            <svg className={cn("w-3.5 h-3.5 flex-shrink-0", isActive ? "text-emerald-400 animate-gear-active" : "text-slate-700")} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
+                                                            </svg>
+                                                            <span className={cn("text-[10px] font-bold tabular-nums", isActive ? "text-emerald-400" : "text-slate-600")}>#{i + 1}</span>
                                                         </div>
-                                                        {isActive && (
-                                                            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-1 rounded-full bg-emerald-400/60 blur-sm" />
+                                                        {isActive ? (
+                                                            <span className={cn(
+                                                                "text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full",
+                                                                runJob?.automationType === 'marketplace'
+                                                                    ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
+                                                                    : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                                                            )}>
+                                                                {runJob?.automationType === 'marketplace' ? '🏪 MKT' : '👥 GRP'}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-[8px] text-slate-700 uppercase tracking-wider">IDLE</span>
                                                         )}
                                                     </div>
-                                                </TooltipTrigger>
-                                                <TooltipContent side="top" className="text-xs">
+
                                                     {runJob ? (
-                                                        <div className="space-y-0.5">
-                                                            <p className="font-semibold">{runJob.displayName || runJob.userId}</p>
-                                                            <p className="text-muted-foreground">{runJob.groupCount} groups • {Math.floor(runJob.runningSec / 60)}:{String(runJob.runningSec % 60).padStart(2, '0')}</p>
-                                                            {runJob.automationType && <p className="text-xs opacity-70">{runJob.automationType === 'marketplace' ? '🏪 Marketplace' : '👥 Groups'}</p>}
-                                                            {runJob.progress && <p className="text-emerald-600 dark:text-emerald-400">Step {runJob.progress.currentStep}/{runJob.progress.totalSteps}</p>}
-                                                        </div>
+                                                        <>
+                                                            {/* User info */}
+                                                            <div className="space-y-0.5 mb-1.5">
+                                                                <p className="text-[11px] font-semibold text-white truncate leading-tight">{runJob.displayName || runJob.userId}</p>
+                                                                {runJob.email && <p className="text-[9px] text-slate-500 truncate leading-tight">{runJob.email}</p>}
+                                                                {runJob.fbAccount && (
+                                                                    <div className="flex items-center gap-1 mt-0.5">
+                                                                        <svg className="w-2.5 h-2.5 text-blue-400 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                                                                        <span className="text-[9px] text-blue-400/80 truncate leading-tight">{runJob.fbAccount}</span>
+                                                                    </div>
+                                                                )}
+                                                                {runJob.propertyTitle && (
+                                                                    <p className="text-[9px] text-amber-400/70 truncate leading-tight mt-0.5">🏠 {runJob.propertyTitle}</p>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Progress bar */}
+                                                            <div className="space-y-1">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-[9px] text-slate-400 tabular-nums">
+                                                                        {runJob.progress ? `Step ${runJob.progress.currentStep}/${runJob.progress.totalSteps}` : `${runJob.groupCount} groups`}
+                                                                    </span>
+                                                                    <span className="text-[9px] text-slate-500 tabular-nums font-mono">{runMin}:{String(runSec).padStart(2, '0')}</span>
+                                                                </div>
+                                                                <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
+                                                                    <motion.div
+                                                                        className={cn(
+                                                                            "h-full rounded-full",
+                                                                            runJob.progress?.isPaused
+                                                                                ? "bg-yellow-500"
+                                                                                : "bg-gradient-to-r from-emerald-500 to-emerald-400"
+                                                                        )}
+                                                                        initial={{ width: 0 }}
+                                                                        animate={{ width: `${progressPct}%` }}
+                                                                        transition={{ duration: 0.5, ease: 'easeOut' }}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </>
                                                     ) : (
-                                                        <span className="text-muted-foreground">Slot {i + 1} — Available</span>
+                                                        <div className="flex-1 flex items-center justify-center">
+                                                            <span className="text-[10px] text-slate-700">Available</span>
+                                                        </div>
                                                     )}
-                                                </TooltipContent>
-                                            </Tooltip>
+                                                </div>
+                                            </motion.div>
                                         );
                                     })}
                                 </div>
+
+                                {/* Queue waiting list — shown when users are waiting */}
+                                {liveStats.queue.queue && liveStats.queue.queue.length > 0 && (
+                                    <div className="mt-4 p-3 rounded-xl bg-amber-500/5 border border-amber-500/15">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <Hourglass className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                                            <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">Waiting Queue — {liveStats.queue.queue.length} user(s)</span>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            {liveStats.queue.queue.map((q: any, qi: number) => (
+                                                <div key={qi} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-amber-500/5 border border-amber-500/10">
+                                                    <span className="text-[10px] font-bold text-amber-400 tabular-nums w-5 text-center">#{q.position}</span>
+                                                    <span className="text-[10px] text-slate-300 truncate flex-1">{q.displayName || q.userId}</span>
+                                                    <span className="text-[9px] text-slate-500 tabular-nums">{q.groupCount} groups</span>
+                                                    <span className="text-[9px] text-amber-400/60 tabular-nums">~{Math.ceil((q.estimatedWaitSec || 300) / 60)}m</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Bottom bar: slot label + live indicator */}
                                 <div className="flex items-center justify-between mt-3">

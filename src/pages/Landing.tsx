@@ -918,7 +918,7 @@ export default function Landing() {
       </section>
 
       {/* ═══════════════ PACKAGES — Glassmorphism Cards ═══════════════ */}
-      <section className="py-20 px-6 relative">
+      <section id="packages" className="py-20 px-6 relative scroll-mt-20">
         <div className="absolute inset-0 data-circuit opacity-10" />
         <div className="container mx-auto relative z-10">
           <motion.div
@@ -1140,7 +1140,7 @@ export default function Landing() {
               <h4 className="font-semibold mb-3">{isEn ? 'Links' : 'ลิงก์'}</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><Link to="/auth" className="hover:text-foreground transition-colors">{isEn ? 'Sign In' : 'เข้าสู่ระบบ'}</Link></li>
-                <li><Link to="/pricing" className="hover:text-foreground transition-colors">{isEn ? 'Pricing' : 'แพ็กเกจและราคา'}</Link></li>
+                <li><a href="#packages" className="hover:text-foreground transition-colors">{isEn ? 'Pricing' : 'แพ็กเกจและราคา'}</a></li>
                 <li><a href="https://line.me/ti/p/@897hrloe" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{isEn ? 'Contact Us (LINE)' : 'ติดต่อเรา (LINE)'}</a></li>
               </ul>
             </div>

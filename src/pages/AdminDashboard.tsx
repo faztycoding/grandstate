@@ -650,27 +650,14 @@ export default function AdminDashboard() {
 
     const deleteLicense = async (id: string) => {
         try {
-            // First delete related device activations
-            const { error: devErr } = await supabase
-                .from('device_activations')
-                .delete()
-                .eq('license_key_id', id);
+            const resp = await apiFetch('/api/admin/delete-license', {
+                method: 'POST',
+                body: JSON.stringify({ licenseId: id }),
+            });
+            const data = await resp.json();
 
-            if (devErr) console.warn('device_activations delete:', devErr.message);
-
-            const { data, error } = await supabase
-                .from('license_keys')
-                .delete()
-                .eq('id', id)
-                .select();
-
-            if (error) {
-                console.error('Delete error:', error);
-                throw error;
-            }
-
-            if (!data || data.length === 0) {
-                toast.error('ลบไม่สำเร็จ — Supabase RLS อาจบล็อก ลองเช็ค Policy ใน Dashboard');
+            if (!data.success) {
+                toast.error(`ลบไม่สำเร็จ: ${data.error || 'Unknown error'}`);
                 return;
             }
 

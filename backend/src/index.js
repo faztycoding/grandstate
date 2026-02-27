@@ -1228,6 +1228,38 @@ app.post('/api/admin/change-package', ...adminAuth, async (req, res) => {
   }
 });
 
+// Admin: delete a license key (uses service key to bypass RLS)
+app.post('/api/admin/delete-license', ...adminAuth, async (req, res) => {
+  try {
+    const { licenseId } = req.body;
+    if (!licenseId) return res.status(400).json({ success: false, error: 'licenseId required' });
+
+    const { createClient } = await import('@supabase/supabase-js');
+    const supa = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+
+    // Delete related device activations first
+    await supa.from('device_activations').delete().eq('license_key_id', licenseId);
+
+    // Delete the license key
+    const { data, error } = await supa
+      .from('license_keys')
+      .delete()
+      .eq('id', licenseId)
+      .select();
+
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      return res.status(404).json({ success: false, error: 'License not found' });
+    }
+
+    console.log(`🗑️ [Admin] License ${licenseId} deleted by ${req.userEmail}`);
+    res.json({ success: true, deleted: data[0] });
+  } catch (error) {
+    console.error('Delete license error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Admin: get license info for all users
 app.get('/api/admin/user-licenses', ...adminAuth, async (req, res) => {
   try {

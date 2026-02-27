@@ -754,10 +754,10 @@ export default function Landing() {
             className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-4"
           >
             {[
-              { label: isEn ? 'Processing Speed' : 'ความเร็วประมวลผล', value: '<0.3s', icon: Zap },
-              { label: isEn ? 'Concurrent Posts' : 'โพสต์พร้อมกัน', value: '∞', icon: Globe },
-              { label: isEn ? 'AI Models' : 'โมเดล AI', value: '█████', redacted: true, icon: Cpu },
-              { label: isEn ? 'Architecture' : 'สถาปัตยกรรม', value: '██████', redacted: true, icon: Lock },
+              { label: isEn ? 'Speed / Group' : 'ความเร็ว / กลุ่ม', value: '~12s', icon: Zap },
+              { label: isEn ? 'Parallel Tabs' : 'โพสต์พร้อมกัน', value: '2-3', icon: Globe },
+              { label: isEn ? 'AI Caption' : 'AI สร้างแคปชั่น', value: 'Claude AI', icon: Cpu },
+              { label: isEn ? 'Architecture' : 'สถาปัตยกรรม', value: 'Sliding-Window', icon: Lock },
             ].map((m, i) => (
               <motion.div
                 key={i}
@@ -768,7 +768,7 @@ export default function Landing() {
                 className="rounded-xl border border-border/50 p-4 text-center bg-background/50 backdrop-blur-sm hover:border-purple-500/20 transition-colors group"
               >
                 <m.icon className="w-5 h-5 mx-auto mb-2 text-purple-500/60 group-hover:text-purple-500 transition-colors" />
-                <p className={`text-xl font-bold ${m.redacted ? 'text-muted-foreground/30 select-none blur-[2px]' : 'text-foreground'}`}>{m.value}</p>
+                <p className="text-xl font-bold text-foreground">{m.value}</p>
                 <p className="text-xs text-muted-foreground mt-1">{m.label}</p>
               </motion.div>
             ))}

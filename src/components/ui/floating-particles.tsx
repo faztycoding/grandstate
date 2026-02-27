@@ -44,8 +44,7 @@ export function FloatingParticles({ count = 30, className = '' }: FloatingPartic
     const draw = () => {
       ctx.clearRect(0, 0, w, h);
 
-      // Get computed style to adapt to theme
-      const style = getComputedStyle(document.documentElement);
+      // Adapt to theme
       const isDark = document.documentElement.classList.contains('dark');
       const color = isDark ? '255,255,255' : '0,0,0';
 

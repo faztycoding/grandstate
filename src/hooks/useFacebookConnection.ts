@@ -50,6 +50,7 @@ export function useFacebookConnection() {
 
     try {
       const response = await apiFetch('/api/facebook/status');
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
 
       if (data.success) {
@@ -85,6 +86,7 @@ export function useFacebookConnection() {
         method: 'POST',
         body: JSON.stringify({ slot }),
       });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
 
       if (data.success) {
@@ -104,6 +106,7 @@ export function useFacebookConnection() {
   const confirmLogin = useCallback(async () => {
     try {
       const response = await apiFetch('/api/facebook/confirm-login', { method: 'POST' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
 
       if (data.success && data.connected) {
@@ -126,6 +129,7 @@ export function useFacebookConnection() {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
 
       if (data.success) {
@@ -147,6 +151,7 @@ export function useFacebookConnection() {
         method: 'POST',
         body: JSON.stringify({ slot: slot ?? state.activeSlot }),
       });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
 
       if (data.success) {

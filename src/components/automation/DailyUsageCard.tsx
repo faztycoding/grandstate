@@ -45,6 +45,7 @@ export function DailyUsageCard({ userPackage = 'free', className }: DailyUsageCa
   const fetchStats = useCallback(async () => {
     try {
       const res = await apiFetch(`/api/posting/today?userPackage=${userPackage}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) {
         setStats(data);

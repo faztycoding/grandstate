@@ -85,6 +85,7 @@ function useActiveUsersPresence() {
   const fetchPresence = useCallback(async () => {
     try {
       const response = await apiFetch('/api/session/active-users');
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       applyPresencePayload(data);
     } catch {

@@ -29,6 +29,7 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { useLicenseAuth, LicenseInfo } from '@/hooks/useLicenseAuth';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { PACKAGE_LIMITS } from '@/hooks/usePackageLimits';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
@@ -68,6 +69,7 @@ const packageInfo = {
 export default function UserProfile() {
     const navigate = useNavigate();
     const { license, logout, currentPackage, limits } = useLicenseAuth();
+    const { displayId } = useUserProfile();
     const [subscriptionHistory, setSubscriptionHistory] = useState<SubscriptionHistoryItem[]>([]);
 
     // Usage stats (mock - would come from actual usage tracking)
@@ -182,6 +184,12 @@ export default function UserProfile() {
                                     <p className="text-muted-foreground">
                                         {license.ownerName || 'ผู้ใช้งาน GrandState'}
                                     </p>
+                                    {displayId && (
+                                        <div className="flex items-center gap-1.5 mt-1">
+                                            <span className="text-[10px] text-muted-foreground/70 uppercase tracking-wider">User ID</span>
+                                            <code className="text-xs font-mono font-bold bg-accent/10 text-accent px-2 py-0.5 rounded-md">{displayId}</code>
+                                        </div>
+                                    )}
                                 </div>
                                 <Button variant="outline" onClick={() => navigate('/pricing')}>
                                     <Crown className="w-4 h-4 mr-2" />

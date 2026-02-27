@@ -26,6 +26,7 @@ import { useState, createContext, useContext, useEffect, useCallback } from 'rea
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { useLicenseAuth } from '@/hooks/useLicenseAuth';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { apiFetch } from '@/lib/config';
 
@@ -161,6 +162,7 @@ function SidebarContent({
   const navigate = useNavigate();
   const { t, language } = useLanguage();
   const { user, signOut } = useLicenseAuth();
+  const { displayId } = useUserProfile();
 
   const activeUsersLabel = language === 'th' ? 'ผู้ใช้งานในระบบ' : 'ACTIVE USERS';
   const onlineLabel = language === 'th' ? 'ออนไลน์' : 'online';
@@ -287,6 +289,9 @@ function SidebarContent({
         {!collapsed && user?.email && (
           <div className="px-2 py-1 text-center">
             <p className="text-[10px] text-sidebar-foreground/50 truncate">{user.email}</p>
+            {displayId && (
+              <p className="text-[9px] font-mono font-bold text-accent/80 mt-0.5">{displayId}</p>
+            )}
           </div>
         )}
         <Button

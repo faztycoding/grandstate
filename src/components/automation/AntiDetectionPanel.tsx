@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import {
-  Shield, Sparkles, ChevronDown, CheckCircle2, AlertCircle,
+  Shield, Sparkles, ChevronUp, CheckCircle2, AlertCircle,
   Fingerprint, Eye, Zap, Timer, Users, Clock,
   Activity, Lock, Cpu, Radio
 } from 'lucide-react';
@@ -14,66 +14,12 @@ interface AntiDetectionPanelProps {
 }
 
 const MODULES = [
-  {
-    icon: Activity,
-    color: 'text-violet-500',
-    bg: 'bg-violet-500/10',
-    border: 'border-violet-500/20',
-    glow: 'shadow-violet-500/20',
-    title: 'Gaussian Jitter Timing',
-    desc: 'สุ่มจังหวะแบบระฆังคว่ำ ทำลาย Pattern',
-    tag: 'TIMING',
-  },
-  {
-    icon: Fingerprint,
-    color: 'text-cyan-500',
-    bg: 'bg-cyan-500/10',
-    border: 'border-cyan-500/20',
-    glow: 'shadow-cyan-500/20',
-    title: 'Fingerprint Masking',
-    desc: 'ปลอม Canvas/WebGL/Audio/Font/Battery ทุก session',
-    tag: 'IDENTITY',
-  },
-  {
-    icon: Eye,
-    color: 'text-blue-500',
-    bg: 'bg-blue-500/10',
-    border: 'border-blue-500/20',
-    glow: 'shadow-blue-500/20',
-    title: 'WebRTC Leak Protection',
-    desc: 'ปิดกั้น IP จริง + ป้องกันรั่วไหลผ่าน WebRTC',
-    tag: 'NETWORK',
-  },
-  {
-    icon: Sparkles,
-    color: 'text-amber-500',
-    bg: 'bg-amber-500/10',
-    border: 'border-amber-500/20',
-    glow: 'shadow-amber-500/20',
-    title: 'Image Hash Breaking',
-    desc: 'Pixel noise + EXIF scrub ทุกรูปเปลี่ยน hash 100%',
-    tag: 'MEDIA',
-  },
-  {
-    icon: Zap,
-    color: 'text-rose-500',
-    bg: 'bg-rose-500/10',
-    border: 'border-rose-500/20',
-    glow: 'shadow-rose-500/20',
-    title: 'Micro-Interactions',
-    desc: 'Scroll, hover, mouse move ก่อนโพสต์เหมือนคนจริง',
-    tag: 'BEHAVIOR',
-  },
-  {
-    icon: Cpu,
-    color: 'text-emerald-500',
-    bg: 'bg-emerald-500/10',
-    border: 'border-emerald-500/20',
-    glow: 'shadow-emerald-500/20',
-    title: 'Typing + Typo Simulation',
-    desc: 'พิมพ์ทีละตัว + พิมพ์ผิดแล้วลบแก้เหมือนมนุษย์',
-    tag: 'INPUT',
-  },
+  { icon: Activity, color: 'text-violet-500', bg: 'bg-violet-500/10', border: 'border-violet-500/20', title: 'Gaussian Jitter Timing', desc: 'สุ่มจังหวะแบบระฆังคว่ำ ทำลาย Pattern', tag: 'TIMING' },
+  { icon: Fingerprint, color: 'text-cyan-500', bg: 'bg-cyan-500/10', border: 'border-cyan-500/20', title: 'Fingerprint Masking', desc: 'ปลอม Canvas/WebGL/Audio/Font/Battery ทุก session', tag: 'IDENTITY' },
+  { icon: Eye, color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/20', title: 'WebRTC Leak Protection', desc: 'ปิดกั้น IP จริง + ป้องกันรั่วไหลผ่าน WebRTC', tag: 'NETWORK' },
+  { icon: Sparkles, color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20', title: 'Image Hash Breaking', desc: 'Pixel noise + EXIF scrub ทุกรูปเปลี่ยน hash 100%', tag: 'MEDIA' },
+  { icon: Zap, color: 'text-rose-500', bg: 'bg-rose-500/10', border: 'border-rose-500/20', title: 'Micro-Interactions', desc: 'Scroll, hover, mouse move ก่อนโพสต์เหมือนคนจริง', tag: 'BEHAVIOR' },
+  { icon: Cpu, color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', title: 'Typing + Typo Simulation', desc: 'พิมพ์ทีละตัว + พิมพ์ผิดแล้วลบแก้เหมือนมนุษย์', tag: 'INPUT' },
 ];
 
 const TIPS = [
@@ -89,21 +35,62 @@ function getRiskLevel(delay: number, groups: number) {
   return { level: 'high', label: 'เสี่ยงสูง', emoji: '🔴', percent: 85, color: 'red', gradient: 'from-red-500 to-orange-400' };
 }
 
+// Scroll roller SVG component
+function ScrollRoller({ side }: { side: 'top' | 'bottom' }) {
+  return (
+    <div className={cn('relative w-full h-5 z-20', side === 'top' ? '-mb-1' : '-mt-1')}>
+      <svg viewBox="0 0 400 24" className="w-full h-full" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id={`roller-${side}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#b45309" stopOpacity="0.8" />
+            <stop offset="30%" stopColor="#d97706" stopOpacity="0.9" />
+            <stop offset="50%" stopColor="#f59e0b" stopOpacity="1" />
+            <stop offset="70%" stopColor="#d97706" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="#92400e" stopOpacity="0.8" />
+          </linearGradient>
+          <linearGradient id={`roller-shadow-${side}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#000" stopOpacity="0.15" />
+            <stop offset="100%" stopColor="#000" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <rect x="0" y="4" width="400" height="16" rx="8" fill={`url(#roller-${side})`} />
+        <rect x="0" y="4" width="400" height="8" rx="4" fill={`url(#roller-shadow-${side})`} />
+        {/* Knobs */}
+        <circle cx="12" cy="12" r="6" fill="#92400e" opacity="0.6" />
+        <circle cx="388" cy="12" r="6" fill="#92400e" opacity="0.6" />
+        <circle cx="12" cy="11" r="3" fill="#d97706" opacity="0.5" />
+        <circle cx="388" cy="11" r="3" fill="#d97706" opacity="0.5" />
+      </svg>
+    </div>
+  );
+}
+
 export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: AntiDetectionPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [hoveredModule, setHoveredModule] = useState<number | null>(null);
+  const [contentVisible, setContentVisible] = useState(false);
   const pulseControls = useAnimationControls();
   const risk = getRiskLevel(delayBetweenPosts, selectedGroupsCount);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [contentHeight, setContentHeight] = useState(0);
 
-  // Attention-grabbing pulse every 4 seconds when collapsed
+  useEffect(() => {
+    if (isOpen && contentRef.current) {
+      const h = contentRef.current.scrollHeight;
+      setContentHeight(h);
+      const timer = setTimeout(() => setContentVisible(true), 100);
+      return () => clearTimeout(timer);
+    } else {
+      setContentVisible(false);
+      setContentHeight(0);
+    }
+  }, [isOpen]);
+
+  // Pulse when collapsed
   useEffect(() => {
     if (isOpen) return;
     const interval = setInterval(() => {
-      pulseControls.start({
-        scale: [1, 1.02, 1],
-        transition: { duration: 0.6, ease: 'easeInOut' },
-      });
-    }, 4000);
+      pulseControls.start({ scale: [1, 1.015, 1], transition: { duration: 0.5, ease: 'easeInOut' } });
+    }, 3500);
     return () => clearInterval(interval);
   }, [isOpen, pulseControls]);
 
@@ -114,42 +101,25 @@ export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: A
   };
 
   return (
-    <motion.div
-      animate={pulseControls}
-      className="relative rounded-xl overflow-hidden"
-    >
-      {/* Animated border glow */}
-      <div className="absolute inset-0 rounded-xl p-[1px] overflow-hidden pointer-events-none z-0">
-        <motion.div
-          className="absolute inset-[-200%] bg-[conic-gradient(from_0deg,transparent_0%,#10b981_10%,transparent_20%)]"
-          animate={{ rotate: 360 }}
-          transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
-          style={{ opacity: isOpen ? 0.6 : 0.3 }}
-        />
-      </div>
-
-      <div className="relative z-10 rounded-xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 via-teal-500/3 to-cyan-500/5 backdrop-blur-sm overflow-hidden">
-
-        {/* ═══ HEADER — Always visible, clickable ═══ */}
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="w-full flex items-center gap-3 p-3 hover:bg-emerald-500/5 transition-all duration-300 group"
-        >
-          {/* Shield icon with pulse ring */}
+    <motion.div animate={pulseControls} className="relative">
+      {/* ═══ HEADER — Always visible ═══ */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          'w-full rounded-xl border overflow-hidden transition-all duration-300',
+          'bg-gradient-to-br from-emerald-500/5 via-teal-500/3 to-cyan-500/5',
+          isOpen ? 'border-emerald-500/40 rounded-b-none' : 'border-emerald-500/25 hover:border-emerald-500/50 hover:shadow-md hover:shadow-emerald-500/5',
+        )}
+      >
+        <div className="flex items-center gap-3 p-3">
+          {/* Shield icon */}
           <div className="relative w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/10 flex items-center justify-center flex-shrink-0">
-            <Shield className="w-4.5 h-4.5 text-emerald-500" />
-            <motion.span
-              className="absolute inset-0 rounded-lg border-2 border-emerald-500/50"
-              animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0, 0.5] }}
-              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-            />
+            <Shield className="w-4 h-4 text-emerald-500" />
             <span className="absolute -top-1 -right-1 flex items-center justify-center">
-              <span className="absolute w-3 h-3 rounded-full bg-emerald-500 animate-ping opacity-50" />
+              <span className="absolute w-3 h-3 rounded-full bg-emerald-500 animate-ping opacity-40" />
               <span className="relative w-2 h-2 rounded-full bg-emerald-400" />
             </span>
           </div>
-
-          {/* Title + subtitle */}
           <div className="flex-1 text-left">
             <p className="text-sm font-bold flex items-center gap-1.5 text-foreground">
               <Lock className="w-3 h-3 text-emerald-500" />
@@ -162,83 +132,89 @@ export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: A
               <span>6 Modules</span>
               <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground/50" />
               <span>World-Class Anti-Detection</span>
-              {!isOpen && (
-                <motion.span
-                  className="text-emerald-500 font-semibold ml-auto"
-                  animate={{ opacity: [0.5, 1, 0.5] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
-                  กดเพื่อดู →
-                </motion.span>
-              )}
             </p>
           </div>
-
-          {/* Chevron */}
           <motion.div
             animate={{ rotate: isOpen ? 180 : 0 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="w-7 h-7 rounded-full bg-emerald-500/10 flex items-center justify-center"
+            transition={{ duration: 0.3 }}
+            className="w-7 h-7 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0"
           >
-            <ChevronDown className="w-4 h-4 text-emerald-500" />
+            <ChevronUp className="w-4 h-4 text-emerald-500" />
           </motion.div>
-        </button>
+        </div>
+      </button>
 
-        {/* ═══ UNROLLING CONTENT ═══ */}
-        <AnimatePresence>
-          {isOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              className="overflow-hidden"
+      {/* ═══ SCROLL / PARCHMENT UNROLLING ═══ */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: contentHeight || 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{
+              height: { duration: 0.8, ease: [0.22, 0.61, 0.36, 1] },
+              opacity: { duration: 0.3 },
+            }}
+            className="overflow-hidden relative"
+          >
+            {/* Top scroll roller */}
+            <ScrollRoller side="top" />
+
+            {/* Parchment body */}
+            <div
+              ref={contentRef}
+              className={cn(
+                'relative border-x border-emerald-500/20',
+                'bg-gradient-to-b from-[#fefcf3] via-[#fdf9eb] to-[#fefcf3]',
+                'dark:from-[#1a1f16] dark:via-[#1d2218] dark:to-[#1a1f16]',
+              )}
+              style={{
+                backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'40\' height=\'40\' viewBox=\'0 0 40 40\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'%23000\' fill-opacity=\'0.02\'%3E%3Cpath d=\'M0 0h20v20H0zM20 20h20v20H20z\'/%3E%3C/g%3E%3C/svg%3E")',
+              }}
             >
-              <div className="px-3 pb-3 space-y-3">
+              {/* Paper edge shadow */}
+              <div className="absolute inset-x-0 top-0 h-3 bg-gradient-to-b from-black/[0.06] to-transparent dark:from-black/20 pointer-events-none z-10" />
 
-                {/* ── Risk Level Meter ── */}
+              <div className="px-3 py-3 space-y-3">
+
+                {/* ── Risk Level ── */}
                 <motion.div
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
+                  initial={{ scaleY: 0, opacity: 0, originY: 0 }}
+                  animate={contentVisible ? { scaleY: 1, opacity: 1 } : {}}
                   transition={{ delay: 0.1, duration: 0.4 }}
-                  className="p-3 rounded-lg bg-background/80 border border-border/50"
+                  className="p-2.5 rounded-lg bg-white/60 dark:bg-white/5 border border-emerald-500/15"
                 >
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-1.5">
                     <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
                       <Radio className="w-3 h-3" />
                       ระดับความเสี่ยง
                     </span>
-                    <Badge
-                      variant="outline"
-                      className={cn('text-[10px] font-bold px-2',
-                        risk.color === 'emerald' && 'border-emerald-500/50 text-emerald-600 bg-emerald-500/10',
-                        risk.color === 'amber' && 'border-amber-500/50 text-amber-600 bg-amber-500/10',
-                        risk.color === 'red' && 'border-red-500/50 text-red-600 bg-red-500/10',
-                      )}
-                    >
+                    <Badge variant="outline" className={cn('text-[10px] font-bold px-2',
+                      risk.color === 'emerald' && 'border-emerald-500/50 text-emerald-600 bg-emerald-500/10',
+                      risk.color === 'amber' && 'border-amber-500/50 text-amber-600 bg-amber-500/10',
+                      risk.color === 'red' && 'border-red-500/50 text-red-600 bg-red-500/10',
+                    )}>
                       {risk.emoji} {risk.label}
                     </Badge>
                   </div>
-                  <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
+                  <div className="w-full h-2 rounded-full bg-muted/50 overflow-hidden">
                     <motion.div
                       className={cn('h-full rounded-full bg-gradient-to-r', risk.gradient)}
                       initial={{ width: 0 }}
-                      animate={{ width: `${risk.percent}%` }}
-                      transition={{ delay: 0.3, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                      animate={contentVisible ? { width: `${risk.percent}%` } : {}}
+                      transition={{ delay: 0.3, duration: 0.8 }}
                     />
                   </div>
-                  <p className="text-[10px] text-muted-foreground mt-1.5">
-                    {selectedGroupsCount} กลุ่ม • delay {delayBetweenPosts}s
-                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-1">{selectedGroupsCount} กลุ่ม • delay {delayBetweenPosts}s</p>
                 </motion.div>
 
-                {/* ── Active Protection Modules ── */}
+                {/* ── Active Modules ── */}
                 <div>
                   <motion.p
-                    initial={{ x: -20, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.15, duration: 0.4 }}
-                    className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest px-1 mb-2 flex items-center gap-1.5"
+                    initial={{ x: -15, opacity: 0 }}
+                    animate={contentVisible ? { x: 0, opacity: 1 } : {}}
+                    transition={{ delay: 0.15 }}
+                    className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest px-1 mb-2 flex items-center gap-1.5"
                   >
                     <span className="relative flex items-center justify-center">
                       <span className="absolute w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
@@ -251,41 +227,24 @@ export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: A
                     {MODULES.map((mod, i) => (
                       <motion.div
                         key={i}
-                        initial={{ x: -30, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        transition={{ delay: 0.2 + i * 0.07, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                        onMouseEnter={() => setHoveredModule(i)}
-                        onMouseLeave={() => setHoveredModule(null)}
-                        className={cn(
-                          'flex items-center gap-2.5 p-2 rounded-lg border transition-all duration-300 cursor-default',
-                          'bg-emerald-500/[0.03] border-emerald-500/10',
-                          hoveredModule === i && 'bg-emerald-500/[0.08] border-emerald-500/30 shadow-sm',
-                        )}
+                        initial={{ x: -25, opacity: 0, filter: 'blur(4px)' }}
+                        animate={contentVisible ? { x: 0, opacity: 1, filter: 'blur(0px)' } : {}}
+                        transition={{ delay: 0.2 + i * 0.08, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                        className="flex items-center gap-2.5 p-2 rounded-lg bg-white/40 dark:bg-white/[0.03] border border-emerald-500/10 hover:bg-white/70 dark:hover:bg-white/[0.06] hover:border-emerald-500/30 transition-all duration-200"
                       >
-                        {/* Icon */}
-                        <motion.div
-                          className={cn('w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 border', mod.bg, mod.border)}
-                          animate={hoveredModule === i ? { scale: [1, 1.15, 1] } : {}}
-                          transition={{ duration: 0.3 }}
-                        >
+                        <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 border', mod.bg, mod.border)}>
                           <mod.icon className={cn('w-3.5 h-3.5', mod.color)} />
-                        </motion.div>
-
-                        {/* Text */}
+                        </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[11px] font-bold leading-tight">{mod.title}</p>
+                          <p className="text-[11px] font-bold leading-tight text-foreground">{mod.title}</p>
                           <p className="text-[9px] text-muted-foreground leading-tight mt-0.5">{mod.desc}</p>
                         </div>
-
-                        {/* Tag + Check */}
                         <div className="flex items-center gap-1.5 flex-shrink-0">
-                          <span className={cn('text-[7px] font-bold tracking-wider px-1.5 py-0.5 rounded-full', mod.bg, mod.color)}>
-                            {mod.tag}
-                          </span>
+                          <span className={cn('text-[7px] font-bold tracking-wider px-1.5 py-0.5 rounded-full', mod.bg, mod.color)}>{mod.tag}</span>
                           <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ delay: 0.4 + i * 0.07, type: 'spring', stiffness: 300 }}
+                            initial={{ scale: 0, rotate: -90 }}
+                            animate={contentVisible ? { scale: 1, rotate: 0 } : {}}
+                            transition={{ delay: 0.45 + i * 0.08, type: 'spring', stiffness: 400, damping: 15 }}
                           >
                             <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                           </motion.div>
@@ -295,12 +254,20 @@ export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: A
                   </div>
                 </div>
 
-                {/* ── Tips Section ── */}
+                {/* ── Divider ── */}
+                <motion.div
+                  initial={{ scaleX: 0 }}
+                  animate={contentVisible ? { scaleX: 1 } : {}}
+                  transition={{ delay: 0.7, duration: 0.5 }}
+                  className="h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent"
+                />
+
+                {/* ── Tips ── */}
                 <div>
                   <motion.p
-                    initial={{ x: -20, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.6, duration: 0.4 }}
+                    initial={{ x: -15, opacity: 0 }}
+                    animate={contentVisible ? { x: 0, opacity: 1 } : {}}
+                    transition={{ delay: 0.65 }}
                     className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1 mb-2"
                   >
                     เคล็ดลับเพิ่มเติม
@@ -312,10 +279,10 @@ export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: A
                       return (
                         <motion.div
                           key={i}
-                          initial={{ x: -20, opacity: 0 }}
-                          animate={{ x: 0, opacity: 1 }}
-                          transition={{ delay: 0.65 + i * 0.06, duration: 0.4 }}
-                          className="flex items-start gap-2.5 p-2 rounded-lg bg-background/60 border border-border/30 hover:bg-background/90 transition-colors"
+                          initial={{ y: 10, opacity: 0 }}
+                          animate={contentVisible ? { y: 0, opacity: 1 } : {}}
+                          transition={{ delay: 0.7 + i * 0.06, duration: 0.35 }}
+                          className="flex items-start gap-2.5 p-2 rounded-lg bg-white/40 dark:bg-white/[0.03] border border-border/20 hover:bg-white/70 dark:hover:bg-white/[0.06] transition-colors"
                         >
                           <div className={cn('w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5', tip.bg)}>
                             <tip.icon className={cn('w-3 h-3', tip.color)} />
@@ -337,25 +304,28 @@ export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: A
                   </div>
                 </div>
 
-                {/* ── Pro Tip Footer ── */}
+                {/* ── Pro Tip ── */}
                 <motion.div
-                  initial={{ y: 15, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.9, duration: 0.4 }}
-                  className="relative p-2.5 rounded-lg overflow-hidden"
+                  initial={{ y: 10, opacity: 0 }}
+                  animate={contentVisible ? { y: 0, opacity: 1 } : {}}
+                  transition={{ delay: 1, duration: 0.4 }}
+                  className="p-2.5 rounded-lg bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/20"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 via-orange-500/8 to-amber-500/10" />
-                  <div className="absolute inset-0 border border-amber-500/20 rounded-lg" />
-                  <p className="relative text-[10px] text-amber-700 dark:text-amber-400 leading-relaxed">
+                  <p className="text-[10px] text-amber-800 dark:text-amber-400 leading-relaxed">
                     <span className="font-bold">💡 Pro Tip:</span> ระบบมี Checkpoint Detection หยุดอัตโนมัติเมื่อ Facebook เตือน + Pre-post Warm-up จำลองกิจกรรมก่อนโพสต์ทุกครั้ง
                   </p>
                 </motion.div>
-
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+
+              {/* Paper edge shadow bottom */}
+              <div className="absolute inset-x-0 bottom-0 h-3 bg-gradient-to-t from-black/[0.06] to-transparent dark:from-black/20 pointer-events-none z-10" />
+            </div>
+
+            {/* Bottom scroll roller */}
+            <ScrollRoller side="bottom" />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

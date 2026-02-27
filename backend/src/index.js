@@ -22,6 +22,15 @@ function isAdminEmail(email) {
   return ADMIN_EMAILS.includes(email.toLowerCase());
 }
 
+// Generate unique display ID in format GS###XX (e.g. GS042ZK)
+function generateDisplayId() {
+  const num = String(Math.floor(Math.random() * 999) + 1).padStart(3, '0');
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const l1 = chars[Math.floor(Math.random() * 26)];
+  const l2 = chars[Math.floor(Math.random() * 26)];
+  return `GS${num}${l1}${l2}`;
+}
+
 // Admin-only middleware — must be used AFTER authMiddleware
 function adminOnly(req, res, next) {
   if (!isAdminEmail(req.userEmail)) {
@@ -106,6 +115,63 @@ app.post('/api/session/presence', ...auth, (req, res) => {
       ...sessionManager.getPresenceStats(),
     });
   } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// User profile — returns display_id (auto-generates if missing)
+app.get('/api/user/profile', ...auth, async (req, res) => {
+  try {
+    const supaUrl = process.env.SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+
+    // Fetch from public.users
+    const resp = await fetch(`${supaUrl}/rest/v1/users?id=eq.${req.userId}&select=id,email,full_name,display_id`, {
+      headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` },
+    });
+
+    let profile = null;
+    if (resp.ok) {
+      const rows = await resp.json();
+      profile = rows[0] || null;
+    }
+
+    // If user exists but has no display_id, generate one
+    if (profile && !profile.display_id) {
+      const newId = generateDisplayId();
+      await fetch(`${supaUrl}/rest/v1/users?id=eq.${req.userId}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': serviceKey,
+          'Authorization': `Bearer ${serviceKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation',
+        },
+        body: JSON.stringify({ display_id: newId }),
+      });
+      profile.display_id = newId;
+      console.log(`🆔 Generated display_id ${newId} for user ${req.userId.substring(0, 8)}`);
+    }
+
+    // If user doesn't exist in public.users yet, create row
+    if (!profile) {
+      const newId = generateDisplayId();
+      await fetch(`${supaUrl}/rest/v1/users`, {
+        method: 'POST',
+        headers: {
+          'apikey': serviceKey,
+          'Authorization': `Bearer ${serviceKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: req.userId, email: req.userEmail || 'unknown', display_id: newId }),
+      });
+      profile = { id: req.userId, email: req.userEmail, display_id: newId };
+      console.log(`🆔 Created user row + display_id ${newId} for ${req.userId.substring(0, 8)}`);
+    }
+
+    res.json({ success: true, profile });
+  } catch (error) {
+    console.error('User profile error:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -892,6 +958,18 @@ app.get('/api/admin/all-users', ...adminAuth, async (req, res) => {
     const { data: { users }, error } = await supa.auth.admin.listUsers({ perPage: 1000 });
     if (error) throw error;
 
+    // Fetch display_ids from public.users table
+    const displayIdMap = new Map();
+    try {
+      const resp = await fetch(`${process.env.SUPABASE_URL}/rest/v1/users?select=id,display_id`, {
+        headers: { 'apikey': process.env.SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}` },
+      });
+      if (resp.ok) {
+        const rows = await resp.json();
+        for (const r of rows) { if (r.display_id) displayIdMap.set(r.id, r.display_id); }
+      }
+    } catch (e) { console.log('⚠️ Could not fetch display_ids:', e.message); }
+
     // Get live session stats
     const adminStats = sessionManager.getAdminStats();
     const liveUserMap = new Map();
@@ -899,13 +977,14 @@ app.get('/api/admin/all-users', ...adminAuth, async (req, res) => {
       if (u.fullUserId) liveUserMap.set(u.fullUserId, u);
     }
 
-    // Merge: all Supabase users + live session overlay
+    // Merge: all Supabase users + live session overlay + display_id
     const merged = (users || []).map(u => {
       const live = liveUserMap.get(u.id);
       const meta = u.user_metadata || {};
       return {
         userId: u.id.substring(0, 8) + '...',
         fullUserId: u.id,
+        displayId: displayIdMap.get(u.id) || null,
         email: u.email || null,
         displayName: meta.display_name || meta.full_name || (u.email ? u.email.split('@')[0] : u.id.substring(0, 8)),
         fullName: meta.full_name || null,

@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   email TEXT NOT NULL,
   full_name TEXT,
   avatar_url TEXT,
+  display_id TEXT UNIQUE,
   package TEXT DEFAULT 'free' CHECK (package IN ('free', 'starter', 'top_agent', 'elite')),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -106,16 +107,40 @@ CREATE POLICY "Users can delete own groups" ON public.facebook_groups
 -- FUNCTIONS & TRIGGERS
 -- =============================================
 
--- Auto-create user profile on signup
+-- Function to generate unique GS###XX display IDs
+CREATE OR REPLACE FUNCTION public.generate_display_id()
+RETURNS TEXT AS $$
+DECLARE
+  new_id TEXT;
+  num_part INTEGER;
+  letter1 CHAR(1);
+  letter2 CHAR(1);
+  exists_count INTEGER;
+BEGIN
+  LOOP
+    num_part := floor(random() * 999 + 1)::INTEGER;
+    letter1 := chr(floor(random() * 26 + 65)::INTEGER);
+    letter2 := chr(floor(random() * 26 + 65)::INTEGER);
+    new_id := 'GS' || lpad(num_part::TEXT, 3, '0') || letter1 || letter2;
+    SELECT COUNT(*) INTO exists_count FROM public.users WHERE display_id = new_id;
+    IF exists_count = 0 THEN
+      RETURN new_id;
+    END IF;
+  END LOOP;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Auto-create user profile on signup (with auto-generated display_id)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.users (id, email, full_name, avatar_url)
+  INSERT INTO public.users (id, email, full_name, avatar_url, display_id)
   VALUES (
     NEW.id,
     NEW.email,
     NEW.raw_user_meta_data->>'full_name',
-    NEW.raw_user_meta_data->>'avatar_url'
+    NEW.raw_user_meta_data->>'avatar_url',
+    public.generate_display_id()
   );
   RETURN NEW;
 END;

@@ -1101,7 +1101,12 @@ export default function AdminDashboard() {
                                                                     "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
                                                                 )}>{userPkg === 'free' ? 'ROOKIE' : userPkg === 'agent' ? 'AGENT' : 'ELITE'}</span>
                                                             </div>
-                                                            <p className="text-[11px] text-muted-foreground truncate">{u.email || u.userId}</p>
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="text-[11px] text-muted-foreground truncate">{u.email || u.userId}</p>
+                                                                {(u as any).displayId && (
+                                                                    <code className="text-[9px] font-mono font-bold bg-accent/10 text-accent px-1.5 py-0.5 rounded">{(u as any).displayId}</code>
+                                                                )}
+                                                            </div>
                                                             {u.fullName && (
                                                                 <p className="text-[10px] text-muted-foreground/70 truncate">ชื่อ-นามสกุล: {u.fullName}</p>
                                                             )}

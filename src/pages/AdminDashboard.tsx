@@ -214,6 +214,7 @@ export default function AdminDashboard() {
         fullUserId?: string;
         email?: string | null;
         displayName?: string;
+        fullName?: string | null;
         lineId?: string | null;
         isOnline: boolean;
         isRunningGroup: boolean;
@@ -914,6 +915,9 @@ export default function AdminDashboard() {
                                                                 {u.isOnline && <span className="text-[9px] font-medium text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-1.5 py-0.5 rounded-full">Online</span>}
                                                             </div>
                                                             <p className="text-[11px] text-muted-foreground truncate">{u.email || u.userId}</p>
+                                                            {u.fullName && u.fullName !== u.displayName && (
+                                                                <p className="text-[10px] text-muted-foreground/70 truncate">ชื่อจริง: {u.fullName}</p>
+                                                            )}
                                                         </div>
 
                                                         {/* Stats chips */}

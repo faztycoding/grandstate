@@ -42,7 +42,10 @@ class UserSessionManager {
     session.lastPresenceAt = Date.now();
     if (email) session.email = email;
     if (userMeta) {
-      if (userMeta.display_name || userMeta.full_name) session.displayName = userMeta.display_name || userMeta.full_name;
+      if (userMeta.display_name) session.displayName = userMeta.display_name;
+      if (userMeta.full_name) session.fullName = userMeta.full_name;
+      // Fallback: if no display_name, use full_name
+      if (!session.displayName && userMeta.full_name) session.displayName = userMeta.full_name;
       if (userMeta.line_id) session.lineId = userMeta.line_id;
     }
     return session;
@@ -256,6 +259,7 @@ class UserSessionManager {
         fullUserId: uid,
         email: session.email || null,
         displayName: session.displayName || (session.email ? session.email.split('@')[0] : uid.substring(0, 8)),
+        fullName: session.fullName || null,
         lineId: session.lineId || null,
         isOnline,
         isRunningGroup,

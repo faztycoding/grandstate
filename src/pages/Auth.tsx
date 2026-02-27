@@ -35,7 +35,7 @@ const packageInfo = {
   free: {
     name: 'Rookie', icon: Rocket, color: 'text-emerald-600',
     gradient: 'from-emerald-500 to-teal-500',
-    features: ['10 โพสต์/วัน', '10 กลุ่ม', '5 สินทรัพย์'],
+    features: ['10 โพสต์/วัน', '10 กลุ่ม', '10 สินทรัพย์'],
   },
   agent: {
     name: 'Top Agent', icon: Star, color: 'text-amber-600',

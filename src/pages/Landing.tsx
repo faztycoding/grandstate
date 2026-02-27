@@ -430,7 +430,7 @@ export default function Landing() {
                   </Link>
                 </Button>
                 <Button size="xl" variant="outline" className="border-white/30 text-white hover:bg-white/10" asChild>
-                  <a href="https://line.me/ti/p/@897hrloe" target="_blank" rel="noopener noreferrer">
+                  <a href="https://line.me/ti/p/@grandstate" target="_blank" rel="noopener noreferrer">
                     <MessageCircle className="w-5 h-5 mr-2" />
                     ติดต่อทาง LINE
                   </a>
@@ -462,7 +462,7 @@ export default function Landing() {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><Link to="/auth" className="hover:text-foreground transition-colors">เข้าสู่ระบบ</Link></li>
                 <li><Link to="/pricing" className="hover:text-foreground transition-colors">แพ็กเกจและราคา</Link></li>
-                <li><a href="https://line.me/ti/p/@897hrloe" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">ติดต่อเรา (LINE)</a></li>
+                <li><a href="https://line.me/ti/p/@grandstate" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">ติดต่อเรา (LINE)</a></li>
               </ul>
             </div>
             <div>

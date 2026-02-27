@@ -66,8 +66,10 @@ const apiLimiter = rateLimit({
 app.use('/api/', apiLimiter);
 
 // Session middleware — runs after auth, attaches per-user session to req
+// Also touches presence so every authenticated call keeps the user visible in admin stats
 function attachSession(req, res, next) {
   const session = sessionManager.getSession(req.userId);
+  sessionManager.touchPresence(req.userId, req.userEmail, req.userMeta);
   req.session = session;
   req.groupWorker = session.groupWorker;
   req.marketplaceWorker = session.marketplaceWorker;

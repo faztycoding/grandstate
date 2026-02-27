@@ -58,17 +58,23 @@ class UserSessionManager {
     session.lastActivity = Date.now();
   }
 
-  getPresenceStats() {
+  getPresenceStats(adminEmails = []) {
     const now = Date.now();
     let activeUsers = 0;
     let onlineUsers = 0;
     let automationUsers = 0;
+    let adminOnline = false;
 
     for (const [, session] of this.sessions) {
       const hasLivePresence = !!session.lastPresenceAt && (now - session.lastPresenceAt <= PRESENCE_TIMEOUT_MS);
       const hasRunningAutomation = !!(session.groupWorker.isRunning || session.marketplaceWorker.isRunning);
 
-      if (hasLivePresence) onlineUsers++;
+      if (hasLivePresence) {
+        onlineUsers++;
+        if (session.email && adminEmails.includes(session.email.toLowerCase())) {
+          adminOnline = true;
+        }
+      }
       if (hasRunningAutomation) automationUsers++;
       if (hasLivePresence || hasRunningAutomation) activeUsers++;
     }
@@ -77,6 +83,7 @@ class UserSessionManager {
       activeUsers,
       onlineUsers,
       automationUsers,
+      adminOnline,
       presenceTimeoutMs: PRESENCE_TIMEOUT_MS,
     };
   }

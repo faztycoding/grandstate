@@ -112,7 +112,7 @@ app.post('/api/session/presence', ...auth, (req, res) => {
     res.json({
       success: true,
       online: isOnline,
-      ...sessionManager.getPresenceStats(),
+      ...sessionManager.getPresenceStats(ADMIN_EMAILS),
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -181,7 +181,7 @@ app.get('/api/session/active-users', ...auth, (req, res) => {
   try {
     // A successful authenticated poll implies user is online right now
     sessionManager.touchPresence(req.userId, req.userEmail, req.userMeta);
-    res.json({ success: true, ...sessionManager.getPresenceStats() });
+    res.json({ success: true, ...sessionManager.getPresenceStats(ADMIN_EMAILS) });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

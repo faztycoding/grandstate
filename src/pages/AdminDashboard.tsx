@@ -224,6 +224,17 @@ export default function AdminDashboard() {
         } catch { /* silent */ }
     }, []);
 
+    // ALL registered users (from Supabase Auth, not just in-memory sessions)
+    const [allUsers, setAllUsers] = useState<LiveUser[]>([]);
+    const [allUsersLoaded, setAllUsersLoaded] = useState(false);
+    const fetchAllUsers = useCallback(async () => {
+        try {
+            const res = await apiFetch('/api/admin/all-users');
+            const data = await res.json();
+            if (data.success) { setAllUsers(data.users || []); setAllUsersLoaded(true); }
+        } catch { /* silent */ }
+    }, []);
+
     // Expanded user card (to show management controls)
     const [expandedUser, setExpandedUser] = useState<string | null>(null);
 
@@ -253,6 +264,9 @@ export default function AdminDashboard() {
         displayName?: string;
         fullName?: string | null;
         lineId?: string | null;
+        createdAt?: string;
+        lastSignIn?: string | null;
+        banned?: boolean;
         isOnline: boolean;
         isRunningGroup: boolean;
         isRunningMarketplace: boolean;
@@ -360,8 +374,9 @@ export default function AdminDashboard() {
             fetchLicenses();
             fetchLicenseActivations();
             fetchUserLicenses();
+            fetchAllUsers();
         }
-    }, [adminUser, fetchLicenseActivations, fetchUserLicenses]);
+    }, [adminUser, fetchLicenseActivations, fetchUserLicenses, fetchAllUsers]);
 
     // Connected to SSE stream (Real-time Elon Musk Level)
     useEffect(() => {
@@ -907,7 +922,7 @@ export default function AdminDashboard() {
                                     {/* Summary Cards */}
                                     <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                                         <div className="p-3 rounded-xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800"><div className="flex items-center gap-1.5 mb-1"><Wifi className="w-3.5 h-3.5 text-green-600" /><span className="text-[11px] font-medium text-green-700 dark:text-green-400">{t.admin.online}</span></div><p className="text-2xl font-bold text-green-700 dark:text-green-300">{liveStats.onlineUsers}</p></div>
-                                        <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800"><div className="flex items-center gap-1.5 mb-1"><Users className="w-3.5 h-3.5 text-blue-600" /><span className="text-[11px] font-medium text-blue-700 dark:text-blue-400">{t.admin.totalUsers}</span></div><p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{liveStats.activeUsers}</p></div>
+                                        <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800"><div className="flex items-center gap-1.5 mb-1"><Users className="w-3.5 h-3.5 text-blue-600" /><span className="text-[11px] font-medium text-blue-700 dark:text-blue-400">{t.admin.totalUsers}</span></div><p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{allUsers.length || liveStats.activeUsers}</p></div>
                                         <div className="p-3 rounded-xl bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800"><div className="flex items-center gap-1.5 mb-1"><Zap className={cn("w-3.5 h-3.5 text-orange-600", liveStats.automation.currentlyRunning > 0 && "animate-pulse")} /><span className="text-[11px] font-medium text-orange-700 dark:text-orange-400">Automation</span></div><p className="text-2xl font-bold text-orange-700 dark:text-orange-300">{liveStats.automation.currentlyRunning}</p></div>
                                         <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800"><div className="flex items-center gap-1.5 mb-1"><Activity className="w-3.5 h-3.5 text-purple-600" /><span className="text-[11px] font-medium text-purple-700 dark:text-purple-400">{t.admin.runsToday}</span></div><p className="text-2xl font-bold text-purple-700 dark:text-purple-300">{liveStats.automation.totalRunsToday}</p></div>
                                         <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700"><div className="flex items-center gap-1.5 mb-1"><Monitor className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" /><span className="text-[11px] font-medium text-gray-700 dark:text-gray-400">Browsers</span></div><p className="text-2xl font-bold text-gray-700 dark:text-gray-300">{liveStats.activeBrowsers}/{liveStats.maxBrowsers}</p></div>
@@ -923,19 +938,22 @@ export default function AdminDashboard() {
                                         </div>
                                     )}
 
-                                    {/* Per-User Cards — Clean & Readable */}
-                                    {liveStats.users.length > 0 ? (
-                                        <div className="space-y-2">
-                                            {[...liveStats.users].sort((a, b) => {
-                                                // Running automation first
-                                                const aRun = (a.isRunningGroup || a.isRunningMarketplace) ? 1 : 0;
-                                                const bRun = (b.isRunningGroup || b.isRunningMarketplace) ? 1 : 0;
-                                                if (bRun !== aRun) return bRun - aRun;
-                                                // Online before offline
-                                                if (b.isOnline !== a.isOnline) return b.isOnline ? 1 : -1;
-                                                // More posts today first
-                                                return b.todayPosts - a.todayPosts;
-                                            }).map(u => {
+                                    {/* Per-User Cards — All Registered Users */}
+                                    {(() => {
+                                        const liveMap = new Map<string, LiveUser>();
+                                        for (const lu of (liveStats.users || [])) { if (lu.fullUserId) liveMap.set(lu.fullUserId, lu); }
+                                        const displayUsers: LiveUser[] = allUsersLoaded
+                                            ? allUsers.map(au => { const live = au.fullUserId ? liveMap.get(au.fullUserId) : null; return live ? { ...au, ...live, displayName: au.displayName || live.displayName, fullName: au.fullName || live.fullName } : au; })
+                                            : liveStats.users || [];
+                                        const sorted = [...displayUsers].sort((a, b) => {
+                                            const aRun = (a.isRunningGroup || a.isRunningMarketplace) ? 1 : 0;
+                                            const bRun = (b.isRunningGroup || b.isRunningMarketplace) ? 1 : 0;
+                                            if (bRun !== aRun) return bRun - aRun;
+                                            if (b.isOnline !== a.isOnline) return b.isOnline ? 1 : -1;
+                                            return b.todayPosts - a.todayPosts;
+                                        });
+                                        if (sorted.length === 0) return <p className="text-center text-sm text-muted-foreground py-8">{t.admin.noUsers}</p>;
+                                        return (<div className="space-y-2">{sorted.map(u => {
                                                 const isRunning = u.isRunningGroup || u.isRunningMarketplace;
                                                 const taskPct = u.currentTasks.total > 0 ? Math.round(((u.currentTasks.completed + u.currentTasks.failed) / u.currentTasks.total) * 100) : 0;
                                                 const lic = u.fullUserId ? userLicenses[u.fullUserId] : null;
@@ -1069,10 +1087,8 @@ export default function AdminDashboard() {
                                                 </div>
                                                 );
                                             })}
-                                        </div>
-                                    ) : (
-                                        <p className="text-center text-sm text-muted-foreground py-8">{t.admin.noUsers}</p>
-                                    )}
+                                        </div>);
+                                    })()}
                                 </div>
                             )}
                         </CardContent>
@@ -1101,11 +1117,11 @@ export default function AdminDashboard() {
                                 <div className="overflow-x-auto">
                                     <Table className="min-w-[700px]">
                                         <TableHeader><TableRow>
-                                            <TableHead>License Key</TableHead><TableHead>{t.admin.package}</TableHead><TableHead>{t.admin.owner}</TableHead><TableHead>{t.admin.user}</TableHead><TableHead>{t.admin.fbSessions}</TableHead><TableHead>{t.admin.expiryDate}</TableHead><TableHead>{t.admin.status}</TableHead><TableHead className="text-right">{t.admin.colManage}</TableHead>
+                                            <TableHead>License Key</TableHead><TableHead>{t.admin.package}</TableHead><TableHead>{t.admin.owner}</TableHead><TableHead>{t.admin.user}</TableHead><TableHead>{t.admin.expiryDate}</TableHead><TableHead>{t.admin.status}</TableHead><TableHead className="text-right">{t.admin.colManage}</TableHead>
                                         </TableRow></TableHeader>
                                         <TableBody>
                                             {filteredLicenses.length === 0 ? (
-                                                <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground"><Key className="w-12 h-12 mx-auto mb-4 opacity-20" />{t.admin.noLicenseFound}</TableCell></TableRow>
+                                                <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground"><Key className="w-12 h-12 mx-auto mb-4 opacity-20" />{t.admin.noLicenseFound}</TableCell></TableRow>
                                             ) : filteredLicenses.map(license => {
                                                 const expired = isExpired(license.expires_at);
                                                 const expiringSoon = isExpiringSoon(license.expires_at);
@@ -1121,11 +1137,6 @@ export default function AdminDashboard() {
                                                                 <p className="text-[10px] text-muted-foreground">{activation.activated_at ? formatDate(activation.activated_at) : ''}</p>
                                                             </div>
                                                         ) : <span className="text-[10px] text-muted-foreground">—</span>}</TableCell>
-                                                        <TableCell><div className="flex items-center gap-1">
-                                                            <button className="w-5 h-5 rounded bg-muted hover:bg-muted-foreground/20 flex items-center justify-center text-xs font-bold transition-colors" onClick={() => updateFbSessions(license.id, license.max_fb_sessions - 1)} disabled={license.max_fb_sessions <= 1}>−</button>
-                                                            <span className="text-sm font-semibold w-5 text-center tabular-nums">{license.max_fb_sessions}</span>
-                                                            <button className="w-5 h-5 rounded bg-muted hover:bg-muted-foreground/20 flex items-center justify-center text-xs font-bold transition-colors" onClick={() => updateFbSessions(license.id, license.max_fb_sessions + 1)} disabled={license.max_fb_sessions >= 10}>+</button>
-                                                        </div></TableCell>
                                                         <TableCell><div className={cn("flex items-center gap-1.5 text-sm", expired ? "text-red-500 font-medium" : expiringSoon ? "text-amber-500 font-medium" : "")}>{formatDate(license.expires_at)}{expiringSoon && !expired && <AlertCircle className="w-3.5 h-3.5" />}</div></TableCell>
                                                         <TableCell><Badge variant={license.is_active && !expired ? 'outline' : 'destructive'} className={cn(license.is_active && !expired && "border-green-500 text-green-500")}>{license.is_active && !expired ? 'Active' : 'Inactive'}</Badge></TableCell>
                                                         <TableCell className="text-right"><div className="flex justify-end gap-1.5">

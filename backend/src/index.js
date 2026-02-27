@@ -881,6 +881,58 @@ app.post('/api/admin/force-stop', ...adminAuth, async (req, res) => {
   }
 });
 
+// Admin: get ALL registered users from Supabase Auth + merge with live session data
+app.get('/api/admin/all-users', ...adminAuth, async (req, res) => {
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supa = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+
+    // Fetch all users from Supabase Auth (paginated, up to 1000)
+    const { data: { users }, error } = await supa.auth.admin.listUsers({ perPage: 1000 });
+    if (error) throw error;
+
+    // Get live session stats
+    const adminStats = sessionManager.getAdminStats();
+    const liveUserMap = new Map();
+    for (const u of adminStats.users) {
+      if (u.fullUserId) liveUserMap.set(u.fullUserId, u);
+    }
+
+    // Merge: all Supabase users + live session overlay
+    const merged = (users || []).map(u => {
+      const live = liveUserMap.get(u.id);
+      const meta = u.user_metadata || {};
+      return {
+        userId: u.id.substring(0, 8) + '...',
+        fullUserId: u.id,
+        email: u.email || null,
+        displayName: meta.display_name || meta.full_name || (u.email ? u.email.split('@')[0] : u.id.substring(0, 8)),
+        fullName: meta.full_name || null,
+        lineId: meta.line_id || null,
+        createdAt: u.created_at,
+        lastSignIn: u.last_sign_in_at,
+        banned: !!u.banned_until || !!meta.banned,
+        // Live session data (if user is online / has session)
+        isOnline: live?.isOnline || false,
+        isRunningGroup: live?.isRunningGroup || false,
+        isRunningMarketplace: live?.isRunningMarketplace || false,
+        hasBrowser: live?.hasBrowser || false,
+        todayPosts: live?.todayPosts || 0,
+        todaySuccess: live?.todaySuccess || 0,
+        todayFailed: live?.todayFailed || 0,
+        automationRuns: live?.automationRuns || 0,
+        currentTasks: live?.currentTasks || { total: 0, completed: 0, failed: 0, pending: 0 },
+        lastActivity: live?.lastActivity || null,
+      };
+    });
+
+    res.json({ success: true, users: merged, totalUsers: merged.length });
+  } catch (error) {
+    console.error('Admin all-users error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Admin: get license activation details (which user activated which key)
 app.get('/api/admin/license-activations', ...adminAuth, async (req, res) => {
   try {

@@ -19,21 +19,22 @@ export function LanguageSwitcher({ heroMode = false }: { heroMode?: boolean }) {
           variant="ghost"
           size="icon"
           className={cn(
-            'relative',
-            heroMode && 'text-white/85 hover:text-white hover:bg-white/10'
+            'relative transition-colors duration-300',
+            heroMode
+              ? 'text-white hover:text-white hover:bg-white/10 [&_svg]:text-white'
+              : ''
           )}
         >
-          <Languages className={cn('w-5 h-5', heroMode && 'text-white')} />
-          <span
-            className={cn(
-              'absolute -bottom-0.5 -right-0.5 text-[10px] font-bold rounded px-1',
-              heroMode
-                ? 'bg-white/15 text-white border border-white/20 backdrop-blur-md'
-                : 'bg-primary text-primary-foreground'
-            )}
-          >
-            {language.toUpperCase()}
-          </span>
+          <Languages className="w-5 h-5" />
+          {heroMode ? (
+            <span className="absolute -bottom-0.5 -right-0.5 text-[10px] font-bold rounded px-1 bg-white/20 text-white border border-white/25 backdrop-blur-md">
+              {language.toUpperCase()}
+            </span>
+          ) : (
+            <span className="absolute -bottom-0.5 -right-0.5 text-[10px] font-bold rounded px-1 bg-primary text-primary-foreground">
+              {language.toUpperCase()}
+            </span>
+          )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40">

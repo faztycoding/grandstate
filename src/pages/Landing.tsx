@@ -21,6 +21,9 @@ import {
   Cpu,
   Globe,
   TrendingUp,
+  BrainCircuit,
+  Timer,
+  ChevronDown,
 } from 'lucide-react';
 import { motion, useInView, useMotionValue, useTransform, animate, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/i18n/LanguageContext';
@@ -354,28 +357,35 @@ const benefits = [
 export default function Landing() {
   const { language } = useLanguage();
   const isEn = language === 'en';
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 80);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
-      {/* Header — Glassmorphism */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/60 backdrop-blur-xl border-b border-border/50">
+      {/* Header — Cinematic glassmorphism */}
+      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? 'bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-lg' : 'bg-transparent'}`}>
         <div className="container mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 md:gap-3 group">
             <motion.div
-              className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg"
+              className={`w-9 h-9 md:w-10 md:h-10 rounded-xl flex items-center justify-center shadow-lg transition-colors duration-500 ${scrolled ? 'bg-primary' : 'bg-white/15 backdrop-blur-md border border-white/20'}`}
               whileHover={{ scale: 1.1, rotate: 5 }}
               transition={{ type: 'spring', stiffness: 400 }}
             >
-              <Building2 className="w-4 h-4 md:w-5 md:h-5 text-primary-foreground" />
+              <Building2 className={`w-4 h-4 md:w-5 md:h-5 transition-colors duration-500 ${scrolled ? 'text-primary-foreground' : 'text-white'}`} />
             </motion.div>
-            <span className="font-bold text-lg md:text-xl">Grand$tate</span>
+            <span className={`font-bold text-lg md:text-xl transition-colors duration-500 ${scrolled ? 'text-foreground' : 'text-white'}`}>Grand$tate</span>
           </Link>
           <div className="flex items-center gap-2 md:gap-4">
             <LanguageSwitcher />
-            <Button variant="ghost" size="sm" asChild className="hidden sm:inline-flex">
+            <Button variant="ghost" size="sm" asChild className={`hidden sm:inline-flex transition-colors duration-500 ${scrolled ? '' : 'text-white/80 hover:text-white hover:bg-white/10'}`}>
               <Link to="/auth">{isEn ? 'Sign In' : 'เข้าสู่ระบบ'}</Link>
             </Button>
-            <Link to="/auth" className="btn-glass inline-flex items-center gap-1 md:gap-2 px-4 py-2 rounded-lg text-sm font-medium text-accent">
+            <Link to="/auth" className={`inline-flex items-center gap-1 md:gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-500 shadow-lg ${scrolled ? 'btn-glass text-accent' : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:shadow-amber-500/30 hover:scale-105'}`}>
               <span className="sm:hidden">{isEn ? 'Sign In' : 'เข้าสู่ระบบ'}</span>
               <span className="hidden sm:inline">{isEn ? 'Get Started' : 'เริ่มต้นใช้งาน'}</span>
               <ArrowRight className="w-4 h-4" />
@@ -489,43 +499,52 @@ export default function Landing() {
               className="mt-16 flex flex-wrap justify-center gap-3 md:gap-4"
             >
               {[
-                { val: '750+', lab: isEn ? 'Posts/Day' : 'โพสต์/วัน', icon: '⚡' },
-                { val: 'AI', lab: isEn ? 'Captions' : 'แคปชั่น', icon: '🧠' },
-                { val: '10x', lab: isEn ? 'Faster' : 'เร็วขึ้น', icon: '🚀' },
-                { val: '24/7', lab: isEn ? 'Auto' : 'อัตโนมัติ', icon: '⏰' },
+                { val: '750+', lab: isEn ? 'Posts/Day' : 'โพสต์/วัน', Icon: Zap, color: 'text-amber-400', bg: 'bg-amber-400/10' },
+                { val: 'AI', lab: isEn ? 'Captions' : 'แคปชั่น', Icon: BrainCircuit, color: 'text-purple-400', bg: 'bg-purple-400/10' },
+                { val: '10x', lab: isEn ? 'Faster' : 'เร็วขึ้น', Icon: Rocket, color: 'text-emerald-400', bg: 'bg-emerald-400/10' },
+                { val: '24/7', lab: isEn ? 'Auto' : 'อัตโนมัติ', Icon: Timer, color: 'text-sky-400', bg: 'bg-sky-400/10' },
               ].map((s, i) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 1.8 + i * 0.1 }}
-                  className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl px-5 py-3 text-center min-w-[100px] hover:bg-white/10 transition-all duration-300"
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  className="bg-white/[0.06] backdrop-blur-xl border border-white/[0.08] rounded-2xl px-6 py-4 text-center min-w-[110px] hover:bg-white/[0.1] hover:border-white/15 transition-all duration-300 group"
                 >
-                  <span className="text-lg block mb-0.5">{s.icon}</span>
-                  <p className="text-white font-bold text-lg">{s.val}</p>
-                  <p className="text-white/50 text-[11px]">{s.lab}</p>
+                  <div className={`w-9 h-9 mx-auto mb-2 rounded-xl ${s.bg} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+                    <s.Icon className={`w-4.5 h-4.5 ${s.color}`} />
+                  </div>
+                  <p className="text-white font-bold text-lg leading-tight">{s.val}</p>
+                  <p className="text-white/45 text-[11px] mt-0.5">{s.lab}</p>
                 </motion.div>
               ))}
             </motion.div>
           </motion.div>
 
-          {/* Scroll indicator */}
-          <motion.div
-            className="absolute bottom-8 left-1/2 -translate-x-1/2"
-            animate={{ y: [0, 10, 0] }}
-            transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-          >
-            <div className="flex flex-col items-center gap-2">
-              <span className="text-white/40 text-[10px] uppercase tracking-widest">{isEn ? 'Scroll' : 'เลื่อนลง'}</span>
-              <div className="w-6 h-10 rounded-full border-2 border-white/20 flex justify-center pt-2">
-                <motion.div
-                  className="w-1 h-2.5 rounded-full bg-amber-400/80"
-                  animate={{ y: [0, 6, 0], opacity: [1, 0.3, 1] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                />
-              </div>
-            </div>
-          </motion.div>
+          {/* Scroll indicator — hides on scroll */}
+          <AnimatePresence>
+            {!scrolled && (
+              <motion.div
+                className="absolute bottom-8 left-1/2 -translate-x-1/2"
+                initial={{ opacity: 1 }}
+                exit={{ opacity: 0, y: 20 }}
+                transition={{ duration: 0.4 }}
+                animate={{ y: [0, 10, 0] }}
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <span className="text-white/40 text-[10px] uppercase tracking-widest">{isEn ? 'Scroll' : 'เลื่อนลง'}</span>
+                  <div className="w-7 h-11 rounded-full border-2 border-white/20 flex justify-center pt-2 backdrop-blur-sm">
+                    <motion.div
+                      className="w-1 h-2.5 rounded-full bg-amber-400/80"
+                      animate={{ y: [0, 6, 0], opacity: [1, 0.3, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    />
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </section>
 

@@ -153,6 +153,7 @@ export default function Landing() {
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-6 relative overflow-hidden">
         <div className="absolute inset-0 gradient-hero opacity-5" />
+        <div className="absolute inset-0 dot-grid opacity-40" />
         <motion.div
           className="absolute top-1/4 left-1/4 w-96 h-96 bg-accent/20 rounded-full blur-3xl"
           animate={{ x: [0, 30, 0], y: [0, -20, 0], scale: [1, 1.1, 1] }}
@@ -257,7 +258,7 @@ export default function Landing() {
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
               >
-                <Card className="h-full card-elevated hover:shadow-card-hover transition-all duration-300 group">
+                <Card className="h-full card-glow overflow-hidden group">
                   <CardContent className="p-6">
                     <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-4 shadow-lg`}>
                       <feature.icon className="w-6 h-6 text-white" />

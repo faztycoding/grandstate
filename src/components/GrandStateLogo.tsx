@@ -7,13 +7,13 @@ interface LogoProps {
 
 export function GrandStateLogo({ className, heroMode = false }: LogoProps) {
   const uid = heroMode ? 'h' : 'd';
-  const bldgLight = heroMode ? '#e8e8f0' : '#c8ccd4';
-  const bldgMid = heroMode ? '#d0d0dc' : '#a8aeb8';
-  const bldgDark = heroMode ? '#b8b8c8' : '#888e98';
+  const bldgLight = heroMode ? '#f0f0f8' : '#d8dce4';
+  const bldgMid = heroMode ? '#dcdce8' : '#b8bcc8';
+  const bldgDark = heroMode ? '#c4c4d4' : '#98a0ac';
   const dollarColor = heroMode ? '#fbbf24' : '#f59e0b';
-  const dollarGlow = heroMode ? '#fde68a' : '#fcd34d';
-  const baseFill = heroMode ? '#d4d4dc' : '#b0b4bc';
-  const shadowColor = heroMode ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.2)';
+  const dollarGlow = heroMode ? '#fef3c7' : '#fde68a';
+  const baseFill = heroMode ? '#e0e0e8' : '#c0c4cc';
+  const shadowColor = heroMode ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.25)';
 
   return (
     <svg

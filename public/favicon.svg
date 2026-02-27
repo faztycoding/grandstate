@@ -1,21 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <defs>
     <linearGradient id="bl" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#e8e8f0"/>
-      <stop offset="100%" stop-color="#d0d0dc"/>
+      <stop offset="0%" stop-color="#d8dce4"/>
+      <stop offset="100%" stop-color="#b8bcc8"/>
     </linearGradient>
     <linearGradient id="bc" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#e8e8f0"/>
-      <stop offset="60%" stop-color="#d0d0dc"/>
-      <stop offset="100%" stop-color="#b8b8c8"/>
+      <stop offset="0%" stop-color="#d8dce4"/>
+      <stop offset="60%" stop-color="#b8bcc8"/>
+      <stop offset="100%" stop-color="#98a0ac"/>
     </linearGradient>
     <linearGradient id="br" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#d0d0dc"/>
-      <stop offset="100%" stop-color="#b8b8c8"/>
+      <stop offset="0%" stop-color="#b8bcc8"/>
+      <stop offset="100%" stop-color="#98a0ac"/>
     </linearGradient>
     <linearGradient id="dl" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#fde68a"/>
-      <stop offset="100%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
     </linearGradient>
     <filter id="sh">
       <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.15)"/>

@@ -67,6 +67,7 @@ interface PresencePayload extends Partial<ActiveUsersState> {
 const HEARTBEAT_INTERVAL_MS = 5000; // 5s for near-realtime
 
 const FLASH_DURATION_MS = 3000; // how long join/leave banners stay visible
+const ADMIN_ENTRANCE_DURATION_MS = 5000; // how long admin entrance effect lasts
 
 function useActiveUsersPresence() {
   const [activeUserStats, setActiveUserStats] = useState<ActiveUsersState>({
@@ -78,9 +79,12 @@ function useActiveUsersPresence() {
   const [hasLoadedPresence, setHasLoadedPresence] = useState(false);
   const [joinFlash, setJoinFlash] = useState(false);
   const [leaveFlash, setLeaveFlash] = useState(false);
+  const [adminJustArrived, setAdminJustArrived] = useState(false);
   const prevCountRef = useRef(0);
+  const prevAdminRef = useRef(false);
   const joinTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const adminTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const triggerJoin = useCallback(() => {
     setJoinFlash(true);
@@ -94,6 +98,12 @@ function useActiveUsersPresence() {
     leaveTimerRef.current = setTimeout(() => setLeaveFlash(false), FLASH_DURATION_MS);
   }, []);
 
+  const triggerAdminEntrance = useCallback(() => {
+    setAdminJustArrived(true);
+    if (adminTimerRef.current) clearTimeout(adminTimerRef.current);
+    adminTimerRef.current = setTimeout(() => setAdminJustArrived(false), ADMIN_ENTRANCE_DURATION_MS);
+  }, []);
+
   const applyPresencePayload = useCallback((payload: PresencePayload) => {
     if (!payload?.success) return;
     const newActive = Number(payload.activeUsers) || 0;
@@ -105,16 +115,22 @@ function useActiveUsersPresence() {
       } else if (oldCount > 0 && newActive < oldCount) {
         triggerLeave();
       }
+      // Detect admin entrance: was offline, now online
+      const wasAdminOnline = prev.adminOnline;
+      const isNowAdminOnline = !!payload.adminOnline;
+      if (!wasAdminOnline && isNowAdminOnline) {
+        triggerAdminEntrance();
+      }
       prevCountRef.current = newActive;
       return {
         activeUsers: newActive,
         onlineUsers: Number(payload.onlineUsers) || 0,
         automationUsers: Number(payload.automationUsers) || 0,
-        adminOnline: !!payload.adminOnline,
+        adminOnline: isNowAdminOnline,
       };
     });
     setHasLoadedPresence(true);
-  }, [triggerJoin, triggerLeave]);
+  }, [triggerJoin, triggerLeave, triggerAdminEntrance]);
 
   const fetchPresence = useCallback(async () => {
     try {
@@ -166,6 +182,7 @@ function useActiveUsersPresence() {
       if (heartbeatTimer) clearInterval(heartbeatTimer);
       if (joinTimerRef.current) clearTimeout(joinTimerRef.current);
       if (leaveTimerRef.current) clearTimeout(leaveTimerRef.current);
+      if (adminTimerRef.current) clearTimeout(adminTimerRef.current);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('pagehide', handlePageHide);
       window.removeEventListener('beforeunload', handleBeforeUnload);
@@ -178,6 +195,7 @@ function useActiveUsersPresence() {
     markOffline,
     joinFlash,
     leaveFlash,
+    adminJustArrived,
   };
 }
 
@@ -189,6 +207,7 @@ interface SidebarContentProps {
   markOffline: () => Promise<void>;
   joinFlash: boolean;
   leaveFlash: boolean;
+  adminJustArrived: boolean;
 }
 
 function SidebarContent({
@@ -199,6 +218,7 @@ function SidebarContent({
   markOffline,
   joinFlash,
   leaveFlash,
+  adminJustArrived,
 }: SidebarContentProps) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -416,63 +436,177 @@ function SidebarContent({
                 )}
               </AnimatePresence>
 
-              {/* ── ADMIN ONLINE: Crown drops + golden burst — visible to ALL users ── */}
+              {/* ══ ADMIN EPIC ENTRANCE — Lightning + Giant Crown + ADMIN Slam ══ */}
+              <AnimatePresence>
+                {adminJustArrived && (
+                  <>
+                    {/* Golden screen flash */}
+                    <motion.div key="admin-flash" className="pointer-events-none absolute inset-0 z-50 rounded-xl"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: [0, 0.9, 0.6, 0.9, 0] }}
+                      transition={{ duration: 1.2, times: [0, 0.1, 0.2, 0.3, 1] }}
+                      style={{ background: 'radial-gradient(ellipse at center, rgba(251,191,36,0.8) 0%, rgba(245,158,11,0.4) 50%, transparent 80%)' }}
+                    />
+
+                    {/* Shockwave rings */}
+                    {[0, 1, 2].map(i => (
+                      <motion.div key={`admin-shock-${i}`}
+                        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-amber-400/60 z-50"
+                        initial={{ width: 0, height: 0, opacity: 1 }}
+                        animate={{ width: 300, height: 300, opacity: 0 }}
+                        transition={{ duration: 1.5, ease: 'easeOut', delay: 0.3 + i * 0.2 }}
+                      />
+                    ))}
+
+                    {/* Lightning bolts — left */}
+                    <motion.svg key="lightning-left" className="pointer-events-none absolute z-50" width="60" height="80"
+                      viewBox="0 0 60 80" fill="none"
+                      style={{ left: '15%', top: '-10px' }}
+                      initial={{ opacity: 0, scaleY: 0 }}
+                      animate={{ opacity: [0, 1, 1, 0.8, 0], scaleY: [0, 1, 1, 1, 0] }}
+                      transition={{ duration: 1.5, times: [0, 0.1, 0.4, 0.7, 1], delay: 0.2 }}>
+                      <path d="M30 0 L22 28 L35 25 L18 55 L28 35 L16 38 L26 80" stroke="#fbbf24" strokeWidth="3" fill="none"
+                        filter="drop-shadow(0 0 8px rgba(251,191,36,1)) drop-shadow(0 0 20px rgba(251,191,36,0.6))" />
+                      <path d="M30 0 L22 28 L35 25 L18 55 L28 35 L16 38 L26 80" stroke="white" strokeWidth="1.2" fill="none" opacity="0.8" />
+                    </motion.svg>
+
+                    {/* Lightning bolts — right */}
+                    <motion.svg key="lightning-right" className="pointer-events-none absolute z-50" width="60" height="80"
+                      viewBox="0 0 60 80" fill="none"
+                      style={{ right: '15%', top: '-10px' }}
+                      initial={{ opacity: 0, scaleY: 0 }}
+                      animate={{ opacity: [0, 1, 1, 0.8, 0], scaleY: [0, 1, 1, 1, 0] }}
+                      transition={{ duration: 1.5, times: [0, 0.1, 0.4, 0.7, 1], delay: 0.35 }}>
+                      <path d="M30 0 L38 28 L25 25 L42 55 L32 35 L44 38 L34 80" stroke="#fbbf24" strokeWidth="3" fill="none"
+                        filter="drop-shadow(0 0 8px rgba(251,191,36,1)) drop-shadow(0 0 20px rgba(251,191,36,0.6))" />
+                      <path d="M30 0 L38 28 L25 25 L42 55 L32 35 L44 38 L34 80" stroke="white" strokeWidth="1.2" fill="none" opacity="0.8" />
+                    </motion.svg>
+
+                    {/* Spark particles from lightning impact */}
+                    {[...Array(12)].map((_, i) => (
+                      <motion.div key={`spark-${i}`}
+                        className="pointer-events-none absolute w-1.5 h-1.5 rounded-full z-50"
+                        style={{
+                          left: '50%', top: '30%',
+                          background: i % 3 === 0 ? '#fbbf24' : i % 3 === 1 ? '#ffffff' : '#f59e0b',
+                          boxShadow: '0 0 6px rgba(251,191,36,0.9)',
+                        }}
+                        initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+                        animate={{
+                          x: Math.cos((i / 12) * Math.PI * 2) * (40 + Math.random() * 60),
+                          y: Math.sin((i / 12) * Math.PI * 2) * (30 + Math.random() * 40),
+                          opacity: 0,
+                          scale: 0,
+                        }}
+                        transition={{ duration: 0.8 + Math.random() * 0.5, delay: 0.4, ease: 'easeOut' }}
+                      />
+                    ))}
+
+                    {/* ADMIN text slams from right — crashes into position */}
+                    <motion.div key="admin-slam" className="pointer-events-none absolute inset-x-0 z-50 flex items-center justify-center"
+                      style={{ top: '50%', transform: 'translateY(-50%)' }}
+                      initial={{ x: 200, opacity: 0, scale: 1.8 }}
+                      animate={{ x: [200, -8, 4, 0], opacity: [0, 1, 1, 1], scale: [1.8, 1.1, 0.95, 1] }}
+                      exit={{ opacity: 0, scale: 0.5, y: -20 }}
+                      transition={{ duration: 0.6, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}>
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(251,191,36,0.95) 0%, rgba(245,158,11,0.9) 50%, rgba(217,119,6,0.95) 100%)',
+                          boxShadow: '0 0 20px rgba(251,191,36,0.8), 0 0 40px rgba(251,191,36,0.4), inset 0 1px 0 rgba(255,255,255,0.3)',
+                          border: '1px solid rgba(255,215,0,0.6)',
+                        }}>
+                        {/* Mini crown in badge */}
+                        <svg width="16" height="13" viewBox="0 0 28 22" fill="none">
+                          <rect x="4" y="15" width="20" height="5" rx="1.5" fill="#fcd34d"/>
+                          <path d="M4 15 L1 5 L7 10 L14 2 L21 10 L27 5 L24 15Z" fill="#b91c1c" stroke="#ffd700" strokeWidth="0.8"/>
+                          <circle cx="14" cy="4" r="1.2" fill="#ef4444"/>
+                          <circle cx="14" cy="11" r="1.5" fill="#38bdf8"/>
+                        </svg>
+                        <span className="text-xs font-black text-white tracking-[0.15em]"
+                          style={{ textShadow: '0 1px 3px rgba(0,0,0,0.4), 0 0 10px rgba(255,255,255,0.3)' }}>
+                          ADMIN
+                        </span>
+                        <Zap className="w-3.5 h-3.5 text-white" style={{ filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.6))' }} />
+                      </div>
+                    </motion.div>
+
+                    {/* Announcement text below */}
+                    <motion.p key="admin-announce" className="pointer-events-none absolute inset-x-0 bottom-1 z-50 text-center"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: [0, 1, 1, 0], y: [10, 0, 0, -5] }}
+                      transition={{ duration: 3, times: [0, 0.2, 0.7, 1], delay: 1.2 }}>
+                      <span className="text-[8px] font-bold text-amber-300/90 tracking-widest uppercase"
+                        style={{ textShadow: '0 0 8px rgba(251,191,36,0.6)' }}>
+                        {language === 'th' ? '⚡ แอดมินเข้าสู่ระบบแล้ว ⚡' : '⚡ ADMIN HAS ENTERED ⚡'}
+                      </span>
+                    </motion.p>
+                  </>
+                )}
+              </AnimatePresence>
+
+              {/* ── ADMIN ONLINE: Persistent crown + golden aura (after entrance settles) ── */}
               <AnimatePresence>
                 {adminOnline && (
-                  <motion.div key="admin-crown" className="pointer-events-none absolute -top-3 left-1/2 -translate-x-1/2 z-40"
-                    initial={{ y: -28, opacity: 0, scale: 0, rotate: -20 }}
+                  <motion.div key="admin-crown-persist" className="pointer-events-none absolute -top-5 left-1/2 -translate-x-1/2 z-40"
+                    initial={{ y: -40, opacity: 0, scale: 0, rotate: -25 }}
                     animate={{ y: 0, opacity: 1, scale: 1, rotate: 0 }}
-                    exit={{ y: -20, opacity: 0, scale: 0.5 }}
-                    transition={{ type: 'spring', stiffness: 260, damping: 12, delay: 0.3 }}>
-                    {/* Detailed Crown SVG — red/gold/jewels */}
-                    <svg width="28" height="22" viewBox="0 0 28 22" fill="none" style={{ filter: 'drop-shadow(0 0 6px rgba(251,191,36,0.8)) drop-shadow(0 0 14px rgba(251,191,36,0.35))' }}>
-                      {/* Crown base band */}
-                      <rect x="4" y="15" width="20" height="5" rx="1.5" fill="url(#crownGold)" stroke="#b8860b" strokeWidth="0.5"/>
-                      {/* Crown body */}
-                      <path d="M4 15 L1 5 L7 10 L14 2 L21 10 L27 5 L24 15Z" fill="url(#crownRed)" stroke="#b8860b" strokeWidth="0.6"/>
-                      {/* Gold trim lines */}
-                      <path d="M4 15 L1 5 L7 10 L14 2 L21 10 L27 5 L24 15" fill="none" stroke="#ffd700" strokeWidth="0.8" opacity="0.6"/>
-                      {/* Center jewel — blue teardrop */}
+                    exit={{ y: -30, opacity: 0, scale: 0.3 }}
+                    transition={{ type: 'spring', stiffness: 200, damping: 10, delay: adminJustArrived ? 1.5 : 0.3 }}>
+                    {/* Large Crown SVG — red/gold/jewels */}
+                    <svg width="42" height="34" viewBox="0 0 28 22" fill="none" style={{ filter: 'drop-shadow(0 0 10px rgba(251,191,36,0.9)) drop-shadow(0 0 20px rgba(251,191,36,0.5)) drop-shadow(0 0 40px rgba(251,191,36,0.2))' }}>
+                      <rect x="4" y="15" width="20" height="5" rx="1.5" fill="url(#crownGoldL)" stroke="#b8860b" strokeWidth="0.5"/>
+                      <path d="M4 15 L1 5 L7 10 L14 2 L21 10 L27 5 L24 15Z" fill="url(#crownRedL)" stroke="#b8860b" strokeWidth="0.6"/>
+                      <path d="M4 15 L1 5 L7 10 L14 2 L21 10 L27 5 L24 15" fill="none" stroke="#ffd700" strokeWidth="0.8" opacity="0.7"/>
                       <ellipse cx="14" cy="11" rx="2" ry="2.5" fill="#38bdf8" stroke="#1e3a5f" strokeWidth="0.4"/>
                       <ellipse cx="13.5" cy="10.3" rx="0.7" ry="0.5" fill="white" opacity="0.6"/>
-                      {/* Left jewel — green */}
                       <circle cx="8.5" cy="12.5" r="1.4" fill="#4ade80" stroke="#166534" strokeWidth="0.4"/>
-                      <circle cx="8.1" cy="12" r="0.4" fill="white" opacity="0.5"/>
-                      {/* Right jewel — green */}
                       <circle cx="19.5" cy="12.5" r="1.4" fill="#4ade80" stroke="#166534" strokeWidth="0.4"/>
-                      <circle cx="19.1" cy="12" r="0.4" fill="white" opacity="0.5"/>
-                      {/* Crown tip jewels — red rubies */}
                       <circle cx="14" cy="4" r="1.2" fill="#ef4444" stroke="#7f1d1d" strokeWidth="0.3"/>
-                      <circle cx="13.6" cy="3.6" r="0.35" fill="white" opacity="0.5"/>
                       <circle cx="7" cy="9.5" r="1" fill="#ef4444" stroke="#7f1d1d" strokeWidth="0.3"/>
                       <circle cx="21" cy="9.5" r="1" fill="#ef4444" stroke="#7f1d1d" strokeWidth="0.3"/>
-                      {/* Band jewels — small rubies */}
                       <circle cx="9" cy="17.5" r="0.9" fill="#ef4444" stroke="#991b1b" strokeWidth="0.3"/>
                       <circle cx="14" cy="17.5" r="0.9" fill="#ef4444" stroke="#991b1b" strokeWidth="0.3"/>
                       <circle cx="19" cy="17.5" r="0.9" fill="#ef4444" stroke="#991b1b" strokeWidth="0.3"/>
-                      {/* Top ornament — gold ball */}
                       <circle cx="14" cy="2.2" r="1" fill="#fbbf24" stroke="#b8860b" strokeWidth="0.3"/>
-                      <circle cx="13.6" cy="1.8" r="0.3" fill="white" opacity="0.6"/>
                       <defs>
-                        <linearGradient id="crownGold" x1="4" y1="15" x2="4" y2="20">
-                          <stop offset="0%" stopColor="#fcd34d"/>
-                          <stop offset="50%" stopColor="#f59e0b"/>
-                          <stop offset="100%" stopColor="#d97706"/>
+                        <linearGradient id="crownGoldL" x1="4" y1="15" x2="4" y2="20">
+                          <stop offset="0%" stopColor="#fcd34d"/><stop offset="50%" stopColor="#f59e0b"/><stop offset="100%" stopColor="#d97706"/>
                         </linearGradient>
-                        <linearGradient id="crownRed" x1="14" y1="2" x2="14" y2="15">
-                          <stop offset="0%" stopColor="#fca5a5"/>
-                          <stop offset="30%" stopColor="#ef4444"/>
-                          <stop offset="100%" stopColor="#b91c1c"/>
+                        <linearGradient id="crownRedL" x1="14" y1="2" x2="14" y2="15">
+                          <stop offset="0%" stopColor="#fca5a5"/><stop offset="30%" stopColor="#ef4444"/><stop offset="100%" stopColor="#b91c1c"/>
                         </linearGradient>
                       </defs>
                     </svg>
-                    {/* Golden burst behind crown */}
-                    <motion.div className="absolute -inset-3 -z-10"
-                      initial={{ scale: 0, opacity: 0.8 }} animate={{ scale: [1, 1.4, 1], opacity: [0.4, 0.15, 0.4] }}
+                    {/* Pulsing golden aura behind crown */}
+                    <motion.div className="absolute -inset-4 -z-10"
+                      animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0.15, 0.5] }}
                       transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}>
-                      <div className="w-full h-full rounded-full bg-amber-400/30 blur-md" />
+                      <div className="w-full h-full rounded-full bg-amber-400/40 blur-lg" />
+                    </motion.div>
+                    {/* Continuous subtle lightning flickers */}
+                    <motion.div className="absolute -inset-2 -z-5"
+                      animate={{ opacity: [0, 0.3, 0, 0.2, 0, 0.4, 0] }}
+                      transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}>
+                      <div className="w-full h-full rounded-full bg-white/20 blur-sm" />
                     </motion.div>
                   </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* ── ADMIN ONLINE: Golden border glow on the card ── */}
+              <AnimatePresence>
+                {adminOnline && (
+                  <motion.div key="admin-border-glow" className="pointer-events-none absolute inset-0 z-5 rounded-xl"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.5 }}
+                    style={{
+                      boxShadow: '0 0 15px rgba(251,191,36,0.4), 0 0 30px rgba(251,191,36,0.15), inset 0 0 15px rgba(251,191,36,0.1)',
+                      border: '1px solid rgba(251,191,36,0.3)',
+                      borderRadius: '0.75rem',
+                    }}
+                  />
                 )}
               </AnimatePresence>
 
@@ -487,17 +621,19 @@ function SidebarContent({
                     <AnimatePresence>
                       {adminOnline && (
                         <motion.span
-                          initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0, opacity: 0 }}
-                          transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-                          className="inline-flex items-center gap-0.5 px-1.5 py-px rounded-full bg-gradient-to-r from-amber-500/25 to-yellow-500/25 border border-amber-400/40"
-                          style={{ boxShadow: '0 0 8px rgba(251,191,36,0.3)' }}>
-                          <svg width="10" height="8" viewBox="0 0 28 22" fill="none" className="flex-shrink-0">
-                            <rect x="4" y="15" width="20" height="5" rx="1.5" fill="#f59e0b"/>
-                            <path d="M4 15 L1 5 L7 10 L14 2 L21 10 L27 5 L24 15Z" fill="#ef4444" stroke="#b8860b" strokeWidth="0.6"/>
-                            <circle cx="14" cy="4" r="1.2" fill="#ef4444"/>
-                            <circle cx="14" cy="11" rx="2" ry="2.5" fill="#38bdf8" r="1.5"/>
-                          </svg>
-                          <span className="text-[7px] font-bold text-amber-300 tracking-wider">ADMIN</span>
+                          initial={{ scale: 0, opacity: 0, x: 30 }}
+                          animate={{ scale: 1, opacity: 1, x: 0 }}
+                          exit={{ scale: 0, opacity: 0 }}
+                          transition={{ type: 'spring', stiffness: 300, damping: 12, delay: adminJustArrived ? 1.8 : 0 }}
+                          className="inline-flex items-center gap-0.5 px-1.5 py-px rounded-full"
+                          style={{
+                            background: 'linear-gradient(135deg, rgba(251,191,36,0.35) 0%, rgba(245,158,11,0.25) 100%)',
+                            boxShadow: '0 0 12px rgba(251,191,36,0.4), 0 0 4px rgba(251,191,36,0.6)',
+                            border: '1px solid rgba(255,215,0,0.5)',
+                          }}>
+                          <Zap className="w-2.5 h-2.5 text-amber-300" style={{ filter: 'drop-shadow(0 0 3px rgba(251,191,36,0.8))' }} />
+                          <span className="text-[7px] font-black text-amber-200 tracking-[0.12em]"
+                            style={{ textShadow: '0 0 6px rgba(251,191,36,0.6)' }}>ADMIN</span>
                         </motion.span>
                       )}
                     </AnimatePresence>
@@ -630,7 +766,7 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const isMobile = useIsMobile();
   const { open, setOpen } = useMobileSidebar();
-  const { activeUserStats, hasLoadedPresence, markOffline, joinFlash, leaveFlash } = useActiveUsersPresence();
+  const { activeUserStats, hasLoadedPresence, markOffline, joinFlash, leaveFlash, adminJustArrived } = useActiveUsersPresence();
 
   // Mobile: Sheet drawer
   if (isMobile) {
@@ -656,6 +792,7 @@ export function Sidebar() {
               markOffline={markOffline}
               joinFlash={joinFlash}
               leaveFlash={leaveFlash}
+              adminJustArrived={adminJustArrived}
             />
           </div>
         </SheetContent>
@@ -702,6 +839,7 @@ export function Sidebar() {
         markOffline={markOffline}
         joinFlash={joinFlash}
         leaveFlash={leaveFlash}
+        adminJustArrived={adminJustArrived}
       />
     </motion.aside>
   );

@@ -309,6 +309,158 @@
   50% { transform: translateY(-10px); }
 }
 
+/* ═══════════════════════════════════════════════════
+   GRAND$TATE PREMIUM LANDING ANIMATIONS
+   ═══════════════════════════════════════════════════ */
+
+/* Vortex rotation */
+@keyframes vortexSpin {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.05); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+/* Neon pulse glow */
+@keyframes neonPulse {
+  0%, 100% { box-shadow: 0 0 5px hsl(var(--accent) / 0.3), 0 0 20px hsl(var(--accent) / 0.1), inset 0 0 10px hsl(var(--accent) / 0.05); }
+  50% { box-shadow: 0 0 10px hsl(var(--accent) / 0.5), 0 0 40px hsl(var(--accent) / 0.2), inset 0 0 20px hsl(var(--accent) / 0.1); }
+}
+
+/* Circuit trace — border glow runs around */
+@keyframes circuitTrace {
+  0% { background-position: 0% 0%; }
+  25% { background-position: 100% 0%; }
+  50% { background-position: 100% 100%; }
+  75% { background-position: 0% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+/* Light trail for neural flow */
+@keyframes lightTrail {
+  0% { offset-distance: 0%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { offset-distance: 100%; opacity: 0; }
+}
+
+/* Data stream upward */
+@keyframes dataStreamUp {
+  0% { transform: translateY(100%) scale(0.8); opacity: 0; }
+  20% { opacity: 1; transform: translateY(60%) scale(1); }
+  80% { opacity: 1; transform: translateY(-60%) scale(1); }
+  100% { transform: translateY(-100%) scale(0.8); opacity: 0; }
+}
+
+/* Organic pulse */
+@keyframes organicPulse {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.08); filter: brightness(1.2); }
+}
+
+/* Gear spin */
+@keyframes gearSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes gearSpinReverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+/* Clock hand sweep */
+@keyframes clockSweep {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Shimmer effect */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Glow breathe */
+@keyframes glowBreathe {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.15); }
+}
+
+/* Float in from bottom */
+@keyframes floatInUp {
+  from { opacity: 0; transform: translateY(60px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@layer utilities {
+  /* Glassmorphism button with circuit trace */
+  .btn-glass {
+    position: relative;
+    background: hsl(var(--background) / 0.4);
+    backdrop-filter: blur(16px) saturate(1.8);
+    -webkit-backdrop-filter: blur(16px) saturate(1.8);
+    border: 1px solid hsl(var(--accent) / 0.2);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+  }
+  .btn-glass::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    background: conic-gradient(from 0deg, transparent, hsl(var(--accent) / 0.6), transparent, transparent);
+    opacity: 0;
+    transition: opacity 0.4s;
+    z-index: -1;
+    animation: vortexSpin 3s linear infinite paused;
+  }
+  .btn-glass:hover::before {
+    opacity: 1;
+    animation-play-state: running;
+  }
+  .btn-glass:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 40px -10px hsl(var(--accent) / 0.4), 0 0 20px hsl(var(--accent) / 0.1);
+    border-color: hsl(var(--accent) / 0.5);
+  }
+
+  /* Neon border card */
+  .neon-card {
+    position: relative;
+    background: hsl(var(--card) / 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid hsl(var(--accent) / 0.15);
+    animation: neonPulse 4s ease-in-out infinite;
+  }
+
+  /* Vortex container */
+  .vortex-ring {
+    animation: vortexSpin 12s linear infinite;
+  }
+  .vortex-ring-reverse {
+    animation: vortexSpin 16s linear infinite reverse;
+  }
+
+  /* Data circuit pattern background */
+  .data-circuit {
+    background-image:
+      linear-gradient(hsl(var(--accent) / 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--accent) / 0.03) 1px, transparent 1px),
+      radial-gradient(circle 2px, hsl(var(--accent) / 0.08) 1px, transparent 1px);
+    background-size: 60px 60px, 60px 60px, 60px 60px;
+  }
+
+  /* Shimmer overlay */
+  .shimmer-overlay::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, hsl(var(--accent) / 0.08), transparent);
+    animation: shimmer 3s ease-in-out infinite;
+  }
+}
+
 /* Property card specific styles */
 .property-card-image {
   @apply relative overflow-hidden;

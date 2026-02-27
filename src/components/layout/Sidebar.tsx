@@ -66,6 +66,8 @@ interface PresencePayload extends Partial<ActiveUsersState> {
 
 const HEARTBEAT_INTERVAL_MS = 5000; // 5s for near-realtime
 
+const FLASH_DURATION_MS = 3000; // how long join/leave banners stay visible
+
 function useActiveUsersPresence() {
   const [activeUserStats, setActiveUserStats] = useState<ActiveUsersState>({
     activeUsers: 0,
@@ -74,9 +76,23 @@ function useActiveUsersPresence() {
     adminOnline: false,
   });
   const [hasLoadedPresence, setHasLoadedPresence] = useState(false);
-  const [joinFlash, setJoinFlash] = useState(0);
-  const [leaveFlash, setLeaveFlash] = useState(0);
+  const [joinFlash, setJoinFlash] = useState(false);
+  const [leaveFlash, setLeaveFlash] = useState(false);
   const prevCountRef = useRef(0);
+  const joinTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const triggerJoin = useCallback(() => {
+    setJoinFlash(true);
+    if (joinTimerRef.current) clearTimeout(joinTimerRef.current);
+    joinTimerRef.current = setTimeout(() => setJoinFlash(false), FLASH_DURATION_MS);
+  }, []);
+
+  const triggerLeave = useCallback(() => {
+    setLeaveFlash(true);
+    if (leaveTimerRef.current) clearTimeout(leaveTimerRef.current);
+    leaveTimerRef.current = setTimeout(() => setLeaveFlash(false), FLASH_DURATION_MS);
+  }, []);
 
   const applyPresencePayload = useCallback((payload: PresencePayload) => {
     if (!payload?.success) return;
@@ -85,9 +101,9 @@ function useActiveUsersPresence() {
     setActiveUserStats(prev => {
       const oldCount = prev.activeUsers;
       if (oldCount > 0 && newActive > oldCount) {
-        setJoinFlash(f => f + 1);
+        triggerJoin();
       } else if (oldCount > 0 && newActive < oldCount) {
-        setLeaveFlash(f => f + 1);
+        triggerLeave();
       }
       prevCountRef.current = newActive;
       return {
@@ -98,7 +114,7 @@ function useActiveUsersPresence() {
       };
     });
     setHasLoadedPresence(true);
-  }, []);
+  }, [triggerJoin, triggerLeave]);
 
   const fetchPresence = useCallback(async () => {
     try {
@@ -148,6 +164,8 @@ function useActiveUsersPresence() {
 
     return () => {
       if (heartbeatTimer) clearInterval(heartbeatTimer);
+      if (joinTimerRef.current) clearTimeout(joinTimerRef.current);
+      if (leaveTimerRef.current) clearTimeout(leaveTimerRef.current);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('pagehide', handlePageHide);
       window.removeEventListener('beforeunload', handleBeforeUnload);
@@ -169,8 +187,8 @@ interface SidebarContentProps {
   activeUserStats: ActiveUsersState;
   hasLoadedPresence: boolean;
   markOffline: () => Promise<void>;
-  joinFlash: number;
-  leaveFlash: number;
+  joinFlash: boolean;
+  leaveFlash: boolean;
 }
 
 function SidebarContent({
@@ -334,8 +352,8 @@ function SidebarContent({
 
               {/* ── JOIN FLASH: burst rings — tier colored ── */}
               <AnimatePresence>
-                {joinFlash > 0 && (
-                  <motion.div key={`burst-${joinFlash}`} className="pointer-events-none absolute inset-0 z-20"
+                {joinFlash && (
+                  <motion.div key="burst-join" className="pointer-events-none absolute inset-0 z-20"
                     initial={{ opacity: 1 }} animate={{ opacity: 0 }} exit={{ opacity: 0 }} transition={{ duration: 2.5 }}>
                     <motion.div className={cn("absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2",
                         tier === 'storm' ? 'border-cyan-400/60' : tier === 'wings' ? 'border-violet-400/60' : 'border-pink-400/60')}
@@ -354,8 +372,8 @@ function SidebarContent({
 
               {/* ── JOIN FLASH: notification banner — tier colored ── */}
               <AnimatePresence>
-                {joinFlash > 0 && (
-                  <motion.div key={`banner-${joinFlash}`}
+                {joinFlash && (
+                  <motion.div key="banner-join"
                     className={cn("absolute inset-x-0 top-0 z-30 flex items-center justify-center py-1",
                       tier === 'storm' ? 'bg-gradient-to-r from-cyan-500/90 via-blue-500/90 to-cyan-500/90'
                         : tier === 'wings' ? 'bg-gradient-to-r from-violet-500/90 via-fuchsia-500/90 to-violet-500/90'
@@ -374,8 +392,8 @@ function SidebarContent({
 
               {/* ── LEAVE FLASH: user left banner ── */}
               <AnimatePresence>
-                {leaveFlash > 0 && (
-                  <motion.div key={`leave-${leaveFlash}`}
+                {leaveFlash && (
+                  <motion.div key="leave-banner"
                     className="absolute inset-x-0 bottom-0 z-30 flex items-center justify-center py-1 bg-gradient-to-r from-slate-600/90 via-gray-500/90 to-slate-600/90"
                     initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 30, opacity: 0 }}
                     transition={{ type: 'spring', stiffness: 500, damping: 25 }}>
@@ -390,8 +408,8 @@ function SidebarContent({
 
               {/* ── LEAVE FLASH: dim pulse ── */}
               <AnimatePresence>
-                {leaveFlash > 0 && (
-                  <motion.div key={`ldim-${leaveFlash}`}
+                {leaveFlash && (
+                  <motion.div key="leave-dim"
                     className="pointer-events-none absolute inset-0 z-20 rounded-xl bg-black/20"
                     initial={{ opacity: 1 }} animate={{ opacity: 0 }} exit={{ opacity: 0 }}
                     transition={{ duration: 1.5 }} />
@@ -505,12 +523,12 @@ function SidebarContent({
                       </motion.p>
                     </AnimatePresence>
 
-                    <motion.span key={`radio-${joinFlash}`}
-                      animate={joinFlash > 0
+                    <motion.span
+                      animate={joinFlash
                         ? { scale: [1, 1.8, 1, 1.4, 1], opacity: [0.5, 1, 0.6, 1, 0.5] }
                         : { scale: [1, 1.3, 1], opacity: [0.4, 1, 0.4] }
                       }
-                      transition={joinFlash > 0
+                      transition={joinFlash
                         ? { duration: 0.8, ease: 'easeInOut' }
                         : { duration: hasAutomation ? 0.7 : 1.6, repeat: Infinity, ease: 'easeInOut' }
                       }
@@ -536,8 +554,8 @@ function SidebarContent({
                 {/* Activity icon with tier glow */}
                 <div className="relative">
                   <AnimatePresence>
-                    {joinFlash > 0 && (
-                      <motion.span key={`glow-${joinFlash}`}
+                    {joinFlash && (
+                      <motion.span key="glow-join"
                         className={cn("absolute inset-0 rounded-full blur-lg",
                           tier === 'storm' ? 'bg-cyan-400/50' : tier === 'wings' ? 'bg-violet-400/50' : 'bg-pink-400/50')}
                         initial={{ scale: 0.5, opacity: 1 }} animate={{ scale: 3.5, opacity: 0 }}

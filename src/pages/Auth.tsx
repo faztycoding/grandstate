@@ -255,23 +255,24 @@ export default function Auth() {
         <video
           autoPlay muted loop playsInline
           className="absolute inset-0 w-full h-full object-cover scale-105"
-          style={{ filter: 'saturate(0.7) brightness(0.5)' }}
+          style={{ filter: 'saturate(0.8) brightness(0.45) sepia(0.15)' }}
           poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1920' height='1080'%3E%3Crect fill='%23070b14'/%3E%3C/svg%3E"
         >
           <source src="https://videos.pexels.com/video-files/3129671/3129671-uhd_2560_1440_30fps.mp4" type="video/mp4" />
         </video>
 
-        {/* Multi-layer cinematic overlays */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#070b14]/80 via-[#070b14]/50 to-[#070b14]/90" />
-        <div className="absolute inset-0 bg-gradient-to-r from-indigo-950/40 via-transparent to-purple-950/30" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,#070b14_100%)]" />
+        {/* Multi-layer cinematic overlays — warm amber/orange tone */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0704]/80 via-[#0a0704]/40 to-[#0a0704]/90" />
+        <div className="absolute inset-0 bg-gradient-to-r from-amber-950/40 via-transparent to-orange-950/30" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,#0a0704_100%)]" />
 
         {/* Warm amber glow — center focus */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,rgba(245,158,11,0.06)_0%,transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,rgba(245,158,11,0.12)_0%,transparent_55%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_60%,rgba(251,146,60,0.06)_0%,transparent_40%)]" />
 
         {/* Horizon glow line */}
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500/20 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-[#070b14] to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500/30 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-[#0a0704] to-transparent" />
 
         {/* Subtle vignette */}
         <div className="absolute inset-0" style={{ boxShadow: 'inset 0 0 200px 60px rgba(0,0,0,0.5)' }} />
@@ -286,7 +287,7 @@ export default function Auth() {
               height: i % 3 === 0 ? 3 : 2,
               left: `${8 + i * 7.5}%`,
               top: `${10 + (i % 5) * 18}%`,
-              background: i % 2 === 0 ? 'rgba(245,158,11,0.4)' : 'rgba(147,197,253,0.3)',
+              background: i % 3 === 0 ? 'rgba(251,191,36,0.5)' : i % 3 === 1 ? 'rgba(251,146,60,0.4)' : 'rgba(245,158,11,0.35)',
             }}
             animate={{ y: [-20, 20, -20], opacity: [0.1, 0.6, 0.1] }}
             transition={{ duration: 4 + i * 0.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.25 }} />
@@ -294,7 +295,7 @@ export default function Auth() {
         {/* Accent light streaks */}
         <motion.div className="absolute top-1/3 left-0 w-full h-px bg-gradient-to-r from-transparent via-amber-400/10 to-transparent"
           animate={{ opacity: [0.2, 0.5, 0.2] }} transition={{ duration: 5, repeat: Infinity }} />
-        <motion.div className="absolute top-2/3 left-0 w-full h-px bg-gradient-to-r from-transparent via-blue-400/8 to-transparent"
+        <motion.div className="absolute top-2/3 left-0 w-full h-px bg-gradient-to-r from-transparent via-orange-400/10 to-transparent"
           animate={{ opacity: [0.15, 0.4, 0.15] }} transition={{ duration: 6, repeat: Infinity, delay: 1 }} />
       </div>
 

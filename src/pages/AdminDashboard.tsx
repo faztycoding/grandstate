@@ -1310,91 +1310,84 @@ export default function AdminDashboard() {
                             )}
                         </motion.div>
 
-                        {/* ── HERO: Queue Engine — World-Class Gear Theme ── */}
+                        {/* ── HERO: Nexus Engine — Quantum Automation Core ── */}
                         <TooltipProvider delayDuration={200}>
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="relative overflow-hidden rounded-2xl text-white cursor-pointer group"
-                            style={{ background: 'linear-gradient(135deg, #0c0e14 0%, #141825 30%, #1a1f30 50%, #141825 70%, #0c0e14 100%)' }}
+                            className="relative overflow-hidden rounded-3xl text-white cursor-pointer group shadow-2xl"
+                            style={{ background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.1)' }}
                             onClick={() => setQueueDetail({ type: 'slots', data: liveStats.queue })}
                         >
-                            {/* Industrial grid pattern */}
-                            <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+                            {/* Scanline sweep animation */}
+                            <div className="absolute inset-x-0 h-[2px] z-20 pointer-events-none" style={{ background: 'rgba(34, 211, 238, 0.1)', animation: 'engineScan 4s linear infinite' }} />
 
-                            {/* Animated gear decorations */}
-                            <svg className={cn("absolute -top-8 -left-8 w-32 h-32 text-white/[0.04]", liveStats.queue.runningCount > 0 ? "animate-gear-active" : "animate-gear")} viewBox="0 0 100 100" fill="currentColor">
-                                <path d="M50 10 L54 10 L56 2 L60 2 L62 10 L66 12 L72 6 L76 8 L74 16 L78 20 L86 18 L88 22 L80 26 L82 30 L90 32 L90 36 L82 38 L80 42 L88 48 L86 52 L78 48 L74 52 L76 60 L72 62 L66 56 L62 58 L60 66 L56 66 L54 58 L50 58 L46 66 L42 66 L40 58 L36 56 L30 62 L26 60 L28 52 L24 48 L16 52 L14 48 L22 42 L20 38 L12 36 L12 32 L20 30 L22 26 L14 22 L16 18 L24 20 L28 16 L26 8 L30 6 L36 12 L40 10 L42 2 L46 2 L48 10Z M50 30 a20 20 0 1 0 0 40 a20 20 0 1 0 0-40Z"/>
-                            </svg>
-                            <svg className={cn("absolute -bottom-6 -right-6 w-24 h-24 text-white/[0.03]", liveStats.queue.runningCount > 0 ? "animate-gear-active-reverse" : "animate-gear-reverse")} viewBox="0 0 100 100" fill="currentColor">
-                                <path d="M50 10 L54 10 L56 2 L60 2 L62 10 L66 12 L72 6 L76 8 L74 16 L78 20 L86 18 L88 22 L80 26 L82 30 L90 32 L90 36 L82 38 L80 42 L88 48 L86 52 L78 48 L74 52 L76 60 L72 62 L66 56 L62 58 L60 66 L56 66 L54 58 L50 58 L46 66 L42 66 L40 58 L36 56 L30 62 L26 60 L28 52 L24 48 L16 52 L14 48 L22 42 L20 38 L12 36 L12 32 L20 30 L22 26 L14 22 L16 18 L24 20 L28 16 L26 8 L30 6 L36 12 L40 10 L42 2 L46 2 L48 10Z M50 30 a20 20 0 1 0 0 40 a20 20 0 1 0 0-40Z"/>
-                            </svg>
+                            {/* Circuit grid pattern */}
+                            <div className="absolute inset-0 opacity-[0.03]" style={{
+                                backgroundImage: 'linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px), radial-gradient(circle 2px, rgba(59,130,246,0.08) 1px, transparent 1px)',
+                                backgroundSize: '60px 60px, 60px 60px, 60px 60px'
+                            }} />
 
-                            {/* Top ambient glow — shifts color based on state */}
+                            {/* Ambient glow orbs */}
                             <div className={cn(
-                                "absolute -top-20 left-1/3 w-[500px] h-48 rounded-full blur-[120px] transition-all duration-[3000ms]",
-                                liveStats.queue.runningCount > 0 ? "bg-emerald-500/20" : "bg-slate-500/5"
+                                "absolute -top-20 -left-20 w-64 h-64 rounded-full blur-[100px] transition-all duration-[3000ms]",
+                                liveStats.queue.runningCount > 0 ? "bg-blue-500/15" : "bg-blue-500/5"
                             )} />
                             <div className={cn(
-                                "absolute -bottom-16 right-1/4 w-80 h-32 rounded-full blur-[100px] transition-all duration-[3000ms]",
-                                liveStats.queue.queueLength > 0 ? "bg-amber-500/12" : "bg-transparent"
+                                "absolute -bottom-20 -right-20 w-64 h-64 rounded-full blur-[100px] transition-all duration-[3000ms]",
+                                liveStats.queue.runningCount > 0 ? "bg-emerald-500/15" : "bg-emerald-500/3"
                             )} />
 
-                            <div className="relative z-10 p-5 md:p-8">
-                                {/* Header row */}
-                                <div className="flex items-start justify-between mb-7">
-                                    <div className="flex items-center gap-3.5">
-                                        {/* Animated gear icon */}
+                            <div className="relative z-10 p-6 md:p-10">
+                                {/* ── Header: Engine Identity + Metrics Panel ── */}
+                                <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10">
+                                    <div className="flex items-center gap-4">
+                                        {/* Lightning bolt icon */}
                                         <div className="relative">
-                                            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-400/90 via-orange-500 to-red-500/80 flex items-center justify-center shadow-xl shadow-orange-600/30 ring-1 ring-white/10">
-                                                <svg className={cn("w-5 h-5 text-white", liveStats.queue.runningCount > 0 ? "animate-gear-active" : "")} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                                    <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
+                                            <div className="p-3 bg-blue-500/20 rounded-xl border border-blue-500/50 shadow-lg shadow-blue-500/20">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className={cn("w-6 h-6 text-blue-400", liveStats.queue.runningCount > 0 && "animate-pulse")} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                                                 </svg>
                                             </div>
                                             {liveStats.queue.runningCount > 0 && (
-                                                <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50 animate-pulse" />
+                                                <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50 animate-pulse" />
                                             )}
                                         </div>
                                         <div>
-                                            <h3 className="text-lg md:text-xl font-black tracking-tight bg-gradient-to-r from-white via-white to-slate-400 bg-clip-text text-transparent">
-                                                {t.admin.engineTitle}
+                                            <h3 className="text-xl md:text-2xl font-bold tracking-tighter uppercase">
+                                                Nexus Engine <span className="text-blue-500 text-xs font-normal">v4.0</span>
                                             </h3>
-                                            <div className="flex items-center gap-2 mt-0.5">
-                                                <span className="text-[10px] text-slate-500 font-medium">{liveStats.queue.maxConcurrent} Slots</span>
-                                                <span className="text-slate-700">•</span>
-                                                <span className="text-[10px] text-slate-500 font-medium">{liveStats.queue.queueTimeoutMin}m Timeout</span>
-                                                <span className="text-slate-700">•</span>
-                                                <span className={cn("text-[10px] font-bold uppercase tracking-wider", liveStats.queue.runningCount > 0 ? "text-emerald-400" : "text-slate-600")}>
-                                                    {liveStats.queue.runningCount > 0 ? t.admin.processing : t.admin.idle}
-                                                </span>
-                                            </div>
+                                            <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] mt-0.5">Quantum Automation Core</p>
                                         </div>
                                     </div>
 
-                                    {/* Big counter + queue badge */}
-                                    <div className="flex items-center gap-3 md:gap-5">
-                                        {liveStats.queue.queueLength > 0 && (
-                                            <motion.div
-                                                initial={{ scale: 0.8, opacity: 0 }}
-                                                animate={{ scale: 1, opacity: 1 }}
-                                                className="px-3 md:px-4 py-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 backdrop-blur-md text-center animate-float"
-                                            >
-                                                <p className="text-2xl md:text-3xl font-black text-amber-400 tabular-nums leading-none drop-shadow-lg">{liveStats.queue.queueLength}</p>
-                                                <p className="text-[7px] text-amber-400/50 uppercase tracking-[0.2em] mt-1 font-semibold">{t.admin.inQueue}</p>
-                                            </motion.div>
-                                        )}
-                                        <div className="text-right">
-                                            <div className="flex items-baseline gap-0.5">
-                                                <AnimatedCounter value={liveStats.queue.runningCount} className="text-4xl md:text-6xl font-black tabular-nums tracking-tighter leading-none text-white drop-shadow-lg" />
-                                                <span className="text-lg md:text-2xl text-slate-600 font-extralight">/{liveStats.queue.maxConcurrent}</span>
-                                            </div>
-                                            <p className="text-[8px] text-slate-600 uppercase tracking-[0.25em] mt-1 font-semibold">{t.admin.activeSlots}</p>
+                                    {/* Dark metrics panel */}
+                                    <div className="flex gap-6 md:gap-8 bg-black/40 px-5 py-4 rounded-2xl border border-white/5">
+                                        <div className="text-center">
+                                            <AnimatedCounter value={liveStats.queue.runningCount} className="text-3xl md:text-4xl font-bold text-white tabular-nums leading-none" />
+                                            <p className="text-[9px] text-slate-500 uppercase tracking-[0.15em] mt-1 font-medium">Active Threads</p>
                                         </div>
+                                        <div className="w-[1px] bg-white/10" />
+                                        <div className="text-center">
+                                            <p className="text-3xl md:text-4xl font-bold text-blue-400 tabular-nums leading-none">
+                                                {liveStats.queue.runningCount > 0 ? Math.min(Math.round((liveStats.queue.runningCount / liveStats.queue.maxConcurrent) * 100), 100) : 0}%
+                                            </p>
+                                            <p className="text-[9px] text-slate-500 uppercase tracking-[0.15em] mt-1 font-medium">System Load</p>
+                                        </div>
+                                        {liveStats.queue.queueLength > 0 && (
+                                            <>
+                                                <div className="w-[1px] bg-white/10" />
+                                                <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center">
+                                                    <p className="text-3xl md:text-4xl font-bold text-amber-400 tabular-nums leading-none animate-pulse">{liveStats.queue.queueLength}</p>
+                                                    <p className="text-[9px] text-amber-400/50 uppercase tracking-[0.15em] mt-1 font-medium">{t.admin.inQueue}</p>
+                                                </motion.div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
 
-                                {/* Slot Grid — Industrial Machine Cards */}
-                                <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                                {/* ── Slot Grid — Cyberpunk Worker Cards ── */}
+                                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                                     {Array.from({ length: liveStats.queue.maxConcurrent }, (_, i) => {
                                         const isActive = i < liveStats.queue!.runningCount;
                                         const runJob = isActive ? liveStats.queue!.running[i] : null;
@@ -1408,82 +1401,82 @@ export default function AdminDashboard() {
                                                 animate={{ opacity: 1, scale: 1 }}
                                                 transition={{ delay: i * 0.04 }}
                                                 className={cn(
-                                                    "relative rounded-xl border overflow-hidden transition-all duration-500 group/slot",
+                                                    "relative rounded-2xl border overflow-hidden transition-all duration-500 group/slot",
                                                     isActive
-                                                        ? "bg-gradient-to-br from-slate-800/80 via-slate-900 to-slate-800/80 border-emerald-500/30 shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-400/10"
-                                                        : "bg-white/[0.015] border-white/[0.06] hover:border-white/[0.12]"
+                                                        ? "border-emerald-500/30"
+                                                        : "border-white/10 hover:border-white/20"
                                                 )}
+                                                style={{
+                                                    background: isActive
+                                                        ? 'linear-gradient(145deg, rgba(16,185,129,0.08), rgba(15,23,42,0.8))'
+                                                        : 'linear-gradient(145deg, rgba(30,41,59,0.4), rgba(15,23,42,0.8))',
+                                                    ...(isActive ? { animation: 'slotActiveGlow 3s ease-in-out infinite' } : {})
+                                                }}
                                             >
-                                                {/* Active slot scan line */}
-                                                {isActive && <div className="absolute inset-0 bg-gradient-to-b from-emerald-400/5 via-transparent to-transparent animate-pulse" />}
+                                                {/* Active scan overlay */}
+                                                {isActive && (
+                                                    <div className="absolute inset-x-0 h-[1px] pointer-events-none" style={{ background: 'rgba(16,185,129,0.15)', animation: 'engineScan 3s linear infinite' }} />
+                                                )}
 
-                                                <div className="relative z-10 p-2.5 min-h-[88px] flex flex-col justify-between">
-                                                    {/* Slot header */}
-                                                    <div className="flex items-center justify-between mb-1.5">
-                                                        <div className="flex items-center gap-1.5">
-                                                            {/* Spinning gear for active, static for idle */}
-                                                            <svg className={cn("w-3.5 h-3.5 flex-shrink-0", isActive ? "text-emerald-400 animate-gear-active" : "text-slate-700")} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                                <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
-                                                            </svg>
-                                                            <span className={cn("text-[10px] font-bold tabular-nums", isActive ? "text-emerald-400" : "text-slate-600")}>#{i + 1}</span>
-                                                        </div>
-                                                        {isActive ? (
-                                                            <span className={cn(
-                                                                "text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full",
-                                                                runJob?.automationType === 'marketplace'
-                                                                    ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
-                                                                    : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                                                            )}>
-                                                                {runJob?.automationType === 'marketplace' ? '🏪 MKT' : '👥 GRP'}
-                                                            </span>
-                                                        ) : (
-                                                            <span className="text-[8px] text-slate-700 uppercase tracking-wider">IDLE</span>
-                                                        )}
+                                                <div className="relative z-10 p-3 min-h-[110px] flex flex-col justify-between">
+                                                    {/* Slot header: ID + status dot */}
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <span className="text-[10px] text-slate-500 font-mono">ID: {String(i + 1).padStart(3, '0')}</span>
+                                                        <div className={cn(
+                                                            "w-2 h-2 rounded-full transition-colors",
+                                                            isActive ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]" : "bg-slate-700"
+                                                        )} />
                                                     </div>
 
-                                                    {runJob ? (
-                                                        <>
-                                                            {/* User info */}
-                                                            <div className="space-y-0.5 mb-1.5">
-                                                                <p className="text-[11px] font-semibold text-white truncate leading-tight">{runJob.displayName || runJob.userId}</p>
-                                                                {runJob.email && <p className="text-[9px] text-slate-500 truncate leading-tight">{runJob.email}</p>}
-                                                                {runJob.fbAccount && (
-                                                                    <div className="flex items-center gap-1 mt-0.5">
-                                                                        <svg className="w-2.5 h-2.5 text-blue-400 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                                                                        <span className="text-[9px] text-blue-400/80 truncate leading-tight">{runJob.fbAccount}</span>
-                                                                    </div>
-                                                                )}
-                                                                {runJob.propertyTitle && (
-                                                                    <p className="text-[9px] text-amber-400/70 truncate leading-tight mt-0.5">🏠 {runJob.propertyTitle}</p>
-                                                                )}
-                                                            </div>
+                                                    {/* Slot title + status */}
+                                                    <div className="mb-2">
+                                                        <h4 className={cn("text-xs font-bold uppercase transition-colors leading-tight", isActive ? "text-white" : "text-slate-400 group-hover/slot:text-white")}>
+                                                            {isActive ? (runJob?.automationType === 'marketplace' ? 'Marketplace' : 'Group Post') : 'Worker Slot'}
+                                                        </h4>
+                                                        <p className={cn("text-[10px] uppercase font-medium", isActive ? "text-emerald-400" : "text-slate-600")}>
+                                                            {isActive ? (runJob?.progress?.isPaused ? 'Paused' : 'Processing') : 'Standby'}
+                                                        </p>
+                                                    </div>
 
-                                                            {/* Progress bar */}
-                                                            <div className="space-y-1">
-                                                                <div className="flex items-center justify-between">
-                                                                    <span className="text-[9px] text-slate-400 tabular-nums">
-                                                                        {runJob.progress ? `Step ${runJob.progress.currentStep}/${runJob.progress.totalSteps}` : `${runJob.groupCount} groups`}
-                                                                    </span>
-                                                                    <span className="text-[9px] text-slate-500 tabular-nums font-mono">{runMin}:{String(runSec).padStart(2, '0')}</span>
+                                                    {/* Progress bar with glow */}
+                                                    <div className="w-full bg-white/5 h-[2px] mb-2.5 overflow-hidden">
+                                                        {isActive ? (
+                                                            <motion.div
+                                                                className="h-full"
+                                                                style={{
+                                                                    background: runJob?.progress?.isPaused ? '#eab308' : '#10b981',
+                                                                    boxShadow: runJob?.progress?.isPaused ? '0 0 10px #eab308' : '0 0 10px #10b981'
+                                                                }}
+                                                                initial={{ width: 0 }}
+                                                                animate={{ width: `${progressPct}%` }}
+                                                                transition={{ duration: 0.5, ease: 'easeOut' }}
+                                                            />
+                                                        ) : <div className="h-full w-0" />}
+                                                    </div>
+
+                                                    {/* Job details or idle metrics */}
+                                                    {runJob ? (
+                                                        <div className="space-y-1">
+                                                            <p className="text-[10px] font-semibold text-white truncate leading-tight">{runJob.displayName || runJob.userId}</p>
+                                                            {runJob.fbAccount && (
+                                                                <div className="flex items-center gap-1">
+                                                                    <svg className="w-2 h-2 text-blue-400 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                                                                    <span className="text-[8px] text-blue-400/70 truncate leading-tight">{runJob.fbAccount}</span>
                                                                 </div>
-                                                                <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
-                                                                    <motion.div
-                                                                        className={cn(
-                                                                            "h-full rounded-full",
-                                                                            runJob.progress?.isPaused
-                                                                                ? "bg-yellow-500"
-                                                                                : "bg-gradient-to-r from-emerald-500 to-emerald-400"
-                                                                        )}
-                                                                        initial={{ width: 0 }}
-                                                                        animate={{ width: `${progressPct}%` }}
-                                                                        transition={{ duration: 0.5, ease: 'easeOut' }}
-                                                                    />
-                                                                </div>
+                                                            )}
+                                                            {runJob.propertyTitle && (
+                                                                <p className="text-[8px] text-amber-400/70 truncate leading-tight">🏠 {runJob.propertyTitle}</p>
+                                                            )}
+                                                            <div className="flex justify-between items-center pt-0.5">
+                                                                <span className="text-[9px] text-emerald-500/70 font-mono">
+                                                                    {runJob.progress ? `${runJob.progress.currentStep}/${runJob.progress.totalSteps}` : `${runJob.groupCount}g`}
+                                                                </span>
+                                                                <span className="text-[9px] text-blue-500/70 font-mono">{runMin}:{String(runSec).padStart(2, '0')}</span>
                                                             </div>
-                                                        </>
+                                                        </div>
                                                     ) : (
-                                                        <div className="flex-1 flex items-center justify-center">
-                                                            <span className="text-[10px] text-slate-700">Available</span>
+                                                        <div className="flex-1 flex items-center justify-center opacity-0 group-hover/slot:opacity-100 transition-opacity">
+                                                            <span className="text-[9px] text-slate-600">Available</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -1492,9 +1485,9 @@ export default function AdminDashboard() {
                                     })}
                                 </div>
 
-                                {/* Queue waiting list — shown when users are waiting */}
+                                {/* ── Queue waiting list ── */}
                                 {liveStats.queue.queue && liveStats.queue.queue.length > 0 && (
-                                    <div className="mt-4 p-3 rounded-xl bg-amber-500/5 border border-amber-500/15">
+                                    <div className="mt-5 p-3 rounded-xl bg-amber-500/5 border border-amber-500/15">
                                         <div className="flex items-center gap-2 mb-2">
                                             <Hourglass className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
                                             <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">Waiting Queue — {liveStats.queue.queue.length} user(s)</span>
@@ -1512,9 +1505,26 @@ export default function AdminDashboard() {
                                     </div>
                                 )}
 
-                                {/* Bottom bar: slot label + live indicator */}
-                                <div className="flex items-center justify-between mt-3">
-                                    <p className="text-[8px] text-slate-700 uppercase tracking-[0.3em] font-medium">Slot 1 — {liveStats.queue.maxConcurrent}</p>
+                                {/* ── Terminal — System Console Log ── */}
+                                <div className="mt-5 bg-black/60 rounded-xl p-4 border border-white/5 max-h-28 overflow-y-auto">
+                                    <div className="space-y-0.5 font-mono">
+                                        <p className="text-[10px]"><span className="text-blue-900">[SYS]</span> <span className="text-slate-500">Engine initialized — {liveStats.queue.maxConcurrent} slots configured</span></p>
+                                        <p className="text-[10px]"><span className="text-blue-900">[CFG]</span> <span className="text-slate-500">Timeout: {liveStats.queue.queueTimeoutMin}m per session</span></p>
+                                        <p className="text-[10px]"><span className="text-blue-900">[SEC]</span> <span className="text-slate-500">Anti-detection modules loaded — stealth active</span></p>
+                                        {liveStats.queue.runningCount > 0 && (
+                                            <p className="text-[10px]"><span className="text-emerald-800">[RUN]</span> <span className="text-emerald-500/70">{liveStats.queue.runningCount} thread(s) active — processing requests...</span></p>
+                                        )}
+                                        {liveStats.queue.queueLength > 0 && (
+                                            <p className="text-[10px]"><span className="text-amber-800">[QUE]</span> <span className="text-amber-400/70">{liveStats.queue.queueLength} request(s) in queue — awaiting slot...</span></p>
+                                        )}
+                                        <p className="text-[10px]"><span className="text-blue-900">[NET]</span> <span className="text-slate-500">{sseConnected ? 'SSE connection stable — heartbeat OK' : 'SSE disconnected — attempting reconnect...'}</span></p>
+                                        <p className="text-[10px]"><span className="text-slate-800">[SYS]</span> <span className="text-slate-600">Waiting for user input...</span></p>
+                                    </div>
+                                </div>
+
+                                {/* ── Bottom bar: slot label + live indicator ── */}
+                                <div className="flex items-center justify-between mt-4">
+                                    <p className="text-[8px] text-slate-700 uppercase tracking-[0.3em] font-medium font-mono">Slot 1 — {liveStats.queue.maxConcurrent}</p>
                                     <div className="flex items-center gap-1.5">
                                         <div className={cn("w-1.5 h-1.5 rounded-full", sseConnected ? "bg-emerald-500 animate-pulse" : "bg-red-500")} />
                                         <span className="text-[8px] text-slate-600 uppercase tracking-wider font-medium">{sseConnected ? 'Live' : 'Offline'}</span>

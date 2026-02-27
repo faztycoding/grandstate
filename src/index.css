@@ -369,6 +369,26 @@
   to { transform: rotate(0deg); }
 }
 
+/* Engine scanline sweep */
+@keyframes engineScan {
+  0% { top: -2px; opacity: 0; }
+  5% { opacity: 1; }
+  95% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+/* Engine data pulse */
+@keyframes engineDataPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+/* Engine slot active glow */
+@keyframes slotActiveGlow {
+  0%, 100% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.15); }
+  50% { box-shadow: 0 0 30px rgba(16, 185, 129, 0.3); }
+}
+
 /* Clock hand sweep */
 @keyframes clockSweep {
   from { transform: rotate(0deg); }

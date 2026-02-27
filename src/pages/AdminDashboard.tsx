@@ -888,7 +888,16 @@ export default function AdminDashboard() {
                                     {/* Per-User Cards — Clean & Readable */}
                                     {liveStats.users.length > 0 ? (
                                         <div className="space-y-2">
-                                            {liveStats.users.map(u => {
+                                            {[...liveStats.users].sort((a, b) => {
+                                                // Running automation first
+                                                const aRun = (a.isRunningGroup || a.isRunningMarketplace) ? 1 : 0;
+                                                const bRun = (b.isRunningGroup || b.isRunningMarketplace) ? 1 : 0;
+                                                if (bRun !== aRun) return bRun - aRun;
+                                                // Online before offline
+                                                if (b.isOnline !== a.isOnline) return b.isOnline ? 1 : -1;
+                                                // More posts today first
+                                                return b.todayPosts - a.todayPosts;
+                                            }).map(u => {
                                                 const isRunning = u.isRunningGroup || u.isRunningMarketplace;
                                                 const taskPct = u.currentTasks.total > 0 ? Math.round(((u.currentTasks.completed + u.currentTasks.failed) / u.currentTasks.total) * 100) : 0;
                                                 return (

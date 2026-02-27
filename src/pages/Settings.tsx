@@ -202,7 +202,8 @@ export default function Settings() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.user_metadata) {
         const meta = user.user_metadata;
-        if (meta.display_name) { setDisplayName(meta.display_name); localStorage.setItem('profile_display_name', meta.display_name); }
+        const name = meta.display_name || meta.full_name || '';
+        if (name) { setDisplayName(name); localStorage.setItem('profile_display_name', name); }
         if (meta.line_id) { setLineId(meta.line_id); localStorage.setItem('profile_line_id', meta.line_id); }
       }
     };

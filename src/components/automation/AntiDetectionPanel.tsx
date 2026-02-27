@@ -35,31 +35,47 @@ function getRiskLevel(delay: number, groups: number) {
   return { level: 'high', label: 'เสี่ยงสูง', emoji: '🔴', percent: 85, color: 'red', gradient: 'from-red-500 to-orange-400' };
 }
 
-// Scroll roller SVG component
+// Premium wooden scroll roller
 function ScrollRoller({ side }: { side: 'top' | 'bottom' }) {
   return (
-    <div className={cn('relative w-full h-5 z-20', side === 'top' ? '-mb-1' : '-mt-1')}>
-      <svg viewBox="0 0 400 24" className="w-full h-full" preserveAspectRatio="none">
+    <div className={cn('relative w-full h-6 z-20', side === 'top' ? '-mb-0.5' : '-mt-0.5')}>
+      <svg viewBox="0 0 400 28" className="w-full h-full" preserveAspectRatio="none">
         <defs>
-          <linearGradient id={`roller-${side}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#b45309" stopOpacity="0.8" />
-            <stop offset="30%" stopColor="#d97706" stopOpacity="0.9" />
-            <stop offset="50%" stopColor="#f59e0b" stopOpacity="1" />
-            <stop offset="70%" stopColor="#d97706" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#92400e" stopOpacity="0.8" />
+          <linearGradient id={`wood-${side}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#5c3d2e" />
+            <stop offset="15%" stopColor="#8b6914" />
+            <stop offset="35%" stopColor="#a67c3a" />
+            <stop offset="50%" stopColor="#c49a52" />
+            <stop offset="65%" stopColor="#a67c3a" />
+            <stop offset="85%" stopColor="#8b6914" />
+            <stop offset="100%" stopColor="#4a3222" />
           </linearGradient>
-          <linearGradient id={`roller-shadow-${side}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#000" stopOpacity="0.15" />
-            <stop offset="100%" stopColor="#000" stopOpacity="0" />
+          <linearGradient id={`wood-hi-${side}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#fff" stopOpacity="0" />
+            <stop offset="30%" stopColor="#fff" stopOpacity="0.15" />
+            <stop offset="50%" stopColor="#fff" stopOpacity="0.08" />
+            <stop offset="100%" stopColor="#000" stopOpacity="0.12" />
+          </linearGradient>
+          <linearGradient id={`knob-${side}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#c49a52" />
+            <stop offset="50%" stopColor="#8b6914" />
+            <stop offset="100%" stopColor="#5c3d2e" />
           </linearGradient>
         </defs>
-        <rect x="0" y="4" width="400" height="16" rx="8" fill={`url(#roller-${side})`} />
-        <rect x="0" y="4" width="400" height="8" rx="4" fill={`url(#roller-shadow-${side})`} />
-        {/* Knobs */}
-        <circle cx="12" cy="12" r="6" fill="#92400e" opacity="0.6" />
-        <circle cx="388" cy="12" r="6" fill="#92400e" opacity="0.6" />
-        <circle cx="12" cy="11" r="3" fill="#d97706" opacity="0.5" />
-        <circle cx="388" cy="11" r="3" fill="#d97706" opacity="0.5" />
+        {/* Main roller body */}
+        <rect x="8" y="4" width="384" height="20" rx="10" fill={`url(#wood-${side})`} />
+        <rect x="8" y="4" width="384" height="20" rx="10" fill={`url(#wood-hi-${side})`} />
+        {/* Wood grain lines */}
+        <line x1="30" y1="8" x2="370" y2="8" stroke="#5c3d2e" strokeWidth="0.5" opacity="0.15" />
+        <line x1="40" y1="14" x2="360" y2="14" stroke="#5c3d2e" strokeWidth="0.3" opacity="0.1" />
+        <line x1="30" y1="20" x2="370" y2="20" stroke="#5c3d2e" strokeWidth="0.5" opacity="0.15" />
+        {/* End caps / knobs */}
+        <circle cx="14" cy="14" r="8" fill={`url(#knob-${side})`} />
+        <circle cx="386" cy="14" r="8" fill={`url(#knob-${side})`} />
+        <circle cx="14" cy="13" r="4" fill="#c49a52" opacity="0.6" />
+        <circle cx="386" cy="13" r="4" fill="#c49a52" opacity="0.6" />
+        <circle cx="14" cy="12" r="1.5" fill="#e8d5a8" opacity="0.4" />
+        <circle cx="386" cy="12" r="1.5" fill="#e8d5a8" opacity="0.4" />
       </svg>
     </div>
   );
@@ -102,29 +118,29 @@ export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: A
 
   return (
     <motion.div animate={pulseControls} className="relative">
-      {/* ═══ HEADER — Always visible ═══ */}
+      {/* ═══ HEADER — Estate theme ═══ */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
           'w-full rounded-xl border overflow-hidden transition-all duration-300',
-          'bg-gradient-to-br from-emerald-500/5 via-teal-500/3 to-cyan-500/5',
-          isOpen ? 'border-emerald-500/40 rounded-b-none' : 'border-emerald-500/25 hover:border-emerald-500/50 hover:shadow-md hover:shadow-emerald-500/5',
+          'bg-gradient-to-br from-amber-500/8 via-orange-500/5 to-yellow-500/8',
+          isOpen ? 'border-amber-600/40 rounded-b-none' : 'border-amber-500/25 hover:border-amber-500/50 hover:shadow-md hover:shadow-amber-500/10',
         )}
       >
         <div className="flex items-center gap-3 p-3">
           {/* Shield icon */}
-          <div className="relative w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/10 flex items-center justify-center flex-shrink-0">
-            <Shield className="w-4 h-4 text-emerald-500" />
+          <div className="relative w-9 h-9 rounded-lg bg-gradient-to-br from-amber-500/25 to-orange-500/15 flex items-center justify-center flex-shrink-0">
+            <Shield className="w-4 h-4 text-amber-600 dark:text-amber-400" />
             <span className="absolute -top-1 -right-1 flex items-center justify-center">
-              <span className="absolute w-3 h-3 rounded-full bg-emerald-500 animate-ping opacity-40" />
-              <span className="relative w-2 h-2 rounded-full bg-emerald-400" />
+              <span className="absolute w-3 h-3 rounded-full bg-amber-500 animate-ping opacity-40" />
+              <span className="relative w-2 h-2 rounded-full bg-amber-400" />
             </span>
           </div>
           <div className="flex-1 text-left">
             <p className="text-sm font-bold flex items-center gap-1.5 text-foreground">
-              <Lock className="w-3 h-3 text-emerald-500" />
+              <Lock className="w-3 h-3 text-amber-600 dark:text-amber-400" />
               ระบบป้องกันการตรวจจับ
-              <Badge className="ml-1 text-[8px] px-1.5 py-0 h-4 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 font-bold tracking-wide">
+              <Badge className="ml-1 text-[8px] px-1.5 py-0 h-4 bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 font-bold tracking-wide">
                 ACTIVE
               </Badge>
             </p>
@@ -137,9 +153,9 @@ export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: A
           <motion.div
             animate={{ rotate: isOpen ? 180 : 0 }}
             transition={{ duration: 0.3 }}
-            className="w-7 h-7 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0"
+            className="w-7 h-7 rounded-full bg-amber-500/15 flex items-center justify-center flex-shrink-0"
           >
-            <ChevronUp className="w-4 h-4 text-emerald-500" />
+            <ChevronUp className="w-4 h-4 text-amber-600 dark:text-amber-400" />
           </motion.div>
         </div>
       </button>
@@ -160,20 +176,20 @@ export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: A
             {/* Top scroll roller */}
             <ScrollRoller side="top" />
 
-            {/* Parchment body */}
+            {/* Parchment body — warm estate parchment */}
             <div
               ref={contentRef}
               className={cn(
-                'relative border-x border-emerald-500/20',
-                'bg-gradient-to-b from-[#fefcf3] via-[#fdf9eb] to-[#fefcf3]',
-                'dark:from-[#1a1f16] dark:via-[#1d2218] dark:to-[#1a1f16]',
+                'relative border-x border-amber-700/20',
+                'bg-gradient-to-b from-[#fdf6e3] via-[#faf0d4] to-[#fdf6e3]',
+                'dark:from-[#1c1810] dark:via-[#201c14] dark:to-[#1c1810]',
               )}
               style={{
-                backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'40\' height=\'40\' viewBox=\'0 0 40 40\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'%23000\' fill-opacity=\'0.02\'%3E%3Cpath d=\'M0 0h20v20H0zM20 20h20v20H20z\'/%3E%3C/g%3E%3C/svg%3E")',
+                backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'%23a67c3a\' fill-opacity=\'0.03\'%3E%3Cpath d=\'M0 0h30v30H0zM30 30h30v30H30z\'/%3E%3C/g%3E%3C/svg%3E")',
               }}
             >
               {/* Paper edge shadow */}
-              <div className="absolute inset-x-0 top-0 h-3 bg-gradient-to-b from-black/[0.06] to-transparent dark:from-black/20 pointer-events-none z-10" />
+              <div className="absolute inset-x-0 top-0 h-4 bg-gradient-to-b from-amber-900/[0.08] to-transparent dark:from-black/20 pointer-events-none z-10" />
 
               <div className="px-3 py-3 space-y-3">
 
@@ -182,7 +198,7 @@ export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: A
                   initial={{ scaleY: 0, opacity: 0, originY: 0 }}
                   animate={contentVisible ? { scaleY: 1, opacity: 1 } : {}}
                   transition={{ delay: 0.1, duration: 0.4 }}
-                  className="p-2.5 rounded-lg bg-white/60 dark:bg-white/5 border border-emerald-500/15"
+                  className="p-2.5 rounded-lg bg-white/50 dark:bg-white/5 border border-amber-500/20"
                 >
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
@@ -214,11 +230,11 @@ export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: A
                     initial={{ x: -15, opacity: 0 }}
                     animate={contentVisible ? { x: 0, opacity: 1 } : {}}
                     transition={{ delay: 0.15 }}
-                    className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest px-1 mb-2 flex items-center gap-1.5"
+                    className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-widest px-1 mb-2 flex items-center gap-1.5"
                   >
                     <span className="relative flex items-center justify-center">
-                      <span className="absolute w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                      <span className="relative w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      <span className="absolute w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                      <span className="relative w-1.5 h-1.5 rounded-full bg-amber-500" />
                     </span>
                     ระบบป้องกันอัตโนมัติ (ACTIVE)
                   </motion.p>
@@ -230,7 +246,7 @@ export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: A
                         initial={{ x: -25, opacity: 0, filter: 'blur(4px)' }}
                         animate={contentVisible ? { x: 0, opacity: 1, filter: 'blur(0px)' } : {}}
                         transition={{ delay: 0.2 + i * 0.08, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-                        className="flex items-center gap-2.5 p-2 rounded-lg bg-white/40 dark:bg-white/[0.03] border border-emerald-500/10 hover:bg-white/70 dark:hover:bg-white/[0.06] hover:border-emerald-500/30 transition-all duration-200"
+                        className="flex items-center gap-2.5 p-2 rounded-lg bg-white/40 dark:bg-white/[0.03] border border-amber-600/10 hover:bg-white/70 dark:hover:bg-white/[0.06] hover:border-amber-500/30 transition-all duration-200"
                       >
                         <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 border', mod.bg, mod.border)}>
                           <mod.icon className={cn('w-3.5 h-3.5', mod.color)} />
@@ -246,7 +262,7 @@ export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: A
                             animate={contentVisible ? { scale: 1, rotate: 0 } : {}}
                             transition={{ delay: 0.45 + i * 0.08, type: 'spring', stiffness: 400, damping: 15 }}
                           >
-                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                            <CheckCircle2 className="w-4 h-4 text-amber-500" />
                           </motion.div>
                         </div>
                       </motion.div>
@@ -259,7 +275,7 @@ export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: A
                   initial={{ scaleX: 0 }}
                   animate={contentVisible ? { scaleX: 1 } : {}}
                   transition={{ delay: 0.7, duration: 0.5 }}
-                  className="h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent"
+                  className="h-px bg-gradient-to-r from-transparent via-amber-600/30 to-transparent"
                 />
 
                 {/* ── Tips ── */}
@@ -292,8 +308,8 @@ export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: A
                               {tip.title}
                               {safe !== undefined && (
                                 safe
-                                  ? <CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" />
-                                  : <AlertCircle className="w-3 h-3 text-amber-500 flex-shrink-0" />
+                                  ? <CheckCircle2 className="w-3 h-3 text-amber-500 flex-shrink-0" />
+                                  : <AlertCircle className="w-3 h-3 text-red-400 flex-shrink-0" />
                               )}
                             </p>
                             <p className="text-[9px] text-muted-foreground leading-tight mt-0.5">{tip.desc}</p>
@@ -318,7 +334,7 @@ export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: A
               </div>
 
               {/* Paper edge shadow bottom */}
-              <div className="absolute inset-x-0 bottom-0 h-3 bg-gradient-to-t from-black/[0.06] to-transparent dark:from-black/20 pointer-events-none z-10" />
+              <div className="absolute inset-x-0 bottom-0 h-4 bg-gradient-to-t from-amber-900/[0.08] to-transparent dark:from-black/20 pointer-events-none z-10" />
             </div>
 
             {/* Bottom scroll roller */}

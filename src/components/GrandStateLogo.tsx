@@ -6,14 +6,14 @@ interface LogoProps {
 }
 
 export function GrandStateLogo({ className, heroMode = false }: LogoProps) {
-  const bgFrom = heroMode ? '#1e1b4b' : '#0f172a';
-  const bgTo = heroMode ? '#312e81' : '#1e293b';
-  const gFrom = heroMode ? '#c4b5fd' : '#a78bfa';
-  const gMid = heroMode ? '#a78bfa' : '#8b5cf6';
-  const gTo = heroMode ? '#8b5cf6' : '#7c3aed';
-  const dotFrom = heroMode ? '#fbbf24' : '#f59e0b';
-  const dotTo = heroMode ? '#fb923c' : '#f97316';
-  const ringColor = heroMode ? '#a78bfa' : '#8b5cf6';
+  const uid = heroMode ? 'h' : 'd';
+  const bldgLight = heroMode ? '#e8e8f0' : '#c8ccd4';
+  const bldgMid = heroMode ? '#d0d0dc' : '#a8aeb8';
+  const bldgDark = heroMode ? '#b8b8c8' : '#888e98';
+  const dollarColor = heroMode ? '#fbbf24' : '#f59e0b';
+  const dollarGlow = heroMode ? '#fde68a' : '#fcd34d';
+  const baseFill = heroMode ? '#d4d4dc' : '#b0b4bc';
+  const shadowColor = heroMode ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.2)';
 
   return (
     <svg
@@ -23,38 +23,73 @@ export function GrandStateLogo({ className, heroMode = false }: LogoProps) {
       className={cn('w-8 h-8', className)}
     >
       <defs>
-        <linearGradient id="logoBg" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor={bgFrom} />
-          <stop offset="100%" stopColor={bgTo} />
+        <linearGradient id={`bldg-l-${uid}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={bldgLight} />
+          <stop offset="100%" stopColor={bldgMid} />
         </linearGradient>
-        <linearGradient id="logoG" x1="30" y1="25" x2="70" y2="75" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor={gFrom} />
-          <stop offset="50%" stopColor={gMid} />
-          <stop offset="100%" stopColor={gTo} />
+        <linearGradient id={`bldg-c-${uid}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={bldgLight} />
+          <stop offset="60%" stopColor={bldgMid} />
+          <stop offset="100%" stopColor={bldgDark} />
         </linearGradient>
-        <linearGradient id="logoDot" x1="50" y1="60" x2="70" y2="55" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor={dotFrom} />
-          <stop offset="100%" stopColor={dotTo} />
+        <linearGradient id={`bldg-r-${uid}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={bldgMid} />
+          <stop offset="100%" stopColor={bldgDark} />
         </linearGradient>
+        <linearGradient id={`dollar-${uid}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={dollarGlow} />
+          <stop offset="100%" stopColor={dollarColor} />
+        </linearGradient>
+        <filter id={`shadow-${uid}`}>
+          <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor={shadowColor} />
+        </filter>
+        <filter id={`glow-${uid}`}>
+          <feGaussianBlur stdDeviation="3" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
       </defs>
-      {/* Background */}
-      <rect width="100" height="100" rx="22" fill="url(#logoBg)" />
-      {/* Subtle ring */}
-      <rect x="4" y="4" width="92" height="92" rx="19" fill="none" stroke={ringColor} strokeWidth="1" opacity="0.15" />
-      {/* G letter */}
+
+      {/* Base platform with 3D feel */}
+      <path d="M12 78 L22 70 L78 70 L88 78 Z" fill={baseFill} opacity="0.9" />
+      <path d="M12 78 L22 70 L78 70 L88 78 L78 80 L22 80 Z" fill={bldgDark} opacity="0.3" />
+
+      {/* Left buildings — gradient shading */}
+      <rect x="20" y="44" width="9" height="26" rx="1" fill={`url(#bldg-r-${uid})`} opacity="0.7" filter={`url(#shadow-${uid})`} />
+      <rect x="31" y="34" width="9" height="36" rx="1" fill={`url(#bldg-l-${uid})`} opacity="0.85" filter={`url(#shadow-${uid})`} />
+
+      {/* Center tower — tallest, 3D gradient */}
+      <rect x="42" y="22" width="16" height="48" rx="1.5" fill={`url(#bldg-c-${uid})`} opacity="0.9" filter={`url(#shadow-${uid})`} />
+      {/* Tower spire */}
+      <path d="M46 22 L50 13 L54 22 Z" fill={bldgLight} opacity="0.9" />
+      {/* Tower window lines */}
+      <line x1="50" y1="25" x2="50" y2="68" stroke={bldgDark} strokeWidth="0.6" opacity="0.15" />
+      <line x1="47" y1="28" x2="47" y2="68" stroke={bldgDark} strokeWidth="0.4" opacity="0.1" />
+      <line x1="53" y1="28" x2="53" y2="68" stroke={bldgDark} strokeWidth="0.4" opacity="0.1" />
+
+      {/* Right buildings */}
+      <rect x="60" y="34" width="9" height="36" rx="1" fill={`url(#bldg-r-${uid})`} opacity="0.8" filter={`url(#shadow-${uid})`} />
+      <rect x="71" y="44" width="9" height="26" rx="1" fill={`url(#bldg-l-${uid})`} opacity="0.65" filter={`url(#shadow-${uid})`} />
+
+      {/* Upward arrows — growth feel */}
+      <path d="M17 48 L20 42 L23 48" stroke={bldgLight} strokeWidth="1.5" fill="none" opacity="0.4" strokeLinecap="round" />
+      <path d="M77 48 L80 42 L83 48" stroke={bldgLight} strokeWidth="1.5" fill="none" opacity="0.4" strokeLinecap="round" />
+
+      {/* $ sign — golden glow */}
       <text
         x="50"
-        y="68"
+        y="58"
         textAnchor="middle"
-        fontSize="60"
-        fontWeight="800"
+        fontSize="26"
+        fontWeight="bold"
         fontFamily="Inter, system-ui, sans-serif"
-        fill="url(#logoG)"
+        fill={`url(#dollar-${uid})`}
+        filter={`url(#glow-${uid})`}
       >
-        G
+        $
       </text>
-      {/* Accent dot */}
-      <circle cx="68" cy="55" r="5" fill="url(#logoDot)" />
+
+      {/* Decorative arc */}
+      <path d="M16 73 Q50 66 84 73" stroke={bldgMid} strokeWidth="0.8" fill="none" opacity="0.25" />
     </svg>
   );
 }

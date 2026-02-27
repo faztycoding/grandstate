@@ -1,25 +1,55 @@
-<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <defs>
-    <linearGradient id="bgGrad" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#0f172a"/>
-      <stop offset="100%" stop-color="#1e293b"/>
+    <linearGradient id="bl" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e8e8f0"/>
+      <stop offset="100%" stop-color="#d0d0dc"/>
     </linearGradient>
-    <linearGradient id="gGrad" x1="30" y1="25" x2="70" y2="75" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#a78bfa"/>
-      <stop offset="50%" stop-color="#8b5cf6"/>
-      <stop offset="100%" stop-color="#7c3aed"/>
+    <linearGradient id="bc" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e8e8f0"/>
+      <stop offset="60%" stop-color="#d0d0dc"/>
+      <stop offset="100%" stop-color="#b8b8c8"/>
     </linearGradient>
-    <linearGradient id="accentGrad" x1="50" y1="60" x2="70" y2="55" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#f59e0b"/>
-      <stop offset="100%" stop-color="#f97316"/>
+    <linearGradient id="br" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#d0d0dc"/>
+      <stop offset="100%" stop-color="#b8b8c8"/>
     </linearGradient>
+    <linearGradient id="dl" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fde68a"/>
+      <stop offset="100%" stop-color="#fbbf24"/>
+    </linearGradient>
+    <filter id="sh">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.15)"/>
+    </filter>
+    <filter id="gl">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
   </defs>
-  <!-- Background -->
-  <rect width="100" height="100" rx="22" fill="url(#bgGrad)"/>
-  <!-- Subtle ring -->
-  <rect x="4" y="4" width="92" height="92" rx="19" fill="none" stroke="#8b5cf6" stroke-width="1" opacity="0.15"/>
-  <!-- G letter -->
-  <text x="50" y="68" text-anchor="middle" font-size="60" font-weight="800" font-family="Inter, system-ui, sans-serif" fill="url(#gGrad)">G</text>
-  <!-- Accent dot -->
-  <circle cx="68" cy="55" r="5" fill="url(#accentGrad)"/>
+
+  <!-- Base platform -->
+  <path d="M12 78 L22 70 L78 70 L88 78 Z" fill="#d4d4dc" opacity="0.9"/>
+  <path d="M12 78 L22 70 L78 70 L88 78 L78 80 L22 80 Z" fill="#b8b8c8" opacity="0.3"/>
+
+  <!-- Left buildings -->
+  <rect x="20" y="44" width="9" height="26" rx="1" fill="url(#br)" opacity="0.7" filter="url(#sh)"/>
+  <rect x="31" y="34" width="9" height="36" rx="1" fill="url(#bl)" opacity="0.85" filter="url(#sh)"/>
+
+  <!-- Center tower -->
+  <rect x="42" y="22" width="16" height="48" rx="1.5" fill="url(#bc)" opacity="0.9" filter="url(#sh)"/>
+  <path d="M46 22 L50 13 L54 22 Z" fill="#e8e8f0" opacity="0.9"/>
+  <line x1="50" y1="25" x2="50" y2="68" stroke="#b8b8c8" stroke-width="0.6" opacity="0.15"/>
+
+  <!-- Right buildings -->
+  <rect x="60" y="34" width="9" height="36" rx="1" fill="url(#br)" opacity="0.8" filter="url(#sh)"/>
+  <rect x="71" y="44" width="9" height="26" rx="1" fill="url(#bl)" opacity="0.65" filter="url(#sh)"/>
+
+  <!-- Growth arrows -->
+  <path d="M17 48 L20 42 L23 48" stroke="#e8e8f0" stroke-width="1.5" fill="none" opacity="0.4" stroke-linecap="round"/>
+  <path d="M77 48 L80 42 L83 48" stroke="#e8e8f0" stroke-width="1.5" fill="none" opacity="0.4" stroke-linecap="round"/>
+
+  <!-- $ sign with golden glow -->
+  <text x="50" y="58" text-anchor="middle" font-size="26" font-weight="bold" font-family="Inter, system-ui, sans-serif" fill="url(#dl)" filter="url(#gl)">$</text>
+
+  <!-- Decorative arc -->
+  <path d="M16 73 Q50 66 84 73" stroke="#d0d0dc" stroke-width="0.8" fill="none" opacity="0.25"/>
 </svg>

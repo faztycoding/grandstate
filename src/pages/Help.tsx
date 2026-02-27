@@ -31,6 +31,7 @@ import {
   Target,
   ChevronRight,
 } from 'lucide-react';
+import { GrandStateLogo } from '@/components/GrandStateLogo';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -323,11 +324,12 @@ export default function Help() {
         </div>
 
         {/* Version */}
-        <div className="text-center py-3">
+        <div className="text-center py-3 flex flex-col items-center gap-1">
+          <GrandStateLogo className="w-7 h-7" />
           <p className="text-xs font-bold bg-gradient-to-r from-accent via-amber-400 to-accent bg-clip-text text-transparent">
-            Grand$tate
+            Grand<span className="text-amber-400">$</span>tate
           </p>
-          <p className="text-[9px] text-muted-foreground tracking-widest mt-0.5">v1.0</p>
+          <p className="text-[9px] text-muted-foreground tracking-widest">v2.0</p>
         </div>
       </div>
     </DashboardLayout>

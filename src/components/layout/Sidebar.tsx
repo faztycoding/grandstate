@@ -18,6 +18,7 @@ import {
   Menu,
   X,
 } from 'lucide-react';
+import { GrandStateLogo } from '@/components/GrandStateLogo';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
@@ -265,9 +266,9 @@ function SidebarContent({
 
         {!collapsed && (
           <div className="px-2 py-2 text-center">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-sidebar-foreground/40 font-medium">Powered by</p>
+            <GrandStateLogo className="w-7 h-7 mx-auto mb-0.5" />
             <p className="text-sm font-bold bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 bg-clip-text text-transparent tracking-wide">
-              Grand$tate
+              Grand<span className="text-amber-400">$</span>tate
             </p>
             <p className="text-[9px] text-sidebar-foreground/30 tracking-widest">VERSION 2.0</p>
           </div>
@@ -278,7 +279,7 @@ function SidebarContent({
               <Radio className="w-2.5 h-2.5 text-sidebar-primary" />
               <span className="text-[9px] font-semibold text-sidebar-foreground/80">{hasLoadedPresence ? activeUserStats.activeUsers : '•'}</span>
             </div>
-            <p className="text-[9px] font-bold bg-gradient-to-r from-amber-400 to-yellow-300 bg-clip-text text-transparent">G$</p>
+            <GrandStateLogo className="w-6 h-6 mx-auto" />
           </div>
         )}
         {!collapsed && user?.email && (
@@ -324,10 +325,8 @@ export function Sidebar() {
             {/* Logo */}
             <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
               <Link to="/automation" className="flex items-center gap-3" onClick={() => setOpen(false)}>
-                <div className="w-10 h-10 rounded-xl bg-sidebar-primary flex items-center justify-center shadow-glow">
-                  <Building2 className="w-5 h-5 text-sidebar-primary-foreground" />
-                </div>
-                <span className="font-bold text-lg text-sidebar-foreground">Grand$tate</span>
+                <GrandStateLogo heroMode className="w-10 h-10 drop-shadow-lg" />
+                <span className="font-bold text-lg text-sidebar-foreground">Grand<span className="text-amber-500">$</span>tate</span>
               </Link>
               <Button variant="ghost" size="icon-sm" onClick={() => setOpen(false)} className="text-sidebar-foreground">
                 <X className="w-5 h-5" />
@@ -357,9 +356,7 @@ export function Sidebar() {
       {/* Logo */}
       <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
         <Link to="/automation" className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-sidebar-primary flex items-center justify-center shadow-glow">
-            <Building2 className="w-5 h-5 text-sidebar-primary-foreground" />
-          </div>
+          <GrandStateLogo className="w-10 h-10 drop-shadow-lg" />
           {!collapsed && (
             <motion.span
               initial={{ opacity: 0 }}
@@ -367,7 +364,7 @@ export function Sidebar() {
               exit={{ opacity: 0 }}
               className="font-bold text-lg text-sidebar-foreground"
             >
-              Grand$tate
+              Grand<span className="text-amber-500">$</span>tate
             </motion.span>
           )}
         </Link>

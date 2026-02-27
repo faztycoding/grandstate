@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  Building2,
   Key,
   ArrowRight,
   ArrowLeft,
@@ -26,6 +25,7 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { GrandStateLogo } from '@/components/GrandStateLogo';
 import { useLicenseAuth } from '@/hooks/useLicenseAuth';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/i18n/LanguageContext';
@@ -278,9 +278,7 @@ export default function Auth() {
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15, type: 'spring' }}
           className="text-center mb-8">
           <div className="inline-flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/25 ring-1 ring-amber-400/30">
-              <span className="text-white text-2xl font-bold font-serif">$</span>
-            </div>
+            <GrandStateLogo heroMode className="w-12 h-12 drop-shadow-[0_0_12px_rgba(247,181,0,0.3)]" />
             <span className="text-[26px] font-bold text-white tracking-wide">Grand<span className="text-amber-400 font-serif">$</span>tate</span>
           </div>
         </motion.div>

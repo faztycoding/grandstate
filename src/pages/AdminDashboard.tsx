@@ -49,6 +49,7 @@ import {
     ArrowRight,
     Send,
 } from 'lucide-react';
+import { GrandStateLogo } from '@/components/GrandStateLogo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -889,8 +890,8 @@ export default function AdminDashboard() {
                 <div className="max-w-7xl mx-auto px-4 md:px-6">
                     <div className="flex items-center justify-between h-14">
                         <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center">
-                                <Shield className="w-4 h-4 text-white" />
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center">
+                                <GrandStateLogo className="w-8 h-8" />
                             </div>
                             <div>
                                 <h1 className="text-base font-bold leading-none">{t.admin.title}</h1>

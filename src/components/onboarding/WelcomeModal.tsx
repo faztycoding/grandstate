@@ -6,6 +6,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Building2, Users, Zap, ShieldCheck, ArrowRight, Sparkles } from 'lucide-react';
+import { GrandStateLogo } from '@/components/GrandStateLogo';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/i18n/LanguageContext';
@@ -32,7 +33,7 @@ export function WelcomeModal() {
 
   const steps: Step[] = [
     {
-      icon: <Building2 className="w-8 h-8" />,
+      icon: <GrandStateLogo heroMode className="w-10 h-10" />,
       title: o.step1Title,
       desc: o.step1Desc,
       color: 'from-blue-500 to-cyan-500',
@@ -89,7 +90,7 @@ export function WelcomeModal() {
                 <div className="mb-3">
                   <Badge className="bg-white/20 text-white border-white/30 mb-2">
                     <Sparkles className="w-3 h-3 mr-1" />
-                    Grand$tate v1.0
+                    Grand$tate v2.0
                   </Badge>
                 </div>
               )}

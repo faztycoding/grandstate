@@ -98,6 +98,49 @@ class UserSessionManager {
     // Wire shared postingTracker into marketplaceWorker (replaces its internal tracker)
     marketplaceWorker.setTracker(postingTracker);
 
+    // Wire pre-flight check: verify browser/session health before scheduled jobs
+    scheduler.setPreflightCheck(async () => {
+      // Check if automation is already running
+      if (groupWorker.isRunning || marketplaceWorker.isRunning) {
+        return { ok: false, error: 'Automation already running — will retry next cycle', canRetry: false };
+      }
+
+      // Check if browser is alive
+      const browserAlive = groupWorker.browser && groupWorker.browser.isConnected();
+      if (!browserAlive) {
+        return {
+          ok: false,
+          error: 'Browser not connected',
+          canRetry: true,
+          reinit: async () => {
+            console.log(`⏰ [${shortId}] Re-initializing browser for scheduled job...`);
+            await groupWorker.initialize('chrome');
+          }
+        };
+      }
+
+      // Check if Facebook session is still valid
+      try {
+        const loggedIn = await groupWorker.checkLogin();
+        if (!loggedIn) {
+          return { ok: false, error: 'Facebook session expired — need re-login', canRetry: false };
+        }
+      } catch (e) {
+        return {
+          ok: false,
+          error: `Login check failed: ${e.message}`,
+          canRetry: true,
+          reinit: async () => {
+            console.log(`⏰ [${shortId}] Browser crashed during login check — re-initializing...`);
+            try { await groupWorker.close(); } catch {}
+            await groupWorker.initialize('chrome');
+          }
+        };
+      }
+
+      return { ok: true };
+    });
+
     // Start scheduler
     scheduler.start(async (job) => {
       console.log(`⏰ [${shortId}] Scheduler: ${job.mode} for ${job.groups?.length} groups`);

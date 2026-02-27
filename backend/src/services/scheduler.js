@@ -101,31 +101,115 @@ export class PostScheduler {
     return this.schedules.filter(s => s.status === 'pending');
   }
 
+  /**
+   * Pre-flight check callback — set by userSessionManager
+   * Returns { ok, error?, canRetry? } to verify browser/session health
+   */
+  setPreflightCheck(fn) {
+    this._preflightCheck = fn;
+  }
+
   async checkDueJobs() {
     const now = new Date();
     const pending = this.schedules.filter(s => s.status === 'pending');
 
+    // Clean up stale 'running' jobs older than 2 hours (stuck)
+    for (const job of this.schedules) {
+      if (job.status === 'running') {
+        const runningFor = now - new Date(job.scheduledAt);
+        if (runningFor > 2 * 60 * 60 * 1000) {
+          console.log(`⏰ [${this.userId.substring(0, 8)}] Stale job ${job.id} — marking failed`);
+          job.status = 'failed';
+          job.result = { error: 'Job timed out (stuck > 2 hours)' };
+          this._saveSchedules();
+        }
+      }
+    }
+
     for (const job of pending) {
       const scheduledTime = new Date(job.scheduledAt);
       if (scheduledTime <= now) {
-        console.log(`⏰ TRIGGER: ${job.id} — ${job.mode} mode, ${job.groups?.length} groups`);
+        const shortId = this.userId.substring(0, 8);
+        console.log(`\n⏰ [${shortId}] TRIGGER: ${job.id} — ${job.mode} mode, ${job.groups?.length} groups`);
+
+        // Pre-flight: check browser/session health before starting
+        if (this._preflightCheck) {
+          const preflight = await this._preflightCheck();
+          if (!preflight.ok) {
+            console.log(`⏰ [${shortId}] Pre-flight FAILED: ${preflight.error}`);
+
+            // If recoverable, try once to re-initialize browser
+            if (preflight.canRetry) {
+              console.log(`⏰ [${shortId}] Attempting recovery...`);
+              try {
+                if (preflight.reinit) await preflight.reinit();
+                const retry = await this._preflightCheck();
+                if (!retry.ok) {
+                  job.status = 'failed';
+                  job.result = { error: `Pre-flight failed after retry: ${retry.error}` };
+                  this._saveSchedules();
+                  continue;
+                }
+                console.log(`⏰ [${shortId}] Recovery successful — proceeding`);
+              } catch (recoverErr) {
+                job.status = 'failed';
+                job.result = { error: `Recovery failed: ${recoverErr.message}` };
+                this._saveSchedules();
+                continue;
+              }
+            } else {
+              job.status = 'failed';
+              job.result = { error: preflight.error };
+              this._saveSchedules();
+              continue;
+            }
+          }
+        }
+
         job.status = 'running';
+        job.startedAt = new Date().toISOString();
         this._saveSchedules();
 
         try {
           if (this.onTrigger) {
             const result = await this.onTrigger(job);
-            job.status = 'completed';
-            job.result = result;
+
+            // Check actual result from automation — don't blindly mark completed
+            if (result && result.success === false) {
+              // Automation returned failure (e.g. login_required, browser error)
+              if (result.errorType === 'login_required' && !job._retried) {
+                // Retry once: mark for retry, re-initialize, and try again
+                console.log(`⏰ [${shortId}] Login required — retrying after browser re-init...`);
+                job._retried = true;
+                job.status = 'pending'; // Put back in queue for next cycle
+                this._saveSchedules();
+                continue;
+              }
+              job.status = 'failed';
+              job.result = { error: result.error || result.message || 'Automation returned failure', tasks: result.tasks };
+            } else {
+              job.status = 'completed';
+              job.result = result;
+            }
           } else {
             job.status = 'failed';
             job.result = { error: 'No trigger callback registered' };
           }
         } catch (err) {
-          job.status = 'failed';
-          job.result = { error: err.message };
+          console.error(`⏰ [${shortId}] Scheduled job error:`, err.message);
+
+          // If browser crashed, retry once
+          if (!job._retried && (err.message.includes('browser') || err.message.includes('Target closed') || err.message.includes('Session closed'))) {
+            console.log(`⏰ [${shortId}] Browser crash detected — will retry next cycle`);
+            job._retried = true;
+            job.status = 'pending';
+          } else {
+            job.status = 'failed';
+            job.result = { error: err.message };
+          }
         }
 
+        job.completedAt = new Date().toISOString();
         this._saveSchedules();
       }
     }

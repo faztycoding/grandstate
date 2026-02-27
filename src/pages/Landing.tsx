@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { GrandStateLogo } from '@/components/GrandStateLogo';
 import {
   Building2,
   Sparkles,
@@ -372,13 +373,14 @@ export default function Landing() {
         <div className="container mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 md:gap-3 group">
             <motion.div
-              className={`w-9 h-9 md:w-10 md:h-10 rounded-xl flex items-center justify-center shadow-lg transition-colors duration-500 ${scrolled ? 'bg-primary' : 'bg-white/15 backdrop-blur-md border border-white/20'}`}
-              whileHover={{ scale: 1.1, rotate: 5 }}
+              whileHover={{ scale: 1.1, rotate: 3 }}
               transition={{ type: 'spring', stiffness: 400 }}
             >
-              <Building2 className={`w-4 h-4 md:w-5 md:h-5 transition-colors duration-500 ${scrolled ? 'text-primary-foreground' : 'text-white'}`} />
+              <GrandStateLogo heroMode={!scrolled} className="w-10 h-10 md:w-11 md:h-11 drop-shadow-lg" />
             </motion.div>
-            <span className={`font-bold text-lg md:text-xl transition-colors duration-500 ${scrolled ? 'text-foreground' : 'text-white'}`}>Grand$tate</span>
+            <span className={`font-bold text-lg md:text-xl transition-colors duration-500 ${scrolled ? 'text-foreground' : 'text-white'}`}>
+              Grand<span className="text-amber-500">$</span>tate
+            </span>
           </Link>
           <div className="flex items-center gap-2 md:gap-4">
             <LanguageSwitcher heroMode={!scrolled} />

@@ -72,7 +72,10 @@ export function useLicenseAuth() {
             const { data: { session } } = await supabase.auth.getSession();
 
             if (session?.user) {
-                if (mounted) setUser(session.user);
+                if (mounted) {
+                    setUser(session.user);
+                    setIsLoading(false); // Unblock UI immediately — license checks continue in background
+                }
 
                 // 1) Try localStorage first (instant)
                 const storedKey = localStorage.getItem(STORAGE_KEY);
@@ -102,10 +105,9 @@ export function useLicenseAuth() {
                 if (mounted) {
                     setUser(null);
                     if (!cachedLicense) setLicense(null);
+                    setIsLoading(false);
                 }
             }
-
-            if (mounted) setIsLoading(false);
         };
 
         init();
@@ -115,7 +117,9 @@ export function useLicenseAuth() {
             async (_event, session) => {
                 if (mounted) {
                     setUser(session?.user ?? null);
-                    if (!session?.user) {
+                    if (session?.user) {
+                        setIsLoading(false); // Unblock UI immediately on sign-in
+                    } else {
                         setLicense(null);
                         // Keep license key + cache so re-login auto-restores license
                     }

@@ -19,6 +19,11 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
         }
     }, [isLoading, isFullyReady, navigate, location]);
 
+    // If user is authenticated, render immediately — don't wait for license checks
+    if (isFullyReady) {
+        return <>{children}</>;
+    }
+
     if (isLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-background">
@@ -30,9 +35,5 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
         );
     }
 
-    if (!isFullyReady) {
-        return null;
-    }
-
-    return <>{children}</>;
+    return null;
 }

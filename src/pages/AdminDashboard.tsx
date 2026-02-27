@@ -1105,6 +1105,7 @@ export default function AdminDashboard() {
                                                                     "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                                                                 )}>{userPkg === 'free' ? 'ROOKIE' : userPkg === 'agent' ? 'AGENT' : 'ELITE'}</span>
                                                                 {u.banned && <span className="text-[8px] font-bold text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded-md">BANNED</span>}
+                                                                {isAdminEmail(u.email) && <span className="inline-flex items-center gap-0.5 text-[8px] font-bold text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded-md"><Crown className="w-2.5 h-2.5" />ADMIN</span>}
                                                             </div>
                                                             <div className="flex items-center gap-1.5 mt-0.5">
                                                                 <p className="text-[11px] text-muted-foreground truncate">{u.email || u.userId}</p>

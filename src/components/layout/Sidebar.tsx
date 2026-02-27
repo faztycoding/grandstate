@@ -28,7 +28,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLicenseAuth } from '@/hooks/useLicenseAuth';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { apiFetch } from '@/lib/config';
+import { apiFetch, isAdminEmail } from '@/lib/config';
 
 // Context for mobile sidebar toggle
 interface MobileSidebarContextType {
@@ -181,6 +181,11 @@ function SidebarContent({
   const onlineLabel = language === 'th' ? 'ออนไลน์' : 'online';
   const automationLabel = language === 'th' ? 'กำลังรันออโต้' : 'automation';
 
+  const isAdmin = isAdminEmail(user?.email);
+  const onlineCount = hasLoadedPresence ? activeUserStats.onlineUsers : 0;
+  const tier: 'standard' | 'wings' | 'storm' = onlineCount >= 10 ? 'storm' : onlineCount >= 5 ? 'wings' : 'standard';
+  const hasAutomation = activeUserStats.automationUsers > 0;
+
   return (
     <>
       {/* Navigation */}
@@ -228,70 +233,126 @@ function SidebarContent({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, ease: 'easeOut' }}
-            className="px-2"
+            className="px-2 relative"
           >
-            <div className="relative overflow-hidden rounded-xl border border-sidebar-border/80 bg-sidebar-accent/60 px-3 py-2.5 shadow-[0_0_20px_hsl(var(--sidebar-ring)/0.15)]">
-              {/* Shimmer sweep */}
-              <motion.div
-                aria-hidden
-                className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-sidebar-primary/20 to-transparent"
-                animate={{ x: ['-120%', '120%'] }}
-                transition={{ duration: 2.6, repeat: Infinity, ease: 'linear' }}
+            {/* ── TIER: Wings — neon feather lines spreading outside card (5-9) ── */}
+            {tier === 'wings' && (
+              <div className="pointer-events-none absolute inset-0 z-0" style={{ overflow: 'visible' }}>
+                {[0, 1, 2].map(i => (
+                  <motion.div key={`lw-${i}`} className="absolute bg-gradient-to-l from-violet-400/50 to-transparent"
+                    style={{ left: -4, top: `${32 + i * 12}%`, height: 1.5, transformOrigin: 'right center' }}
+                    animate={{ width: [0, 22 + i * 7, 14 + i * 4], opacity: [0, 0.7, 0.25] }}
+                    transition={{ duration: 2.2 + i * 0.3, repeat: Infinity, delay: i * 0.25 }} />
+                ))}
+                {[0, 1, 2].map(i => (
+                  <motion.div key={`rw-${i}`} className="absolute bg-gradient-to-r from-violet-400/50 to-transparent"
+                    style={{ right: -4, top: `${32 + i * 12}%`, height: 1.5, transformOrigin: 'left center' }}
+                    animate={{ width: [0, 22 + i * 7, 14 + i * 4], opacity: [0, 0.7, 0.25] }}
+                    transition={{ duration: 2.2 + i * 0.3, repeat: Infinity, delay: i * 0.25 + 0.1 }} />
+                ))}
+              </div>
+            )}
+
+            <div className={cn(
+              "relative overflow-hidden rounded-xl px-3 py-2.5 border transition-all duration-500",
+              tier === 'storm'
+                ? 'border-cyan-400/50 shadow-[0_0_30px_rgba(34,211,238,0.25),inset_0_0_20px_rgba(34,211,238,0.05)]'
+                : tier === 'wings'
+                ? 'border-violet-400/50 shadow-[0_0_25px_rgba(167,139,250,0.25),inset_0_0_15px_rgba(167,139,250,0.05)]'
+                : 'border-pink-500/30 shadow-[0_0_20px_rgba(236,72,153,0.15)]'
+            )}>
+              {/* ── Animated gradient background ── */}
+              <motion.div aria-hidden
+                className={cn("pointer-events-none absolute inset-0",
+                  tier === 'storm' ? 'bg-gradient-to-br from-cyan-950/90 via-slate-900/90 to-blue-950/90'
+                    : tier === 'wings' ? 'bg-gradient-to-br from-violet-950/90 via-purple-900/70 to-fuchsia-950/90'
+                    : 'bg-gradient-to-br from-pink-950/70 via-purple-950/70 to-violet-950/70'
+                )}
+                animate={{ backgroundPosition: ['0% 0%', '100% 100%', '0% 0%'] }}
+                transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+                style={{ backgroundSize: '200% 200%' }}
               />
 
-              {/* ── JOIN FLASH: burst rings ── */}
+              {/* ── Shimmer sweep — tier colored ── */}
+              <motion.div aria-hidden
+                className={cn("pointer-events-none absolute inset-0",
+                  tier === 'storm' ? 'bg-gradient-to-r from-transparent via-cyan-400/15 to-transparent'
+                    : tier === 'wings' ? 'bg-gradient-to-r from-transparent via-violet-400/15 to-transparent'
+                    : 'bg-gradient-to-r from-transparent via-pink-400/15 to-transparent'
+                )}
+                animate={{ x: ['-120%', '120%'] }}
+                transition={{ duration: tier === 'storm' ? 1.5 : 2.6, repeat: Infinity, ease: 'linear' }}
+              />
+
+              {/* ── TIER: Standard — heartbeat border pulse (1-4) ── */}
+              {tier === 'standard' && (
+                <motion.div className="pointer-events-none absolute inset-0 rounded-xl border border-pink-400/40"
+                  animate={{ opacity: [0.2, 0.8, 0.2], boxShadow: ['0 0 5px rgba(236,72,153,0.1)', '0 0 15px rgba(236,72,153,0.3)', '0 0 5px rgba(236,72,153,0.1)'] }}
+                  transition={{ duration: hasAutomation ? 0.8 : 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                />
+              )}
+
+              {/* ── TIER: Storm — lightning sparks around border (10+) ── */}
+              {tier === 'storm' && (
+                <>
+                  <motion.div className="pointer-events-none absolute top-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-300 to-transparent z-10"
+                    animate={{ left: ['-20%', '120%'], opacity: [0, 1, 1, 0] }}
+                    transition={{ duration: 1.2, repeat: Infinity, repeatDelay: 0.4 }}
+                    style={{ width: '30%' }} />
+                  <motion.div className="pointer-events-none absolute bottom-0 h-[2px] bg-gradient-to-r from-transparent via-blue-300 to-transparent z-10"
+                    animate={{ right: ['-20%', '120%'], opacity: [0, 1, 1, 0] }}
+                    transition={{ duration: 1.5, repeat: Infinity, delay: 0.6, repeatDelay: 0.3 }}
+                    style={{ width: '25%' }} />
+                  <motion.div className="pointer-events-none absolute left-0 w-[2px] bg-gradient-to-b from-transparent via-cyan-300 to-transparent z-10"
+                    animate={{ top: ['-20%', '120%'], opacity: [0, 1, 1, 0] }}
+                    transition={{ duration: 1, repeat: Infinity, delay: 0.3, repeatDelay: 0.6 }}
+                    style={{ height: '40%' }} />
+                  <motion.div className="pointer-events-none absolute right-0 w-[2px] bg-gradient-to-b from-transparent via-blue-400 to-transparent z-10"
+                    animate={{ bottom: ['-20%', '120%'], opacity: [0, 1, 1, 0] }}
+                    transition={{ duration: 1.3, repeat: Infinity, delay: 0.9, repeatDelay: 0.5 }}
+                    style={{ height: '35%' }} />
+                  {[0, 1, 2, 3].map(i => (
+                    <motion.div key={`sp-${i}`} className="pointer-events-none absolute w-1 h-1 rounded-full bg-cyan-300 z-10"
+                      style={{ left: `${20 + i * 20}%`, top: `${30 + (i % 2) * 40}%`, filter: 'blur(0.5px)' }}
+                      animate={{ x: [(i-1.5)*10, (i-1.5)*-10], y: [0, -8, 0], opacity: [0, 1, 0], scale: [0.3, 1.5, 0.3] }}
+                      transition={{ duration: 1.5 + i * 0.3, repeat: Infinity, delay: i * 0.4 }} />
+                  ))}
+                </>
+              )}
+
+              {/* ── JOIN FLASH: burst rings — tier colored ── */}
               <AnimatePresence>
                 {joinFlash > 0 && (
-                  <motion.div
-                    key={`burst-${joinFlash}`}
-                    className="pointer-events-none absolute inset-0 z-20"
-                    initial={{ opacity: 1 }}
-                    animate={{ opacity: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 2.5 }}
-                  >
-                    {/* Ring 1 — fast expand */}
-                    <motion.div
-                      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-amber-400/60"
-                      initial={{ width: 0, height: 0, opacity: 1 }}
-                      animate={{ width: 200, height: 200, opacity: 0 }}
-                      transition={{ duration: 1.2, ease: 'easeOut' }}
-                    />
-                    {/* Ring 2 — delayed */}
-                    <motion.div
-                      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-emerald-400/50"
-                      initial={{ width: 0, height: 0, opacity: 1 }}
-                      animate={{ width: 160, height: 160, opacity: 0 }}
-                      transition={{ duration: 1.4, ease: 'easeOut', delay: 0.15 }}
-                    />
-                    {/* Flash overlay */}
-                    <motion.div
-                      className="absolute inset-0 bg-amber-400/20 rounded-xl"
-                      initial={{ opacity: 1 }}
-                      animate={{ opacity: 0 }}
-                      transition={{ duration: 0.6 }}
-                    />
+                  <motion.div key={`burst-${joinFlash}`} className="pointer-events-none absolute inset-0 z-20"
+                    initial={{ opacity: 1 }} animate={{ opacity: 0 }} exit={{ opacity: 0 }} transition={{ duration: 2.5 }}>
+                    <motion.div className={cn("absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2",
+                        tier === 'storm' ? 'border-cyan-400/60' : tier === 'wings' ? 'border-violet-400/60' : 'border-pink-400/60')}
+                      initial={{ width: 0, height: 0, opacity: 1 }} animate={{ width: 200, height: 200, opacity: 0 }}
+                      transition={{ duration: 1.2, ease: 'easeOut' }} />
+                    <motion.div className={cn("absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border",
+                        tier === 'storm' ? 'border-blue-300/50' : tier === 'wings' ? 'border-fuchsia-400/50' : 'border-purple-400/50')}
+                      initial={{ width: 0, height: 0, opacity: 1 }} animate={{ width: 160, height: 160, opacity: 0 }}
+                      transition={{ duration: 1.4, ease: 'easeOut', delay: 0.15 }} />
+                    <motion.div className={cn("absolute inset-0 rounded-xl",
+                        tier === 'storm' ? 'bg-cyan-400/20' : tier === 'wings' ? 'bg-violet-400/20' : 'bg-pink-400/20')}
+                      initial={{ opacity: 1 }} animate={{ opacity: 0 }} transition={{ duration: 0.6 }} />
                   </motion.div>
                 )}
               </AnimatePresence>
 
-              {/* ── JOIN FLASH: notification banner ── */}
+              {/* ── JOIN FLASH: notification banner — tier colored ── */}
               <AnimatePresence>
                 {joinFlash > 0 && (
-                  <motion.div
-                    key={`banner-${joinFlash}`}
-                    className="absolute inset-x-0 top-0 z-30 flex items-center justify-center py-1 bg-gradient-to-r from-amber-500/90 via-orange-500/90 to-amber-500/90"
-                    initial={{ y: -30, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: -30, opacity: 0 }}
-                    transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-                  >
-                    <motion.p
-                      className="text-[10px] font-bold text-white flex items-center gap-1"
-                      initial={{ scale: 0.8 }}
-                      animate={{ scale: [0.8, 1.1, 1] }}
-                      transition={{ duration: 0.4 }}
-                    >
+                  <motion.div key={`banner-${joinFlash}`}
+                    className={cn("absolute inset-x-0 top-0 z-30 flex items-center justify-center py-1",
+                      tier === 'storm' ? 'bg-gradient-to-r from-cyan-500/90 via-blue-500/90 to-cyan-500/90'
+                        : tier === 'wings' ? 'bg-gradient-to-r from-violet-500/90 via-fuchsia-500/90 to-violet-500/90'
+                        : 'bg-gradient-to-r from-pink-500/90 via-fuchsia-500/90 to-pink-500/90'
+                    )}
+                    initial={{ y: -30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -30, opacity: 0 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 25 }}>
+                    <motion.p className="text-[10px] font-bold text-white flex items-center gap-1"
+                      initial={{ scale: 0.8 }} animate={{ scale: [0.8, 1.1, 1] }} transition={{ duration: 0.4 }}>
                       <Zap className="w-3 h-3" />
                       {language === 'th' ? 'มีผู้ใช้เข้ามาใหม่!' : 'New user joined!'}
                     </motion.p>
@@ -299,66 +360,102 @@ function SidebarContent({
                 )}
               </AnimatePresence>
 
-              <div className="relative flex items-center justify-between gap-3">
+              {/* ── ADMIN: Crown Entry — golden crown drops + burst ── */}
+              {isAdmin && hasLoadedPresence && (
+                <div className="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 z-40">
+                  <motion.div initial={{ y: -24, opacity: 0, scale: 0, rotate: -30 }}
+                    animate={{ y: 0, opacity: 1, scale: 1, rotate: 0 }}
+                    transition={{ type: 'spring', stiffness: 260, damping: 12, delay: 0.6 }}>
+                    <Crown className="w-5 h-5 text-amber-400" style={{ filter: 'drop-shadow(0 0 8px rgba(251,191,36,0.9)) drop-shadow(0 0 20px rgba(251,191,36,0.4))' }} />
+                  </motion.div>
+                  <motion.div className="absolute inset-0 -inset-x-4 -inset-y-4"
+                    initial={{ scale: 0, opacity: 1 }} animate={{ scale: 5, opacity: 0 }}
+                    transition={{ duration: 1.8, delay: 0.6 }}>
+                    <div className="w-full h-full rounded-full bg-amber-400/30 blur-md" />
+                  </motion.div>
+                </div>
+              )}
+
+              {/* ── Main content ── */}
+              <div className="relative flex items-center justify-between gap-3 z-10">
                 <div>
-                  <p className="text-[9px] uppercase tracking-[0.2em] text-sidebar-foreground/50 font-semibold">
-                    {activeUsersLabel}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-[9px] uppercase tracking-[0.2em] text-white/50 font-semibold">
+                      {activeUsersLabel}
+                    </p>
+                    {isAdmin && (
+                      <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', delay: 0.8 }}
+                        className="inline-flex items-center gap-0.5 px-1.5 py-px rounded-full bg-amber-500/20 border border-amber-500/30">
+                        <Crown className="w-2.5 h-2.5 text-amber-400" />
+                        <span className="text-[7px] font-bold text-amber-300 tracking-wider">ADMIN</span>
+                      </motion.span>
+                    )}
+                  </div>
+
                   <div className="flex items-center gap-2 mt-0.5">
-                    {/* Animated number counter */}
-                    <motion.p
-                      key={hasLoadedPresence ? activeUserStats.activeUsers : -1}
+                    <motion.p key={hasLoadedPresence ? activeUserStats.activeUsers : -1}
                       initial={{ opacity: 0, y: 12, scale: 0.5 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-                      className="text-xl font-black leading-none bg-gradient-to-r from-sidebar-primary via-sidebar-foreground to-sidebar-primary bg-clip-text text-transparent"
-                    >
+                      animate={isAdmin && joinFlash === 0
+                        ? { opacity: 1, y: 0, scale: [1, 1.02, 1], textShadow: ['0 0 10px rgba(251,191,36,0.6)', '0 0 20px rgba(251,191,36,0.8)', '0 0 10px rgba(251,191,36,0.6)'] }
+                        : { opacity: 1, y: 0, scale: 1 }
+                      }
+                      transition={isAdmin ? { duration: 2, repeat: Infinity, ease: 'easeInOut' } : { type: 'spring', stiffness: 400, damping: 15 }}
+                      className="text-xl font-black leading-none text-white"
+                      style={{
+                        textShadow: tier === 'storm' ? '0 0 12px rgba(34,211,238,0.8), 0 0 30px rgba(34,211,238,0.4)'
+                          : tier === 'wings' ? '0 0 10px rgba(167,139,250,0.7), 0 0 25px rgba(167,139,250,0.35)'
+                          : '0 0 10px rgba(236,72,153,0.6), 0 0 20px rgba(236,72,153,0.3)',
+                      }}>
                       {hasLoadedPresence ? activeUserStats.activeUsers.toLocaleString() : '...'}
                     </motion.p>
-                    {/* Pulsing radio with glow on join */}
-                    <motion.span
-                      key={`radio-${joinFlash}`}
+
+                    <motion.span key={`radio-${joinFlash}`}
                       animate={joinFlash > 0
-                        ? { scale: [1, 1.6, 1, 1.3, 1], opacity: [0.55, 1, 0.7, 1, 0.55] }
-                        : { scale: [1, 1.15, 1], opacity: [0.55, 1, 0.55] }
+                        ? { scale: [1, 1.8, 1, 1.4, 1], opacity: [0.5, 1, 0.6, 1, 0.5] }
+                        : { scale: [1, 1.3, 1], opacity: [0.4, 1, 0.4] }
                       }
                       transition={joinFlash > 0
-                        ? { duration: 1, ease: 'easeInOut' }
-                        : { duration: 1.8, repeat: Infinity, ease: 'easeInOut' }
+                        ? { duration: 0.8, ease: 'easeInOut' }
+                        : { duration: hasAutomation ? 0.7 : 1.6, repeat: Infinity, ease: 'easeInOut' }
                       }
-                      className="text-sidebar-primary"
-                    >
+                      className={cn(
+                        tier === 'storm' ? 'text-cyan-400' : tier === 'wings' ? 'text-violet-400' : 'text-pink-400'
+                      )}
+                      style={{
+                        filter: `drop-shadow(0 0 4px ${tier === 'storm' ? 'rgba(34,211,238,0.6)' : tier === 'wings' ? 'rgba(167,139,250,0.6)' : 'rgba(236,72,153,0.6)'})`,
+                      }}>
                       <Radio className="w-4 h-4" />
                     </motion.span>
                   </div>
-                  <p className="text-[10px] text-sidebar-foreground/55 mt-0.5">
+
+                  <p className="text-[10px] text-white/55 mt-0.5" style={{
+                    textShadow: tier === 'storm' ? '0 0 6px rgba(34,211,238,0.3)' : tier === 'wings' ? '0 0 6px rgba(167,139,250,0.3)' : '0 0 6px rgba(236,72,153,0.2)',
+                  }}>
                     {hasLoadedPresence
                       ? `${activeUserStats.onlineUsers} ${onlineLabel} • ${activeUserStats.automationUsers} ${automationLabel}`
                       : language === 'th' ? 'กำลังซิงค์สถานะ...' : 'syncing status...'}
                   </p>
                 </div>
 
-                {/* Activity icon with join glow burst */}
+                {/* Activity icon with tier glow */}
                 <div className="relative">
                   <AnimatePresence>
                     {joinFlash > 0 && (
-                      <motion.span
-                        key={`glow-${joinFlash}`}
-                        className="absolute inset-0 rounded-full bg-amber-400/40 blur-lg"
-                        initial={{ scale: 0.5, opacity: 1 }}
-                        animate={{ scale: 3, opacity: 0 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 1.5 }}
-                      />
+                      <motion.span key={`glow-${joinFlash}`}
+                        className={cn("absolute inset-0 rounded-full blur-lg",
+                          tier === 'storm' ? 'bg-cyan-400/50' : tier === 'wings' ? 'bg-violet-400/50' : 'bg-pink-400/50')}
+                        initial={{ scale: 0.5, opacity: 1 }} animate={{ scale: 3.5, opacity: 0 }}
+                        exit={{ opacity: 0 }} transition={{ duration: 1.5 }} />
                     )}
                   </AnimatePresence>
-                  <motion.div
-                    animate={{ rotate: [0, 4, 0, -4, 0] }}
-                    transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-                    className="relative"
-                  >
-                    <span className="absolute inset-0 rounded-full bg-sidebar-primary/20 blur-md" />
-                    <Activity className="relative w-5 h-5 text-sidebar-primary" />
+                  <motion.div animate={{ rotate: [0, 5, 0, -5, 0] }}
+                    transition={{ duration: hasAutomation ? 2 : 5, repeat: Infinity, ease: 'easeInOut' }}
+                    className="relative">
+                    <span className={cn("absolute inset-0 rounded-full blur-md",
+                      tier === 'storm' ? 'bg-cyan-400/25' : tier === 'wings' ? 'bg-violet-400/25' : 'bg-pink-400/25')} />
+                    <Activity className={cn("relative w-5 h-5",
+                      tier === 'storm' ? 'text-cyan-400' : tier === 'wings' ? 'text-violet-400' : 'text-pink-400')}
+                      style={{ filter: `drop-shadow(0 0 6px ${tier === 'storm' ? 'rgba(34,211,238,0.5)' : tier === 'wings' ? 'rgba(167,139,250,0.5)' : 'rgba(236,72,153,0.5)'})` }} />
                   </motion.div>
                 </div>
               </div>

@@ -265,10 +265,11 @@ export class MarketplaceWorker {
   async checkLogin() {
     try {
       if (!this.browser || !this.browser.isConnected()) return false;
+      if (!this.page || this.page.isClosed?.()) return false;
 
       await this.page.goto('https://www.facebook.com', {
-        waitUntil: 'networkidle2',
-        timeout: 30000,
+        waitUntil: 'domcontentloaded',
+        timeout: 20000,
       });
 
       await this.delay(2000);
@@ -278,7 +279,12 @@ export class MarketplaceWorker {
                !document.querySelector('button[name="login"]');
       });
     } catch (error) {
-      console.error('Login check error:', error.message);
+      const msg = error.message || '';
+      if (msg.includes('context was destroyed') || msg.includes('ERR_ABORTED') || msg.includes('Target closed') || msg.includes('Session closed')) {
+        console.log(`🔇 Marketplace login check skipped (stale session)`);
+      } else {
+        console.warn('⚠️ Marketplace login check error:', msg);
+      }
       return false;
     }
   }

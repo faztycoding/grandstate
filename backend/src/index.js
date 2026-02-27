@@ -94,7 +94,7 @@ const adminAuth = [authMiddleware, adminOnly, attachSession];
 
 // Health endpoint (no auth required)
 app.get('/api/ping', (req, res) => {
-  res.json({ success: true, message: 'Grand$tate API is running', sessions: sessionManager.getStats() });
+  res.json({ success: true, message: 'GrandState API is running', sessions: sessionManager.getStats() });
 });
 
 // Presence heartbeat (auth required)
@@ -1615,8 +1615,13 @@ app.post('/api/facebook/auto-login', ...auth, async (req, res) => {
 
     res.json({ success: false, error: 'Email หรือ Password ไม่ถูกต้อง' });
   } catch (error) {
-    console.error('Auto-login error:', error.message);
-    res.json({ success: false, error: `Login ผิดพลาด: ${error.message}` });
+    const msg = error.message || '';
+    if (msg.includes('not clickable') || msg.includes('Target closed') || msg.includes('context was destroyed')) {
+      console.log('🔇 Auto-login skipped (stale browser)');
+    } else {
+      console.warn('⚠️ Auto-login error:', msg);
+    }
+    res.json({ success: false, error: `Login ผิดพลาด: ${msg}` });
   }
 });
 
@@ -2163,7 +2168,7 @@ process.on('unhandledRejection', (reason) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Grand$tate API running on http://localhost:${PORT}`);
+  console.log(`🚀 GrandState API running on http://localhost:${PORT}`);
   console.log(`🔒 CORS: ${ALLOWED_ORIGINS.join(', ')}`);
   console.log(`🌐 Multi-user: max ${10} concurrent browsers`);
   console.log(`📋 Auth: Supabase JWT required on all /api/* routes`);

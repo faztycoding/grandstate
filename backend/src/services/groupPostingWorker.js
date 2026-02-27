@@ -2844,10 +2844,9 @@ export class GroupPostingWorker {
   async checkLogin() {
     try {
       if (!this.browser || !this.browser.isConnected()) {
-        console.log('⚠️ Browser not connected');
         return false;
       }
-      if (!this.page) return false;
+      if (!this.page || this.page.isClosed?.()) return false;
 
       // First try quick check without navigation
       const quickResult = await this.checkLoginQuick();
@@ -2872,7 +2871,13 @@ export class GroupPostingWorker {
 
       return isLoggedIn;
     } catch (error) {
-      console.error('Login check error:', error.message);
+      // Suppress noisy navigation/context errors from stale sessions
+      const msg = error.message || '';
+      if (msg.includes('context was destroyed') || msg.includes('ERR_ABORTED') || msg.includes('Target closed') || msg.includes('Session closed')) {
+        console.log(`🔇 Login check skipped (stale session)`);
+      } else {
+        console.warn('⚠️ Login check error:', msg);
+      }
       return false;
     }
   }

@@ -62,7 +62,7 @@ interface PresencePayload extends Partial<ActiveUsersState> {
   success?: boolean;
 }
 
-const HEARTBEAT_INTERVAL_MS = 15000;
+const HEARTBEAT_INTERVAL_MS = 5000; // 5s for near-realtime
 
 function useActiveUsersPresence() {
   const [activeUserStats, setActiveUserStats] = useState<ActiveUsersState>({
@@ -72,6 +72,7 @@ function useActiveUsersPresence() {
   });
   const [hasLoadedPresence, setHasLoadedPresence] = useState(false);
   const [joinFlash, setJoinFlash] = useState(0);
+  const [leaveFlash, setLeaveFlash] = useState(0);
   const prevCountRef = useRef(0);
 
   const applyPresencePayload = useCallback((payload: PresencePayload) => {
@@ -82,6 +83,8 @@ function useActiveUsersPresence() {
       const oldCount = prev.activeUsers;
       if (oldCount > 0 && newActive > oldCount) {
         setJoinFlash(f => f + 1);
+      } else if (oldCount > 0 && newActive < oldCount) {
+        setLeaveFlash(f => f + 1);
       }
       prevCountRef.current = newActive;
       return {
@@ -125,9 +128,8 @@ function useActiveUsersPresence() {
       }
     };
 
-    const handlePageHide = () => {
-      void markOffline();
-    };
+    const handlePageHide = () => void markOffline();
+    const handleBeforeUnload = () => void markOffline();
 
     void fetchPresence();
     heartbeatTimer = setInterval(() => {
@@ -138,11 +140,13 @@ function useActiveUsersPresence() {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('pagehide', handlePageHide);
+    window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
       if (heartbeatTimer) clearInterval(heartbeatTimer);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('pagehide', handlePageHide);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [fetchPresence, markOffline]);
 
@@ -151,6 +155,7 @@ function useActiveUsersPresence() {
     hasLoadedPresence,
     markOffline,
     joinFlash,
+    leaveFlash,
   };
 }
 
@@ -161,6 +166,7 @@ interface SidebarContentProps {
   hasLoadedPresence: boolean;
   markOffline: () => Promise<void>;
   joinFlash: number;
+  leaveFlash: number;
 }
 
 function SidebarContent({
@@ -170,6 +176,7 @@ function SidebarContent({
   hasLoadedPresence,
   markOffline,
   joinFlash,
+  leaveFlash,
 }: SidebarContentProps) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -360,6 +367,32 @@ function SidebarContent({
                 )}
               </AnimatePresence>
 
+              {/* ── LEAVE FLASH: user left banner ── */}
+              <AnimatePresence>
+                {leaveFlash > 0 && (
+                  <motion.div key={`leave-${leaveFlash}`}
+                    className="absolute inset-x-0 bottom-0 z-30 flex items-center justify-center py-1 bg-gradient-to-r from-slate-600/90 via-gray-500/90 to-slate-600/90"
+                    initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 30, opacity: 0 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 25 }}>
+                    <motion.p className="text-[10px] font-bold text-white/80 flex items-center gap-1"
+                      initial={{ scale: 0.8 }} animate={{ scale: [0.8, 1.05, 1] }} transition={{ duration: 0.3 }}>
+                      <LogOut className="w-3 h-3" />
+                      {language === 'th' ? 'มีผู้ใช้ออกจากระบบ' : 'User went offline'}
+                    </motion.p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* ── LEAVE FLASH: dim pulse ── */}
+              <AnimatePresence>
+                {leaveFlash > 0 && (
+                  <motion.div key={`ldim-${leaveFlash}`}
+                    className="pointer-events-none absolute inset-0 z-20 rounded-xl bg-black/20"
+                    initial={{ opacity: 1 }} animate={{ opacity: 0 }} exit={{ opacity: 0 }}
+                    transition={{ duration: 1.5 }} />
+                )}
+              </AnimatePresence>
+
               {/* ── ADMIN: Crown Entry — golden crown drops + burst ── */}
               {isAdmin && hasLoadedPresence && (
                 <div className="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 z-40">
@@ -516,7 +549,7 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const isMobile = useIsMobile();
   const { open, setOpen } = useMobileSidebar();
-  const { activeUserStats, hasLoadedPresence, markOffline, joinFlash } = useActiveUsersPresence();
+  const { activeUserStats, hasLoadedPresence, markOffline, joinFlash, leaveFlash } = useActiveUsersPresence();
 
   // Mobile: Sheet drawer
   if (isMobile) {
@@ -541,6 +574,7 @@ export function Sidebar() {
               hasLoadedPresence={hasLoadedPresence}
               markOffline={markOffline}
               joinFlash={joinFlash}
+              leaveFlash={leaveFlash}
             />
           </div>
         </SheetContent>
@@ -586,6 +620,7 @@ export function Sidebar() {
         hasLoadedPresence={hasLoadedPresence}
         markOffline={markOffline}
         joinFlash={joinFlash}
+        leaveFlash={leaveFlash}
       />
     </motion.aside>
   );

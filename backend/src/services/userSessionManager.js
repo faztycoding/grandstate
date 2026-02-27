@@ -5,7 +5,7 @@ import { PostScheduler } from './scheduler.js';
 
 const MAX_CONCURRENT_BROWSERS = 10;
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes inactivity
-const PRESENCE_TIMEOUT_MS = 45 * 1000; // 45s without heartbeat = offline
+const PRESENCE_TIMEOUT_MS = 12 * 1000; // 12s without heartbeat = offline (near-realtime)
 
 /**
  * UserSessionManager — manages per-user worker instances + browser pool

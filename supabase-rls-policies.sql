@@ -155,7 +155,7 @@ BEGIN
   RETURN (
     SELECT email FROM auth.users WHERE id = auth.uid()
   ) IN (
-    'admin@grandstate.co'
+    'admin@grandstate.com'
     -- เพิ่ม admin email ได้ที่นี่ เช่น:
     -- , 'another-admin@email.com'
   );

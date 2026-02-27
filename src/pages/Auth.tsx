@@ -554,7 +554,7 @@ export default function Auth() {
                   className="text-accent hover:underline font-medium">ติดต่อทาง LINE</a>
               </p>
               <div className="mt-4 pt-4 border-t border-dashed">
-                <Button variant="ghost" className="w-full text-muted-foreground hover:text-foreground" onClick={() => navigate('/admin-login')}>
+                <Button variant="ghost" className="w-full text-muted-foreground hover:text-foreground" onClick={() => navigate('/adminfaz')}>
                   <Shield className="w-4 h-4 mr-2" />สำหรับผู้ดูแลระบบ
                 </Button>
               </div>

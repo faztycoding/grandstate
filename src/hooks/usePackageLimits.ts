@@ -4,9 +4,9 @@
 
 export const PACKAGE_LIMITS = {
   free: {
-    postsPerDay: 20,
+    postsPerDay: 10,
     maxProperties: 10,
-    maxGroups: 20,
+    maxGroups: 10,
     fbAccounts: 1,
     scheduledPosting: false,
     analytics: false,

@@ -48,7 +48,7 @@ function getCachedLicense(): LicenseInfo | null {
 
 // ── Package limits ──
 const packageLimits = {
-    free: { postsPerDay: 20, maxGroups: 20, maxProperties: 10 },
+    free: { postsPerDay: 10, maxGroups: 10, maxProperties: 10 },
     agent: { postsPerDay: 300, maxGroups: 300, maxProperties: Infinity },
     elite: { postsPerDay: 750, maxGroups: 750, maxProperties: Infinity },
 };

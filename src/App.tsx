@@ -3,26 +3,29 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { lazy, Suspense } from "react";
 import { LanguageProvider } from "@/i18n/LanguageContext";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Landing from "./pages/Landing";
-import Auth from "./pages/Auth";
-import Automation from "./pages/Automation";
-import CreateMarketplaceListing from "./pages/CreateMarketplaceListing";
-import PropertyGallery from "./pages/PropertyGallery";
-import Properties from "./pages/Properties";
-import Settings from "./pages/Settings";
-import Groups from "./pages/Groups";
-import Help from "./pages/Help";
-import Pricing from "./pages/Pricing";
-import Analytics from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
-import Checkout from "./pages/Checkout";
-import AdminDashboard from "./pages/AdminDashboard";
-import UserProfile from "./pages/UserProfile";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import TermsOfService from "./pages/TermsOfService";
+
+// Lazy-load all pages for smaller initial bundle
+const Auth = lazy(() => import("./pages/Auth"));
+const Automation = lazy(() => import("./pages/Automation"));
+const CreateMarketplaceListing = lazy(() => import("./pages/CreateMarketplaceListing"));
+const PropertyGallery = lazy(() => import("./pages/PropertyGallery"));
+const Properties = lazy(() => import("./pages/Properties"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Groups = lazy(() => import("./pages/Groups"));
+const Help = lazy(() => import("./pages/Help"));
+const Pricing = lazy(() => import("./pages/Pricing"));
+const Analytics = lazy(() => import("./pages/Analytics"));
+const Checkout = lazy(() => import("./pages/Checkout"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const UserProfile = lazy(() => import("./pages/UserProfile"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 
 const queryClient = new QueryClient();
 
@@ -34,6 +37,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin" /></div>}>
             <Routes>
               {/* Public routes */}
               <Route path="/" element={<Landing />} />
@@ -65,6 +69,7 @@ const App = () => (
               {/* 404 */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </Suspense>
           </BrowserRouter>
         </TooltipProvider>
       </LanguageProvider>

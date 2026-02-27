@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { authMiddleware } from './middleware/auth.js';
 import { sessionManager } from './services/userSessionManager.js';
@@ -9,8 +10,30 @@ import { automationQueue } from './services/automationQueue.js';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Admin email whitelist (comma-separated in env)
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
+  .split(',')
+  .map(e => e.trim().toLowerCase())
+  .filter(Boolean);
+
+function isAdminEmail(email) {
+  if (!email) return false;
+  return ADMIN_EMAILS.includes(email.toLowerCase());
+}
+
+// Admin-only middleware — must be used AFTER authMiddleware
+function adminOnly(req, res, next) {
+  if (!isAdminEmail(req.userEmail)) {
+    return res.status(403).json({ success: false, error: 'Admin access required' });
+  }
+  next();
+}
+
 // Trust proxy (behind Nginx reverse proxy)
 app.set('trust proxy', 1);
+
+// Security headers
+app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 
 // CORS — lock to allowed origins
 const ALLOWED_ORIGINS = [
@@ -55,6 +78,7 @@ function attachSession(req, res, next) {
 
 // Combine auth + session into one middleware array
 const auth = [authMiddleware, attachSession];
+const adminAuth = [authMiddleware, adminOnly, attachSession];
 
 // Health endpoint (no auth required)
 app.get('/api/ping', (req, res) => {
@@ -95,7 +119,7 @@ app.get('/api/session/active-users', ...auth, (req, res) => {
 });
 
 // Admin stats — detailed active users + automation + queue info
-app.get('/api/admin/stats', ...auth, (req, res) => {
+app.get('/api/admin/stats', ...adminAuth, (req, res) => {
   try {
     const adminStats = sessionManager.getAdminStats();
     const queueStats = automationQueue.getQueueStats();
@@ -105,8 +129,41 @@ app.get('/api/admin/stats', ...auth, (req, res) => {
   }
 });
 
-// Debug: check user data in DB (service key bypasses RLS)
-app.get('/api/debug/my-data', ...auth, async (req, res) => {
+// Admin stats SSE stream — Real-time updates (Elon Musk Level)
+app.get('/api/admin/stats/stream', ...adminAuth, (req, res) => {
+  // Set headers for Server-Sent Events (SSE)
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+  });
+
+  // Function to send current stats
+  const sendStats = () => {
+    try {
+      const adminStats = sessionManager.getAdminStats();
+      const queueStats = automationQueue.getQueueStats();
+      const data = JSON.stringify({ success: true, ...adminStats, queue: queueStats });
+      res.write(`data: ${data}\n\n`);
+    } catch (err) {
+      console.error('SSE send error:', err.message);
+    }
+  };
+
+  // Send initial data immediately
+  sendStats();
+
+  // Stream data every 1 second
+  const intervalId = setInterval(sendStats, 1000);
+
+  // Clean up when client disconnects
+  req.on('close', () => {
+    clearInterval(intervalId);
+  });
+});
+
+// Debug: check user data in DB (admin-only — service key bypasses RLS)
+app.get('/api/debug/my-data', ...adminAuth, async (req, res) => {
   try {
     const { createClient } = await import('@supabase/supabase-js');
     const supa = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY);
@@ -671,10 +728,14 @@ app.post('/api/group-automation/start', ...auth, async (req, res) => {
 
     // Use queue system — either starts immediately or enqueues
     const groupWorker = req.groupWorker;
+    const session = sessionManager.getSession(req.userId);
+    const displayName = session?.displayName || session?.email?.split('@')[0] || req.userId.substring(0, 8);
+
     const queueResult = await automationQueue.tryStartOrEnqueue(
       req.userId,
       (cfg) => groupWorker.startAutomation(cfg),
       automationConfig,
+      { worker: groupWorker, displayName, automationType: 'group' }
     );
 
     if (queueResult.queued) {
@@ -750,9 +811,85 @@ app.post('/api/group-automation/cancel-queue', ...auth, (req, res) => {
 });
 
 // Admin: full queue stats
-app.get('/api/admin/queue', ...auth, (req, res) => {
+app.get('/api/admin/queue', ...adminAuth, (req, res) => {
   try {
     res.json({ success: true, ...automationQueue.getQueueStats() });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Admin: force-stop a specific user's automation
+app.post('/api/admin/force-stop', ...adminAuth, async (req, res) => {
+  try {
+    const { targetUserId } = req.body;
+    if (!targetUserId) {
+      return res.status(400).json({ success: false, error: 'targetUserId is required' });
+    }
+
+    const targetSession = sessionManager.sessions.get(targetUserId);
+    if (!targetSession) {
+      return res.status(404).json({ success: false, error: 'User session not found' });
+    }
+
+    const results = [];
+
+    // Cancel from queue if waiting
+    const wasQueued = automationQueue.cancelQueue(targetUserId);
+    if (wasQueued) results.push('Removed from queue');
+
+    // Stop group automation
+    if (targetSession.groupWorker.isRunning) {
+      try {
+        await targetSession.groupWorker.stop();
+        results.push('Group automation stopped');
+      } catch (e) {
+        results.push(`Group stop error: ${e.message}`);
+      }
+    }
+
+    // Stop marketplace automation
+    if (targetSession.marketplaceWorker.isRunning) {
+      try {
+        await targetSession.marketplaceWorker.stop();
+        results.push('Marketplace automation stopped');
+      } catch (e) {
+        results.push(`Marketplace stop error: ${e.message}`);
+      }
+    }
+
+    // Notify queue system (frees slot for next in queue)
+    if (!wasQueued) {
+      automationQueue._onJobComplete(targetUserId, false);
+    }
+
+    const shortId = targetUserId.substring(0, 8);
+    console.log(`🛑 [Admin] Force-stopped user ${shortId}: ${results.join(', ') || 'No running automation'}`);
+
+    res.json({
+      success: true,
+      message: results.length > 0 ? results.join('; ') : 'No active automation to stop',
+      results,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Admin: get license activation details (which user activated which key)
+app.get('/api/admin/license-activations', ...adminAuth, async (req, res) => {
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supa = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY);
+
+    const { data, error } = await supa
+      .from('device_activations')
+      .select('*, license_keys(license_key, package, owner_name)')
+      .order('activated_at', { ascending: false });
+
+    if (error) throw error;
+
+    res.json({ success: true, activations: data || [] });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -781,12 +918,19 @@ app.post('/api/group-automation/resume', ...auth, (req, res) => {
 // Stop automation (also removes from queue + notifies queue system)
 app.post('/api/group-automation/stop', ...auth, async (req, res) => {
   try {
-    // Remove from queue if waiting
-    automationQueue.cancelQueue(req.userId);
-    // Stop the worker
+    // Remove from queue if waiting (before it started)
+    const wasQueued = automationQueue.cancelQueue(req.userId);
+    // Track if browser was open before stop
+    const hadBrowser = !!(req.groupWorker.browser && req.groupWorker.browser.isConnected());
+    // Stop the worker (closes browser internally)
     await req.groupWorker.stop();
-    // Notify queue that this slot is free
-    automationQueue._onJobComplete(req.userId, false);
+    // Decrement browser counter if browser was closed
+    if (hadBrowser) sessionManager.registerBrowserClose();
+    // Only notify queue if user was actually running (not just queued)
+    // _onJobComplete has a guard but being explicit avoids unnecessary log noise
+    if (!wasQueued) {
+      automationQueue._onJobComplete(req.userId, false);
+    }
     res.json({ success: true, message: 'Automation stopped' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -796,7 +940,9 @@ app.post('/api/group-automation/stop', ...auth, async (req, res) => {
 // Close browser
 app.post('/api/group-automation/close', ...auth, async (req, res) => {
   try {
+    const hadBrowser = !!(req.groupWorker.browser && req.groupWorker.browser.isConnected());
     await req.groupWorker.close();
+    if (hadBrowser) sessionManager.registerBrowserClose();
     res.json({ success: true, message: 'Browser closed' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1000,7 +1146,7 @@ app.post('/api/facebook/auto-login', ...auth, async (req, res) => {
       ];
       for (const sel of cookieSelectors) {
         const btn = await page.$(sel);
-        if (btn) { await btn.click().catch(() => {}); await new Promise(r => setTimeout(r, 1500)); break; }
+        if (btn) { await btn.click().catch(() => { }); await new Promise(r => setTimeout(r, 1500)); break; }
       }
     } catch (e) { }
 
@@ -1018,7 +1164,7 @@ app.post('/api/facebook/auto-login', ...auth, async (req, res) => {
     if (!emailInput) return res.json({ success: false, error: 'ไม่พบช่องกรอก Email — Facebook อาจ block หน้า Login' });
 
     // Clear and type email
-    await emailInput.click({ clickCount: 3 }).catch(() => {});
+    await emailInput.click({ clickCount: 3 }).catch(() => { });
     await new Promise(r => setTimeout(r, 300));
     await emailInput.type(email, { delay: 50 });
     await new Promise(r => setTimeout(r, 500));
@@ -1028,7 +1174,7 @@ app.post('/api/facebook/auto-login', ...auth, async (req, res) => {
     let passInput = null;
     for (const sel of passSelectors) { passInput = await page.$(sel); if (passInput) break; }
     if (!passInput) return res.json({ success: false, error: 'ไม่พบช่องกรอก Password' });
-    await passInput.click({ clickCount: 3 }).catch(() => {});
+    await passInput.click({ clickCount: 3 }).catch(() => { });
     await new Promise(r => setTimeout(r, 300));
     await passInput.type(password, { delay: 50 });
     await new Promise(r => setTimeout(r, 500));
@@ -1074,7 +1220,7 @@ app.post('/api/facebook/auto-login', ...auth, async (req, res) => {
 
     if (isLoggedIn) {
       // Navigate to homepage to scrape user info
-      await page.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {});
+      await page.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => { });
       await new Promise(r => setTimeout(r, 3000));
 
       const activeSlot = sessionManager.getActiveSlot(req.userId);
@@ -1283,11 +1429,13 @@ app.post('/api/marketplace-automation/start', ...auth, async (req, res) => {
       });
     }
 
-    // Start automation in BACKGROUND — don't await!
-    // This lets the HTTP response return immediately so frontend can start polling
-    req.marketplaceWorker.startMarketplaceAutomation({
+    // Use queue system for Marketplace
+    const session = sessionManager.getSession(req.userId);
+    const displayName = session?.displayName || session?.email?.split('@')[0] || req.userId.substring(0, 8);
+
+    const automationConfig = {
       property,
-      groups,
+      groups: preflight.canPost, // Only use allowed groups
       caption,
       images: images || property.images || [],
       delayMinutes: delayMinutes || undefined,
@@ -1296,12 +1444,31 @@ app.post('/api/marketplace-automation/start', ...auth, async (req, res) => {
       browser: browser || 'chrome',
       userPackage: userPackage || 'free',
       claudeApiKey,
-    }).then(result => {
-      console.log('✅ Marketplace automation finished:', result.success ? 'SUCCESS' : 'FAILED');
-    }).catch(err => {
-      console.error('❌ Marketplace automation error:', err.message);
-    });
+    };
 
+    const queueResult = await automationQueue.tryStartOrEnqueue(
+      req.userId,
+      (cfg) => req.marketplaceWorker.startMarketplaceAutomation(cfg),
+      automationConfig,
+      { worker: req.marketplaceWorker, displayName, automationType: 'marketplace' }
+    );
+
+    if (queueResult.queued) {
+      console.log(`📋 User ${req.userId.substring(0, 8)} queued at position ${queueResult.position}`);
+      return res.json({
+        success: true,
+        queued: true,
+        position: queueResult.position,
+        estimatedWaitSec: queueResult.estimatedWaitSec,
+        message: `คิวที่ ${queueResult.position} — รอประมาณ ${Math.ceil(queueResult.estimatedWaitSec / 60)} นาที`,
+        skippedDuplicate: preflight.skippedDuplicate.length,
+        skippedOverLimit: preflight.skippedOverLimit.length,
+        totalGroups: preflight.canPost.length,
+      });
+    }
+
+    // Started immediately
+    await new Promise(r => setTimeout(r, 200));
     const status = req.marketplaceWorker.getStatus();
 
     // Return immediately with "started" response
@@ -1360,7 +1527,11 @@ app.post('/api/marketplace-automation/resume', ...auth, (req, res) => {
 // Stop marketplace automation
 app.post('/api/marketplace-automation/stop', ...auth, async (req, res) => {
   try {
+    const wasQueued = automationQueue.cancelQueue(req.userId);
     await req.marketplaceWorker.stop();
+    if (!wasQueued) {
+      automationQueue._onJobComplete(req.userId, false);
+    }
     res.json({ success: true, message: 'Marketplace automation stopped' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1617,10 +1788,24 @@ app.post('/api/analytics/reset', ...auth, (req, res) => {
   }
 });
 
+// ── Global error handlers — keep the process alive ──
+process.on('uncaughtException', (err) => {
+  console.error('⚠️ Uncaught Exception:', err.message);
+  console.error(err.stack);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('⚠️ Unhandled Rejection:', reason);
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 Grand$tate API running on http://localhost:${PORT}`);
-  console.log(`� CORS: ${ALLOWED_ORIGINS.join(', ')}`);
+  console.log(`🔒 CORS: ${ALLOWED_ORIGINS.join(', ')}`);
   console.log(`🌐 Multi-user: max ${10} concurrent browsers`);
   console.log(`📋 Auth: Supabase JWT required on all /api/* routes`);
   console.log(`💡 Health: GET /api/ping (no auth)`);
+  if (ADMIN_EMAILS.length === 0) {
+    console.warn('⚠️  ADMIN_EMAILS is empty — /api/admin/* endpoints will reject ALL requests');
+  } else {
+    console.log(`🛡️  Admin emails: ${ADMIN_EMAILS.join(', ')}`);
+  }
 });

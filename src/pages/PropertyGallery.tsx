@@ -12,8 +12,6 @@ export default function PropertyGallery() {
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSubmit = async (data: PropertyFormData) => {
-    console.log('Submitting property:', data);
-    
     // Store the property data for automation
     localStorage.setItem('pendingPropertyListing', JSON.stringify(data));
     
@@ -40,7 +38,7 @@ export default function PropertyGallery() {
 
   return (
     <DashboardLayout title={g.galleryTitle}>
-      <div className="p-6 bg-gray-50 min-h-screen">
+      <div className="p-6 bg-background min-h-screen">
         <PropertyGalleryForm 
           onSubmit={handleSubmit}
           onSave={handleSave}

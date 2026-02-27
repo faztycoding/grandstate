@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useSupabaseProperties } from '@/hooks/useSupabaseProperties';
-import { useGroups } from '@/hooks/useGroups';
+import { useSupabaseGroups } from '@/hooks/useSupabaseGroups';
 import { useHealthCheck } from '@/hooks/useHealthCheck';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { WelcomeModal } from '@/components/onboarding/WelcomeModal';
@@ -43,7 +43,7 @@ export default function Dashboard() {
   const { t } = useLanguage();
   const d = t.dashboard;
   const { properties } = useSupabaseProperties();
-  const { groups } = useGroups();
+  const { groups } = useSupabaseGroups();
   const { result: healthResult } = useHealthCheck();
   const score = healthResult.overallScore;
   const riskLevel = healthResult.overallLevel;

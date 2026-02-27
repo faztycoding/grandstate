@@ -51,7 +51,7 @@ export class MarketplaceWorker {
     this.currentBatch = 0;
     this.totalBatches = 0;
     this.anthropic = null;
-    this.tracker = new PostingTracker(userId);
+    this.tracker = new PostingTracker(userId); // default — overridden by setTracker()
 
     // Live log buffer + timing for frontend display
     this.logs = [];        // ring buffer — max 150 entries
@@ -71,6 +71,11 @@ export class MarketplaceWorker {
     if (key && Anthropic) {
       this.anthropic = new Anthropic({ apiKey: key });
     }
+  }
+
+  // Replace internal tracker with shared session tracker
+  setTracker(tracker) {
+    this.tracker = tracker;
   }
 
   // ============================================
@@ -2735,7 +2740,13 @@ export class MarketplaceWorker {
             }
           }
 
-          await this.delay(delayMs);
+          // Wait in 5-second chunks so pause/stop can interrupt
+          const chunks = Math.ceil(delayMs / 5000);
+          for (let c = 0; c < chunks; c++) {
+            if (!this.isRunning) break;
+            while (this.isPaused && this.isRunning) { await this.delay(1000); }
+            await this.delay(Math.min(5000, delayMs - c * 5000));
+          }
           console.log(`✅ Delay done, starting batch ${batchIdx + 2}...`);
         }
       }

@@ -144,7 +144,7 @@ export default function Automation() {
     if (!resetDone) {
       clearHistory();
       localStorage.setItem('_stats_reset_v1', '1');
-      console.log('🔄 Stats reset to new-user state');
+      // Stats reset to new-user state
     }
   }, [clearHistory]);
 
@@ -355,6 +355,10 @@ export default function Automation() {
           description: `รอประมาณ ${Math.ceil((result.estimatedWaitSec || 300) / 60)} นาที — ระบบจะเริ่มอัตโนมัติเมื่อถึงคิว`,
           duration: 6000,
         });
+        // Request browser notification permission for queue alerts
+        if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+          Notification.requestPermission();
+        }
         // Keep running state true so UI shows "waiting"
         setAutomation(prev => ({
           ...prev,
@@ -414,12 +418,31 @@ export default function Automation() {
         const data = await res.json();
 
         if (data.success) {
+          // Handle backend notification (queue_ready / queue_timeout)
+          if (data.notification) {
+            const notif = data.notification;
+            if (notif.type === 'queue_ready') {
+              toast.success(notif.message, { duration: 5000 });
+              // Browser push notification (if permission granted)
+              if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+                new Notification('HomePost Pro', { body: notif.message, icon: '/favicon.ico' });
+              }
+            } else if (notif.type === 'queue_timeout') {
+              toast.error(notif.message, { duration: 6000 });
+              if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+                new Notification('HomePost Pro', { body: notif.message, icon: '/favicon.ico' });
+              }
+            }
+          }
+
           if (data.status === 'running' || data.isRunning) {
             // Our turn! Stop queue polling, start automation polling
             setQueuePosition(null);
             if (queuePollingRef.current) clearInterval(queuePollingRef.current);
             queuePollingRef.current = null;
-            toast.success('🚀 ถึงคิวคุณแล้ว! กำลังเริ่ม Automation...', { duration: 3000 });
+            if (!data.notification?.type) {
+              toast.success('🚀 ถึงคิวคุณแล้ว! กำลังเริ่ม Automation...', { duration: 3000 });
+            }
             pollAutomationStatus(mode);
           } else if (data.status === 'queued') {
             setQueuePosition(data.position);
@@ -542,7 +565,7 @@ export default function Automation() {
           const response = await apiFetch(getAutomationStatusPath(mode));
           const data = await response.json();
           if (data.success && data.isRunning) {
-            console.log(`🔄 Reconnecting to ${mode} automation (isRunning=true)`);
+            // Reconnecting to running automation
             setPostingMode(mode);
             setAutomation({
               isRunning: true,
@@ -565,7 +588,7 @@ export default function Automation() {
           if (data.success && !data.isRunning && data.tasks && data.tasks.length > 0) {
             const hasResults = data.tasks.some((t: TaskStatus) => t.status === 'completed' || t.status === 'pending_approval' || t.status === 'failed');
             if (hasResults) {
-              console.log(`📋 Found completed ${mode} automation results`);
+              // Found completed automation results
               setPostingMode(mode);
               setAutomation({
                 isRunning: false,

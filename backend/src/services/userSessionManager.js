@@ -92,6 +92,9 @@ class UserSessionManager {
       postingTracker.recordPosting(propertyId || 'unknown', groupId, groupName, success);
     });
 
+    // Wire shared postingTracker into marketplaceWorker (replaces its internal tracker)
+    marketplaceWorker.setTracker(postingTracker);
+
     // Start scheduler
     scheduler.start(async (job) => {
       console.log(`⏰ [${shortId}] Scheduler: ${job.mode} for ${job.groups?.length} groups`);

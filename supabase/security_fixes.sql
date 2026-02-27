@@ -74,7 +74,7 @@ BEGIN
   RETURN (
     SELECT email FROM auth.users WHERE id = auth.uid()
   ) IN (
-    'admin@grandstate.co'
+    'admin@grandstate.com'
     -- Add more admin emails here if needed
   );
 END;

@@ -43,6 +43,11 @@ import {
     ChevronDown,
     ChevronRight,
     Sparkles,
+    Mail,
+    MessageCircle,
+    Eye,
+    ArrowRight,
+    Send,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -72,6 +77,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
@@ -241,6 +247,75 @@ export default function AdminDashboard() {
     // Expanded user card (to show management controls)
     const [expandedUser, setExpandedUser] = useState<string | null>(null);
 
+    // Support tickets
+    interface SupportTicket {
+        id: string;
+        user_id: string;
+        user_email: string;
+        user_name: string;
+        subject: string;
+        description: string;
+        category: string;
+        status: string;
+        admin_reply: string | null;
+        admin_replied_at: string | null;
+        created_at: string;
+        updated_at: string;
+    }
+    const [tickets, setTickets] = useState<SupportTicket[]>([]);
+    const [ticketsLoading, setTicketsLoading] = useState(false);
+    const [ticketFilter, setTicketFilter] = useState<string>('all');
+    const [replyingTicket, setReplyingTicket] = useState<string | null>(null);
+    const [replyText, setReplyText] = useState('');
+
+    const fetchTickets = useCallback(async () => {
+        setTicketsLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('support_tickets')
+                .select('*')
+                .order('created_at', { ascending: false });
+            if (error) throw error;
+            setTickets(data || []);
+        } catch (err) {
+            console.error('Fetch tickets error:', err);
+        } finally {
+            setTicketsLoading(false);
+        }
+    }, []);
+
+    const handleUpdateTicketStatus = async (ticketId: string, newStatus: string) => {
+        try {
+            const { error } = await supabase
+                .from('support_tickets')
+                .update({ status: newStatus, updated_at: new Date().toISOString() })
+                .eq('id', ticketId);
+            if (error) throw error;
+            toast.success(`อัปเดตสถานะเป็น ${newStatus}`);
+            fetchTickets();
+        } catch { toast.error('อัปเดตไม่สำเร็จ'); }
+    };
+
+    const handleReplyTicket = async (ticketId: string) => {
+        if (!replyText.trim()) return;
+        try {
+            const { error } = await supabase
+                .from('support_tickets')
+                .update({
+                    admin_reply: replyText.trim(),
+                    admin_replied_at: new Date().toISOString(),
+                    status: 'in_progress',
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', ticketId);
+            if (error) throw error;
+            toast.success('ตอบกลับสำเร็จ');
+            setReplyingTicket(null);
+            setReplyText('');
+            fetchTickets();
+        } catch { toast.error('ตอบกลับไม่สำเร็จ'); }
+    };
+
     // License activations
     const [licenseActivations, setLicenseActivations] = useState<any[]>([]);
     const fetchLicenseActivations = useCallback(async () => {
@@ -327,7 +402,7 @@ export default function AdminDashboard() {
     const [checkingSession, setCheckingSession] = useState(true);
 
     // Admin tab navigation
-    type AdminTab = 'overview' | 'users' | 'licenses' | 'system';
+    type AdminTab = 'overview' | 'users' | 'licenses' | 'system' | 'tickets';
     const [activeTab, setActiveTab] = useState<AdminTab>('overview');
 
     useEffect(() => {
@@ -378,8 +453,9 @@ export default function AdminDashboard() {
             fetchLicenseActivations();
             fetchUserLicenses();
             fetchAllUsers();
+            fetchTickets();
         }
-    }, [adminUser, fetchLicenseActivations, fetchUserLicenses, fetchAllUsers]);
+    }, [adminUser, fetchLicenseActivations, fetchUserLicenses, fetchAllUsers, fetchTickets]);
 
     // Auto-refresh allUsers every 30s when on users tab
     useEffect(() => {
@@ -765,6 +841,7 @@ export default function AdminDashboard() {
         { key: 'users', label: t.admin.tabUsers, icon: <Users className="w-4 h-4" /> },
         { key: 'licenses', label: t.admin.tabLicenses, icon: <Key className="w-4 h-4" /> },
         { key: 'system', label: t.admin.tabSystem, icon: <Monitor className="w-4 h-4" /> },
+        { key: 'tickets', label: 'แจ้งปัญหา', icon: <Mail className="w-4 h-4" /> },
     ];
 
     return (
@@ -1890,6 +1967,157 @@ export default function AdminDashboard() {
                             </div>
                         </DialogContent>
                     </Dialog>
+                </>)}
+
+                {/* ═══════════════ TAB: SUPPORT TICKETS ═══════════════ */}
+                {activeTab === 'tickets' && (<>
+                    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+                        {/* Header Stats */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                            {[
+                                { label: 'ทั้งหมด', count: tickets.length, color: 'text-blue-600', bg: 'bg-blue-100 dark:bg-blue-900/30', icon: <Mail className="w-5 h-5 text-blue-600" /> },
+                                { label: 'เปิดอยู่', count: tickets.filter(t => t.status === 'open').length, color: 'text-amber-600', bg: 'bg-amber-100 dark:bg-amber-900/30', icon: <Clock className="w-5 h-5 text-amber-600" /> },
+                                { label: 'กำลังดำเนินการ', count: tickets.filter(t => t.status === 'in_progress').length, color: 'text-cyan-600', bg: 'bg-cyan-100 dark:bg-cyan-900/30', icon: <Zap className="w-5 h-5 text-cyan-600" /> },
+                                { label: 'แก้ไขแล้ว', count: tickets.filter(t => t.status === 'resolved' || t.status === 'closed').length, color: 'text-green-600', bg: 'bg-green-100 dark:bg-green-900/30', icon: <CheckCircle2 className="w-5 h-5 text-green-600" /> },
+                            ].map((s, si) => (
+                                <Card key={si}><CardContent className="pt-5 pb-4"><div className="flex items-center gap-3"><div className={cn("p-2.5 rounded-xl", s.bg)}>{s.icon}</div><div><p className="text-xs text-muted-foreground">{s.label}</p><p className={cn("text-xl font-bold", s.color)}>{s.count}</p></div></div></CardContent></Card>
+                            ))}
+                        </div>
+
+                        {/* Filter & Refresh */}
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex gap-2">
+                                {['all', 'open', 'in_progress', 'resolved', 'closed'].map(f => (
+                                    <Button
+                                        key={f}
+                                        variant={ticketFilter === f ? 'default' : 'outline'}
+                                        size="sm"
+                                        onClick={() => setTicketFilter(f)}
+                                        className="text-xs h-8"
+                                    >
+                                        {f === 'all' ? 'ทั้งหมด' : f === 'open' ? 'เปิด' : f === 'in_progress' ? 'กำลังดำเนินการ' : f === 'resolved' ? 'แก้ไขแล้ว' : 'ปิด'}
+                                    </Button>
+                                ))}
+                            </div>
+                            <Button variant="outline" size="sm" onClick={fetchTickets} disabled={ticketsLoading} className="h-8">
+                                <RefreshCw className={cn("w-3.5 h-3.5 mr-1.5", ticketsLoading && "animate-spin")} /> รีเฟรช
+                            </Button>
+                        </div>
+
+                        {/* Ticket List */}
+                        <div className="space-y-3">
+                            {ticketsLoading && tickets.length === 0 ? (
+                                <div className="flex items-center justify-center py-20 text-muted-foreground gap-2">
+                                    <Loader2 className="w-5 h-5 animate-spin" /> กำลังโหลด...
+                                </div>
+                            ) : (tickets.filter(t => ticketFilter === 'all' || t.status === ticketFilter)).length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
+                                    <Mail className="w-10 h-10 opacity-30" />
+                                    <p className="text-sm">ไม่มีเรื่องแจ้งปัญหา</p>
+                                </div>
+                            ) : (
+                                (tickets.filter(t => ticketFilter === 'all' || t.status === ticketFilter)).map(ticket => {
+                                    const catConfig: Record<string, { label: string; color: string }> = {
+                                        general: { label: 'ทั่วไป', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' },
+                                        bug: { label: 'บัค', color: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400' },
+                                        feature: { label: 'ฟีเจอร์', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' },
+                                        billing: { label: 'ชำระเงิน', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' },
+                                        facebook: { label: 'Facebook', color: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400' },
+                                        automation: { label: 'ออโต้', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400' },
+                                    };
+                                    const statusConfig: Record<string, { label: string; color: string }> = {
+                                        open: { label: 'เปิด', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' },
+                                        in_progress: { label: 'กำลังดำเนินการ', color: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-400' },
+                                        resolved: { label: 'แก้ไขแล้ว', color: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' },
+                                        closed: { label: 'ปิด', color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400' },
+                                    };
+                                    const cat = catConfig[ticket.category] || catConfig.general;
+                                    const sta = statusConfig[ticket.status] || statusConfig.open;
+                                    const isExpanded = replyingTicket === ticket.id;
+
+                                    return (
+                                        <Card key={ticket.id} className={cn("transition-all", ticket.status === 'open' && "border-amber-300 dark:border-amber-800")}>
+                                            <CardContent className="p-4">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                                                            <Badge className={cn("text-[10px] h-5 px-1.5", cat.color)}>{cat.label}</Badge>
+                                                            <Badge className={cn("text-[10px] h-5 px-1.5", sta.color)}>{sta.label}</Badge>
+                                                            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                                                <Clock className="w-3 h-3" />
+                                                                {new Date(ticket.created_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                            </span>
+                                                        </div>
+                                                        <h4 className="font-semibold text-sm truncate">{ticket.subject}</h4>
+                                                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{ticket.description}</p>
+                                                        <div className="flex items-center gap-2 mt-2">
+                                                            <span className="text-[10px] text-muted-foreground">จาก: <strong>{ticket.user_name || ticket.user_email}</strong></span>
+                                                            <span className="text-[10px] text-muted-foreground">({ticket.user_email})</span>
+                                                        </div>
+                                                        {ticket.admin_reply && (
+                                                            <div className="mt-2 p-2.5 rounded-lg bg-cyan-50 dark:bg-cyan-950/20 border border-cyan-200 dark:border-cyan-800">
+                                                                <p className="text-[10px] font-semibold text-cyan-700 dark:text-cyan-400 mb-0.5">ตอบกลับจากแอดมิน:</p>
+                                                                <p className="text-xs text-cyan-800 dark:text-cyan-300">{ticket.admin_reply}</p>
+                                                                {ticket.admin_replied_at && <p className="text-[9px] text-muted-foreground mt-1">{new Date(ticket.admin_replied_at).toLocaleString('th-TH')}</p>}
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Actions */}
+                                                    <div className="flex flex-col gap-1.5 flex-shrink-0">
+                                                        <Select value={ticket.status} onValueChange={(val) => handleUpdateTicketStatus(ticket.id, val)}>
+                                                            <SelectTrigger className="w-[130px] h-7 text-[10px]"><SelectValue /></SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="open">เปิด</SelectItem>
+                                                                <SelectItem value="in_progress">กำลังดำเนินการ</SelectItem>
+                                                                <SelectItem value="resolved">แก้ไขแล้ว</SelectItem>
+                                                                <SelectItem value="closed">ปิด</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-7 text-[10px]"
+                                                            onClick={() => { setReplyingTicket(isExpanded ? null : ticket.id); setReplyText(ticket.admin_reply || ''); }}
+                                                        >
+                                                            <MessageCircle className="w-3 h-3 mr-1" /> {isExpanded ? 'ยกเลิก' : 'ตอบกลับ'}
+                                                        </Button>
+                                                    </div>
+                                                </div>
+
+                                                {/* Reply form */}
+                                                <AnimatePresence>
+                                                    {isExpanded && (
+                                                        <motion.div
+                                                            initial={{ height: 0, opacity: 0 }}
+                                                            animate={{ height: 'auto', opacity: 1 }}
+                                                            exit={{ height: 0, opacity: 0 }}
+                                                            className="overflow-hidden"
+                                                        >
+                                                            <div className="mt-3 pt-3 border-t space-y-2">
+                                                                <Textarea
+                                                                    value={replyText}
+                                                                    onChange={(e) => setReplyText(e.target.value)}
+                                                                    placeholder="พิมพ์ข้อความตอบกลับ..."
+                                                                    className="min-h-[80px] text-sm resize-none"
+                                                                />
+                                                                <div className="flex justify-end gap-2">
+                                                                    <Button variant="outline" size="sm" onClick={() => setReplyingTicket(null)}>ยกเลิก</Button>
+                                                                    <Button size="sm" onClick={() => handleReplyTicket(ticket.id)} disabled={!replyText.trim()}>
+                                                                        <Send className="w-3.5 h-3.5 mr-1.5" /> ส่งตอบกลับ
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            </CardContent>
+                                        </Card>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </motion.div>
                 </>)}
 
             </div>{/* end max-w container */}

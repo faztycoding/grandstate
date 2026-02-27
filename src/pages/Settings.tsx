@@ -43,11 +43,13 @@ import {
   CircleDot,
   Circle,
   Send,
+  MessageCircle,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useFacebookConnection } from '@/hooks/useFacebookConnection';
+import { SupportTicketDialog } from '@/components/SupportTicketDialog';
 import { getUserPackage, getPackageLimits } from '@/hooks/usePackageLimits';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/i18n/LanguageContext';
@@ -99,6 +101,7 @@ export default function Settings() {
   } = useFacebookConnection();
 
   const [connectSlot, setConnectSlot] = useState(0);
+  const [showSupportTicket, setShowSupportTicket] = useState(false);
 
   const handleDisconnect = async (slot?: number) => {
     const targetSlot = slot ?? activeSlot;
@@ -789,15 +792,31 @@ export default function Settings() {
                       {/* Actions */}
                       <div className="flex items-center gap-1 flex-shrink-0">
                         {hasUser && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="w-7 h-7 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={(e) => { e.stopPropagation(); handleDisconnect(i); }}
-                            title={`ยกเลิก Session ${i + 1}`}
-                          >
-                            <Unlink className="w-3.5 h-3.5" />
-                          </Button>
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="w-7 h-7 text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                              onClick={(e) => { e.stopPropagation(); handleConnectFacebook(i); }}
+                              title={`เข้าสู่ระบบใหม่ Slot ${i + 1}`}
+                            >
+                              <RefreshCw className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="w-7 h-7 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm(`ลบบัญชี "${session.name}" ออกจาก Slot ${i + 1}?\nจะสามารถเชื่อมต่อบัญชีใหม่แทนได้`)) {
+                                  handleDisconnect(i);
+                                }
+                              }}
+                              title={`ลบ Session ${i + 1}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </>
                         )}
                         {isThisConnecting && (
                           <Loader2 className="w-4 h-4 text-[#1877F2] animate-spin" />
@@ -918,10 +937,34 @@ export default function Settings() {
           </CardContent>
         </Card>
 
+        {/* Support Ticket */}
+        <Card className="card-elevated border-cyan-500/20 bg-gradient-to-br from-cyan-50/50 to-blue-50/30 dark:from-cyan-950/20 dark:to-blue-950/10">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                  <MessageCircle className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm">{isEn ? 'Report an Issue' : 'แจ้งปัญหา'}</p>
+                  <p className="text-[11px] text-muted-foreground">{isEn ? 'We\'ll resolve it ASAP once received' : 'เราจะรีบแก้ไขให้ไวที่สุดเมื่อได้รับเรื่อง'}</p>
+                </div>
+              </div>
+              <Button
+                onClick={() => setShowSupportTicket(true)}
+                className="h-9 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold shadow-lg shadow-cyan-500/15 hover:shadow-cyan-500/30 transition-all text-xs px-4"
+              >
+                <Send className="w-3.5 h-3.5 mr-1.5" />
+                {isEn ? 'Report' : 'แจ้งปัญหา'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* App Version */}
         <div className="flex items-center justify-center gap-2 py-4 text-xs text-muted-foreground">
           <Info className="w-3 h-3" />
-          <span>{s.appVersion}: Grand$tate v1.0.0</span>
+          <span>{s.appVersion}: Grand$tate v2.0.0</span>
         </div>
 
         {/* Save Button */}
@@ -931,6 +974,9 @@ export default function Settings() {
           </Button>
         </div>
       </div>
+
+      {/* Support Ticket Dialog */}
+      <SupportTicketDialog open={showSupportTicket} onOpenChange={setShowSupportTicket} />
 
       {/* Facebook Login Dialog — World-class UI */}
       <Dialog open={showLoginPopup} onOpenChange={(open) => { if (!open) handleCloseLoginPopup(); }}>

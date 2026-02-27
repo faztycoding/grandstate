@@ -900,6 +900,136 @@ app.get('/api/admin/license-activations', ...adminAuth, async (req, res) => {
   }
 });
 
+// Admin: ban/unban a user
+app.post('/api/admin/ban-user', ...adminAuth, async (req, res) => {
+  try {
+    const { targetUserId, banned } = req.body;
+    if (!targetUserId) return res.status(400).json({ success: false, error: 'targetUserId required' });
+
+    const { createClient } = await import('@supabase/supabase-js');
+    const supa = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+
+    // Update user metadata with banned flag
+    const { error } = await supa.auth.admin.updateUserById(targetUserId, {
+      user_metadata: { banned: !!banned },
+      ...(banned ? { ban_duration: '876000h' } : { ban_duration: 'none' }),
+    });
+    if (error) throw error;
+
+    // If banning, also force-stop their automation
+    if (banned) {
+      const session = sessionManager.getSession(targetUserId);
+      if (session?.groupWorker?.isRunning) {
+        await session.groupWorker.stop();
+        automationQueue._onJobComplete(targetUserId, false);
+      }
+      if (session?.marketplaceWorker?.isRunning) {
+        await session.marketplaceWorker.stop();
+      }
+    }
+
+    const shortId = targetUserId.substring(0, 8);
+    console.log(`${banned ? '🚫' : '✅'} [Admin] User ${shortId} ${banned ? 'BANNED' : 'UNBANNED'}`);
+    res.json({ success: true, banned: !!banned, message: `User ${shortId} ${banned ? 'banned' : 'unbanned'}` });
+  } catch (error) {
+    console.error('Ban user error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Admin: change user package (update or create license)
+app.post('/api/admin/change-package', ...adminAuth, async (req, res) => {
+  try {
+    const { targetUserId, newPackage } = req.body;
+    if (!targetUserId) return res.status(400).json({ success: false, error: 'targetUserId required' });
+    if (!['free', 'agent', 'elite'].includes(newPackage)) return res.status(400).json({ success: false, error: 'Invalid package' });
+
+    const { createClient } = await import('@supabase/supabase-js');
+    const supa = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+
+    if (newPackage === 'free') {
+      // Downgrade to free: deactivate any bound license
+      const { error } = await supa
+        .from('license_keys')
+        .update({ is_active: false })
+        .eq('bound_user_id', targetUserId);
+      if (error) throw error;
+      res.json({ success: true, package: 'free', message: 'Downgraded to Free (license deactivated)' });
+    } else {
+      // Check if user already has a bound license
+      const { data: existing } = await supa
+        .from('license_keys')
+        .select('*')
+        .eq('bound_user_id', targetUserId)
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        // Update existing license package
+        const { error } = await supa
+          .from('license_keys')
+          .update({ package: newPackage })
+          .eq('id', existing.id);
+        if (error) throw error;
+        res.json({ success: true, package: newPackage, message: `Updated license to ${newPackage}` });
+      } else {
+        // Create admin-assigned license for this user
+        const key = `GSADM-${Math.random().toString(36).substring(2, 7).toUpperCase()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+        const expiresAt = new Date();
+        expiresAt.setFullYear(expiresAt.getFullYear() + 1); // 1 year
+
+        const { error } = await supa
+          .from('license_keys')
+          .insert({
+            license_key: key,
+            package: newPackage,
+            max_devices: 1,
+            expires_at: expiresAt.toISOString(),
+            is_active: true,
+            bound_user_id: targetUserId,
+            owner_name: 'Admin Assigned',
+            note: `Admin-assigned ${newPackage} package`,
+          });
+        if (error) throw error;
+        res.json({ success: true, package: newPackage, licenseKey: key, message: `Created ${newPackage} license` });
+      }
+    }
+  } catch (error) {
+    console.error('Change package error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Admin: get license info for all users
+app.get('/api/admin/user-licenses', ...adminAuth, async (req, res) => {
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supa = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+
+    const { data, error } = await supa
+      .from('license_keys')
+      .select('bound_user_id, license_key, package, expires_at, is_active, owner_name, created_at')
+      .not('bound_user_id', 'is', null)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    // Group by user ID — latest active license per user
+    const byUser = {};
+    for (const row of (data || [])) {
+      const uid = row.bound_user_id;
+      if (!byUser[uid] || (row.is_active && !byUser[uid].is_active)) {
+        byUser[uid] = row;
+      }
+    }
+
+    res.json({ success: true, licenses: byUser });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Pause automation
 app.post('/api/group-automation/pause', ...auth, (req, res) => {
   try {

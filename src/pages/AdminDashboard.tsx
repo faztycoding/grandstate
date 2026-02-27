@@ -190,6 +190,43 @@ export default function AdminDashboard() {
         }
     };
 
+    // User management: ban/unban
+    const [banningUser, setBanningUser] = useState<string | null>(null);
+    const handleBanUser = async (fullUserId: string, displayName: string, ban: boolean) => {
+        const msg = ban ? `แบน "${displayName}" — จะ login ไม่ได้ + automation หยุดทันที` : `ปลดแบน "${displayName}" — จะ login ได้ตามปกติ`;
+        if (!confirm(msg)) return;
+        setBanningUser(fullUserId);
+        try {
+            const res = await apiFetch('/api/admin/ban-user', { method: 'POST', body: JSON.stringify({ targetUserId: fullUserId, banned: ban }) });
+            const data = await res.json();
+            if (data.success) { toast.success(data.message); } else { toast.error(data.error); }
+        } catch { toast.error('Failed'); } finally { setBanningUser(null); }
+    };
+
+    // User management: change package
+    const [changingPkgUser, setChangingPkgUser] = useState<string | null>(null);
+    const handleChangePackage = async (fullUserId: string, newPkg: string) => {
+        setChangingPkgUser(fullUserId);
+        try {
+            const res = await apiFetch('/api/admin/change-package', { method: 'POST', body: JSON.stringify({ targetUserId: fullUserId, newPackage: newPkg }) });
+            const data = await res.json();
+            if (data.success) { toast.success(`เปลี่ยนเป็น ${newPkg.toUpperCase()} สำเร็จ`); fetchUserLicenses(); } else { toast.error(data.error); }
+        } catch { toast.error('Failed'); } finally { setChangingPkgUser(null); }
+    };
+
+    // User licenses map: userId -> license info
+    const [userLicenses, setUserLicenses] = useState<Record<string, any>>({});
+    const fetchUserLicenses = useCallback(async () => {
+        try {
+            const res = await apiFetch('/api/admin/user-licenses');
+            const data = await res.json();
+            if (data.success) setUserLicenses(data.licenses || {});
+        } catch { /* silent */ }
+    }, []);
+
+    // Expanded user card (to show management controls)
+    const [expandedUser, setExpandedUser] = useState<string | null>(null);
+
     // License activations
     const [licenseActivations, setLicenseActivations] = useState<any[]>([]);
     const fetchLicenseActivations = useCallback(async () => {
@@ -322,8 +359,9 @@ export default function AdminDashboard() {
         if (adminUser) {
             fetchLicenses();
             fetchLicenseActivations();
+            fetchUserLicenses();
         }
-    }, [adminUser, fetchLicenseActivations]);
+    }, [adminUser, fetchLicenseActivations, fetchUserLicenses]);
 
     // Connected to SSE stream (Real-time Elon Musk Level)
     useEffect(() => {
@@ -900,11 +938,16 @@ export default function AdminDashboard() {
                                             }).map(u => {
                                                 const isRunning = u.isRunningGroup || u.isRunningMarketplace;
                                                 const taskPct = u.currentTasks.total > 0 ? Math.round(((u.currentTasks.completed + u.currentTasks.failed) / u.currentTasks.total) * 100) : 0;
+                                                const lic = u.fullUserId ? userLicenses[u.fullUserId] : null;
+                                                const userPkg = lic?.package || 'free';
+                                                const isExpanded = expandedUser === u.fullUserId;
                                                 return (
                                                 <div key={u.userId} className={cn(
-                                                    "p-3 rounded-xl border transition-all",
+                                                    "rounded-xl border transition-all",
                                                     isRunning ? "bg-orange-50/50 dark:bg-orange-950/10 border-orange-200 dark:border-orange-800/50" : "bg-card border-border"
                                                 )}>
+                                                    {/* Main row — clickable to expand */}
+                                                    <div className="p-3 cursor-pointer" onClick={() => setExpandedUser(isExpanded ? null : (u.fullUserId || null))}>
                                                     <div className="flex items-center gap-3">
                                                         {/* Avatar + Status dot */}
                                                         <div className="relative flex-shrink-0">
@@ -917,11 +960,16 @@ export default function AdminDashboard() {
                                                             )} />
                                                         </div>
 
-                                                        {/* Name + Email */}
+                                                        {/* Name + Email + Package badge */}
                                                         <div className="flex-1 min-w-0">
                                                             <div className="flex items-center gap-2">
                                                                 <p className="text-sm font-semibold truncate">{u.displayName || u.email?.split('@')[0] || u.userId}</p>
                                                                 {u.isOnline && <span className="text-[9px] font-medium text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-1.5 py-0.5 rounded-full">Online</span>}
+                                                                <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase",
+                                                                    userPkg === 'elite' ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" :
+                                                                    userPkg === 'agent' ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" :
+                                                                    "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                                                                )}>{userPkg}</span>
                                                             </div>
                                                             <p className="text-[11px] text-muted-foreground truncate">{u.email || u.userId}</p>
                                                             {u.fullName && u.fullName !== u.displayName && (
@@ -929,62 +977,93 @@ export default function AdminDashboard() {
                                                             )}
                                                         </div>
 
-                                                        {/* Stats chips */}
+                                                        {/* Stats + actions */}
                                                         <div className="flex items-center gap-2 flex-shrink-0">
-                                                            {/* Automation badge */}
-                                                            {isRunning ? (
+                                                            {isRunning && (
                                                                 <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 text-[10px] gap-1">
                                                                     <Zap className="w-3 h-3 animate-pulse" />
-                                                                    {u.isRunningGroup && u.isRunningMarketplace ? 'GRP+MKT' : u.isRunningGroup ? 'Groups' : 'Marketplace'}
+                                                                    {u.isRunningGroup && u.isRunningMarketplace ? 'GRP+MKT' : u.isRunningGroup ? 'Groups' : 'MKT'}
                                                                 </Badge>
-                                                            ) : u.hasBrowser ? (
-                                                                <Badge variant="outline" className="text-[10px] gap-1"><Monitor className="w-3 h-3" />Browser</Badge>
-                                                            ) : null}
-
-                                                            {/* Posts today */}
-                                                            <div className="text-center px-2">
+                                                            )}
+                                                            <div className="text-center px-1.5">
                                                                 <p className="text-sm font-bold tabular-nums">{u.todayPosts}</p>
                                                                 <p className="text-[9px] text-muted-foreground leading-none">โพสต์</p>
                                                             </div>
-
-                                                            {/* Runs today */}
-                                                            <div className="text-center px-2">
+                                                            <div className="text-center px-1.5">
                                                                 <p className="text-sm font-bold tabular-nums">{u.automationRuns}</p>
                                                                 <p className="text-[9px] text-muted-foreground leading-none">สั่งการ</p>
                                                             </div>
-
-                                                            {/* Task progress (if running) */}
                                                             {u.currentTasks.total > 0 && (
-                                                                <div className="w-20">
-                                                                    <div className="flex items-center justify-between mb-0.5">
-                                                                        <span className="text-[9px] text-muted-foreground tabular-nums">{u.currentTasks.completed + u.currentTasks.failed}/{u.currentTasks.total}</span>
-                                                                        <span className="text-[9px] text-muted-foreground tabular-nums">{taskPct}%</span>
-                                                                    </div>
+                                                                <div className="w-16">
                                                                     <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                                                                         <div className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full transition-all" style={{ width: `${taskPct}%` }} />
                                                                     </div>
+                                                                    <span className="text-[8px] text-muted-foreground">{taskPct}%</span>
                                                                 </div>
                                                             )}
-
-                                                            {/* Force stop */}
                                                             {isRunning && u.fullUserId && (
                                                                 <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
                                                                     disabled={forceStoppingUser === u.fullUserId}
-                                                                    onClick={() => handleForceStop(u.fullUserId!, u.displayName || u.userId)}>
-                                                                    {forceStoppingUser === u.fullUserId
-                                                                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                                        : <StopCircle className="w-3.5 h-3.5" />}
+                                                                    onClick={(e) => { e.stopPropagation(); handleForceStop(u.fullUserId!, u.displayName || u.userId); }}>
+                                                                    {forceStoppingUser === u.fullUserId ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <StopCircle className="w-3.5 h-3.5" />}
                                                                 </Button>
                                                             )}
                                                         </div>
                                                     </div>
+                                                    </div>
 
-                                                    {/* Post breakdown — only if has posts */}
-                                                    {u.todayPosts > 0 && (
-                                                        <div className="mt-2 pt-2 border-t border-border/50 flex items-center gap-3 text-[10px] text-muted-foreground">
-                                                            <span className="text-green-600 dark:text-green-400">✅ {u.todaySuccess} สำเร็จ</span>
-                                                            {u.todayFailed > 0 && <span className="text-red-500">❌ {u.todayFailed} ล้มเหลว</span>}
-                                                            {u.lineId && <span className="ml-auto text-green-600">LINE: {u.lineId}</span>}
+                                                    {/* Expanded management panel */}
+                                                    {isExpanded && u.fullUserId && (
+                                                        <div className="px-3 pb-3 pt-0 border-t border-border/50 space-y-3">
+                                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3">
+                                                                {/* License info */}
+                                                                <div className="p-2.5 rounded-lg bg-muted/50 space-y-1">
+                                                                    <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">License</p>
+                                                                    {lic ? (
+                                                                        <>
+                                                                            <p className="text-xs font-mono truncate">{lic.license_key}</p>
+                                                                            <p className="text-[10px] text-muted-foreground">
+                                                                                หมดอายุ: {new Date(lic.expires_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}
+                                                                                {!lic.is_active && <span className="text-red-500 ml-1">(ระงับ)</span>}
+                                                                            </p>
+                                                                        </>
+                                                                    ) : (
+                                                                        <p className="text-xs text-muted-foreground">ไม่มี License (Free tier)</p>
+                                                                    )}
+                                                                </div>
+
+                                                                {/* Change package */}
+                                                                <div className="p-2.5 rounded-lg bg-muted/50 space-y-1.5">
+                                                                    <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">เปลี่ยนแพ็กเกจ</p>
+                                                                    <div className="flex gap-1">
+                                                                        {(['free', 'agent', 'elite'] as const).map(pkg => (
+                                                                            <Button key={pkg} size="sm" variant={userPkg === pkg ? 'default' : 'outline'}
+                                                                                className={cn("h-6 px-2 text-[10px]", userPkg === pkg && "pointer-events-none")}
+                                                                                disabled={changingPkgUser === u.fullUserId}
+                                                                                onClick={(e) => { e.stopPropagation(); handleChangePackage(u.fullUserId!, pkg); }}>
+                                                                                {changingPkgUser === u.fullUserId ? <Loader2 className="w-3 h-3 animate-spin" /> : pkg.toUpperCase()}
+                                                                            </Button>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Ban / Post stats */}
+                                                                <div className="p-2.5 rounded-lg bg-muted/50 space-y-1.5">
+                                                                    <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">จัดการ</p>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Button size="sm" variant="outline"
+                                                                            className="h-6 px-2 text-[10px] text-red-600 border-red-200 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-950/20"
+                                                                            disabled={banningUser === u.fullUserId}
+                                                                            onClick={(e) => { e.stopPropagation(); handleBanUser(u.fullUserId!, u.displayName || u.userId, true); }}>
+                                                                            {banningUser === u.fullUserId ? <Loader2 className="w-3 h-3 animate-spin" /> : '🚫 แบน'}
+                                                                        </Button>
+                                                                        {u.todayPosts > 0 && (
+                                                                            <span className="text-[10px] text-muted-foreground">✅{u.todaySuccess} ❌{u.todayFailed}</span>
+                                                                        )}
+                                                                        {u.lineId && <span className="text-[10px] text-green-600">LINE: {u.lineId}</span>}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     )}
                                                 </div>

@@ -19,8 +19,10 @@ import {
   Crown,
   MessageCircle,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, useInView, useMotionValue, useTransform, animate } from 'framer-motion';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { useEffect, useRef } from 'react';
 
 const features = [
   {
@@ -133,6 +135,7 @@ export default function Landing() {
             <span className="font-bold text-lg md:text-xl">Grand$tate</span>
           </Link>
           <div className="flex items-center gap-2 md:gap-4">
+            <LanguageSwitcher />
             <Button variant="ghost" size="sm" asChild className="hidden sm:inline-flex">
               <Link to="/auth">{isEn ? 'Sign In' : 'เข้าสู่ระบบ'}</Link>
             </Button>
@@ -150,8 +153,22 @@ export default function Landing() {
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-6 relative overflow-hidden">
         <div className="absolute inset-0 gradient-hero opacity-5" />
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-accent/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl" />
+        <motion.div
+          className="absolute top-1/4 left-1/4 w-96 h-96 bg-accent/20 rounded-full blur-3xl"
+          animate={{ x: [0, 30, 0], y: [0, -20, 0], scale: [1, 1.1, 1] }}
+          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <motion.div
+          className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl"
+          animate={{ x: [0, -25, 0], y: [0, 25, 0], scale: [1, 1.15, 1] }}
+          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <motion.div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full"
+          style={{ background: 'radial-gradient(circle, hsl(var(--accent) / 0.08) 0%, transparent 70%)' }}
+          animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }}
+          transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+        />
         
         <div className="container mx-auto text-center relative z-10">
           <motion.div
@@ -301,27 +318,28 @@ export default function Landing() {
               viewport={{ once: true }}
               className="relative"
             >
-              <div className="aspect-[4/3] rounded-2xl bg-gradient-to-br from-primary/10 via-accent/10 to-purple-500/10 border p-6 md:p-8 flex flex-col justify-center">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-background/80 backdrop-blur shadow-sm">
+              <div className="aspect-[4/3] rounded-2xl bg-gradient-to-br from-primary/10 via-accent/10 to-purple-500/10 border p-6 md:p-8 flex flex-col justify-center relative overflow-hidden">
+                <motion.div className="absolute inset-0 bg-gradient-to-r from-transparent via-accent/5 to-transparent" animate={{ x: ['-100%', '200%'] }} transition={{ duration: 4, repeat: Infinity, ease: 'linear' }} />
+                <div className="space-y-4 relative">
+                  <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }} className="flex items-center gap-3 p-3 rounded-xl bg-background/80 backdrop-blur shadow-sm">
                     <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center"><Building2 className="w-5 h-5 text-white" /></div>
-                    <div className="flex-1"><p className="text-sm font-medium">เพิ่มทรัพย์สิน 5 รายการ</p><p className="text-xs text-muted-foreground">รูปภาพ + รายละเอียดครบ</p></div>
+                    <div className="flex-1"><p className="text-sm font-medium">{isEn ? 'Added 5 properties' : 'เพิ่มทรัพย์สิน 5 รายการ'}</p><p className="text-xs text-muted-foreground">{isEn ? 'Photos + details complete' : 'รูปภาพ + รายละเอียดครบ'}</p></div>
                     <Check className="w-5 h-5 text-emerald-500" />
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-background/80 backdrop-blur shadow-sm">
+                  </motion.div>
+                  <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: 0.25 }} className="flex items-center gap-3 p-3 rounded-xl bg-background/80 backdrop-blur shadow-sm">
                     <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center"><Users className="w-5 h-5 text-white" /></div>
-                    <div className="flex-1"><p className="text-sm font-medium">เลือก 50 กลุ่มเป้าหมาย</p><p className="text-xs text-muted-foreground">กรุงเทพ + ปริมณฑล</p></div>
+                    <div className="flex-1"><p className="text-sm font-medium">{isEn ? 'Selected 50 target groups' : 'เลือก 50 กลุ่มเป้าหมาย'}</p><p className="text-xs text-muted-foreground">{isEn ? 'Bangkok + surrounding areas' : 'กรุงเทพ + ปริมณฑล'}</p></div>
                     <Check className="w-5 h-5 text-emerald-500" />
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-background/80 backdrop-blur shadow-sm border-2 border-accent/30">
+                  </motion.div>
+                  <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: 0.4 }} className="flex items-center gap-3 p-3 rounded-xl bg-background/80 backdrop-blur shadow-sm border-2 border-accent/30">
                     <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center"><Zap className="w-5 h-5 text-white" /></div>
-                    <div className="flex-1"><p className="text-sm font-medium text-accent">กำลังโพสต์... 23/50 กลุ่ม</p><p className="text-xs text-muted-foreground">AI สร้างแคปชั่นให้แต่ละกลุ่ม</p></div>
+                    <div className="flex-1"><p className="text-sm font-medium text-accent">{isEn ? 'Posting... 23/50 groups' : 'กำลังโพสต์... 23/50 กลุ่ม'}</p><p className="text-xs text-muted-foreground">{isEn ? 'AI generates unique caption per group' : 'AI สร้างแคปชั่นให้แต่ละกลุ่ม'}</p></div>
                     <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-background/80 backdrop-blur shadow-sm opacity-60">
+                  </motion.div>
+                  <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 0.6, x: 0 }} viewport={{ once: true }} transition={{ delay: 0.55 }} className="flex items-center gap-3 p-3 rounded-xl bg-background/80 backdrop-blur shadow-sm">
                     <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center"><BarChart3 className="w-5 h-5 text-white" /></div>
-                    <div className="flex-1"><p className="text-sm font-medium">ดูสถิติผลโพสต์</p><p className="text-xs text-muted-foreground">สำเร็จ 47 / ล้มเหลว 3</p></div>
-                  </div>
+                    <div className="flex-1"><p className="text-sm font-medium">{isEn ? 'View posting analytics' : 'ดูสถิติผลโพสต์'}</p><p className="text-xs text-muted-foreground">{isEn ? 'Success 47 / Failed 3' : 'สำเร็จ 47 / ล้มเหลว 3'}</p></div>
+                  </motion.div>
                 </div>
               </div>
             </motion.div>

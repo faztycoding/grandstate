@@ -28,6 +28,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLicenseAuth } from '@/hooks/useLicenseAuth';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 type AuthView = 'signin' | 'signup' | 'forgot' | 'activate';
 
@@ -50,6 +51,8 @@ const packageInfo = {
 };
 
 export default function Auth() {
+  const { language } = useLanguage();
+  const isEn = language === 'en';
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -204,10 +207,10 @@ export default function Auth() {
                 <Icon className="w-10 h-10 text-white" />
               </motion.div>
               <div>
-                <h2 className="text-2xl font-bold mb-2">ยินดีต้อนรับ! 🎉</h2>
+                <h2 className="text-2xl font-bold mb-2">{isEn ? 'Welcome!' : 'ยินดีต้อนรับ!'} 🎉</h2>
                 <p className="text-muted-foreground">
                   {user?.email && <span className="block text-sm mb-1">{user.email}</span>}
-                  เปิดใช้งานแพ็คเกจ <span className={cn('font-bold', pkg.color)}>{pkg.name}</span> สำเร็จ
+                  {isEn ? 'Activated' : 'เปิดใช้งานแพ็คเกจ'} <span className={cn('font-bold', pkg.color)}>{pkg.name}</span> {isEn ? 'successfully' : 'สำเร็จ'}
                 </p>
               </div>
               <div className="p-4 rounded-xl bg-muted/50 space-y-2">
@@ -220,11 +223,11 @@ export default function Auth() {
               </div>
               <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                 <Clock className="w-4 h-4" />
-                <span>หมดอายุ: {license.expiresAt.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                <span>{isEn ? 'Expires:' : 'หมดอายุ:'} {license.expiresAt.toLocaleDateString(isEn ? 'en-US' : 'th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
               </div>
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
                 <Loader2 className="w-6 h-6 animate-spin mx-auto text-accent" />
-                <p className="text-sm text-muted-foreground mt-2">กำลังเข้าสู่ระบบ...</p>
+                <p className="text-sm text-muted-foreground mt-2">{isEn ? 'Redirecting...' : 'กำลังเข้าสู่ระบบ...'}</p>
               </motion.div>
             </CardContent>
           </Card>
@@ -249,18 +252,18 @@ export default function Auth() {
           </div>
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="space-y-6">
             <h1 className="text-4xl font-bold leading-tight">
-              โพสต์อสังหาฯ อัตโนมัติ<br />
-              <span className="gradient-text">ฉลาดกว่า เร็วกว่า ปลอดภัยกว่า</span>
+              {isEn ? 'Auto-Post Real Estate' : 'โพสต์อสังหาฯ อัตโนมัติ'}<br />
+              <span className="gradient-text">{isEn ? 'Smarter. Faster. Safer.' : 'ฉลาดกว่า เร็วกว่า ปลอดภัยกว่า'}</span>
             </h1>
             <p className="text-lg text-white/70 max-w-md">
-              ระบบช่วยโพสต์อสังหาริมทรัพย์ไปยัง Facebook Groups อัตโนมัติ ประหยัดเวลา เพิ่มยอดขาย
+              {isEn ? 'Auto-post properties to Facebook Groups. Save time, boost sales.' : 'ระบบช่วยโพสต์อสังหาริมทรัพย์ไปยัง Facebook Groups อัตโนมัติ ประหยัดเวลา เพิ่มยอดขาย'}
             </p>
             <div className="grid grid-cols-2 gap-4 pt-4">
               {[
-                { icon: Sparkles, text: 'AI สร้าง Caption' },
-                { icon: Shield, text: 'ปลอดภัย ไม่โดนแบน' },
-                { icon: Clock, text: 'ตั้งเวลาโพสต์' },
-                { icon: Monitor, text: 'Sync ข้อมูลข้ามเครื่อง' },
+                { icon: Sparkles, text: isEn ? 'AI Captions' : 'AI สร้าง Caption' },
+                { icon: Shield, text: isEn ? 'Safe & Stealth' : 'ปลอดภัย ไม่โดนแบน' },
+                { icon: Clock, text: isEn ? 'Smart Scheduling' : 'ตั้งเวลาโพสต์' },
+                { icon: Monitor, text: isEn ? 'Cloud Sync' : 'Sync ข้อมูลข้ามเครื่อง' },
               ].map(({ icon: Ic, text }) => (
                 <div key={text} className="flex items-center gap-3 p-3 rounded-lg bg-white/10">
                   <Ic className="w-5 h-5 text-accent" />
@@ -269,7 +272,7 @@ export default function Auth() {
               ))}
             </div>
           </motion.div>
-          <p className="text-sm text-white/50">© 2025 Grand$tate — สำหรับนายหน้าอสังหาริมทรัพย์มืออาชีพ</p>
+          <p className="text-sm text-white/50">{isEn ? '© 2026 Grand$tate — for professional agents' : '© 2026 Grand$tate — สำหรับนายหน้าอสังหาริมทรัพย์มืออาชีพ'}</p>
         </div>
       </div>
 
@@ -293,13 +296,13 @@ export default function Auth() {
                     <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-accent to-orange-500 flex items-center justify-center mb-4">
                       <Mail className="w-8 h-8 text-white" />
                     </div>
-                    <CardTitle className="text-2xl">เข้าสู่ระบบ</CardTitle>
-                    <CardDescription>ใช้อีเมลและรหัสผ่านเพื่อเข้าสู่ระบบ</CardDescription>
+                    <CardTitle className="text-2xl">{isEn ? 'Sign In' : 'เข้าสู่ระบบ'}</CardTitle>
+                    <CardDescription>{isEn ? 'Enter your email and password' : 'ใช้อีเมลและรหัสผ่านเพื่อเข้าสู่ระบบ'}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <form onSubmit={handleSignIn} className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="email">อีเมล</Label>
+                        <Label htmlFor="email">{isEn ? 'Email' : 'อีเมล'}</Label>
                         <div className="relative">
                           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                           <Input id="email" type="email" placeholder="your@email.com" value={email}
@@ -309,9 +312,9 @@ export default function Auth() {
                       </div>
                       <div className="space-y-2">
                         <div className="flex justify-between items-center">
-                          <Label htmlFor="password">รหัสผ่าน</Label>
+                          <Label htmlFor="password">{isEn ? 'Password' : 'รหัสผ่าน'}</Label>
                           <button type="button" className="text-xs text-accent hover:underline" onClick={() => switchView('forgot')}>
-                            ลืมรหัสผ่าน?
+                            {isEn ? 'Forgot password?' : 'ลืมรหัสผ่าน?'}
                           </button>
                         </div>
                         <div className="relative">
@@ -341,14 +344,14 @@ export default function Auth() {
 
                       <Button type="submit" className="w-full h-11 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold"
                         disabled={isSubmitting}>
-                        {isSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />กำลังเข้าสู่ระบบ...</> : <>เข้าสู่ระบบ<ArrowRight className="w-4 h-4 ml-2" /></>}
+                        {isSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isEn ? 'Signing in...' : 'กำลังเข้าสู่ระบบ...'}</> : <>{isEn ? 'Sign In' : 'เข้าสู่ระบบ'}<ArrowRight className="w-4 h-4 ml-2" /></>}
                       </Button>
                     </form>
 
                     <div className="mt-6 text-center">
                       <p className="text-sm text-muted-foreground">
-                        ยังไม่มีบัญชี?{' '}
-                        <button className="text-accent hover:underline font-medium" onClick={() => switchView('signup')}>สมัครสมาชิก</button>
+                        {isEn ? "Don't have an account?" : 'ยังไม่มีบัญชี?'}{' '}
+                        <button className="text-accent hover:underline font-medium" onClick={() => switchView('signup')}>{isEn ? 'Sign Up' : 'สมัครสมาชิก'}</button>
                       </p>
                     </div>
                   </CardContent>
@@ -364,21 +367,21 @@ export default function Auth() {
                     <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center mb-4">
                       <User className="w-8 h-8 text-white" />
                     </div>
-                    <CardTitle className="text-2xl">สมัครสมาชิก</CardTitle>
-                    <CardDescription>สร้างบัญชีใหม่เพื่อเริ่มใช้งาน</CardDescription>
+                    <CardTitle className="text-2xl">{isEn ? 'Sign Up' : 'สมัครสมาชิก'}</CardTitle>
+                    <CardDescription>{isEn ? 'Create a new account to get started' : 'สร้างบัญชีใหม่เพื่อเริ่มใช้งาน'}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <form onSubmit={handleSignUp} className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="fullName">ชื่อ-นามสกุล</Label>
+                        <Label htmlFor="fullName">{isEn ? 'Full Name' : 'ชื่อ-นามสกุล'}</Label>
                         <div className="relative">
                           <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input id="fullName" placeholder="เช่น สมชาย ใจดี" value={fullName}
+                          <Input id="fullName" placeholder={isEn ? 'John Doe' : 'เช่น สมชาย ใจดี'} value={fullName}
                             onChange={e => setFullName(e.target.value)} className="pl-10 h-11" />
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="signupEmail">อีเมล</Label>
+                        <Label htmlFor="signupEmail">{isEn ? 'Email' : 'อีเมล'}</Label>
                         <div className="relative">
                           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                           <Input id="signupEmail" type="email" placeholder="your@email.com" value={email}
@@ -386,10 +389,10 @@ export default function Auth() {
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="signupPassword">รหัสผ่าน</Label>
+                        <Label htmlFor="signupPassword">{isEn ? 'Password' : 'รหัสผ่าน'}</Label>
                         <div className="relative">
                           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input id="signupPassword" type={showPassword ? 'text' : 'password'} placeholder="อย่างน้อย 6 ตัวอักษร" value={password}
+                          <Input id="signupPassword" type={showPassword ? 'text' : 'password'} placeholder={isEn ? 'Min 6 characters' : 'อย่างน้อย 6 ตัวอักษร'} value={password}
                             onChange={e => { setPassword(e.target.value); setError(null); }} className="pl-10 pr-10 h-11" required minLength={6} />
                           <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                             onClick={() => setShowPassword(!showPassword)}>
@@ -407,14 +410,14 @@ export default function Auth() {
 
                       <Button type="submit" className="w-full h-11 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold"
                         disabled={isSubmitting}>
-                        {isSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />กำลังสร้างบัญชี...</> : <>สมัครสมาชิก<ArrowRight className="w-4 h-4 ml-2" /></>}
+                        {isSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isEn ? 'Creating account...' : 'กำลังสร้างบัญชี...'}</> : <>{isEn ? 'Sign Up' : 'สมัครสมาชิก'}<ArrowRight className="w-4 h-4 ml-2" /></>}
                       </Button>
                     </form>
 
                     <div className="mt-6 text-center">
                       <p className="text-sm text-muted-foreground">
-                        มีบัญชีแล้ว?{' '}
-                        <button className="text-accent hover:underline font-medium" onClick={() => switchView('signin')}>เข้าสู่ระบบ</button>
+                        {isEn ? 'Already have an account?' : 'มีบัญชีแล้ว?'}{' '}
+                        <button className="text-accent hover:underline font-medium" onClick={() => switchView('signin')}>{isEn ? 'Sign In' : 'เข้าสู่ระบบ'}</button>
                       </p>
                     </div>
                   </CardContent>
@@ -430,13 +433,13 @@ export default function Auth() {
                     <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center mb-4">
                       <Lock className="w-8 h-8 text-white" />
                     </div>
-                    <CardTitle className="text-2xl">ลืมรหัสผ่าน</CardTitle>
-                    <CardDescription>กรอกอีเมลเพื่อรับลิงก์รีเซ็ตรหัสผ่าน</CardDescription>
+                    <CardTitle className="text-2xl">{isEn ? 'Forgot Password' : 'ลืมรหัสผ่าน'}</CardTitle>
+                    <CardDescription>{isEn ? 'Enter your email to receive a reset link' : 'กรอกอีเมลเพื่อรับลิงก์รีเซ็ตรหัสผ่าน'}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <form onSubmit={handleForgotPassword} className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="resetEmail">อีเมล</Label>
+                        <Label htmlFor="resetEmail">{isEn ? 'Email' : 'อีเมล'}</Label>
                         <div className="relative">
                           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                           <Input id="resetEmail" type="email" placeholder="your@email.com" value={email}
@@ -459,13 +462,13 @@ export default function Auth() {
 
                       <Button type="submit" className="w-full h-11 bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white font-semibold"
                         disabled={isSubmitting}>
-                        {isSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />กำลังส่ง...</> : <>ส่งลิงก์รีเซ็ตรหัสผ่าน</>}
+                        {isSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isEn ? 'Sending...' : 'กำลังส่ง...'}</> : <>{isEn ? 'Send Reset Link' : 'ส่งลิงก์รีเซ็ตรหัสผ่าน'}</>}
                       </Button>
                     </form>
 
                     <div className="mt-6 text-center">
                       <button className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1" onClick={() => switchView('signin')}>
-                        <ArrowLeft className="w-3 h-3" /> กลับไปหน้าเข้าสู่ระบบ
+                        <ArrowLeft className="w-3 h-3" /> {isEn ? 'Back to Sign In' : 'กลับไปหน้าเข้าสู่ระบบ'}
                       </button>
                     </div>
                   </CardContent>
@@ -481,10 +484,10 @@ export default function Auth() {
                     <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-accent to-orange-500 flex items-center justify-center mb-4">
                       <Key className="w-8 h-8 text-white" />
                     </div>
-                    <CardTitle className="text-2xl">เปิดใช้งาน License</CardTitle>
+                    <CardTitle className="text-2xl">{isEn ? 'Activate License' : 'เปิดใช้งาน License'}</CardTitle>
                     <CardDescription>
                       {user?.email && <span className="block text-xs text-accent mb-1">{user.email}</span>}
-                      กรอก License Key เพื่อเริ่มใช้งานระบบ
+                      {isEn ? 'Enter your License Key to get started' : 'กรอก License Key เพื่อเริ่มใช้งานระบบ'}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -492,7 +495,7 @@ export default function Auth() {
                       <div className="space-y-2">
                         <Input value={licenseKey} onChange={handleKeyChange} placeholder="GSXXX-XXXXX-XXXXX-XXXXX"
                           className={cn('h-14 text-center text-lg font-mono tracking-wider', error && 'border-red-500')} maxLength={23} />
-                        <p className="text-xs text-center text-muted-foreground">ได้รับ License Key จากผู้ดูแลระบบ</p>
+                        <p className="text-xs text-center text-muted-foreground">{isEn ? 'Received from your administrator' : 'ได้รับ License Key จากผู้ดูแลระบบ'}</p>
                       </div>
 
                       {error && (
@@ -505,14 +508,14 @@ export default function Auth() {
                       <Button type="submit" className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold"
                         disabled={isSubmitting || isValidating || licenseKey.length < 23}>
                         {isSubmitting || isValidating
-                          ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />กำลังตรวจสอบ...</>
-                          : <>เปิดใช้งาน<ArrowRight className="w-5 h-5 ml-2" /></>}
+                          ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />{isEn ? 'Verifying...' : 'กำลังตรวจสอบ...'}</>
+                          : <>{isEn ? 'Activate' : 'เปิดใช้งาน'}<ArrowRight className="w-5 h-5 ml-2" /></>}
                       </Button>
                     </form>
 
                     {/* Package Cards */}
                     <div className="mt-6 pt-6 border-t space-y-3">
-                      <p className="text-xs text-center text-muted-foreground">แพ็คเกจที่รองรับ</p>
+                      <p className="text-xs text-center text-muted-foreground">{isEn ? 'Supported packages' : 'แพ็คเกจที่รองรับ'}</p>
                       <div className="grid grid-cols-3 gap-2">
                         {Object.entries(packageInfo).map(([key, pkg]) => {
                           const Icon = pkg.icon;
@@ -531,7 +534,7 @@ export default function Auth() {
                     {/* Sign out link */}
                     <div className="mt-4 text-center">
                       <button className="text-xs text-muted-foreground hover:text-foreground" onClick={() => { signOut(); switchView('signin'); }}>
-                        ออกจากระบบ
+                        {isEn ? 'Sign out' : 'ออกจากระบบ'}
                       </button>
                     </div>
                   </CardContent>
@@ -544,13 +547,13 @@ export default function Auth() {
           {(view === 'signin' || view === 'signup') && (
             <>
               <p className="mt-6 text-center text-sm text-muted-foreground">
-                ต้องการอัพเกรดแพ็คเกจ?{' '}
+                {isEn ? 'Want to upgrade?' : 'ต้องการอัพเกรดแพ็คเกจ?'}{' '}
                 <a href="https://line.me/ti/p/@grandstate" target="_blank" rel="noopener noreferrer"
-                  className="text-accent hover:underline font-medium">ติดต่อทาง LINE</a>
+                  className="text-accent hover:underline font-medium">{isEn ? 'Contact via LINE' : 'ติดต่อทาง LINE'}</a>
               </p>
               <div className="mt-4 pt-4 border-t border-dashed">
                 <Button variant="ghost" className="w-full text-muted-foreground hover:text-foreground" onClick={() => navigate('/adminfaz')}>
-                  <Shield className="w-4 h-4 mr-2" />สำหรับผู้ดูแลระบบ
+                  <Shield className="w-4 h-4 mr-2" />{isEn ? 'Admin Panel' : 'สำหรับผู้ดูแลระบบ'}
                 </Button>
               </div>
             </>

@@ -2,6 +2,15 @@ import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import path from 'path';
 import fs from 'fs';
+import {
+  gaussianRandom, gaussianDelay, gaussianBatchDelay,
+  typingCharDelay, thinkingPause, preSubmitDelay,
+  generateTypoPositions,
+  getFingerprintInjectionScript, getStealthBrowserArgs,
+  humanScroll, humanMouseMovement, prePostWarmup, preClickBehavior,
+  mutateImageFile,
+  calculateSafePostLimit, getAdaptiveDelay, createSessionProfile,
+} from './antiDetection.js';
 
 // Anthropic SDK is optional - only load if available
 let Anthropic = null;
@@ -70,6 +79,9 @@ export class GroupPostingWorker {
     this.startTime = null; // Date.now() when automation starts
     this.endTime = null;   // Date.now() when automation ends/stops
     this.generatedCaptions = [];
+
+    // Anti-detection session profile — unique behavioral personality per run
+    this.sessionProfile = createSessionProfile();
 
     // Auto-init from env var if available
     const envKey = process.env.ANTHROPIC_API_KEY;
@@ -2685,6 +2697,8 @@ export class GroupPostingWorker {
       fs.mkdirSync(appProfileDir, { recursive: true });
     }
 
+    // Anti-detection stealth args (WebRTC leak prevention, fingerprint hardening)
+    const stealthArgs = getStealthBrowserArgs();
     const vpsArgs = [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -2692,10 +2706,10 @@ export class GroupPostingWorker {
       '--disable-gpu',
       '--no-first-run',
       '--disable-extensions',
+      ...stealthArgs,
     ];
     const localArgs = [
       '--start-maximized',
-      '--disable-blink-features=AutomationControlled',
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-infobars',
@@ -2704,6 +2718,7 @@ export class GroupPostingWorker {
       '--disable-software-rasterizer',
       '--disable-extensions',
       '--no-first-run',
+      ...stealthArgs,
     ];
     const launchOptions = {
       headless: isHeadless ? 'new' : false,
@@ -2741,6 +2756,12 @@ export class GroupPostingWorker {
 
     const pages = await this.browser.pages();
     this.page = pages.length > 0 ? pages[0] : await this.browser.newPage();
+
+    // ── Module 2: Deep Fingerprint Masking ──
+    // Inject Canvas/WebGL/Audio/Battery/Font spoofing into every page
+    const fingerprintScript = getFingerprintInjectionScript();
+    await this.page.evaluateOnNewDocument(fingerprintScript);
+    console.log('🎭 Fingerprint masking injected (Canvas/WebGL/Audio/Battery/Font/Hardware)');
 
     await this.page.setExtraHTTPHeaders({
       'Accept-Language': 'th-TH,th;q=0.9,en;q=0.8'
@@ -3277,9 +3298,9 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
   // Mimics real behavior — sometimes people type, sometimes paste a pre-written caption
   // ============================================
   async humanLikeCaptionInput(page, caption) {
-    // ~45% type, ~55% paste (people paste captions more often than typing them out)
-    const useTyping = Math.random() < 0.45;
-    console.log(`📝 Caption method: ${useTyping ? '⌨️ พิมพ์ทีละตัว (human typing)' : '📋 วางแคปชั่น (clipboard paste)'}`);
+    // Session-based preference: each "person" has a consistent typing/paste habit
+    const useTyping = this.sessionProfile.pastePreference < 0.45;
+    console.log(`📝 Caption method: ${useTyping ? '⌨️ พิมพ์ทีละตัว (Gaussian timing + typos)' : '📋 วางแคปชั่น (clipboard paste)'}`);
 
     // Step 1: Find and focus the correct text editor in the post dialog
     const focusResult = await page.evaluate(() => {
@@ -3319,38 +3340,64 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
 
     // Step 2: Input the caption using the chosen method
     if (useTyping) {
-      // ── TYPING MODE: Character by character with random delays ──
-      // Mimics human typing: 25-70ms per char + occasional thinking pauses
-      const pauseEvery = 15 + Math.floor(Math.random() * 25); // Pause every 15-40 chars
+      // ── TYPING MODE: Gaussian-distributed delays + typo simulation ──
+      const pauseEvery = 15 + Math.floor(Math.random() * 25);
       let charCount = 0;
+      let typoCount = 0;
 
-      for (const char of caption) {
+      // Generate typo positions for this caption
+      const typoPositions = generateTypoPositions(caption.length);
+      const typoSet = new Map(typoPositions.map(t => [t.position, t.wrongChars]));
+
+      const chars = [...caption];
+      for (let ci = 0; ci < chars.length; ci++) {
+        const char = chars[ci];
+
+        // ── Typo simulation: type wrong char(s) → pause → backspace → correct ──
+        if (typoSet.has(ci)) {
+          const wrongCount = typoSet.get(ci);
+          // Type wrong characters
+          for (let w = 0; w < wrongCount; w++) {
+            const wrongChar = String.fromCharCode(97 + Math.floor(Math.random() * 26));
+            await page.keyboard.sendCharacter(wrongChar);
+            await this.delay(typingCharDelay());
+          }
+          // "Notice" the mistake — brief pause (300-800ms)
+          await this.delay(gaussianDelay(500, 200, 250, 900));
+          // Backspace to fix
+          for (let w = 0; w < wrongCount; w++) {
+            await page.keyboard.press('Backspace');
+            await this.delay(gaussianDelay(60, 20, 30, 120));
+          }
+          // Small pause after correction
+          await this.delay(gaussianDelay(150, 50, 80, 300));
+          typoCount++;
+        }
+
+        // Type the correct character
         if (char === '\n') {
           await page.keyboard.press('Enter');
         } else {
           await page.keyboard.sendCharacter(char);
         }
-
         charCount++;
 
-        // Random delay between characters (25-70ms) — realistic typing speed
-        const charDelay = 25 + Math.floor(Math.random() * 45);
-        await this.delay(charDelay);
+        // Gaussian delay between characters (bell curve: most 30-80ms)
+        await this.delay(typingCharDelay());
 
-        // Occasional thinking pause every 15-40 chars (200-800ms)
+        // Occasional thinking pause every 15-40 chars
         if (charCount % pauseEvery === 0) {
-          const thinkPause = 200 + Math.floor(Math.random() * 600);
-          await this.delay(thinkPause);
+          await this.delay(thinkingPause());
         }
       }
 
-      const estimatedTime = (caption.length * 47 / 1000).toFixed(1);
-      console.log(`⌨️ Typed ${caption.length} chars (~${estimatedTime}s)`);
+      const estimatedTime = (caption.length * 55 / 1000).toFixed(1);
+      console.log(`⌨️ Typed ${caption.length} chars (~${estimatedTime}s) with ${typoCount} typo corrections`);
 
     } else {
       // ── PASTE MODE: Insert all text at once (like copy-paste) ──
-      // Small pre-paste delay (human switching from copy to paste)
-      await this.delay(200 + Math.floor(Math.random() * 300));
+      // Gaussian pre-paste delay (human switching from copy to paste)
+      await this.delay(gaussianDelay(350, 150, 150, 700));
 
       const pasted = await page.evaluate((text) => {
         const editor = document.activeElement;
@@ -3376,7 +3423,6 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
 
       if (!pasted) {
         console.log('⚠️ Paste fallback failed, retrying with execCommand...');
-        // Last resort: re-focus and insert
         await page.evaluate((text) => {
           const dialog = document.querySelector('[role="dialog"]');
           if (!dialog) return;
@@ -3897,33 +3943,47 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
     const tempDir = path.join(process.cwd(), 'temp');
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
 
-    const filePaths = [];
+    const rawPaths = [];
     for (let i = 0; i < images.length; i++) {
       const image = images[i];
       if (image.startsWith('data:')) {
         const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
-        const filePath = path.join(tempDir, `img_shared_${Date.now()}_${i}.jpg`);
+        const filePath = path.join(tempDir, `img_raw_${Date.now()}_${i}.jpg`);
         fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
-        filePaths.push(filePath);
+        rawPaths.push(filePath);
       } else if (image.startsWith('http')) {
         try {
           const response = await fetch(image);
           const buffer = Buffer.from(await response.arrayBuffer());
-          const filePath = path.join(tempDir, `img_shared_${Date.now()}_${i}.jpg`);
+          const filePath = path.join(tempDir, `img_raw_${Date.now()}_${i}.jpg`);
           fs.writeFileSync(filePath, buffer);
-          filePaths.push(filePath);
+          rawPaths.push(filePath);
         } catch (e) { console.log(`⚠️ Failed to download: ${image}`); }
       } else if (fs.existsSync(image)) {
-        filePaths.push(image);
+        rawPaths.push(image);
       }
     }
 
-    if (filePaths.length > 0) {
-      console.log(`🖼️ Prepared ${filePaths.length} image files for batch upload`);
-      // Cleanup shared temp files after 5 minutes
-      setTimeout(() => { for (const fp of filePaths) { if (fp.includes('temp')) { try { fs.unlinkSync(fp); } catch (e) { } } } }, 300000);
+    // ── Module 4: Image Hash Breaking ──
+    // Mutate each image (pixel noise + EXIF scrub + unique tag) so every copy has unique hash
+    // This prevents Facebook's duplicate content detection across groups
+    const mutatedPaths = [];
+    for (let i = 0; i < rawPaths.length; i++) {
+      const mutatedPath = path.join(tempDir, `img_mutated_${Date.now()}_${i}.jpg`);
+      const ok = mutateImageFile(rawPaths[i], mutatedPath, i);
+      mutatedPaths.push(ok ? mutatedPath : rawPaths[i]);
     }
-    return filePaths;
+
+    if (mutatedPaths.length > 0) {
+      console.log(`🖼️ Prepared ${mutatedPaths.length} image files (hash-broken via pixel noise + EXIF scrub)`);
+      // Cleanup temp files after 5 minutes
+      setTimeout(() => {
+        for (const fp of [...rawPaths, ...mutatedPaths]) {
+          if (fp.includes('temp')) { try { fs.unlinkSync(fp); } catch (e) { } }
+        }
+      }, 300000);
+    }
+    return mutatedPaths;
   }
 
   // Upload pre-prepared image files on a specific tab (safe for parallel use)
@@ -4126,6 +4186,15 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
 
       await this.handleNotificationPermission();
 
+      // ── Module 5: Pre-Post Warm-up ──
+      // Simulate human browsing activity before starting to post
+      // Scrolls feed, moves mouse, hovers on content — builds trust signal
+      this.sessionProfile = createSessionProfile(); // Fresh behavioral personality
+      console.log(`🎭 Session profile: typing=${this.sessionProfile.typingSpeed.toFixed(0)}ms/char, typoRate=${(this.sessionProfile.typoRate * 100).toFixed(1)}%, rush=${this.sessionProfile.rushFactor.toFixed(2)}`);
+      this.addLog('🔥 Warm-up: จำลองกิจกรรมมนุษย์ก่อนโพสต์...', 'info');
+      await prePostWarmup(this.page);
+      this.addLog('✅ Warm-up เสร็จ — เริ่มโพสต์', 'info');
+
       // Generate or use provided caption
       let finalCaption = caption;
       if (!finalCaption) {
@@ -4201,6 +4270,8 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
             tab = this.page;
           } else {
             tab = await this.browser.newPage();
+            // Inject fingerprint masking into new tab too
+            try { await tab.evaluateOnNewDocument(getFingerprintInjectionScript()); } catch (e) { }
             await tab.setExtraHTTPHeaders({ 'Accept-Language': 'th-TH,th;q=0.9,en;q=0.8' });
           }
           activeTabs.set(taskIdx, tab);
@@ -4221,6 +4292,15 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
             completedCount++;
             return;
           }
+
+          // ── Module 1: Pre-post micro-interactions ──
+          // Simulate human browsing the group before posting (scroll, hover)
+          try {
+            await humanScroll(tab, { minScrolls: 1, maxScrolls: 3, direction: 'down' });
+            await humanMouseMovement(tab);
+            await new Promise(r => setTimeout(r, gaussianDelay(800, 300, 400, 1500)));
+            await humanScroll(tab, { minScrolls: 1, maxScrolls: 2, direction: 'up' });
+          } catch (e) { /* non-critical */ }
 
           // Post
           let groupCaption = finalCaption;
@@ -4268,12 +4348,12 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
           completedCount++;
         };
 
-        // Launch initial concurrent workers with staggered starts (1-2s apart)
+        // Launch initial concurrent workers with Gaussian-staggered starts
         const workers = [];
         for (let w = 0; w < CONCURRENT && nextIdx < batchTasks.length; w++) {
           if (!this.isRunning) break;
           if (w > 0) {
-            const stagger = 800 + Math.floor(Math.random() * 1200); // 0.8-2s stagger
+            const stagger = gaussianDelay(1200, 400, 600, 2500); // Gaussian: mostly 0.8-1.6s
             await this.delay(stagger);
           }
           const idx = nextIdx++;
@@ -4320,7 +4400,7 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
           // Launch new workers for remaining tasks
           while (activeTabs.size < CONCURRENT && nextIdx < batchTasks.length && this.isRunning) {
             while (this.isPaused && this.isRunning) { await this.delay(1000); }
-            const stagger = 500 + Math.floor(Math.random() * 1000); // 0.5-1.5s between new tabs
+            const stagger = gaussianDelay(900, 300, 400, 1800); // Gaussian: mostly 0.6-1.2s
             await this.delay(stagger);
             const idx = nextIdx++;
             workers.push(processGroup(idx));
@@ -4342,20 +4422,22 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
         cursor += batchSize;
         batchIdx++;
 
-        // Delay between batches (except last)
+        // Delay between batches (except last) — Gaussian jitter for human-like timing
         if (cursor < this.tasks.length && this.isRunning) {
           let delayMs;
           if (useSeconds) {
-            // Seconds mode: user's value + random 2-5 seconds jitter
-            const jitter = 2000 + Math.floor(Math.random() * 3000); // 2-5s
-            delayMs = (delaySeconds * 1000) + jitter;
-            console.log(`\n⏳ Waiting ${delaySeconds}s + ${(jitter / 1000).toFixed(1)}s jitter = ${(delayMs / 1000).toFixed(1)}s before next batch...`);
-            this.addLog(`⏳ รอ ${(delayMs / 1000).toFixed(0)}s ก่อน batch ถัดไป...`, 'warn');
+            // ── Module 1: Gaussian Batch Delay ──
+            // Bell-curve jitter: most delays near base, occasional long/short pauses
+            delayMs = gaussianBatchDelay(delaySeconds);
+            const actualSec = (delayMs / 1000).toFixed(1);
+            console.log(`\n⏳ Gaussian delay: ${actualSec}s (base ${delaySeconds}s + bell-curve jitter) before next batch...`);
+            this.addLog(`⏳ รอ ${actualSec}s (Gaussian) ก่อน batch ถัดไป...`, 'warn');
           } else {
-            // Minutes mode (marketplace): user's value + random ±30s
-            delayMs = ((delayMinutes || 3) * 60 + (Math.random() * 60 - 30)) * 1000;
-            console.log(`\n⏳ Waiting ~${delayMinutes || 3} min before next batch...`);
-            this.addLog(`⏳ รอ ~${delayMinutes || 3} นาทีก่อน batch ถัดไป...`, 'warn');
+            // Minutes mode (marketplace): Gaussian jitter around user's value
+            const baseMs = (delayMinutes || 3) * 60 * 1000;
+            delayMs = Math.round(gaussianDelay(baseMs, baseMs * 0.15, baseMs * 0.5, baseMs * 1.5));
+            console.log(`\n⏳ Waiting ~${(delayMs / 60000).toFixed(1)} min (Gaussian) before next batch...`);
+            this.addLog(`⏳ รอ ~${(delayMs / 60000).toFixed(1)} นาที (Gaussian) ก่อน batch ถัดไป...`, 'warn');
           }
 
           // Wait in 5-second chunks so pause/stop can interrupt

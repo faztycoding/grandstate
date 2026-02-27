@@ -1151,21 +1151,22 @@ export default function Automation() {
                 </div>
               </div>
 
-              {/* Anti-Ban Safety Guide */}
-              <div className="rounded-xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 via-teal-500/5 to-emerald-500/5 overflow-hidden">
+              {/* Anti-Ban Safety Guide — World-Class Anti-Detection */}
+              <div className="rounded-xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 via-teal-500/5 to-cyan-500/5 overflow-hidden">
                 <button
                   onClick={() => setShowGuide(!showGuide)}
                   className="w-full flex items-center gap-3 p-3 hover:bg-emerald-500/5 transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/10 flex items-center justify-center flex-shrink-0">
+                  <div className="relative w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/10 flex items-center justify-center flex-shrink-0">
                     <Shield className="w-4 h-4 text-emerald-500" />
+                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                   </div>
                   <div className="flex-1 text-left">
                     <p className="text-sm font-semibold flex items-center gap-1.5">
                       <Sparkles className="w-3 h-3 text-amber-500" />
-                      คู่มือลดโอกาสถูกตรวจจับ
+                      ระบบป้องกันการตรวจจับ
                     </p>
-                    <p className="text-[10px] text-muted-foreground">เคล็ดลับให้โพสต์ปลอดภัยสูงสุด</p>
+                    <p className="text-[10px] text-muted-foreground">5 Modules • World-Class Anti-Detection</p>
                   </div>
                   <motion.div
                     animate={{ rotate: showGuide ? 180 : 0 }}
@@ -1181,10 +1182,10 @@ export default function Automation() {
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
                       className="overflow-hidden"
                     >
-                      <div className="px-3 pb-3 space-y-2">
+                      <div className="px-3 pb-3 space-y-2.5">
                         {/* Risk Level Indicator */}
                         <div className="p-2.5 rounded-lg bg-background/80 border border-border/50">
                           <div className="flex items-center justify-between mb-1.5">
@@ -1207,10 +1208,10 @@ export default function Automation() {
                             <motion.div
                               className={cn("h-full rounded-full",
                                 delayBetweenPosts >= 15 && selectedGroups.length <= 30
-                                  ? "bg-gradient-to-r from-emerald-500 to-green-400 w-[25%]"
+                                  ? "bg-gradient-to-r from-emerald-500 to-green-400"
                                   : delayBetweenPosts >= 10 && selectedGroups.length <= 50
-                                    ? "bg-gradient-to-r from-amber-500 to-yellow-400 w-[55%]"
-                                    : "bg-gradient-to-r from-red-500 to-orange-400 w-[85%]"
+                                    ? "bg-gradient-to-r from-amber-500 to-yellow-400"
+                                    : "bg-gradient-to-r from-red-500 to-orange-400"
                               )}
                               initial={{ width: 0 }}
                               animate={{ width: delayBetweenPosts >= 15 && selectedGroups.length <= 30 ? '25%' : delayBetweenPosts >= 10 && selectedGroups.length <= 50 ? '55%' : '85%' }}
@@ -1222,39 +1223,71 @@ export default function Automation() {
                           </p>
                         </div>
 
-                        {/* Tips Grid */}
-                        <div className="space-y-1.5">
-                          {[
-                            { icon: Timer, color: 'text-blue-500', bg: 'bg-blue-500/10', title: 'ตั้ง Delay 15-30 วินาที', desc: 'ยิ่งนาน ยิ่งปลอดภัย แนะนำ 15 วิ ขึ้นไป', safe: delayBetweenPosts >= 15 },
-                            { icon: Users, color: 'text-purple-500', bg: 'bg-purple-500/10', title: 'ไม่เกิน 30-50 กลุ่ม/วัน', desc: 'บัญชีใหม่ควรเริ่มจาก 10-20 กลุ่ม', safe: selectedGroups.length <= 50 },
-                            { icon: Eye, color: 'text-orange-500', bg: 'bg-orange-500/10', title: 'ใช้รูปภาพจริงและหลากหลาย', desc: 'รูปจริง 3-5 รูป เปลี่ยนทุกสัปดาห์' },
-                            { icon: Fingerprint, color: 'text-emerald-500', bg: 'bg-emerald-500/10', title: 'แคปชั่นหมุนเวียนอัตโนมัติ', desc: 'ระบบสร้างหลาย caption สุ่มต่างกัน ✅' },
-                            { icon: Clock, color: 'text-cyan-500', bg: 'bg-cyan-500/10', title: 'โพสต์ช่วง 8:00-22:00', desc: 'หลีกเลี่ยงช่วงดึก ดูไม่เป็นธรรมชาติ' },
-                            { icon: Shield, color: 'text-rose-500', bg: 'bg-rose-500/10', title: 'บัญชี FB อายุ 3+ เดือน', desc: 'บัญชีใหม่มากจะโดนตรวจจับง่าย' },
-                          ].map((tip, i) => (
-                            <div key={i} className="flex items-start gap-2.5 p-2 rounded-lg bg-background/60 border border-border/30 hover:border-emerald-500/20 transition-colors">
-                              <div className={cn("w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5", tip.bg)}>
-                                <tip.icon className={cn("w-3 h-3", tip.color)} />
+                        {/* ── Active System Protections (auto-enabled) ── */}
+                        <div>
+                          <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider px-1 mb-1.5 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            ระบบป้องกันอัตโนมัติ (Active)
+                          </p>
+                          <div className="space-y-1">
+                            {[
+                              { icon: Fingerprint, color: 'text-violet-500', bg: 'bg-violet-500/10', title: 'Gaussian Jitter Timing', desc: 'สุ่มจังหวะแบบระฆังคว่ำ ทำลาย Pattern' },
+                              { icon: Eye, color: 'text-cyan-500', bg: 'bg-cyan-500/10', title: 'Fingerprint Masking', desc: 'ปลอม Canvas/WebGL/Audio/Font/Battery ทุก session' },
+                              { icon: Shield, color: 'text-blue-500', bg: 'bg-blue-500/10', title: 'WebRTC Leak Protection', desc: 'ปิดกั้น IP จริง + ป้องกันรั่วไหลผ่าน WebRTC' },
+                              { icon: Sparkles, color: 'text-amber-500', bg: 'bg-amber-500/10', title: 'Image Hash Breaking', desc: 'Pixel noise + EXIF scrub ทุกรูปเปลี่ยน hash 100%' },
+                              { icon: Zap, color: 'text-rose-500', bg: 'bg-rose-500/10', title: 'Micro-Interactions', desc: 'Scroll, hover, mouse move ก่อนโพสต์เหมือนคนจริง' },
+                              { icon: Timer, color: 'text-emerald-500', bg: 'bg-emerald-500/10', title: 'Typing + Typo Simulation', desc: 'พิมพ์ทีละตัว + พิมพ์ผิดแล้วลบแก้เหมือนมนุษย์' },
+                            ].map((mod, i) => (
+                              <div key={i} className="flex items-center gap-2 p-1.5 rounded-md bg-emerald-500/[0.03] border border-emerald-500/10">
+                                <div className={cn("w-5 h-5 rounded flex items-center justify-center flex-shrink-0", mod.bg)}>
+                                  <mod.icon className={cn("w-2.5 h-2.5", mod.color)} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[10px] font-semibold leading-tight">{mod.title}</p>
+                                  <p className="text-[9px] text-muted-foreground leading-tight">{mod.desc}</p>
+                                </div>
+                                <CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" />
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-[11px] font-semibold leading-tight flex items-center gap-1">
-                                  {tip.title}
-                                  {tip.safe !== undefined && (
-                                    tip.safe
-                                      ? <CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" />
-                                      : <AlertCircle className="w-3 h-3 text-amber-500 flex-shrink-0" />
-                                  )}
-                                </p>
-                                <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">{tip.desc}</p>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* ── User Tips (manual optimization) ── */}
+                        <div>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-1 mb-1.5">
+                            เคล็ดลับเพิ่มเติม
+                          </p>
+                          <div className="space-y-1">
+                            {[
+                              { icon: Timer, color: 'text-blue-500', bg: 'bg-blue-500/10', title: 'ตั้ง Delay 15-30 วินาที', desc: 'ยิ่งนาน ยิ่งปลอดภัย แนะนำ 15 วิ ขึ้นไป', safe: delayBetweenPosts >= 15 },
+                              { icon: Users, color: 'text-purple-500', bg: 'bg-purple-500/10', title: 'ไม่เกิน 30-50 กลุ่ม/วัน', desc: 'บัญชีใหม่ควรเริ่มจาก 10-20 กลุ่ม', safe: selectedGroups.length <= 50 },
+                              { icon: Clock, color: 'text-cyan-500', bg: 'bg-cyan-500/10', title: 'โพสต์ช่วง 8:00-22:00', desc: 'หลีกเลี่ยงช่วงดึก ดูไม่เป็นธรรมชาติ' },
+                              { icon: Shield, color: 'text-rose-500', bg: 'bg-rose-500/10', title: 'บัญชี FB อายุ 3+ เดือน', desc: 'บัญชีใหม่มากจะโดนตรวจจับง่าย' },
+                            ].map((tip, i) => (
+                              <div key={i} className="flex items-start gap-2 p-1.5 rounded-md bg-background/60 border border-border/30">
+                                <div className={cn("w-5 h-5 rounded flex items-center justify-center flex-shrink-0 mt-0.5", tip.bg)}>
+                                  <tip.icon className={cn("w-2.5 h-2.5", tip.color)} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[10px] font-semibold leading-tight flex items-center gap-1">
+                                    {tip.title}
+                                    {tip.safe !== undefined && (
+                                      tip.safe
+                                        ? <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500 flex-shrink-0" />
+                                        : <AlertCircle className="w-2.5 h-2.5 text-amber-500 flex-shrink-0" />
+                                    )}
+                                  </p>
+                                  <p className="text-[9px] text-muted-foreground leading-tight">{tip.desc}</p>
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
 
                         {/* Pro tip footer */}
                         <div className="p-2 rounded-lg bg-gradient-to-r from-amber-500/10 to-orange-500/5 border border-amber-500/20">
                           <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-relaxed">
-                            <span className="font-bold">💡 Pro Tip:</span> เริ่มจากน้อยๆ (10 กลุ่ม delay 20s) แล้วค่อยเพิ่มเมื่อบัญชีเสถียร ระบบมี Checkpoint Detection หยุดอัตโนมัติเมื่อ Facebook เตือน
+                            <span className="font-bold">💡 Pro Tip:</span> ระบบมี Checkpoint Detection หยุดอัตโนมัติเมื่อ Facebook เตือน + Pre-post Warm-up จำลองกิจกรรมก่อนโพสต์ทุกครั้ง
                           </p>
                         </div>
                       </div>

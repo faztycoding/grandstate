@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Zap,
   Building2,
@@ -22,7 +22,7 @@ import { GrandStateLogo } from '@/components/GrandStateLogo';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
-import { useState, createContext, useContext, useEffect, useCallback } from 'react';
+import { useState, useRef, createContext, useContext, useEffect, useCallback } from 'react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { useLicenseAuth } from '@/hooks/useLicenseAuth';
@@ -71,14 +71,24 @@ function useActiveUsersPresence() {
     automationUsers: 0,
   });
   const [hasLoadedPresence, setHasLoadedPresence] = useState(false);
+  const [joinFlash, setJoinFlash] = useState(0);
+  const prevCountRef = useRef(0);
 
   const applyPresencePayload = useCallback((payload: PresencePayload) => {
     if (!payload?.success) return;
+    const newActive = Number(payload.activeUsers) || 0;
 
-    setActiveUserStats({
-      activeUsers: Number(payload.activeUsers) || 0,
-      onlineUsers: Number(payload.onlineUsers) || 0,
-      automationUsers: Number(payload.automationUsers) || 0,
+    setActiveUserStats(prev => {
+      const oldCount = prev.activeUsers;
+      if (oldCount > 0 && newActive > oldCount) {
+        setJoinFlash(f => f + 1);
+      }
+      prevCountRef.current = newActive;
+      return {
+        activeUsers: newActive,
+        onlineUsers: Number(payload.onlineUsers) || 0,
+        automationUsers: Number(payload.automationUsers) || 0,
+      };
     });
     setHasLoadedPresence(true);
   }, []);
@@ -140,6 +150,7 @@ function useActiveUsersPresence() {
     activeUserStats,
     hasLoadedPresence,
     markOffline,
+    joinFlash,
   };
 }
 
@@ -149,6 +160,7 @@ interface SidebarContentProps {
   activeUserStats: ActiveUsersState;
   hasLoadedPresence: boolean;
   markOffline: () => Promise<void>;
+  joinFlash: number;
 }
 
 function SidebarContent({
@@ -157,6 +169,7 @@ function SidebarContent({
   activeUserStats,
   hasLoadedPresence,
   markOffline,
+  joinFlash,
 }: SidebarContentProps) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -218,6 +231,7 @@ function SidebarContent({
             className="px-2"
           >
             <div className="relative overflow-hidden rounded-xl border border-sidebar-border/80 bg-sidebar-accent/60 px-3 py-2.5 shadow-[0_0_20px_hsl(var(--sidebar-ring)/0.15)]">
+              {/* Shimmer sweep */}
               <motion.div
                 aria-hidden
                 className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-sidebar-primary/20 to-transparent"
@@ -225,24 +239,93 @@ function SidebarContent({
                 transition={{ duration: 2.6, repeat: Infinity, ease: 'linear' }}
               />
 
+              {/* ── JOIN FLASH: burst rings ── */}
+              <AnimatePresence>
+                {joinFlash > 0 && (
+                  <motion.div
+                    key={`burst-${joinFlash}`}
+                    className="pointer-events-none absolute inset-0 z-20"
+                    initial={{ opacity: 1 }}
+                    animate={{ opacity: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 2.5 }}
+                  >
+                    {/* Ring 1 — fast expand */}
+                    <motion.div
+                      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-amber-400/60"
+                      initial={{ width: 0, height: 0, opacity: 1 }}
+                      animate={{ width: 200, height: 200, opacity: 0 }}
+                      transition={{ duration: 1.2, ease: 'easeOut' }}
+                    />
+                    {/* Ring 2 — delayed */}
+                    <motion.div
+                      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-emerald-400/50"
+                      initial={{ width: 0, height: 0, opacity: 1 }}
+                      animate={{ width: 160, height: 160, opacity: 0 }}
+                      transition={{ duration: 1.4, ease: 'easeOut', delay: 0.15 }}
+                    />
+                    {/* Flash overlay */}
+                    <motion.div
+                      className="absolute inset-0 bg-amber-400/20 rounded-xl"
+                      initial={{ opacity: 1 }}
+                      animate={{ opacity: 0 }}
+                      transition={{ duration: 0.6 }}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* ── JOIN FLASH: notification banner ── */}
+              <AnimatePresence>
+                {joinFlash > 0 && (
+                  <motion.div
+                    key={`banner-${joinFlash}`}
+                    className="absolute inset-x-0 top-0 z-30 flex items-center justify-center py-1 bg-gradient-to-r from-amber-500/90 via-orange-500/90 to-amber-500/90"
+                    initial={{ y: -30, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: -30, opacity: 0 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                  >
+                    <motion.p
+                      className="text-[10px] font-bold text-white flex items-center gap-1"
+                      initial={{ scale: 0.8 }}
+                      animate={{ scale: [0.8, 1.1, 1] }}
+                      transition={{ duration: 0.4 }}
+                    >
+                      <Zap className="w-3 h-3" />
+                      {language === 'th' ? 'มีผู้ใช้เข้ามาใหม่!' : 'New user joined!'}
+                    </motion.p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               <div className="relative flex items-center justify-between gap-3">
                 <div>
                   <p className="text-[9px] uppercase tracking-[0.2em] text-sidebar-foreground/50 font-semibold">
                     {activeUsersLabel}
                   </p>
                   <div className="flex items-center gap-2 mt-0.5">
+                    {/* Animated number counter */}
                     <motion.p
                       key={hasLoadedPresence ? activeUserStats.activeUsers : -1}
-                      initial={{ opacity: 0, y: 6, scale: 0.9 }}
+                      initial={{ opacity: 0, y: 12, scale: 0.5 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
-                      transition={{ duration: 0.24, ease: 'easeOut' }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 15 }}
                       className="text-xl font-black leading-none bg-gradient-to-r from-sidebar-primary via-sidebar-foreground to-sidebar-primary bg-clip-text text-transparent"
                     >
                       {hasLoadedPresence ? activeUserStats.activeUsers.toLocaleString() : '...'}
                     </motion.p>
+                    {/* Pulsing radio with glow on join */}
                     <motion.span
-                      animate={{ scale: [1, 1.15, 1], opacity: [0.55, 1, 0.55] }}
-                      transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                      key={`radio-${joinFlash}`}
+                      animate={joinFlash > 0
+                        ? { scale: [1, 1.6, 1, 1.3, 1], opacity: [0.55, 1, 0.7, 1, 0.55] }
+                        : { scale: [1, 1.15, 1], opacity: [0.55, 1, 0.55] }
+                      }
+                      transition={joinFlash > 0
+                        ? { duration: 1, ease: 'easeInOut' }
+                        : { duration: 1.8, repeat: Infinity, ease: 'easeInOut' }
+                      }
                       className="text-sidebar-primary"
                     >
                       <Radio className="w-4 h-4" />
@@ -255,14 +338,29 @@ function SidebarContent({
                   </p>
                 </div>
 
-                <motion.div
-                  animate={{ rotate: [0, 4, 0, -4, 0] }}
-                  transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-                  className="relative"
-                >
-                  <span className="absolute inset-0 rounded-full bg-sidebar-primary/20 blur-md" />
-                  <Activity className="relative w-5 h-5 text-sidebar-primary" />
-                </motion.div>
+                {/* Activity icon with join glow burst */}
+                <div className="relative">
+                  <AnimatePresence>
+                    {joinFlash > 0 && (
+                      <motion.span
+                        key={`glow-${joinFlash}`}
+                        className="absolute inset-0 rounded-full bg-amber-400/40 blur-lg"
+                        initial={{ scale: 0.5, opacity: 1 }}
+                        animate={{ scale: 3, opacity: 0 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 1.5 }}
+                      />
+                    )}
+                  </AnimatePresence>
+                  <motion.div
+                    animate={{ rotate: [0, 4, 0, -4, 0] }}
+                    transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+                    className="relative"
+                  >
+                    <span className="absolute inset-0 rounded-full bg-sidebar-primary/20 blur-md" />
+                    <Activity className="relative w-5 h-5 text-sidebar-primary" />
+                  </motion.div>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -321,7 +419,7 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const isMobile = useIsMobile();
   const { open, setOpen } = useMobileSidebar();
-  const { activeUserStats, hasLoadedPresence, markOffline } = useActiveUsersPresence();
+  const { activeUserStats, hasLoadedPresence, markOffline, joinFlash } = useActiveUsersPresence();
 
   // Mobile: Sheet drawer
   if (isMobile) {
@@ -345,6 +443,7 @@ export function Sidebar() {
               activeUserStats={activeUserStats}
               hasLoadedPresence={hasLoadedPresence}
               markOffline={markOffline}
+              joinFlash={joinFlash}
             />
           </div>
         </SheetContent>
@@ -389,6 +488,7 @@ export function Sidebar() {
         activeUserStats={activeUserStats}
         hasLoadedPresence={hasLoadedPresence}
         markOffline={markOffline}
+        joinFlash={joinFlash}
       />
     </motion.aside>
   );

@@ -95,7 +95,7 @@ export default function Automation() {
   const location = useLocation();
   const { properties } = useSupabaseProperties();
   const { groups, activeGroups, addGroup, deleteGroup, toggleGroupActive } = useSupabaseGroups();
-  const { isConnected, isChecking, user, sessions: fbSessions, connectedCount: fbConnectedCount } = useFacebookConnection();
+  const { isConnected, isChecking, user, sessions: fbSessions, connectedCount: fbConnectedCount, activeSlot } = useFacebookConnection();
   const { t, language } = useLanguage();
 
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
@@ -111,7 +111,7 @@ export default function Automation() {
     return (localStorage.getItem('userPackage') as 'free' | 'agent' | 'elite') || 'elite';
   });
   const [postingMode, setPostingMode] = useState<'group' | 'marketplace'>('marketplace'); // Default to marketplace
-  const [selectedFbSlot, setSelectedFbSlot] = useState<number>(0);
+  const [selectedFbSlot, setSelectedFbSlot] = useState<number>(activeSlot);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [scheduleMode, setScheduleMode] = useState(false);
   const [scheduleDateTime, setScheduleDateTime] = useState('');

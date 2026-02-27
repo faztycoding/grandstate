@@ -40,6 +40,9 @@ import {
   Moon,
   Check,
   Lock,
+  CircleDot,
+  Circle,
+  Send,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
@@ -86,11 +89,13 @@ export default function Settings() {
     sessions: fbSessions,
     connectedCount: fbConnectedCount,
     connectingSlot,
+    activeSlot,
     connect,
     confirmLogin,
     autoLogin,
     disconnect,
-    checkStatus
+    checkStatus,
+    setActiveSlot
   } = useFacebookConnection();
 
   const [connectSlot, setConnectSlot] = useState(0);
@@ -656,50 +661,143 @@ export default function Settings() {
               </div>
             )}
 
-            {/* Session Slots Detail — Interactive per-slot */}
-            <div className="p-3 rounded-xl bg-muted/40 space-y-2">
+            {/* Session Slots Detail — Interactive per-slot with active selector */}
+            <div className="p-4 rounded-xl bg-muted/40 space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-medium flex items-center gap-1.5"><Monitor className="w-3.5 h-3.5" /> FB Sessions ({fbConnectedCount}/{pkgLimits.fbAccounts})</p>
+                <p className="text-sm font-semibold flex items-center gap-1.5"><Monitor className="w-4 h-4" /> FB Sessions ({fbConnectedCount}/{pkgLimits.fbAccounts})</p>
                 <Badge variant="outline" className="text-[10px] h-5">{pkgTheme.label}</Badge>
               </div>
-              <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(pkgLimits.fbAccounts, 5)}, 1fr)` }}>
+              <p className="text-[11px] text-muted-foreground -mt-1">คลิกเลือก session ที่ต้องการใช้โพสต์ • คลิกช่องว่างเพื่อเชื่อมต่อ Facebook ใหม่</p>
+
+              <div className="space-y-2">
                 {Array.from({ length: pkgLimits.fbAccounts }, (_, i) => {
                   const session = fbSessions[i];
                   const hasUser = session && session.name;
+                  const isActive = activeSlot === i;
+                  const isThisConnecting = connectingSlot === i;
+
                   return (
-                    <div key={i} className={cn(
-                      "p-2 rounded-lg border text-center transition-all cursor-pointer group relative",
-                      hasUser
-                        ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800 hover:border-green-400"
-                        : "bg-background border-dashed border-muted-foreground/20 hover:border-[#1877F2]/40"
-                    )}
-                    onClick={() => hasUser ? undefined : handleConnectFacebook(i)}
+                    <div
+                      key={i}
+                      className={cn(
+                        "relative flex items-center gap-3 p-3 rounded-xl border-2 transition-all group",
+                        hasUser && isActive
+                          ? "border-green-500 bg-green-50/80 dark:bg-green-950/30 ring-1 ring-green-500/20 shadow-sm"
+                          : hasUser
+                            ? "border-border bg-background hover:border-green-300 dark:hover:border-green-700 cursor-pointer"
+                            : "border-dashed border-muted-foreground/20 bg-background/50 hover:border-[#1877F2]/40 cursor-pointer"
+                      )}
+                      onClick={() => {
+                        if (hasUser) {
+                          setActiveSlot(i);
+                          toast.success(`เลือก Session ${i + 1} (${session.name}) สำหรับโพสต์`);
+                        } else if (!isThisConnecting) {
+                          handleConnectFacebook(i);
+                        }
+                      }}
                     >
-                      {/* Avatar or empty icon */}
-                      {hasUser && session.profilePic ? (
-                        <img src={session.profilePic} alt={session.name || ''} className="w-8 h-8 mx-auto rounded-full object-cover ring-2 ring-green-500/30 mb-1" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                      ) : hasUser ? (
-                        <div className="w-8 h-8 mx-auto rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-1 ring-2 ring-green-500/30">
-                          <span className="text-white text-xs font-bold">{session.name?.charAt(0) || 'F'}</span>
-                        </div>
-                      ) : (
-                        <div className="w-8 h-8 mx-auto rounded-full bg-muted flex items-center justify-center mb-1 group-hover:bg-[#1877F2]/10 transition-colors">
-                          <Facebook className="w-4 h-4 text-muted-foreground/40 group-hover:text-[#1877F2] transition-colors" />
-                        </div>
-                      )}
-                      {/* Name or empty label */}
-                      <p className="text-[10px] font-medium truncate leading-tight">{hasUser ? session.name : 'ว่าง'}</p>
-                      <p className="text-[8px] text-muted-foreground">Slot {i + 1}</p>
-                      {/* Disconnect overlay on hover */}
-                      {hasUser && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleDisconnect(i); }}
-                          className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                          title={`ยกเลิก Session ${i + 1}`}
-                        >
-                          <X className="w-2.5 h-2.5" />
-                        </button>
-                      )}
+                      {/* Radio selector for active */}
+                      <div className="flex-shrink-0">
+                        {hasUser ? (
+                          isActive ? (
+                            <CircleDot className="w-5 h-5 text-green-600" />
+                          ) : (
+                            <Circle className="w-5 h-5 text-muted-foreground/40 group-hover:text-green-400 transition-colors" />
+                          )
+                        ) : (
+                          <div className="w-5 h-5 rounded-full border-2 border-dashed border-muted-foreground/20" />
+                        )}
+                      </div>
+
+                      {/* Avatar */}
+                      <div className="relative flex-shrink-0">
+                        {hasUser && session.profilePic ? (
+                          <img
+                            src={session.profilePic}
+                            alt={session.name || ''}
+                            className={cn(
+                              "w-10 h-10 rounded-full object-cover ring-2",
+                              isActive ? "ring-green-500" : "ring-border"
+                            )}
+                            onError={(e) => { (e.target as HTMLImageElement).src = ''; (e.target as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        ) : hasUser ? (
+                          <div className={cn(
+                            "w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center ring-2",
+                            isActive ? "ring-green-500" : "ring-border"
+                          )}>
+                            <span className="text-white text-sm font-bold">{session.name?.charAt(0) || 'F'}</span>
+                          </div>
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center group-hover:bg-[#1877F2]/10 transition-colors">
+                            <Facebook className="w-5 h-5 text-muted-foreground/30 group-hover:text-[#1877F2] transition-colors" />
+                          </div>
+                        )}
+                        {/* Online dot */}
+                        {hasUser && (
+                          <div className={cn(
+                            "absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-gray-900",
+                            isActive ? "bg-green-500" : "bg-gray-400"
+                          )} />
+                        )}
+                      </div>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        {hasUser ? (
+                          <>
+                            <p className="text-sm font-semibold truncate">{session.name}</p>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <Badge className={cn(
+                                "text-[9px] h-4 px-1.5",
+                                isActive
+                                  ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
+                                  : "bg-muted text-muted-foreground"
+                              )}>
+                                Slot {i + 1}
+                              </Badge>
+                              {isActive && (
+                                <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 text-[9px] h-4 px-1.5">
+                                  <Send className="w-2.5 h-2.5 mr-0.5" /> ใช้โพสต์
+                                </Badge>
+                              )}
+                              {session.connectedAt && (
+                                <span className="text-[9px] text-muted-foreground">
+                                  เชื่อมต่อ {new Date(session.connectedAt).toLocaleDateString('th-TH')}
+                                </span>
+                              )}
+                            </div>
+                          </>
+                        ) : isThisConnecting ? (
+                          <>
+                            <p className="text-sm font-medium text-blue-600 dark:text-blue-400">กำลังเชื่อมต่อ...</p>
+                            <p className="text-[10px] text-muted-foreground">Slot {i + 1} • รอ login Facebook</p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm font-medium text-muted-foreground">ว่าง — คลิกเพื่อเชื่อมต่อ</p>
+                            <p className="text-[10px] text-muted-foreground">Slot {i + 1}</p>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {hasUser && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="w-7 h-7 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => { e.stopPropagation(); handleDisconnect(i); }}
+                            title={`ยกเลิก Session ${i + 1}`}
+                          >
+                            <Unlink className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
+                        {isThisConnecting && (
+                          <Loader2 className="w-4 h-4 text-[#1877F2] animate-spin" />
+                        )}
+                      </div>
                     </div>
                   );
                 })}

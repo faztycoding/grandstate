@@ -27,6 +27,8 @@ interface FacebookConnectionState {
   connectingSlot: number | null;
 }
 
+const ACTIVE_SLOT_KEY = 'grandstate-active-fb-slot';
+
 export function useFacebookConnection() {
   const [state, setState] = useState<FacebookConnectionState>({
     isConnected: false,
@@ -35,7 +37,9 @@ export function useFacebookConnection() {
     user: null,
     error: null,
     sessions: [],
-    activeSlot: 0,
+    activeSlot: (() => {
+      try { return parseInt(localStorage.getItem(ACTIVE_SLOT_KEY) || '0', 10); } catch { return 0; }
+    })(),
     connectedCount: 0,
     connectingSlot: null,
   });
@@ -156,6 +160,12 @@ export function useFacebookConnection() {
     }
   }, [checkStatus, state.activeSlot]);
 
+  // Set active slot for posting (persisted to localStorage)
+  const setActiveSlot = useCallback((slot: number) => {
+    setState(prev => ({ ...prev, activeSlot: slot }));
+    try { localStorage.setItem(ACTIVE_SLOT_KEY, String(slot)); } catch {}
+  }, []);
+
   return {
     ...state,
     connect,
@@ -163,5 +173,6 @@ export function useFacebookConnection() {
     autoLogin,
     disconnect,
     checkStatus,
+    setActiveSlot,
   };
 }

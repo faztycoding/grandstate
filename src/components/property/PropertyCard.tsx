@@ -38,7 +38,7 @@ export function PropertyCard({ property, onEdit, onDelete, onPost, onPreview }: 
       transition={{ duration: 0.3 }}
     >
       <Card 
-        className="group overflow-hidden card-elevated hover:shadow-card-hover transition-all duration-300 cursor-pointer"
+        className="group overflow-hidden card-elevated card-hover-lift hover:shadow-card-hover transition-all duration-300 cursor-pointer"
         onClick={() => onPreview?.(property)}
       >
         {/* Image */}

@@ -338,7 +338,7 @@ export default function Auth() {
                       </div>
                     )}
 
-                    <Button type="submit" className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-bold text-base shadow-lg shadow-amber-500/25 border-0 transition-all duration-200"
+                    <Button type="submit" className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-bold text-base shadow-lg shadow-amber-500/25 border-0 transition-all duration-200 btn-shine"
                       disabled={isSubmitting}>
                       {isSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isEn ? 'Signing in...' : 'กำลังเข้าสู่ระบบ...'}</> : <>{isEn ? 'Sign In' : 'เข้าสู่ระบบ'}<ArrowRight className="w-4 h-4 ml-2" /></>}
                     </Button>
@@ -404,7 +404,7 @@ export default function Auth() {
                       </div>
                     )}
 
-                    <Button type="submit" className="w-full h-12 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-400 hover:to-cyan-400 text-white font-bold text-base shadow-lg shadow-blue-500/25 border-0 transition-all duration-200"
+                    <Button type="submit" className="w-full h-12 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-400 hover:to-cyan-400 text-white font-bold text-base shadow-lg shadow-blue-500/25 border-0 transition-all duration-200 btn-shine"
                       disabled={isSubmitting}>
                       {isSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isEn ? 'Creating account...' : 'กำลังสร้างบัญชี...'}</> : <>{isEn ? 'Sign Up' : 'สมัครสมาชิก'}<ArrowRight className="w-4 h-4 ml-2" /></>}
                     </Button>
@@ -501,7 +501,7 @@ export default function Auth() {
                       </div>
                     )}
 
-                    <Button type="submit" className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-bold text-base shadow-lg shadow-amber-500/25 border-0 transition-all duration-200"
+                    <Button type="submit" className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-bold text-base shadow-lg shadow-amber-500/25 border-0 transition-all duration-200 btn-shine"
                       disabled={isSubmitting || isValidating || licenseKey.length < 23}>
                       {isSubmitting || isValidating
                         ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />{isEn ? 'Verifying...' : 'กำลังตรวจสอบ...'}</>

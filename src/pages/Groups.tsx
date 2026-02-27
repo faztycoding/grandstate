@@ -288,7 +288,7 @@ export default function Groups() {
         {/* Header Stats */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center gap-4">
-            <Card className="bg-primary/5 border-0">
+            <Card className="bg-primary/5 border-0 card-hover-lift">
               <CardContent className="py-3 px-4 flex items-center gap-3">
                 <Users className="w-5 h-5 text-primary" />
                 <div>
@@ -297,7 +297,7 @@ export default function Groups() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-green-500/10 border-0">
+            <Card className="bg-green-500/10 border-0 card-hover-lift">
               <CardContent className="py-3 px-4 flex items-center gap-3">
                 <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
                 <div>
@@ -386,7 +386,7 @@ export default function Groups() {
               <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
               {t.groups.activeGroups} ({filteredActive.length})
             </h2>
-            <div className="space-y-2">
+            <div className="space-y-2 stagger">
               {filteredActive.map((group, index) => (
                 <GroupCard
                   key={group.id}
@@ -407,7 +407,7 @@ export default function Groups() {
               <div className="w-2.5 h-2.5 rounded-full bg-gray-400" />
               {t.groups.inactiveGroups} ({filteredInactive.length})
             </h2>
-            <div className="space-y-2">
+            <div className="space-y-2 stagger">
               {filteredInactive.map((group, index) => (
                 <GroupCard
                   key={group.id}

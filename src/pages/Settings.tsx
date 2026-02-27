@@ -511,7 +511,7 @@ export default function Settings() {
         )}
 
         {/* Profile Settings */}
-        <Card className="card-elevated">
+        <Card className="card-elevated card-hover-lift">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="w-5 h-5 text-accent" />
@@ -561,7 +561,7 @@ export default function Settings() {
 
         {/* Facebook Connection — World-class UI */}
         <Card className={cn(
-          "card-elevated overflow-hidden transition-all",
+          "card-elevated card-hover-lift overflow-hidden transition-all",
           isConnected && "ring-1 ring-green-500/30"
         )}>
           {/* Card gradient accent bar */}

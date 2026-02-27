@@ -711,7 +711,7 @@ export default function Automation() {
         {/* Left Column - Property & Groups Selection */}
         <div className="lg:col-span-2 space-y-6">
           {/* Step 1: Property Selection */}
-          <Card className="card-elevated">
+          <Card className="card-elevated card-hover-lift">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
@@ -810,7 +810,7 @@ export default function Automation() {
           </Card>
 
           {/* Step 2: Group Selection */}
-          <Card className="card-elevated">
+          <Card className="card-elevated card-hover-lift">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
@@ -928,7 +928,7 @@ export default function Automation() {
         {/* Right Column - Actions */}
         <div className="space-y-6">
           {/* Step 3: Start Automation */}
-          <Card className="card-elevated border-accent/50 bg-gradient-to-br from-accent/5 to-orange-500/5">
+          <Card className="card-elevated card-hover-lift border-accent/50 bg-gradient-to-br from-accent/5 to-orange-500/5">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center text-accent font-bold">3</div>
@@ -1134,7 +1134,7 @@ export default function Automation() {
                   </Button>
                 ) : (
                   <Button
-                    className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg disabled:opacity-50"
+                    className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg disabled:opacity-50 btn-shine"
                     size="lg"
                     onClick={() => setShowConfirmDialog(true)}
                     disabled={!isConnected || !selectedProperty || selectedGroups.length === 0}

@@ -36,7 +36,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin" /></div>}>
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center flex-col gap-4"><div className="w-10 h-10 border-4 border-accent border-t-transparent rounded-full animate-spin" /><p className="text-sm text-muted-foreground animate-pulse">Loading...</p></div>}>
             <Routes>
               {/* Public routes */}
               <Route path="/" element={<Landing />} />

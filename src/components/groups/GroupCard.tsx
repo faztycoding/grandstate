@@ -51,7 +51,7 @@ export function GroupCard({
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.3 }}
       className={cn(
-        "group relative overflow-hidden rounded-xl border bg-card transition-all duration-300",
+        "group relative overflow-hidden rounded-xl border bg-card transition-all duration-300 card-hover-lift",
         "hover:shadow-lg hover:border-primary/30",
         "cursor-pointer",
         selected && "border-2 border-accent bg-accent/5 shadow-md",

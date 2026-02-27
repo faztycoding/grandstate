@@ -217,7 +217,7 @@ export default function Analytics() {
             },
           ].map((stat, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
-              <Card className={stat.bg}>
+              <Card className={`${stat.bg} card-hover-lift`}>
                 <CardContent className="pt-5 pb-4">
                   <div className="flex items-center gap-3">
                     <stat.icon className={`w-8 h-8 ${stat.color}`} />

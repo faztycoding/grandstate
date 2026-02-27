@@ -313,7 +313,7 @@ export default function Automation() {
           fbSlot: selectedFbSlot,
         }),
       });
-
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const result = await response.json();
 
       if (!result.success) {
@@ -420,6 +420,7 @@ export default function Automation() {
     queuePollingRef.current = setInterval(async () => {
       try {
         const res = await apiFetch('/api/group-automation/queue-status');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
 
         if (data.success) {
@@ -491,6 +492,7 @@ export default function Automation() {
     pollingRef.current = setInterval(async () => {
       try {
         const response = await apiFetch(statusPath);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
 
         if (data.success) {
@@ -577,6 +579,7 @@ export default function Automation() {
         // Try both modes
         for (const mode of ['group', 'marketplace'] as const) {
           const response = await apiFetch(getAutomationStatusPath(mode));
+          if (!response.ok) continue;
           const data = await response.json();
           if (data.success && data.isRunning) {
             // Reconnecting to running automation
@@ -653,8 +656,8 @@ export default function Automation() {
 
       // Sync final state (tasks/logs/endTime) after stop
       const statusResponse = await apiFetch(statusPath);
-      const statusData = await statusResponse.json();
-      if (statusData.success) {
+      const statusData = statusResponse.ok ? await statusResponse.json() : null;
+      if (statusData?.success) {
         setAutomation(prev => ({
           ...prev,
           isRunning: false,

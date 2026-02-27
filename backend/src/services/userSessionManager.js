@@ -225,6 +225,23 @@ class UserSessionManager {
     console.log(`🌐 Active browsers: ${this.activeBrowsers}/${MAX_CONCURRENT_BROWSERS}`);
   }
 
+  async destroySession(userId) {
+    const session = this.sessions.get(userId);
+    if (!session) return;
+    const shortId = userId.substring(0, 8);
+    console.log(`🗑️ Destroying session for ${shortId}...`);
+    try {
+      if (session.groupWorker?.browser) {
+        await session.groupWorker.close();
+        this.registerBrowserClose();
+      }
+      session.scheduler?.stop();
+    } catch (e) {
+      console.error(`Destroy session error for ${shortId}:`, e.message);
+    }
+    this.sessions.delete(userId);
+  }
+
   async cleanupInactiveSessions() {
     const now = Date.now();
     for (const [userId, session] of this.sessions) {

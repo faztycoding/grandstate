@@ -223,8 +223,14 @@ export default function AdminDashboard() {
         try {
             const res = await apiFetch('/api/admin/delete-user', { method: 'POST', body: JSON.stringify({ targetUserId: fullUserId }) });
             const data = await res.json();
-            if (data.success) { toast.success(data.message); } else { toast.error(data.error); }
-        } catch { toast.error('Failed to delete user'); } finally { setDeletingUser(null); }
+            if (data.success) {
+                toast.success(data.message);
+                fetchAllUsers();
+                fetchUserLicenses();
+            } else {
+                toast.error(data.error || 'ลบไม่สำเร็จ');
+            }
+        } catch (err: any) { toast.error(err?.message || 'เชื่อมต่อ backend ไม่ได้'); } finally { setDeletingUser(null); }
     };
 
     // User management: change package

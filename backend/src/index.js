@@ -996,10 +996,14 @@ app.post('/api/admin/delete-user', ...adminAuth, async (req, res) => {
     const { targetUserId } = req.body;
     if (!targetUserId) return res.status(400).json({ success: false, error: 'targetUserId required' });
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supa = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+    const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+    if (!serviceKey) {
+      return res.status(500).json({ success: false, error: 'SUPABASE_SERVICE_KEY not configured — ตั้งค่าใน backend/.env ก่อน' });
+    }
 
+    const supaUrl = process.env.SUPABASE_URL;
     const shortId = targetUserId.substring(0, 8);
+    console.log(`🗑️ [Admin] Starting delete for user ${shortId}...`);
 
     // 1. Force-stop any running automation
     const session = sessionManager.getSession(targetUserId);
@@ -1011,27 +1015,68 @@ app.post('/api/admin/delete-user', ...adminAuth, async (req, res) => {
       await session.marketplaceWorker.stop();
     }
 
-    // 2. Delete from public tables (cascade will handle most, but be explicit)
+    // 2. Delete from public tables using direct PostgREST (avoids Supabase client .select() bug)
     const tables = ['facebook_groups', 'properties', 'license_keys'];
     const deleted = {};
     for (const table of tables) {
-      const { data, error } = await supa.from(table).delete().eq('user_id', targetUserId).select('id');
-      deleted[table] = data?.length || 0;
-      if (error) console.log(`   ⚠️ Delete ${table}: ${error.message}`);
+      try {
+        const resp = await fetch(`${supaUrl}/rest/v1/${table}?user_id=eq.${targetUserId}`, {
+          method: 'DELETE',
+          headers: {
+            'apikey': serviceKey,
+            'Authorization': `Bearer ${serviceKey}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation',
+          },
+        });
+        if (resp.ok) {
+          const rows = await resp.json();
+          deleted[table] = Array.isArray(rows) ? rows.length : 0;
+        } else {
+          const errText = await resp.text();
+          console.log(`   ⚠️ Delete ${table}: ${resp.status} ${errText}`);
+          deleted[table] = 0;
+        }
+      } catch (e) {
+        console.log(`   ⚠️ Delete ${table}: ${e.message}`);
+        deleted[table] = 0;
+      }
     }
 
     // 3. Delete from public.users
-    const { error: userErr } = await supa.from('users').delete().eq('id', targetUserId);
-    if (userErr) console.log(`   ⚠️ Delete users: ${userErr.message}`);
+    try {
+      await fetch(`${supaUrl}/rest/v1/users?id=eq.${targetUserId}`, {
+        method: 'DELETE',
+        headers: {
+          'apikey': serviceKey,
+          'Authorization': `Bearer ${serviceKey}`,
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (e) {
+      console.log(`   ⚠️ Delete users table: ${e.message}`);
+    }
 
-    // 4. Delete auth user (this cascades everything via FK)
+    // 4. Delete auth user (this also cascades via FK)
+    const { createClient } = await import('@supabase/supabase-js');
+    const supa = createClient(supaUrl, serviceKey);
     const { error: authErr } = await supa.auth.admin.deleteUser(targetUserId);
-    if (authErr) throw authErr;
+    if (authErr) {
+      // If user already doesn't exist in auth, that's fine
+      if (authErr.message?.includes('not found') || authErr.message?.includes('User not found')) {
+        console.log(`   ℹ️ Auth user already deleted or not found`);
+      } else {
+        throw authErr;
+      }
+    }
+
+    // 5. Clean up in-memory session
+    sessionManager.destroySession?.(targetUserId);
 
     console.log(`🗑️ [Admin] User ${shortId} DELETED — groups:${deleted.facebook_groups}, properties:${deleted.properties}, licenses:${deleted.license_keys}`);
     res.json({
       success: true,
-      message: `ลบผู้ใช้ ${shortId} สำเร็จ — กลุ่ม:${deleted.facebook_groups}, ทรัพย์:${deleted.properties}`,
+      message: `ลบผู้ใช้ ${shortId} สำเร็จ — กลุ่ม:${deleted.facebook_groups}, ทรัพย์สิน:${deleted.properties}`,
       deleted,
     });
   } catch (error) {

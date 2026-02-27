@@ -131,12 +131,12 @@ export function useFacebookConnection() {
       if (data.success) {
         await checkStatus();
         setState(prev => ({ ...prev, isConnecting: false, connectingSlot: null }));
-        return { success: true, message: data.message, slot: data.slot };
+        return { success: true as const, message: data.message, slot: data.slot, user: data.user as { name: string; profilePic: string } | undefined };
       } else {
-        return { success: false, message: data.error };
+        return { success: false as const, message: data.error };
       }
     } catch (error: any) {
-      return { success: false, message: error.message };
+      return { success: false as const, message: error.message };
     }
   }, [checkStatus]);
 

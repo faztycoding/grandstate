@@ -125,6 +125,7 @@ export default function Settings() {
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [loginStep, setLoginStep] = useState<'opening' | 'waiting' | 'checking' | 'success' | 'error'>('opening');
   const [loginUserName, setLoginUserName] = useState('');
+  const [loginProfilePic, setLoginProfilePic] = useState('');
   const loginPollRef = useRef<NodeJS.Timeout | null>(null);
   const pollCountRef = useRef(0);
   const [loginError, setLoginError] = useState('');
@@ -144,6 +145,7 @@ export default function Settings() {
             if (loginPollRef.current) clearInterval(loginPollRef.current);
             loginPollRef.current = null;
             setLoginUserName(result.user?.name || 'Facebook User');
+            setLoginProfilePic(result.user?.profilePic || '');
             setLoginStep('success');
             setTimeout(() => {
               setShowLoginPopup(false);
@@ -174,6 +176,7 @@ export default function Settings() {
     setLoginStep('opening');
     setShowLoginPopup(true);
     setLoginUserName('');
+    setLoginProfilePic('');
     setLoginError('');
     setFbEmail('');
     setFbPassword('');
@@ -194,6 +197,8 @@ export default function Settings() {
     const result = await autoLogin(fbEmail, fbPassword);
     setIsAutoLogging(false);
     if (result.success) {
+      setLoginUserName(result.user?.name || 'Facebook User');
+      setLoginProfilePic(result.user?.profilePic || '');
       setLoginStep('success');
       setFbPassword('');
       await checkStatus();
@@ -1000,7 +1005,7 @@ export default function Settings() {
                   {loginStep === 'success' ? 'เชื่อมต่อสำเร็จ!' : loginStep === 'error' ? 'เกิดข้อผิดพลาด' : 'เชื่อมต่อ Facebook'}
                 </h2>
                 <p className="text-white/70 text-sm">
-                  {loginStep === 'success' ? `ยินดีต้อนรับ ${loginUserName}` : loginStep === 'error' ? 'ไม่สามารถเชื่อมต่อได้' : `Session ${1}/${pkgLimits.fbAccounts} — ${pkgTheme.label}`}
+                  {loginStep === 'success' ? `ยินดีต้อนรับ ${loginUserName}` : loginStep === 'error' ? 'ไม่สามารถเชื่อมต่อได้' : `Session ${connectSlot + 1}/${pkgLimits.fbAccounts} — ${pkgTheme.label}`}
                 </p>
               </div>
             </div>
@@ -1126,15 +1131,24 @@ export default function Settings() {
             {/* Success state */}
             {loginStep === 'success' && (
               <div className="text-center py-2 space-y-3">
-                <div className="w-16 h-16 mx-auto rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                  <CheckCircle2 className="w-8 h-8 text-green-500" />
+                <div className="relative w-16 h-16 mx-auto">
+                  {loginProfilePic ? (
+                    <img src={loginProfilePic} alt={loginUserName} className="w-16 h-16 rounded-full object-cover ring-4 ring-green-500/30" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center ring-4 ring-green-500/30">
+                      <span className="text-white text-xl font-bold">{loginUserName?.charAt(0) || 'F'}</span>
+                    </div>
+                  )}
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-green-500 border-2 border-white dark:border-gray-900 flex items-center justify-center">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                  </div>
                 </div>
                 <div>
                   <p className="text-lg font-bold">{loginUserName}</p>
                   <p className="text-sm text-muted-foreground">เชื่อมต่อ Facebook สำเร็จแล้ว</p>
                 </div>
                 <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                  <CheckCircle2 className="w-3 h-3 mr-1" /> Session 1/{pkgLimits.fbAccounts} ({pkgTheme.label})
+                  <CheckCircle2 className="w-3 h-3 mr-1" /> Session {connectSlot + 1}/{pkgLimits.fbAccounts} ({pkgTheme.label})
                 </Badge>
               </div>
             )}

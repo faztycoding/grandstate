@@ -1096,8 +1096,8 @@ export default function AdminDashboard() {
                                                                 )}>{userPkg === 'free' ? 'ROOKIE' : userPkg === 'agent' ? 'AGENT' : 'ELITE'}</span>
                                                             </div>
                                                             <p className="text-[11px] text-muted-foreground truncate">{u.email || u.userId}</p>
-                                                            {u.fullName && u.fullName !== u.displayName && (
-                                                                <p className="text-[10px] text-muted-foreground/70 truncate">ชื่อจริง: {u.fullName}</p>
+                                                            {u.fullName && (
+                                                                <p className="text-[10px] text-muted-foreground/70 truncate">ชื่อ-นามสกุล: {u.fullName}</p>
                                                             )}
                                                         </div>
 

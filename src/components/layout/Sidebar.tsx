@@ -544,55 +544,6 @@ function SidebarContent({
                 )}
               </AnimatePresence>
 
-              {/* ── ADMIN ONLINE: Persistent crown + golden aura (after entrance settles) ── */}
-              <AnimatePresence>
-                {adminOnline && (
-                  <motion.div key="admin-crown-persist" className="pointer-events-none absolute -top-5 left-1/2 -translate-x-1/2 z-40"
-                    initial={{ y: -40, opacity: 0, scale: 0, rotate: -25 }}
-                    animate={{ y: 0, opacity: 1, scale: 1, rotate: 0 }}
-                    exit={{ y: -30, opacity: 0, scale: 0.3 }}
-                    transition={{ type: 'spring', stiffness: 200, damping: 10, delay: adminJustArrived ? 1.5 : 0.3 }}>
-                    {/* Large Crown SVG — red/gold/jewels */}
-                    <svg width="42" height="34" viewBox="0 0 28 22" fill="none" style={{ filter: 'drop-shadow(0 0 10px rgba(251,191,36,0.9)) drop-shadow(0 0 20px rgba(251,191,36,0.5)) drop-shadow(0 0 40px rgba(251,191,36,0.2))' }}>
-                      <rect x="4" y="15" width="20" height="5" rx="1.5" fill="url(#crownGoldL)" stroke="#b8860b" strokeWidth="0.5"/>
-                      <path d="M4 15 L1 5 L7 10 L14 2 L21 10 L27 5 L24 15Z" fill="url(#crownRedL)" stroke="#b8860b" strokeWidth="0.6"/>
-                      <path d="M4 15 L1 5 L7 10 L14 2 L21 10 L27 5 L24 15" fill="none" stroke="#ffd700" strokeWidth="0.8" opacity="0.7"/>
-                      <ellipse cx="14" cy="11" rx="2" ry="2.5" fill="#38bdf8" stroke="#1e3a5f" strokeWidth="0.4"/>
-                      <ellipse cx="13.5" cy="10.3" rx="0.7" ry="0.5" fill="white" opacity="0.6"/>
-                      <circle cx="8.5" cy="12.5" r="1.4" fill="#4ade80" stroke="#166534" strokeWidth="0.4"/>
-                      <circle cx="19.5" cy="12.5" r="1.4" fill="#4ade80" stroke="#166534" strokeWidth="0.4"/>
-                      <circle cx="14" cy="4" r="1.2" fill="#ef4444" stroke="#7f1d1d" strokeWidth="0.3"/>
-                      <circle cx="7" cy="9.5" r="1" fill="#ef4444" stroke="#7f1d1d" strokeWidth="0.3"/>
-                      <circle cx="21" cy="9.5" r="1" fill="#ef4444" stroke="#7f1d1d" strokeWidth="0.3"/>
-                      <circle cx="9" cy="17.5" r="0.9" fill="#ef4444" stroke="#991b1b" strokeWidth="0.3"/>
-                      <circle cx="14" cy="17.5" r="0.9" fill="#ef4444" stroke="#991b1b" strokeWidth="0.3"/>
-                      <circle cx="19" cy="17.5" r="0.9" fill="#ef4444" stroke="#991b1b" strokeWidth="0.3"/>
-                      <circle cx="14" cy="2.2" r="1" fill="#fbbf24" stroke="#b8860b" strokeWidth="0.3"/>
-                      <defs>
-                        <linearGradient id="crownGoldL" x1="4" y1="15" x2="4" y2="20">
-                          <stop offset="0%" stopColor="#fcd34d"/><stop offset="50%" stopColor="#f59e0b"/><stop offset="100%" stopColor="#d97706"/>
-                        </linearGradient>
-                        <linearGradient id="crownRedL" x1="14" y1="2" x2="14" y2="15">
-                          <stop offset="0%" stopColor="#fca5a5"/><stop offset="30%" stopColor="#ef4444"/><stop offset="100%" stopColor="#b91c1c"/>
-                        </linearGradient>
-                      </defs>
-                    </svg>
-                    {/* Pulsing golden aura behind crown */}
-                    <motion.div className="absolute -inset-4 -z-10"
-                      animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0.15, 0.5] }}
-                      transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}>
-                      <div className="w-full h-full rounded-full bg-amber-400/40 blur-lg" />
-                    </motion.div>
-                    {/* Continuous subtle lightning flickers */}
-                    <motion.div className="absolute -inset-2 -z-5"
-                      animate={{ opacity: [0, 0.3, 0, 0.2, 0, 0.4, 0] }}
-                      transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}>
-                      <div className="w-full h-full rounded-full bg-white/20 blur-sm" />
-                    </motion.div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
               {/* ── ADMIN ONLINE: Golden border glow on the card ── */}
               <AnimatePresence>
                 {adminOnline && (

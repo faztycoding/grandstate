@@ -519,7 +519,7 @@ export default function Landing() {
               transition={{ delay: 1.3, duration: 0.6 }}
               className="flex flex-col sm:flex-row gap-4 justify-center"
             >
-              <Link to="/auth" className="inline-flex items-center justify-center gap-2 px-10 py-4 rounded-2xl text-base font-bold bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-2xl shadow-amber-500/30 hover:shadow-amber-500/50 hover:scale-105 transition-all duration-300">
+              <Link to="/auth" className="inline-flex items-center justify-center gap-2 px-10 py-4 rounded-2xl text-base font-bold bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-2xl shadow-amber-500/30 hover:shadow-amber-500/50 hover:scale-105 transition-all duration-300 btn-shine">
                 {isEn ? 'Start Free' : 'เริ่มต้นใช้งานฟรี'}
                 <ArrowRight className="w-5 h-5" />
               </Link>

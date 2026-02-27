@@ -31,6 +31,8 @@ import { toast } from 'sonner';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { BulkAddGroupDialog } from '@/components/automation/BulkAddGroupDialog';
 import { canAddGroup, getUserPackage, getPackageLimits } from '@/hooks/usePackageLimits';
+import { AnimatedCounter } from '@/components/ui/animated-counter';
+import { GroupListSkeleton } from '@/components/ui/skeleton-loaders';
 
 import { apiFetch } from '@/lib/config';
 
@@ -292,7 +294,7 @@ export default function Groups() {
               <CardContent className="py-3 px-4 flex items-center gap-3">
                 <Users className="w-5 h-5 text-primary" />
                 <div>
-                  <p className="text-2xl font-bold">{groups.length}</p>
+                  <p className="text-2xl font-bold"><AnimatedCounter value={groups.length} /></p>
                   <p className="text-xs text-muted-foreground">{t.groups.totalGroups}</p>
                 </div>
               </CardContent>
@@ -301,7 +303,7 @@ export default function Groups() {
               <CardContent className="py-3 px-4 flex items-center gap-3">
                 <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
                 <div>
-                  <p className="text-2xl font-bold">{activeGroups.length}</p>
+                  <p className="text-2xl font-bold"><AnimatedCounter value={activeGroups.length} /></p>
                   <p className="text-xs text-muted-foreground">{t.groups.active}</p>
                 </div>
               </CardContent>
@@ -433,12 +435,7 @@ export default function Groups() {
 
         {/* Loading State */}
         {groupsLoading && groups.length === 0 && !groupsError && (
-          <Card className="card-elevated">
-            <CardContent className="py-12 text-center">
-              <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-muted-foreground" />
-              <p className="text-muted-foreground">กำลังโหลดกลุ่ม...</p>
-            </CardContent>
-          </Card>
+          <GroupListSkeleton count={5} />
         )}
 
         {/* Empty State */}

@@ -33,6 +33,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { motion } from 'framer-motion';
 
 import { apiFetch } from '@/lib/config';
+import { AnimatedCounter } from '@/components/ui/animated-counter';
 
 interface DailyData {
   date: string;
@@ -210,7 +211,8 @@ export default function Analytics() {
             },
             {
               label: isEn ? 'Success Rate' : 'อัตราสำเร็จ',
-              value: `${successRate}%`,
+              value: successRate,
+              suffix: '%',
               icon: Target,
               color: successRate >= 80 ? 'text-green-600' : successRate >= 50 ? 'text-amber-600' : 'text-red-600',
               bg: successRate >= 80 ? 'bg-green-50 dark:bg-green-950/30' : successRate >= 50 ? 'bg-amber-50 dark:bg-amber-950/30' : 'bg-red-50 dark:bg-red-950/30',
@@ -222,7 +224,9 @@ export default function Analytics() {
                   <div className="flex items-center gap-3">
                     <stat.icon className={`w-8 h-8 ${stat.color}`} />
                     <div>
-                      <p className="text-2xl font-bold">{stat.value}</p>
+                      <p className="text-2xl font-bold">
+                        <AnimatedCounter value={typeof stat.value === 'number' ? stat.value : 0} suffix={'suffix' in stat ? (stat as any).suffix : ''} />
+                      </p>
                       <p className="text-xs text-muted-foreground">{stat.label}</p>
                     </div>
                   </div>

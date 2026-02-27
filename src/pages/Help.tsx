@@ -48,7 +48,7 @@ export default function Help() {
       <div className="max-w-4xl mx-auto space-y-8">
 
         {/* Quick Start — 4 Steps */}
-        <Card className="card-elevated overflow-hidden">
+        <Card className="card-elevated card-hover-lift overflow-hidden">
           <div className="bg-gradient-to-r from-accent/10 via-orange-500/5 to-transparent p-6 pb-4">
             <CardTitle className="flex items-center gap-2.5 text-lg">
               <div className="w-9 h-9 rounded-xl bg-accent flex items-center justify-center">
@@ -92,7 +92,7 @@ export default function Help() {
         </Card>
 
         {/* Posting Modes */}
-        <Card className="card-elevated">
+        <Card className="card-elevated card-hover-lift">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Target className="w-5 h-5 text-accent" />
@@ -141,7 +141,7 @@ export default function Help() {
         </Card>
 
         {/* Features Overview */}
-        <Card className="card-elevated">
+        <Card className="card-elevated card-hover-lift">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-accent" />
@@ -177,7 +177,7 @@ export default function Help() {
         </Card>
 
         {/* Pro Tips */}
-        <Card className="card-elevated bg-gradient-to-br from-yellow-50/50 to-amber-50/30 dark:from-yellow-950/10 dark:to-amber-950/5">
+        <Card className="card-elevated card-hover-lift bg-gradient-to-br from-yellow-50/50 to-amber-50/30 dark:from-yellow-950/10 dark:to-amber-950/5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Lightbulb className="w-5 h-5 text-yellow-500" />
@@ -207,7 +207,7 @@ export default function Help() {
         </Card>
 
         {/* FAQ */}
-        <Card className="card-elevated">
+        <Card className="card-elevated card-hover-lift">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <HelpCircle className="w-5 h-5 text-blue-500" />
@@ -247,7 +247,7 @@ export default function Help() {
         </Card>
 
         {/* Terms & Privacy — compact */}
-        <Card className="card-elevated">
+        <Card className="card-elevated card-hover-lift">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <Scale className="w-5 h-5 text-muted-foreground" />

@@ -224,7 +224,7 @@ export default function Pricing() {
               >
               <Card
                 className={cn(
-                  'relative overflow-hidden transition-all duration-500 group h-full',
+                  'relative overflow-hidden transition-all duration-500 group h-full card-hover-lift',
                   plan.popular && 'neon-card border-accent shadow-xl shadow-accent/10 scale-[1.03]',
                   !plan.popular && 'card-glow hover:shadow-lg',
                   isCurrentPlan && 'ring-2 ring-green-500'
@@ -336,7 +336,7 @@ export default function Pricing() {
                   {/* CTA Button */}
                   <Button
                     className={cn(
-                      'w-full h-12 font-semibold gap-2 transition-all duration-300',
+                      'w-full h-12 font-semibold gap-2 transition-all duration-300 btn-shine',
                       plan.id === 'rookie' && !isCurrentPlan && 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 hover:scale-[1.02]',
                       plan.id === 'agent' && !isCurrentPlan && 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 hover:scale-[1.02]',
                       plan.id === 'elite' && !isCurrentPlan && 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 hover:scale-[1.02]',

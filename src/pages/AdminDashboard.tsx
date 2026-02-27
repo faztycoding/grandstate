@@ -884,57 +884,99 @@ export default function AdminDashboard() {
                                         </div>
                                     )}
 
-                                    {/* Per-User Table */}
+                                    {/* Per-User Cards — Clean & Readable */}
                                     {liveStats.users.length > 0 ? (
-                                        <div className="border rounded-lg overflow-hidden">
-                                            <Table>
-                                                <TableHeader><TableRow className="bg-muted/30">
-                                                    <TableHead className="text-xs">{t.admin.colUser}</TableHead>
-                                                    <TableHead className="text-xs">{t.admin.colStatus}</TableHead>
-                                                    <TableHead className="text-xs">Automation</TableHead>
-                                                    <TableHead className="text-xs">{t.admin.colPostsToday}</TableHead>
-                                                    <TableHead className="text-xs">{t.admin.colRuns}</TableHead>
-                                                    <TableHead className="text-xs">Tasks</TableHead>
-                                                    <TableHead className="text-xs text-right">{t.admin.colManage}</TableHead>
-                                                </TableRow></TableHeader>
-                                                <TableBody>
-                                                    {liveStats.users.map(u => (
-                                                        <TableRow key={u.userId}>
-                                                            <TableCell>
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-accent/30 to-orange-400/30 flex items-center justify-center text-[10px] font-bold text-accent shrink-0">
-                                                                        {(u.displayName || u.userId)?.[0]?.toUpperCase() || '?'}
+                                        <div className="space-y-2">
+                                            {liveStats.users.map(u => {
+                                                const isRunning = u.isRunningGroup || u.isRunningMarketplace;
+                                                const taskPct = u.currentTasks.total > 0 ? Math.round(((u.currentTasks.completed + u.currentTasks.failed) / u.currentTasks.total) * 100) : 0;
+                                                return (
+                                                <div key={u.userId} className={cn(
+                                                    "p-3 rounded-xl border transition-all",
+                                                    isRunning ? "bg-orange-50/50 dark:bg-orange-950/10 border-orange-200 dark:border-orange-800/50" : "bg-card border-border"
+                                                )}>
+                                                    <div className="flex items-center gap-3">
+                                                        {/* Avatar + Status dot */}
+                                                        <div className="relative flex-shrink-0">
+                                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent/20 to-orange-400/20 flex items-center justify-center text-sm font-bold text-accent">
+                                                                {(u.displayName || u.email || u.userId)?.[0]?.toUpperCase() || '?'}
+                                                            </div>
+                                                            <div className={cn(
+                                                                "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background",
+                                                                u.isOnline ? "bg-green-500" : "bg-gray-400"
+                                                            )} />
+                                                        </div>
+
+                                                        {/* Name + Email */}
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="text-sm font-semibold truncate">{u.displayName || u.email?.split('@')[0] || u.userId}</p>
+                                                                {u.isOnline && <span className="text-[9px] font-medium text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-1.5 py-0.5 rounded-full">Online</span>}
+                                                            </div>
+                                                            <p className="text-[11px] text-muted-foreground truncate">{u.email || u.userId}</p>
+                                                        </div>
+
+                                                        {/* Stats chips */}
+                                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                                            {/* Automation badge */}
+                                                            {isRunning ? (
+                                                                <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 text-[10px] gap-1">
+                                                                    <Zap className="w-3 h-3 animate-pulse" />
+                                                                    {u.isRunningGroup && u.isRunningMarketplace ? 'GRP+MKT' : u.isRunningGroup ? 'Groups' : 'Marketplace'}
+                                                                </Badge>
+                                                            ) : u.hasBrowser ? (
+                                                                <Badge variant="outline" className="text-[10px] gap-1"><Monitor className="w-3 h-3" />Browser</Badge>
+                                                            ) : null}
+
+                                                            {/* Posts today */}
+                                                            <div className="text-center px-2">
+                                                                <p className="text-sm font-bold tabular-nums">{u.todayPosts}</p>
+                                                                <p className="text-[9px] text-muted-foreground leading-none">โพสต์</p>
+                                                            </div>
+
+                                                            {/* Runs today */}
+                                                            <div className="text-center px-2">
+                                                                <p className="text-sm font-bold tabular-nums">{u.automationRuns}</p>
+                                                                <p className="text-[9px] text-muted-foreground leading-none">สั่งการ</p>
+                                                            </div>
+
+                                                            {/* Task progress (if running) */}
+                                                            {u.currentTasks.total > 0 && (
+                                                                <div className="w-20">
+                                                                    <div className="flex items-center justify-between mb-0.5">
+                                                                        <span className="text-[9px] text-muted-foreground tabular-nums">{u.currentTasks.completed + u.currentTasks.failed}/{u.currentTasks.total}</span>
+                                                                        <span className="text-[9px] text-muted-foreground tabular-nums">{taskPct}%</span>
                                                                     </div>
-                                                                    <div className="min-w-0">
-                                                                        <p className="text-sm font-medium truncate">{u.displayName || u.userId}</p>
-                                                                        <div className="flex items-center gap-2 flex-wrap">
-                                                                            {u.email && <p className="text-[10px] text-muted-foreground truncate">{u.email}</p>}
-                                                                            {!u.email && <p className="text-[10px] text-muted-foreground font-mono">{u.userId}</p>}
-                                                                            {u.lineId && <span className="text-[10px] text-green-600 dark:text-green-400 font-medium">LINE: {u.lineId}</span>}
-                                                                        </div>
+                                                                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                                                                        <div className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full transition-all" style={{ width: `${taskPct}%` }} />
                                                                     </div>
                                                                 </div>
-                                                            </TableCell>
-                                                            <TableCell>{u.isOnline ? <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px]"><Wifi className="w-3 h-3 mr-1" />Online</Badge> : <Badge variant="secondary" className="text-[10px]"><WifiOff className="w-3 h-3 mr-1" />Offline</Badge>}</TableCell>
-                                                            <TableCell>{u.isRunningGroup || u.isRunningMarketplace ? <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 text-[10px]"><Zap className="w-3 h-3 mr-1 animate-pulse" />{u.isRunningGroup && 'Groups'}{u.isRunningGroup && u.isRunningMarketplace && ' + '}{u.isRunningMarketplace && 'Marketplace'}</Badge> : <span className="text-xs text-muted-foreground">—</span>}</TableCell>
-                                                            <TableCell><div className="text-xs"><span className="font-semibold">{u.todayPosts}</span><span className="text-muted-foreground ml-1">({u.todaySuccess}✅ {u.todayFailed}❌)</span></div></TableCell>
-                                                            <TableCell><span className="text-xs font-semibold">{u.automationRuns} {t.admin.times}</span></TableCell>
-                                                            <TableCell>{u.currentTasks.total > 0 ? <div className="flex items-center gap-1"><div className="w-16 h-2 bg-muted rounded-full overflow-hidden"><div className="h-full bg-green-500 rounded-full" style={{ width: `${((u.currentTasks.completed + u.currentTasks.failed) / u.currentTasks.total) * 100}%` }} /></div><span className="text-[10px] text-muted-foreground">{u.currentTasks.completed + u.currentTasks.failed}/{u.currentTasks.total}</span></div> : <span className="text-xs text-muted-foreground">—</span>}</TableCell>
-                                                            <TableCell className="text-right">
-                                                                {(u.isRunningGroup || u.isRunningMarketplace) && u.fullUserId ? (
-                                                                    <Button size="sm" variant="ghost" className="h-7 px-2 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
-                                                                        disabled={forceStoppingUser === u.fullUserId}
-                                                                        onClick={() => handleForceStop(u.fullUserId!, u.displayName || u.userId)}>
-                                                                        {forceStoppingUser === u.fullUserId
-                                                                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                                            : <StopCircle className="w-3.5 h-3.5" />}
-                                                                    </Button>
-                                                                ) : <span className="text-xs text-muted-foreground">—</span>}
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
+                                                            )}
+
+                                                            {/* Force stop */}
+                                                            {isRunning && u.fullUserId && (
+                                                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
+                                                                    disabled={forceStoppingUser === u.fullUserId}
+                                                                    onClick={() => handleForceStop(u.fullUserId!, u.displayName || u.userId)}>
+                                                                    {forceStoppingUser === u.fullUserId
+                                                                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                                        : <StopCircle className="w-3.5 h-3.5" />}
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Post breakdown — only if has posts */}
+                                                    {u.todayPosts > 0 && (
+                                                        <div className="mt-2 pt-2 border-t border-border/50 flex items-center gap-3 text-[10px] text-muted-foreground">
+                                                            <span className="text-green-600 dark:text-green-400">✅ {u.todaySuccess} สำเร็จ</span>
+                                                            {u.todayFailed > 0 && <span className="text-red-500">❌ {u.todayFailed} ล้มเหลว</span>}
+                                                            {u.lineId && <span className="ml-auto text-green-600">LINE: {u.lineId}</span>}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                );
+                                            })}
                                         </div>
                                     ) : (
                                         <p className="text-center text-sm text-muted-foreground py-8">{t.admin.noUsers}</p>

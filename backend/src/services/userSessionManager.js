@@ -42,7 +42,7 @@ class UserSessionManager {
     session.lastPresenceAt = Date.now();
     if (email) session.email = email;
     if (userMeta) {
-      if (userMeta.display_name) session.displayName = userMeta.display_name;
+      if (userMeta.display_name || userMeta.full_name) session.displayName = userMeta.display_name || userMeta.full_name;
       if (userMeta.line_id) session.lineId = userMeta.line_id;
     }
     return session;

@@ -377,7 +377,7 @@ export default function Auth() {
                         <div className="relative">
                           <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                           <Input id="fullName" placeholder={isEn ? 'John Doe' : 'เช่น สมชาย ใจดี'} value={fullName}
-                            onChange={e => setFullName(e.target.value)} className="pl-10 h-11" />
+                            onChange={e => setFullName(e.target.value)} className="pl-10 h-11" required />
                         </div>
                       </div>
                       <div className="space-y-2">

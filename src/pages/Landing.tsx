@@ -321,28 +321,64 @@ const stats = [
 const packages = [
   {
     name: 'Rookie',
+    nameEn: 'Rookie',
     icon: Rocket,
-    price: 'ฟรี',
+    price: 0,
+    priceLabel: 'ฟรี',
+    priceLabelEn: 'Free',
     period: '',
+    periodEn: '',
     color: 'from-emerald-500 to-teal-500',
-    features: ['10 โพสต์/วัน', '10 กลุ่ม', '10 ทรัพย์สิน', 'โพสต์กลุ่ม'],
+    features: [
+      { th: '10 โพสต์/วัน', en: '10 posts/day' },
+      { th: '10 กลุ่ม', en: '10 groups' },
+      { th: '10 ทรัพย์สิน', en: '10 properties' },
+      { th: '1 บัญชี Facebook', en: '1 Facebook account' },
+      { th: 'โพสต์กลุ่ม', en: 'Group posting' },
+    ],
   },
   {
     name: 'Top Agent',
+    nameEn: 'Top Agent',
     icon: Star,
-    price: '990',
+    price: 990,
+    priceLabel: '990',
+    priceLabelEn: '990',
     period: '/ เดือน',
+    periodEn: '/ month',
     color: 'from-amber-500 to-orange-500',
     popular: true,
-    features: ['300 โพสต์/วัน', '300 กลุ่ม', 'ไม่จำกัดทรัพย์สิน', 'กลุ่ม + Marketplace', 'AI แคปชั่น', 'ตั้งเวลาโพสต์'],
+    features: [
+      { th: '300 โพสต์/วัน', en: '300 posts/day', highlight: true },
+      { th: '300 กลุ่ม', en: 'Up to 300 groups' },
+      { th: 'ไม่จำกัดทรัพย์สิน', en: 'Unlimited properties' },
+      { th: '3 บัญชี Facebook', en: '3 Facebook accounts', highlight: true },
+      { th: 'กลุ่ม + Marketplace', en: 'Groups + Marketplace' },
+      { th: 'AI แคปชั่น', en: 'AI captions' },
+      { th: 'ตั้งเวลาโพสต์', en: 'Scheduled posting' },
+    ],
   },
   {
     name: 'Elite',
+    nameEn: 'Elite',
     icon: Crown,
-    price: '1,990',
+    price: 2990,
+    priceLabel: '2,990',
+    priceLabelEn: '2,990',
     period: '/ เดือน',
+    periodEn: '/ month',
     color: 'from-purple-500 to-pink-500',
-    features: ['750 โพสต์/วัน', '750 กลุ่ม', 'ไม่จำกัดทรัพย์สิน', 'กลุ่ม + Marketplace', 'AI แคปชั่น', 'ตั้งเวลาโพสต์', 'สถิติวิเคราะห์'],
+    features: [
+      { th: '750 โพสต์/วัน', en: '750 posts/day', highlight: true },
+      { th: '750 กลุ่ม', en: 'Up to 750 groups' },
+      { th: 'ไม่จำกัดทรัพย์สิน', en: 'Unlimited properties' },
+      { th: '5 บัญชี Facebook', en: '5 Facebook accounts', highlight: true },
+      { th: 'กลุ่ม + Marketplace', en: 'Groups + Marketplace' },
+      { th: 'AI แคปชั่น', en: 'AI captions' },
+      { th: 'ตั้งเวลาโพสต์', en: 'Scheduled posting' },
+      { th: 'สถิติวิเคราะห์', en: 'Analytics & reports' },
+      { th: 'Priority Support 24/7', en: 'Priority Support 24/7', highlight: true },
+    ],
   },
 ];
 
@@ -902,7 +938,7 @@ export default function Landing() {
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {packages.map((pkg, index) => (
               <motion.div
                 key={pkg.name}
@@ -910,8 +946,9 @@ export default function Landing() {
                 whileInView={{ opacity: 1, y: 0, scale: 1 }}
                 viewport={{ once: true, margin: '-30px' }}
                 transition={{ delay: index * 0.12, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                className={pkg.popular ? 'md:-mt-4 md:mb-4' : ''}
               >
-                <Card className={`h-full relative overflow-hidden transition-all duration-500 group ${pkg.popular ? 'neon-card border-accent shadow-xl shadow-accent/10 scale-[1.03]' : 'card-glow'}`}>
+                <Card className={`h-full relative overflow-hidden transition-all duration-500 group ${pkg.popular ? 'neon-card border-accent shadow-xl shadow-accent/10 ring-1 ring-accent/20' : 'card-glow'}`}>
                   {pkg.popular && (
                     <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-accent to-orange-500" />
                   )}
@@ -919,35 +956,72 @@ export default function Landing() {
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-accent/5 to-transparent" style={{ animation: 'shimmer 2.5s ease-in-out infinite' }} />
                   </div>
-                  <CardContent className="p-6 relative z-10">
-                    <motion.div
-                      whileHover={{ scale: 1.1, rotate: 5 }}
-                      transition={{ type: 'spring', stiffness: 400 }}
-                      className={`w-12 h-12 rounded-xl bg-gradient-to-br ${pkg.color} flex items-center justify-center mb-4 shadow-lg`}
-                    >
-                      <pkg.icon className="w-6 h-6 text-white" />
-                    </motion.div>
-                    <h3 className="text-lg font-bold">{pkg.name}</h3>
-                    {pkg.popular && <Badge className="mt-1 bg-accent/10 text-accent text-xs">{isEn ? 'Popular' : 'ยอดนิยม'}</Badge>}
-                    <div className="mt-3 mb-4">
-                      <span className="text-3xl font-bold">{pkg.price === 'ฟรี' ? 'ฟรี' : `฿${pkg.price}`}</span>
-                      {pkg.period && <span className="text-muted-foreground text-sm">{pkg.period}</span>}
+                  <CardContent className="p-6 md:p-7 relative z-10">
+                    <div className="flex items-center gap-3 mb-4">
+                      <motion.div
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        transition={{ type: 'spring', stiffness: 400 }}
+                        className={`w-12 h-12 rounded-xl bg-gradient-to-br ${pkg.color} flex items-center justify-center shadow-lg`}
+                      >
+                        <pkg.icon className="w-6 h-6 text-white" />
+                      </motion.div>
+                      <div>
+                        <h3 className="text-lg font-bold">{isEn ? pkg.nameEn : pkg.name}</h3>
+                        {pkg.popular && <Badge className="bg-accent/10 text-accent text-[10px] h-5">{isEn ? 'Most Popular' : 'ยอดนิยม'}</Badge>}
+                      </div>
                     </div>
-                    <ul className="space-y-2">
-                      {pkg.features.map((f) => (
-                        <li key={f} className="flex items-center gap-2 text-sm">
-                          <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                          <span>{f}</span>
+
+                    {/* Price */}
+                    <div className="mb-5 pb-5 border-b border-border/50">
+                      {pkg.price === 0 ? (
+                        <div>
+                          <span className="text-4xl font-extrabold">{isEn ? 'Free' : 'ฟรี'}</span>
+                          <p className="text-xs text-muted-foreground mt-1">{isEn ? 'No credit card required' : 'ไม่ต้องผูกบัตร'}</p>
+                        </div>
+                      ) : (
+                        <div>
+                          <span className="text-sm text-muted-foreground">฿</span>
+                          <span className="text-4xl font-extrabold">{isEn ? pkg.priceLabelEn : pkg.priceLabel}</span>
+                          <span className="text-muted-foreground text-sm ml-1">{isEn ? pkg.periodEn : pkg.period}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Features */}
+                    <ul className="space-y-2.5">
+                      {pkg.features.map((f, fi) => (
+                        <li key={fi} className="flex items-start gap-2.5 text-sm">
+                          <Check className={`w-4 h-4 flex-shrink-0 mt-0.5 ${f.highlight ? 'text-accent' : 'text-emerald-500'}`} />
+                          <span className={f.highlight ? 'font-semibold' : ''}>{isEn ? f.en : f.th}</span>
                         </li>
                       ))}
                     </ul>
+
+                    {/* CTA */}
                     <Link
-                      to="/auth"
-                      className={`btn-glass w-full mt-6 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold ${pkg.popular ? 'text-accent' : ''}`}
+                      to={pkg.price === 0 ? '/auth' : '/auth'}
+                      className={`w-full mt-6 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                        pkg.popular
+                          ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 hover:scale-[1.02]'
+                          : 'btn-glass'
+                      }`}
                     >
-                      {pkg.price === 'ฟรี' ? (isEn ? 'Start Free' : 'เริ่มต้นฟรี') : (isEn ? 'Get Started' : 'สมัครเลย')}
+                      {pkg.price === 0
+                        ? (isEn ? 'Start Free' : 'เริ่มต้นฟรี')
+                        : pkg.popular
+                          ? (isEn ? 'Get Started' : 'เริ่มต้นเลย')
+                          : (isEn ? 'Choose Plan' : 'เลือกแพ็กเกจ')
+                      }
                       <ArrowRight className="w-4 h-4" />
                     </Link>
+
+                    {/* Contact hint for paid plans */}
+                    {pkg.price > 0 && (
+                      <p className="text-center text-[10px] text-muted-foreground mt-2">
+                        {isEn ? 'or contact via ' : 'หรือติดต่อทาง '}
+                        <a href="https://line.me/ti/p/@897hrloe" target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline font-medium">LINE</a>
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>
@@ -1054,10 +1128,8 @@ export default function Landing() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-                  <Building2 className="w-4 h-4 text-primary-foreground" />
-                </div>
-                <span className="font-bold text-lg">Grand$tate</span>
+                <GrandStateLogo className="w-10 h-10" />
+                <span className="font-bold text-lg">Grand<span className="text-amber-500">$</span>tate</span>
               </div>
               <p className="text-sm text-muted-foreground">
                 {isEn ? 'Auto real estate posting system' : 'ระบบโพสต์อสังหาริมทรัพย์อัตโนมัติ'}<br />

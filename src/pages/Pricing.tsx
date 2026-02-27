@@ -18,7 +18,6 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
 import { getUserPackage } from '@/hooks/usePackageLimits';
 import { toast } from 'sonner';
 
@@ -159,7 +158,6 @@ const plans: Plan[] = [
 export default function Pricing() {
   const { language } = useLanguage();
   const isEn = language === 'en';
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const userPkg = getUserPackage();
   const currentPlan = userPkg === 'agent' ? 'agent' : userPkg === 'elite' ? 'elite' : 'rookie';
 
@@ -175,9 +173,8 @@ export default function Pricing() {
       return;
     }
 
-    // Paid plans - go to checkout
-    setSelectedPlan(planId);
-    window.location.href = `/checkout?package=${planId}`;
+    // Paid plans - contact via LINE
+    window.open('https://line.me/ti/p/@grandstate', '_blank');
   };
 
   return (
@@ -329,8 +326,8 @@ export default function Pricing() {
                           ? 'Get Started'
                           : 'เริ่มต้นใช้งาน'
                         : isEn
-                          ? 'Upgrade Now'
-                          : 'อัพเกรดเลย'}
+                          ? 'Contact Us — LINE'
+                          : 'ติดต่อซื้อ — LINE'}
                   </Button>
                 </CardContent>
               </Card>

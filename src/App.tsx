@@ -21,7 +21,6 @@ const Groups = lazy(() => import("./pages/Groups"));
 const Help = lazy(() => import("./pages/Help"));
 const Pricing = lazy(() => import("./pages/Pricing"));
 const Analytics = lazy(() => import("./pages/Analytics"));
-const Checkout = lazy(() => import("./pages/Checkout"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const UserProfile = lazy(() => import("./pages/UserProfile"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
@@ -43,7 +42,6 @@ const App = () => (
               <Route path="/" element={<Landing />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/pricing" element={<Pricing />} />
-              <Route path="/checkout" element={<Checkout />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/terms" element={<TermsOfService />} />
 

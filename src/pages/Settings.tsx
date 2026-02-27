@@ -101,9 +101,20 @@ export default function Settings() {
   const [connectSlot, setConnectSlot] = useState(0);
 
   const handleDisconnect = async (slot?: number) => {
-    const result = await disconnect(slot);
+    const targetSlot = slot ?? activeSlot;
+    const sessionName = fbSessions[targetSlot]?.name || `Session ${targetSlot + 1}`;
+    const result = await disconnect(targetSlot);
     if (result.success) {
-      toast.info(result.message);
+      toast.success(`ยกเลิกการเชื่อมต่อ ${sessionName} (Slot ${targetSlot + 1}) สำเร็จ`);
+      // If we disconnected the active slot, switch to next available
+      if (targetSlot === activeSlot) {
+        const nextConnected = fbSessions.findIndex((s, i) => i !== targetSlot && s && s.name);
+        if (nextConnected >= 0) {
+          setActiveSlot(nextConnected);
+        }
+      }
+    } else {
+      toast.error(result.message || 'ยกเลิกการเชื่อมต่อไม่สำเร็จ');
     }
   };
 
@@ -577,87 +588,81 @@ export default function Settings() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Connection Status */}
+            {/* Active Posting Account — shows which FB ID will be used in automation */}
             {isChecking ? (
               <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/50">
                 <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                 <p className="text-sm font-medium text-muted-foreground">{t.settings.checking}</p>
               </div>
-            ) : isConnected ? (
-              <div className="p-4 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50/50 dark:from-green-950/20 dark:to-emerald-950/10 border border-green-200 dark:border-green-800">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {/* Profile Avatar */}
-                    <div className="relative">
-                      <div className={cn(
-                        "w-12 h-12 rounded-full flex items-center justify-center overflow-hidden ring-2 ring-green-500/30",
-                        !user?.profilePic && "bg-gradient-to-br from-blue-500 to-blue-600"
-                      )}>
-                        {user?.profilePic ? (
-                          <img src={user.profilePic} alt={user?.name || 'FB'} className="w-12 h-12 rounded-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                        ) : (
-                          <span className="text-white text-lg font-bold">{user?.name?.charAt(0) || 'F'}</span>
-                        )}
+            ) : fbConnectedCount > 0 ? (
+              <div className="p-4 rounded-xl bg-gradient-to-r from-amber-50/80 to-orange-50/50 dark:from-amber-950/20 dark:to-orange-950/10 border border-amber-200 dark:border-amber-800">
+                <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                  <Send className="w-3 h-3" /> บัญชีที่ใช้โพสต์อัตโนมัติ
+                </p>
+                {(() => {
+                  const activeSession = fbSessions[activeSlot];
+                  const hasActive = activeSession && activeSession.name;
+                  return hasActive ? (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          {activeSession.profilePic ? (
+                            <img src={activeSession.profilePic} alt={activeSession.name || ''} className="w-11 h-11 rounded-full object-cover ring-2 ring-amber-500/40" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                          ) : (
+                            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center ring-2 ring-amber-500/40">
+                              <span className="text-white font-bold">{activeSession.name?.charAt(0) || 'F'}</span>
+                            </div>
+                          )}
+                          <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-amber-500 border-2 border-white dark:border-gray-900 flex items-center justify-center">
+                            <Send className="w-2 h-2 text-white" />
+                          </div>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm">{activeSession.name}</p>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 text-[9px] h-4 px-1.5">
+                              Slot {activeSlot + 1} — ใช้โพสต์
+                            </Badge>
+                          </div>
+                        </div>
                       </div>
-                      <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-green-500 border-2 border-white dark:border-gray-900 flex items-center justify-center">
-                        <Check className="w-2.5 h-2.5 text-white" />
-                      </div>
+                      <p className="text-[10px] text-muted-foreground">เปลี่ยนได้ด้านล่าง ↓</p>
                     </div>
-                    {/* User Info */}
-                    <div>
-                      <p className="font-semibold text-sm">{user?.name || 'Facebook User'}</p>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <Badge className="bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 text-[10px] h-5 px-1.5">
-                          <CheckCircle2 className="w-3 h-3 mr-0.5" /> {t.settings.connected}
-                        </Badge>
-                        {user?.connectedAt && (
-                          <span className="text-[10px] text-muted-foreground">{new Date(user.connectedAt).toLocaleDateString('th-TH')}</span>
-                        )}
-                      </div>
-                    </div>
+                  ) : (
+                    <p className="text-sm text-amber-700 dark:text-amber-400">เลือก session ด้านล่างเพื่อกำหนดบัญชีโพสต์</p>
+                  );
+                })()}
+              </div>
+            ) : isConnecting ? (
+              <div className="p-4 rounded-xl bg-gradient-to-b from-blue-50 to-white dark:from-blue-950/20 dark:to-background border border-blue-200 dark:border-blue-800">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-[#1877F2]/10 flex items-center justify-center">
+                    <Loader2 className="w-4 h-4 text-[#1877F2] animate-spin" />
                   </div>
-                  {/* Disconnect */}
-                  <Button variant="ghost" size="sm" onClick={() => handleDisconnect()} className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 h-8 px-2.5">
-                    <Unlink className="w-3.5 h-3.5 mr-1.5" />
-                    <span className="text-xs">{t.settings.disconnect}</span>
-                  </Button>
+                  <div>
+                    <p className="font-medium text-sm text-blue-700 dark:text-blue-400">{t.settings.waitingLogin}</p>
+                    <p className="text-xs text-muted-foreground">{t.settings.autoDetect}</p>
+                  </div>
                 </div>
               </div>
             ) : (
-              /* Not Connected — Beautiful connect CTA */
-              <div className="space-y-3">
-                {isConnecting ? (
-                  <div className="p-4 rounded-xl bg-gradient-to-b from-blue-50 to-white dark:from-blue-950/20 dark:to-background border border-blue-200 dark:border-blue-800">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-8 h-8 rounded-lg bg-[#1877F2]/10 flex items-center justify-center">
-                        <Loader2 className="w-4 h-4 text-[#1877F2] animate-spin" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm text-blue-700 dark:text-blue-400">{t.settings.waitingLogin}</p>
-                        <p className="text-xs text-muted-foreground">{t.settings.autoDetect}</p>
-                      </div>
-                    </div>
+              <div className="relative overflow-hidden rounded-xl border-2 border-dashed border-muted-foreground/20 hover:border-[#1877F2]/40 transition-all group">
+                <div className="p-5 text-center space-y-3">
+                  <div className="w-14 h-14 mx-auto rounded-2xl bg-[#1877F2]/10 flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <Facebook className="w-7 h-7 text-[#1877F2]" />
                   </div>
-                ) : (
-                  <div className="relative overflow-hidden rounded-xl border-2 border-dashed border-muted-foreground/20 hover:border-[#1877F2]/40 transition-all group">
-                    <div className="p-5 text-center space-y-3">
-                      <div className="w-14 h-14 mx-auto rounded-2xl bg-[#1877F2]/10 flex items-center justify-center group-hover:scale-105 transition-transform">
-                        <Facebook className="w-7 h-7 text-[#1877F2]" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-sm">{t.settings.notConnected}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{t.settings.clickToConnect}</p>
-                      </div>
-                      <Button
-                        onClick={() => handleConnectFacebook(0)}
-                        className="w-full h-11 rounded-xl bg-gradient-to-r from-[#1877F2] to-[#0D47A1] hover:from-[#1565C0] hover:to-[#0B3D91] text-white font-semibold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all"
-                      >
-                        <Facebook className="w-4 h-4 mr-2" />
-                        {t.settings.connectFacebook}
-                      </Button>
-                    </div>
+                  <div>
+                    <p className="font-semibold text-sm">{t.settings.notConnected}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{t.settings.clickToConnect}</p>
                   </div>
-                )}
+                  <Button
+                    onClick={() => handleConnectFacebook(0)}
+                    className="w-full h-11 rounded-xl bg-gradient-to-r from-[#1877F2] to-[#0D47A1] hover:from-[#1565C0] hover:to-[#0B3D91] text-white font-semibold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all"
+                  >
+                    <Facebook className="w-4 h-4 mr-2" />
+                    {t.settings.connectFacebook}
+                  </Button>
+                </div>
               </div>
             )}
 

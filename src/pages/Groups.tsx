@@ -26,7 +26,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useSupabaseGroups } from '@/hooks/useSupabaseGroups';
 import { extractGroupId } from '@/hooks/useGroups';
 import { FacebookGroup } from '@/types/property';
-import { Plus, Link as LinkIcon, Users, Search, Loader2, RefreshCw, Trash2, Lock } from 'lucide-react';
+import { Plus, Link as LinkIcon, Users, Search, Loader2, RefreshCw, Trash2, Lock, AlertCircle, Settings } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useFacebookConnection } from '@/hooks/useFacebookConnection';
 import { toast } from 'sonner';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { BulkAddGroupDialog } from '@/components/automation/BulkAddGroupDialog';
@@ -58,6 +60,8 @@ import { apiFetch } from '@/lib/config';
 export default function Groups() {
   const { t } = useLanguage();
   const { groups, activeGroups, inactiveGroups, loading: groupsLoading, error: groupsError, addGroup, updateGroup, deleteGroup, deleteAllGroups, toggleGroupActive, updateAllActiveGroups } = useSupabaseGroups();
+  const { isConnected, isChecking: fbChecking, connectedCount: fbConnectedCount } = useFacebookConnection();
+  const fbReady = isConnected || fbConnectedCount > 0;
   
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -250,6 +254,12 @@ export default function Groups() {
 
   // Handle update all active groups
   const handleUpdateAllGroups = async () => {
+    if (!fbReady) {
+      toast.error('กรุณาเชื่อมต่อ Facebook ก่อน', {
+        description: 'ไปที่ ตั้งค่า → เชื่อมต่อ Facebook เพื่อให้ระบบดึงข้อมูลกลุ่มได้',
+      });
+      return;
+    }
     if (activeGroups.length === 0) {
       toast.error('ไม่มีกลุ่มที่เปิดใช้งาน');
       return;
@@ -287,6 +297,22 @@ export default function Groups() {
   return (
     <DashboardLayout title={t.groups.title} subtitle={t.groups.subtitle}>
       <div className="space-y-6">
+        {/* Facebook Connection Warning */}
+        {!fbChecking && !fbReady && (
+          <div className="p-4 rounded-xl bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-semibold text-orange-700 dark:text-orange-400 text-sm">ยังไม่ได้เชื่อมต่อ Facebook</p>
+              <p className="text-xs text-muted-foreground mt-1">ต้องเชื่อมต่อ Facebook ก่อนถึงจะเพิ่มกลุ่มหรืออัปเดตข้อมูลกลุ่มได้ (สมาชิก, โพสต์วันนี้, โพสต์/เดือน)</p>
+              <Link to="/settings">
+                <Button variant="outline" size="sm" className="mt-2.5 border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/30">
+                  <Settings className="w-4 h-4 mr-2" />
+                  ไปเชื่อมต่อ Facebook
+                </Button>
+              </Link>
+            </div>
+          </div>
+        )}
         {/* Header Stats */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center gap-4">
@@ -327,7 +353,8 @@ export default function Groups() {
               variant="outline"
               size="sm"
               onClick={handleUpdateAllGroups}
-              disabled={isUpdatingAll || activeGroups.length === 0}
+              disabled={isUpdatingAll || activeGroups.length === 0 || !fbReady}
+              title={!fbReady ? 'เชื่อมต่อ Facebook ก่อน' : ''}
             >
               {isUpdatingAll ? (
                 <>

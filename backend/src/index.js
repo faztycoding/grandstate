@@ -2935,6 +2935,87 @@ app.get('/api/health-check', ...auth, (req, res) => {
 });
 
 // ============================================
+// NOTIFICATIONS — Poll for admin replies to user's support tickets
+// ============================================
+app.get('/api/notifications/poll', ...auth, async (req, res) => {
+  try {
+    const supaUrl = process.env.SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+    if (!supaUrl || !serviceKey) return res.json({ success: true, notifications: [] });
+
+    // Get user's tickets that have an admin reply
+    const resp = await fetch(
+      `${supaUrl}/rest/v1/support_tickets?user_id=eq.${req.userId}&admin_reply=not.is.null&select=id,subject,category,admin_reply,admin_replied_at,status&order=admin_replied_at.desc&limit=10`,
+      { headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` } }
+    );
+    if (!resp.ok) return res.json({ success: true, notifications: [] });
+    const tickets = await resp.json();
+
+    // Check which replies user has already seen (stored in session)
+    const session = sessionManager.getSession(req.userId);
+    const seenReplies = session?._seenTicketReplies || new Set();
+
+    const newNotifications = [];
+    for (const t of tickets) {
+      const replyKey = `${t.id}_${t.admin_replied_at}`;
+      if (!seenReplies.has(replyKey)) {
+        seenReplies.add(replyKey);
+        newNotifications.push({
+          id: replyKey,
+          type: 'admin_reply',
+          category: 'admin',
+          title: `ผู้ดูแลตอบกลับ: ${t.subject}`,
+          message: t.admin_reply.substring(0, 200),
+          ticketId: t.id,
+          timestamp: new Date(t.admin_replied_at).getTime(),
+        });
+      }
+    }
+
+    // Persist seen set back to session
+    if (session) session._seenTicketReplies = seenReplies;
+
+    res.json({ success: true, notifications: newNotifications });
+  } catch (error) {
+    console.error('Notification poll error:', error);
+    res.json({ success: true, notifications: [] });
+  }
+});
+
+// ============================================
+// SUPPORT TICKETS — Delete a ticket (owner only)
+// ============================================
+app.delete('/api/support-tickets/:id', ...auth, async (req, res) => {
+  try {
+    const ticketId = req.params.id;
+    const supaUrl = process.env.SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+    if (!supaUrl || !serviceKey) return res.status(500).json({ success: false, error: 'Supabase not configured' });
+
+    // Verify ownership first
+    const checkResp = await fetch(
+      `${supaUrl}/rest/v1/support_tickets?id=eq.${ticketId}&user_id=eq.${req.userId}&select=id`,
+      { headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` } }
+    );
+    if (!checkResp.ok) return res.status(500).json({ success: false, error: 'DB error' });
+    const found = await checkResp.json();
+    if (!found || found.length === 0) return res.status(403).json({ success: false, error: 'Not your ticket' });
+
+    // Delete
+    const delResp = await fetch(
+      `${supaUrl}/rest/v1/support_tickets?id=eq.${ticketId}`,
+      { method: 'DELETE', headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` } }
+    );
+    if (!delResp.ok) throw new Error('Delete failed');
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete ticket error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
 // WORKER SLOTS — Real-time node status for factory monitor
 // ============================================
 app.get('/api/worker-slots', ...auth, (req, res) => {

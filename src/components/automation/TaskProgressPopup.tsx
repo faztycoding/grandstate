@@ -64,6 +64,7 @@ interface TaskProgressPopupProps {
     endTime: number | null;
     queuePosition?: number | null;
     queueEstimate?: number;
+    queueRunningJobs?: Array<{ displayName: string; groupCount: number; runningSec: number; automationType: string }> | null;
     fbUser?: { name: string; profilePic?: string } | null;
     onStop: () => void;
     onPause: () => void;
@@ -116,6 +117,7 @@ export function TaskProgressPopup({
     endTime,
     queuePosition,
     queueEstimate,
+    queueRunningJobs,
     fbUser,
     onStop,
     onPause,
@@ -506,6 +508,26 @@ export function TaskProgressPopup({
                                                 </div>
                                             </div>
                                         </div>
+
+                                        {/* Running jobs info — show who's currently using slots */}
+                                        {queueRunningJobs && queueRunningJobs.length > 0 && (
+                                            <div className="mt-3 space-y-1.5">
+                                                <p className="text-[10px] text-muted-foreground font-mono tracking-wider">กำลังทำงาน ({queueRunningJobs.length} slot)</p>
+                                                {queueRunningJobs.slice(0, 3).map((job, i) => (
+                                                    <div key={i} className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-muted/30 border border-border/30">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse flex-shrink-0" />
+                                                        <span className="text-[11px] font-medium truncate flex-1">{job.displayName}</span>
+                                                        <span className="text-[10px] text-muted-foreground font-mono flex-shrink-0">{job.groupCount} กลุ่ม</span>
+                                                        <span className="text-[10px] text-muted-foreground/60 font-mono flex-shrink-0">
+                                                            {job.runningSec >= 60 ? `${Math.floor(job.runningSec / 60)}m` : `${job.runningSec}s`}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                                {queueRunningJobs.length > 3 && (
+                                                    <p className="text-[10px] text-muted-foreground/50 text-center">+{queueRunningJobs.length - 3} อื่นๆ</p>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 

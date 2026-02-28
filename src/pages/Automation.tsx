@@ -143,6 +143,7 @@ export default function Automation() {
   // Queue state
   const [queuePosition, setQueuePosition] = useState<number | null>(null);
   const [queueEstimate, setQueueEstimate] = useState<number>(0);
+  const [queueRunningJobs, setQueueRunningJobs] = useState<Array<{ displayName: string; groupCount: number; runningSec: number; automationType: string }> | null>(null);
   const queuePollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Health Check — fetches real data from backend postingTracker
@@ -454,6 +455,7 @@ export default function Automation() {
           if (data.status === 'running' || data.isRunning) {
             // Our turn! Stop queue polling, start automation polling
             setQueuePosition(null);
+            setQueueRunningJobs(null);
             if (queuePollingRef.current) clearInterval(queuePollingRef.current);
             queuePollingRef.current = null;
             if (!data.notification?.type) {
@@ -463,16 +465,19 @@ export default function Automation() {
           } else if (data.status === 'queued') {
             setQueuePosition(data.position);
             setQueueEstimate(data.estimatedWaitSec || 0);
+            // Store running jobs info for queue display
+            if (data.runningJobs) setQueueRunningJobs(data.runningJobs);
           } else if (data.status === 'idle') {
             // No longer in queue and not running — was cancelled or timed out
             setQueuePosition(null);
+            setQueueRunningJobs(null);
             if (queuePollingRef.current) clearInterval(queuePollingRef.current);
             queuePollingRef.current = null;
             setAutomation(prev => ({ ...prev, isRunning: false }));
           }
         }
       } catch { /* silent */ }
-    }, 3000);
+    }, 2000);
   }, []);
 
   // Cleanup queue polling on unmount
@@ -1313,6 +1318,7 @@ export default function Automation() {
         endTime={automationEndTime}
         queuePosition={queuePosition}
         queueEstimate={queueEstimate}
+        queueRunningJobs={queueRunningJobs}
         fbUser={fbSessions[selectedFbSlot]?.name ? { name: fbSessions[selectedFbSlot].name!, profilePic: fbSessions[selectedFbSlot].profilePic! } : user}
         onStop={stopAutomation}
         onPause={pauseAutomation}

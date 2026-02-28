@@ -315,7 +315,8 @@ class AutomationQueue {
    */
   _cleanupStaleEntries() {
     const now = Date.now();
-    const RUNNING_HARD_TIMEOUT_MS = 60 * 60 * 1000; // 60 min hard limit for any running job
+    const RUNNING_HARD_TIMEOUT_MS = 45 * 60 * 1000; // 45 min hard limit
+    const BROWSER_GHOST_TIMEOUT_MS = 5 * 60 * 1000; // 5 min: if worker says running but no browser = ghost
 
     // 1. Clean stale queue entries
     const before = this.queue.length;
@@ -325,20 +326,36 @@ class AutomationQueue {
       console.log(`🧹 [Queue] Removed ${removedQueue} stale queue entries`);
     }
 
-    // 2. Clean ghost running jobs — worker stopped but _onJobComplete was never called
-    //    This is the ROOT CAUSE of the "stuck in queue" bug
+    // 2. AGGRESSIVE ghost cleanup — multiple detection strategies
     const staleRunning = [];
     for (const [uid, job] of this.running.entries()) {
       const elapsedMs = now - job.startedAt;
       const worker = job.worker;
 
-      // Check if worker has already stopped (ghost entry)
-      const workerActuallyRunning = worker && (typeof worker.isRunning !== 'undefined' ? worker.isRunning : true);
+      // Strategy A: worker.isRunning is explicitly false
+      const workerSaysRunning = worker && (typeof worker.isRunning !== 'undefined' ? worker.isRunning : true);
+      if (!workerSaysRunning) {
+        staleRunning.push({ uid, reason: 'worker.isRunning=false but slot not freed' });
+        continue;
+      }
 
-      if (!workerActuallyRunning) {
-        staleRunning.push({ uid, reason: 'worker stopped but slot not freed' });
-      } else if (elapsedMs > RUNNING_HARD_TIMEOUT_MS) {
+      // Strategy B: browser disconnected (crashed/closed) but worker still claims running
+      const browserConnected = worker && worker.browser && typeof worker.browser.isConnected === 'function' && worker.browser.isConnected();
+      if (worker && !browserConnected && elapsedMs > BROWSER_GHOST_TIMEOUT_MS) {
+        staleRunning.push({ uid, reason: `browser disconnected for ${Math.round(elapsedMs / 60000)}m — ghost` });
+        continue;
+      }
+
+      // Strategy C: hard timeout exceeded
+      if (elapsedMs > RUNNING_HARD_TIMEOUT_MS) {
         staleRunning.push({ uid, reason: `exceeded ${Math.round(RUNNING_HARD_TIMEOUT_MS / 60000)}m hard timeout` });
+        continue;
+      }
+
+      // Strategy D: worker has no tasks and has been "running" for > 3 min (startup ghost)
+      if (worker && Array.isArray(worker.tasks) && worker.tasks.length === 0 && elapsedMs > 3 * 60 * 1000) {
+        staleRunning.push({ uid, reason: 'running >3m with zero tasks — startup ghost' });
+        continue;
       }
     }
 
@@ -361,6 +378,9 @@ class AutomationQueue {
    * Get queue status for a specific user (includes notification)
    */
   getUserQueueStatus(userId) {
+    // Run cleanup FIRST to free ghost slots
+    this._cleanupStaleEntries();
+
     // Check for pending notification
     const notification = this.pollNotification(userId);
 
@@ -371,6 +391,7 @@ class AutomationQueue {
         position: 0,
         estimatedWaitSec: 0,
         notification,
+        capacity: { running: this.running.size, max: this.maxConcurrent },
       };
     }
 
@@ -379,11 +400,24 @@ class AutomationQueue {
     if (idx >= 0) {
       const position = idx + 1;
       const automationType = this.queue[idx].automationType || 'group';
+      const now = Date.now();
+
+      // Build running jobs summary (for showing who's ahead)
+      const runningJobs = Array.from(this.running.values()).map(job => ({
+        displayName: job.displayName || 'User',
+        groupCount: job.groupCount,
+        runningSec: Math.round((now - job.startedAt) / 1000),
+        automationType: job.automationType || 'group',
+      }));
+
       return {
         status: 'queued',
         position,
         estimatedWaitSec: this._estimateWait(position, automationType),
         notification,
+        capacity: { running: this.running.size, max: this.maxConcurrent },
+        runningJobs,
+        queueAhead: idx, // how many people waiting before this user
       };
     }
 
@@ -393,6 +427,7 @@ class AutomationQueue {
       position: null,
       estimatedWaitSec: 0,
       notification,
+      capacity: { running: this.running.size, max: this.maxConcurrent },
     };
   }
 

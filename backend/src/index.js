@@ -1091,12 +1091,16 @@ app.get('/api/group-automation/status', ...auth, (req, res) => {
   }
 });
 
-// Queue status for this user
+// Queue status for this user (includes capacity + running jobs for queue display)
 app.get('/api/group-automation/queue-status', ...auth, (req, res) => {
   try {
     const queueStatus = automationQueue.getUserQueueStatus(req.userId);
     const workerStatus = req.groupWorker.getStatus();
-    res.json({ success: true, ...queueStatus, isRunning: workerStatus.isRunning });
+    res.json({
+      success: true,
+      ...queueStatus,
+      isRunning: workerStatus.isRunning,
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

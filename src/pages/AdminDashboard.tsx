@@ -48,6 +48,8 @@ import {
     Eye,
     ArrowRight,
     Send,
+    AlertTriangle,
+    Settings,
 } from 'lucide-react';
 import { GrandStateLogo } from '@/components/GrandStateLogo';
 import { Button } from '@/components/ui/button';
@@ -1997,33 +1999,58 @@ export default function AdminDashboard() {
                     </Dialog>
                 </>)}
 
-                {/* ═══════════════ TAB: SUPPORT TICKETS ═══════════════ */}
+                {/* ═══════════════ TAB: SUPPORT TERMINAL ═══════════════ */}
                 {activeTab === 'tickets' && (<>
                     <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-                        {/* Header Stats */}
+
+                        {/* Summary Cards — Neon stat modules */}
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
                             {[
-                                { label: 'ทั้งหมด', count: tickets.length, color: 'text-blue-600', bg: 'bg-blue-100 dark:bg-blue-900/30', icon: <Mail className="w-5 h-5 text-blue-600" /> },
-                                { label: 'เปิดอยู่', count: tickets.filter(t => t.status === 'open').length, color: 'text-amber-600', bg: 'bg-amber-100 dark:bg-amber-900/30', icon: <Clock className="w-5 h-5 text-amber-600" /> },
-                                { label: 'กำลังดำเนินการ', count: tickets.filter(t => t.status === 'in_progress').length, color: 'text-cyan-600', bg: 'bg-cyan-100 dark:bg-cyan-900/30', icon: <Zap className="w-5 h-5 text-cyan-600" /> },
-                                { label: 'แก้ไขแล้ว', count: tickets.filter(t => t.status === 'resolved' || t.status === 'closed').length, color: 'text-green-600', bg: 'bg-green-100 dark:bg-green-900/30', icon: <CheckCircle2 className="w-5 h-5 text-green-600" /> },
+                                { label: 'Total Tickets', count: tickets.length, icon: <Mail className="w-5 h-5" />, dotColor: 'bg-blue-500', textColor: 'text-blue-500', borderColor: 'border-blue-500/20 hover:border-blue-500/40' },
+                                { label: 'Open', count: tickets.filter(t => t.status === 'open').length, icon: <AlertTriangle className="w-5 h-5" />, dotColor: 'bg-red-500 animate-pulse', textColor: 'text-red-500', borderColor: 'border-red-500/20 hover:border-red-500/40' },
+                                { label: 'In Progress', count: tickets.filter(t => t.status === 'in_progress').length, icon: <Settings className="w-5 h-5" />, dotColor: 'bg-amber-500', textColor: 'text-amber-500', borderColor: 'border-amber-500/20 hover:border-amber-500/40', gear: true },
+                                { label: 'Resolved', count: tickets.filter(t => t.status === 'resolved' || t.status === 'closed').length, icon: <CheckCircle2 className="w-5 h-5" />, dotColor: 'bg-emerald-500', textColor: 'text-emerald-500', borderColor: 'border-emerald-500/20 hover:border-emerald-500/40' },
                             ].map((s, si) => (
-                                <Card key={si}><CardContent className="pt-5 pb-4"><div className="flex items-center gap-3"><div className={cn("p-2.5 rounded-xl", s.bg)}>{s.icon}</div><div><p className="text-xs text-muted-foreground">{s.label}</p><p className={cn("text-xl font-bold", s.color)}>{s.count}</p></div></div></CardContent></Card>
+                                <Card key={si} className={cn("transition-all group", s.borderColor)}>
+                                    <CardContent className="pt-5 pb-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className={cn("opacity-50 group-hover:opacity-100 transition-opacity", s.textColor)}>
+                                                {s.gear ? (
+                                                    <motion.div animate={s.count > 0 ? { rotate: 360 } : {}} transition={{ duration: 4, repeat: Infinity, ease: "linear" }}>
+                                                        {s.icon}
+                                                    </motion.div>
+                                                ) : s.icon}
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">{s.label}</p>
+                                                <p className={cn("text-2xl font-bold font-mono", s.textColor)}>{s.count}</p>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
                             ))}
                         </div>
 
-                        {/* Filter & Refresh */}
+                        {/* Filter Bar — Status tabs with counts */}
                         <div className="flex items-center justify-between mb-4">
-                            <div className="flex gap-2">
-                                {['all', 'open', 'in_progress', 'resolved', 'closed'].map(f => (
+                            <div className="flex gap-1.5 flex-wrap">
+                                {([
+                                    { key: 'all', label: 'ทั้งหมด', count: tickets.length },
+                                    { key: 'open', label: 'เปิด', count: tickets.filter(t => t.status === 'open').length, dot: 'bg-red-500' },
+                                    { key: 'in_progress', label: 'ดำเนินการ', count: tickets.filter(t => t.status === 'in_progress').length, dot: 'bg-amber-500' },
+                                    { key: 'resolved', label: 'แก้ไขแล้ว', count: tickets.filter(t => t.status === 'resolved').length, dot: 'bg-emerald-500' },
+                                    { key: 'closed', label: 'ปิด', count: tickets.filter(t => t.status === 'closed').length, dot: 'bg-muted-foreground' },
+                                ] as const).map(f => (
                                     <Button
-                                        key={f}
-                                        variant={ticketFilter === f ? 'default' : 'outline'}
+                                        key={f.key}
+                                        variant={ticketFilter === f.key ? 'default' : 'outline'}
                                         size="sm"
-                                        onClick={() => setTicketFilter(f)}
-                                        className="text-xs h-8"
+                                        onClick={() => setTicketFilter(f.key)}
+                                        className={cn("text-xs h-8 gap-1.5", ticketFilter === f.key && "shadow-sm")}
                                     >
-                                        {f === 'all' ? 'ทั้งหมด' : f === 'open' ? 'เปิด' : f === 'in_progress' ? 'กำลังดำเนินการ' : f === 'resolved' ? 'แก้ไขแล้ว' : 'ปิด'}
+                                        {f.dot && <div className={cn("w-1.5 h-1.5 rounded-full", f.dot, f.key === 'open' && ticketFilter !== f.key && "animate-pulse")} />}
+                                        {f.label}
+                                        {f.count > 0 && <span className={cn("text-[9px] px-1 py-0.5 rounded-full font-bold", ticketFilter === f.key ? "bg-white/20" : "bg-muted")}>{f.count}</span>}
                                     </Button>
                                 ))}
                             </div>
@@ -2032,69 +2059,88 @@ export default function AdminDashboard() {
                             </Button>
                         </div>
 
-                        {/* Ticket List */}
-                        <div className="space-y-3">
+                        {/* Ticket Table — Professional layout */}
+                        <Card className="overflow-hidden">
                             {ticketsLoading && tickets.length === 0 ? (
                                 <div className="flex items-center justify-center py-20 text-muted-foreground gap-2">
                                     <Loader2 className="w-5 h-5 animate-spin" /> กำลังโหลด...
                                 </div>
                             ) : (tickets.filter(t => ticketFilter === 'all' || t.status === ticketFilter)).length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
-                                    <Mail className="w-10 h-10 opacity-30" />
+                                    <Mail className="w-10 h-10 opacity-20" />
                                     <p className="text-sm">ไม่มีเรื่องแจ้งปัญหา</p>
                                 </div>
                             ) : (
-                                (tickets.filter(t => ticketFilter === 'all' || t.status === ticketFilter)).map(ticket => {
-                                    const catConfig: Record<string, { label: string; color: string }> = {
-                                        general: { label: 'ทั่วไป', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' },
-                                        bug: { label: 'บัค', color: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400' },
-                                        feature: { label: 'ฟีเจอร์', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' },
-                                        billing: { label: 'ชำระเงิน', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' },
-                                        facebook: { label: 'Facebook', color: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400' },
-                                        automation: { label: 'ออโต้', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400' },
-                                    };
-                                    const statusConfig: Record<string, { label: string; color: string }> = {
-                                        open: { label: 'เปิด', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' },
-                                        in_progress: { label: 'กำลังดำเนินการ', color: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-400' },
-                                        resolved: { label: 'แก้ไขแล้ว', color: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' },
-                                        closed: { label: 'ปิด', color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400' },
-                                    };
-                                    const cat = catConfig[ticket.category] || catConfig.general;
-                                    const sta = statusConfig[ticket.status] || statusConfig.open;
-                                    const isExpanded = replyingTicket === ticket.id;
+                                <div className="divide-y divide-border">
+                                    {/* Table Header */}
+                                    <div className="hidden md:grid grid-cols-[100px_1fr_100px_120px_120px] gap-3 px-4 py-2.5 bg-muted/40 text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
+                                        <span>Ticket ID</span>
+                                        <span>Subject</span>
+                                        <span>Priority</span>
+                                        <span>Status</span>
+                                        <span className="text-right">Action</span>
+                                    </div>
 
-                                    return (
-                                        <Card key={ticket.id} className={cn("transition-all", ticket.status === 'open' && "border-amber-300 dark:border-amber-800")}>
-                                            <CardContent className="p-4">
-                                                <div className="flex items-start justify-between gap-3">
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                                                            <Badge className={cn("text-[10px] h-5 px-1.5", cat.color)}>{cat.label}</Badge>
-                                                            <Badge className={cn("text-[10px] h-5 px-1.5", sta.color)}>{sta.label}</Badge>
-                                                            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                                                <Clock className="w-3 h-3" />
-                                                                {new Date(ticket.created_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                                            </span>
+                                    {/* Ticket Rows */}
+                                    {(tickets.filter(t => ticketFilter === 'all' || t.status === ticketFilter)).map((ticket, idx) => {
+                                        const catConfig: Record<string, { label: string; color: string; priority: string }> = {
+                                            general: { label: 'ทั่วไป', color: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20', priority: 'Low' },
+                                            bug: { label: 'บัค', color: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20', priority: 'High' },
+                                            feature: { label: 'ฟีเจอร์', color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20', priority: 'Medium' },
+                                            billing: { label: 'ชำระเงิน', color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20', priority: 'High' },
+                                            facebook: { label: 'Facebook', color: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20', priority: 'Medium' },
+                                            automation: { label: 'ออโต้', color: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20', priority: 'Medium' },
+                                        };
+                                        const statusDot: Record<string, string> = {
+                                            open: 'bg-red-500 animate-pulse',
+                                            in_progress: 'bg-amber-500',
+                                            resolved: 'bg-emerald-500',
+                                            closed: 'bg-muted-foreground',
+                                        };
+                                        const cat = catConfig[ticket.category] || catConfig.general;
+                                        const isExpanded = replyingTicket === ticket.id;
+                                        const ticketNum = `GS-${String(idx + 1).padStart(3, '0')}`;
+
+                                        return (
+                                            <div key={ticket.id} className={cn("transition-all", ticket.status === 'open' && "bg-red-500/[0.02]")}>
+                                                {/* Main row */}
+                                                <div className="grid grid-cols-1 md:grid-cols-[100px_1fr_100px_120px_120px] gap-2 md:gap-3 items-start px-4 py-3 hover:bg-muted/30 transition-colors">
+                                                    {/* Ticket ID */}
+                                                    <div className="font-mono text-sm font-bold text-accent">{ticketNum}</div>
+
+                                                    {/* Subject + User */}
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                            <h4 className="text-sm font-semibold truncate">{ticket.subject}</h4>
+                                                            <Badge variant="outline" className={cn("text-[9px] h-4 px-1.5 border", cat.color)}>{cat.label}</Badge>
                                                         </div>
-                                                        <h4 className="font-semibold text-sm truncate">{ticket.subject}</h4>
-                                                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{ticket.description}</p>
-                                                        <div className="flex items-center gap-2 mt-2">
-                                                            <span className="text-[10px] text-muted-foreground">จาก: <strong>{ticket.user_name || ticket.user_email}</strong></span>
-                                                            <span className="text-[10px] text-muted-foreground">({ticket.user_email})</span>
-                                                        </div>
-                                                        {ticket.admin_reply && (
-                                                            <div className="mt-2 p-2.5 rounded-lg bg-cyan-50 dark:bg-cyan-950/20 border border-cyan-200 dark:border-cyan-800">
-                                                                <p className="text-[10px] font-semibold text-cyan-700 dark:text-cyan-400 mb-0.5">ตอบกลับจากแอดมิน:</p>
-                                                                <p className="text-xs text-cyan-800 dark:text-cyan-300">{ticket.admin_reply}</p>
-                                                                {ticket.admin_replied_at && <p className="text-[9px] text-muted-foreground mt-1">{new Date(ticket.admin_replied_at).toLocaleString('th-TH')}</p>}
-                                                            </div>
-                                                        )}
+                                                        <p className="text-xs text-muted-foreground line-clamp-1">{ticket.description}</p>
+                                                        <p className="text-[10px] text-muted-foreground/60 mt-1">
+                                                            {ticket.user_name || ticket.user_email} · {new Date(ticket.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                                        </p>
                                                     </div>
 
-                                                    {/* Actions */}
-                                                    <div className="flex flex-col gap-1.5 flex-shrink-0">
+                                                    {/* Priority */}
+                                                    <div>
+                                                        <span className={cn(
+                                                            "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border",
+                                                            cat.priority === 'High' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                                                            cat.priority === 'Medium' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                                                            'bg-muted text-muted-foreground border-border'
+                                                        )}>
+                                                            {cat.priority}
+                                                        </span>
+                                                    </div>
+
+                                                    {/* Status */}
+                                                    <div>
                                                         <Select value={ticket.status} onValueChange={(val) => handleUpdateTicketStatus(ticket.id, val)}>
-                                                            <SelectTrigger className="w-[130px] h-7 text-[10px]"><SelectValue /></SelectTrigger>
+                                                            <SelectTrigger className="w-full h-7 text-[10px]">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <div className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", statusDot[ticket.status] || 'bg-muted-foreground')} />
+                                                                    <SelectValue />
+                                                                </div>
+                                                            </SelectTrigger>
                                                             <SelectContent>
                                                                 <SelectItem value="open">เปิด</SelectItem>
                                                                 <SelectItem value="in_progress">กำลังดำเนินการ</SelectItem>
@@ -2102,18 +2148,23 @@ export default function AdminDashboard() {
                                                                 <SelectItem value="closed">ปิด</SelectItem>
                                                             </SelectContent>
                                                         </Select>
+                                                    </div>
+
+                                                    {/* Action */}
+                                                    <div className="flex justify-end">
                                                         <Button
-                                                            variant="outline"
                                                             size="sm"
-                                                            className="h-7 text-[10px]"
+                                                            variant={isExpanded ? 'outline' : 'default'}
+                                                            className={cn("h-7 text-[10px] font-bold", !isExpanded && "bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm shadow-accent/20")}
                                                             onClick={() => { setReplyingTicket(isExpanded ? null : ticket.id); setReplyText(ticket.admin_reply || ''); }}
                                                         >
-                                                            <MessageCircle className="w-3 h-3 mr-1" /> {isExpanded ? 'ยกเลิก' : 'ตอบกลับ'}
+                                                            <MessageCircle className="w-3 h-3 mr-1" />
+                                                            {isExpanded ? 'CLOSE' : 'VIEW & REPLY'}
                                                         </Button>
                                                     </div>
                                                 </div>
 
-                                                {/* Reply form */}
+                                                {/* Expanded: Admin reply + Reply form */}
                                                 <AnimatePresence>
                                                     {isExpanded && (
                                                         <motion.div
@@ -2122,29 +2173,48 @@ export default function AdminDashboard() {
                                                             exit={{ height: 0, opacity: 0 }}
                                                             className="overflow-hidden"
                                                         >
-                                                            <div className="mt-3 pt-3 border-t space-y-2">
-                                                                <Textarea
-                                                                    value={replyText}
-                                                                    onChange={(e) => setReplyText(e.target.value)}
-                                                                    placeholder="พิมพ์ข้อความตอบกลับ..."
-                                                                    className="min-h-[80px] text-sm resize-none"
-                                                                />
-                                                                <div className="flex justify-end gap-2">
-                                                                    <Button variant="outline" size="sm" onClick={() => setReplyingTicket(null)}>ยกเลิก</Button>
-                                                                    <Button size="sm" onClick={() => handleReplyTicket(ticket.id)} disabled={!replyText.trim()}>
-                                                                        <Send className="w-3.5 h-3.5 mr-1.5" /> ส่งตอบกลับ
-                                                                    </Button>
+                                                            <div className="px-4 pb-4 space-y-3">
+                                                                {/* Full description */}
+                                                                <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                                                                    <p className="text-[10px] text-muted-foreground font-mono mb-1">DESCRIPTION</p>
+                                                                    <p className="text-sm whitespace-pre-wrap">{ticket.description}</p>
+                                                                    <p className="text-[10px] text-muted-foreground mt-2">จาก: <strong>{ticket.user_name || 'N/A'}</strong> ({ticket.user_email})</p>
+                                                                </div>
+
+                                                                {/* Existing admin reply */}
+                                                                {ticket.admin_reply && (
+                                                                    <div className="p-3 rounded-lg bg-accent/5 border border-accent/15">
+                                                                        <p className="text-[10px] text-accent font-bold font-mono mb-1">ADMIN REPLY</p>
+                                                                        <p className="text-sm">{ticket.admin_reply}</p>
+                                                                        {ticket.admin_replied_at && <p className="text-[9px] text-muted-foreground mt-1.5">{new Date(ticket.admin_replied_at).toLocaleString('th-TH')}</p>}
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Reply input */}
+                                                                <div className="space-y-2">
+                                                                    <Textarea
+                                                                        value={replyText}
+                                                                        onChange={(e) => setReplyText(e.target.value)}
+                                                                        placeholder="พิมพ์ข้อความตอบกลับ..."
+                                                                        className="min-h-[80px] text-sm resize-none"
+                                                                    />
+                                                                    <div className="flex justify-end gap-2">
+                                                                        <Button variant="outline" size="sm" onClick={() => setReplyingTicket(null)}>ยกเลิก</Button>
+                                                                        <Button size="sm" onClick={() => handleReplyTicket(ticket.id)} disabled={!replyText.trim()} className="bg-accent text-accent-foreground hover:bg-accent/90">
+                                                                            <Send className="w-3.5 h-3.5 mr-1.5" /> ส่งตอบกลับ
+                                                                        </Button>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </motion.div>
                                                     )}
                                                 </AnimatePresence>
-                                            </CardContent>
-                                        </Card>
-                                    );
-                                })
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             )}
-                        </div>
+                        </Card>
                     </motion.div>
                 </>)}
 

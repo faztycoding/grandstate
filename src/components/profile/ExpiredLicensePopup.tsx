@@ -147,7 +147,7 @@ export function ExpiredLicensePopup({ show, userId, onClose }: ExpiredLicensePop
                                             <User className="w-4 h-4 text-slate-400" />
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="text-[10px] text-slate-500 uppercase tracking-wider">User ID</p>
+                                            <p className="text-[10px] text-slate-400 uppercase tracking-wider">User ID</p>
                                             <p className="text-sm font-mono text-white/80 truncate">{displayId}</p>
                                         </div>
                                     </div>

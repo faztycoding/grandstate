@@ -163,7 +163,7 @@ export function SecurityCenter({ result, delayBetweenPosts, selectedGroupsCount,
               <div className="w-1/4" />
             </div>
           </div>
-          <div className="flex justify-between text-[9px] text-slate-500 px-0.5 font-mono">
+          <div className="flex justify-between text-[9px] text-slate-400 px-0.5 font-mono">
             <span>{hc.safe}</span>
             <span>{hc.moderate}</span>
             <span>{hc.high}</span>
@@ -181,7 +181,7 @@ export function SecurityCenter({ result, delayBetweenPosts, selectedGroupsCount,
             ].map((stat, i) => (
               <div key={i} className="text-center p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/40">
                 <p className={cn('text-lg font-black', stat.color)}>{stat.value}</p>
-                <p className="text-[9px] text-slate-500 font-mono">{stat.label}</p>
+                <p className="text-[9px] text-slate-400 font-mono">{stat.label}</p>
               </div>
             ))}
           </div>
@@ -196,7 +196,7 @@ export function SecurityCenter({ result, delayBetweenPosts, selectedGroupsCount,
             </div>
           ) : (
             <div className="space-y-1.5">
-              <p className="text-[10px] font-mono text-slate-500 uppercase tracking-wider flex items-center gap-1">
+              <p className="text-[10px] font-mono text-slate-400 uppercase tracking-wider flex items-center gap-1">
                 <AlertTriangle className="w-3 h-3 text-amber-500" />
                 {hc.recommendations}
               </p>
@@ -268,7 +268,7 @@ export function SecurityCenter({ result, delayBetweenPosts, selectedGroupsCount,
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[11px] font-bold text-slate-200 leading-tight">{mod.title}</p>
-                        <p className="text-[9px] text-slate-500 leading-tight mt-0.5">{mod.desc}</p>
+                        <p className="text-[9px] text-slate-400 leading-tight mt-0.5">{mod.desc}</p>
                       </div>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         <span className={cn('text-[7px] font-black tracking-wider px-1.5 py-0.5 rounded-full border', mod.bgColor, mod.borderColor, mod.color)}>{mod.tag}</span>
@@ -281,7 +281,7 @@ export function SecurityCenter({ result, delayBetweenPosts, selectedGroupsCount,
 
                   {/* Safety Tips */}
                   <div className="pt-2">
-                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest px-1 mb-2 font-mono">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1 mb-2 font-mono">
                       เคล็ดลับเพิ่มเติม
                     </p>
                     <div className="space-y-1.5">
@@ -304,7 +304,7 @@ export function SecurityCenter({ result, delayBetweenPosts, selectedGroupsCount,
                                     : <AlertCircle className="w-3 h-3 text-red-400 flex-shrink-0" />
                                 )}
                               </p>
-                              <p className="text-[9px] text-slate-500 leading-tight mt-0.5">{tip.desc}</p>
+                              <p className="text-[9px] text-slate-400 leading-tight mt-0.5">{tip.desc}</p>
                             </div>
                           </div>
                         );
@@ -331,7 +331,7 @@ export function SecurityCenter({ result, delayBetweenPosts, selectedGroupsCount,
         <div className="px-5 pt-3 pb-4">
           <button
             onClick={() => setShowFactors(!showFactors)}
-            className="w-full flex items-center justify-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors py-1"
+            className="w-full flex items-center justify-center gap-1.5 text-xs text-slate-400 hover:text-slate-300 transition-colors py-1"
           >
             {showFactors ? hc.hideDetails : hc.showDetails}
             {showFactors ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -372,7 +372,7 @@ export function SecurityCenter({ result, delayBetweenPosts, selectedGroupsCount,
                   })}
 
                   {/* Additional Stats */}
-                  <div className="pt-3 mt-2 border-t border-slate-700/40 text-xs text-slate-500 space-y-1.5">
+                  <div className="pt-3 mt-2 border-t border-slate-700/40 text-xs text-slate-400 space-y-1.5">
                     <div className="flex justify-between">
                       <span>{hc.statPostsWeek}</span>
                       <span className="font-medium text-slate-300">{result.stats.postsThisWeek}</span>

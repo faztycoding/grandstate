@@ -456,7 +456,7 @@ export default function Settings() {
                   className="bg-slate-950/80 border-2 border-slate-800 p-4 rounded-2xl flex flex-col items-center">
                   <div className="flex items-center gap-2 w-full mb-2">
                     <g.icon size={14} className={`text-${g.color}-500`} />
-                    <span className="text-[9px] font-black uppercase text-slate-500 tracking-[0.15em] flex-1">{g.label}</span>
+                    <span className="text-[9px] font-black uppercase text-slate-400 tracking-[0.15em] flex-1">{g.label}</span>
                     <span className="text-lg font-black text-white font-mono">{g.val}</span>
                   </div>
                   <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
@@ -469,7 +469,7 @@ export default function Settings() {
               <div className="bg-slate-950/80 border-2 border-slate-800 p-3 rounded-2xl flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_green]" />
                 <span className="text-[9px] font-bold text-green-500 uppercase tracking-[0.15em]">Online — Synced</span>
-                <span className="text-[9px] text-slate-600 ml-auto font-mono">{authUser?.email?.split('@')[0] || '—'}</span>
+                <span className="text-[9px] text-slate-400 ml-auto font-mono">{authUser?.email?.split('@')[0] || '—'}</span>
               </div>
             </div>
 
@@ -524,7 +524,7 @@ export default function Settings() {
                 className="bg-slate-950/80 border-2 border-slate-800 p-4 rounded-2xl flex flex-col items-center">
                 <Clock size={18} className="text-cyan-500 mb-1" />
                 <span className="text-2xl font-black text-white font-mono leading-none">{syncTime}</span>
-                <span className="text-[8px] font-bold text-slate-500 mt-1.5 uppercase tracking-[0.2em]">Sync Time</span>
+                <span className="text-[8px] font-bold text-slate-400 mt-1.5 uppercase tracking-[0.2em]">Sync Time</span>
               </motion.div>
 
               {/* License Days Remaining */}
@@ -534,7 +534,7 @@ export default function Settings() {
                 <span className={cn("text-xl font-black font-mono leading-none mt-1", licenseDaysLeft !== null && licenseDaysLeft <= 7 ? 'text-red-400' : licenseDaysLeft !== null && licenseDaysLeft <= 30 ? 'text-amber-400' : 'text-white')}>
                   {licenseDaysLeft !== null ? licenseDaysLeft : '∞'}
                 </span>
-                <span className="text-[8px] font-bold text-slate-500 mt-1 uppercase tracking-[0.2em]">{isEn ? 'Days Left' : 'วันคงเหลือ'}</span>
+                <span className="text-[8px] font-bold text-slate-400 mt-1 uppercase tracking-[0.2em]">{isEn ? 'Days Left' : 'วันคงเหลือ'}</span>
               </motion.div>
 
               {/* License Key */}
@@ -543,7 +543,7 @@ export default function Settings() {
                   className="bg-slate-950/80 border-2 border-slate-800 p-3 rounded-2xl">
                   <div className="flex items-center gap-2 mb-1">
                     <Key size={12} className="text-amber-500" />
-                    <span className="text-[8px] font-black text-slate-500 uppercase tracking-[0.15em]">License Key</span>
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.15em]">License Key</span>
                   </div>
                   <code className="text-[9px] font-mono text-cyan-400 select-all block truncate">{authLicense.licenseKey}</code>
                 </motion.div>
@@ -552,8 +552,8 @@ export default function Settings() {
               {/* Email */}
               {authUser?.email && (
                 <div className="p-3 flex items-center gap-2">
-                  <Lock size={10} className="text-slate-600" />
-                  <span className="text-[9px] text-slate-500 font-mono truncate">{authUser.email}</span>
+                  <Lock size={10} className="text-slate-400" />
+                  <span className="text-[9px] text-slate-400 font-mono truncate">{authUser.email}</span>
                 </div>
               )}
             </div>
@@ -574,19 +574,19 @@ export default function Settings() {
                 </div>
                 <div>
                   <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">Security Calibration</h3>
-                  <p className="text-[9px] text-slate-500 font-mono">{isEn ? 'Change your access credentials' : 'เปลี่ยนรหัสผ่านเข้าสู่ระบบ'}</p>
+                  <p className="text-[9px] text-slate-400 font-mono">{isEn ? 'Change your access credentials' : 'เปลี่ยนรหัสผ่านเข้าสู่ระบบ'}</p>
                 </div>
               </div>
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-600 uppercase ml-1 tracking-wider">{isEn ? 'New Password' : 'รหัสผ่านใหม่'}</label>
+                  <label className="text-[9px] font-bold text-slate-400 uppercase ml-1 tracking-wider">{isEn ? 'New Password' : 'รหัสผ่านใหม่'}</label>
                   <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••"
-                    className="bg-black border-2 border-slate-800 rounded-xl h-11 px-4 text-sm text-amber-400 focus:border-amber-500/50 placeholder:text-slate-700" />
+                    className="bg-black border-2 border-slate-800 rounded-xl h-11 px-4 text-sm text-amber-400 focus:border-amber-500/50 placeholder:text-slate-500" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-600 uppercase ml-1 tracking-wider">{isEn ? 'Confirm Password' : 'ยืนยันรหัสผ่าน'}</label>
+                  <label className="text-[9px] font-bold text-slate-400 uppercase ml-1 tracking-wider">{isEn ? 'Confirm Password' : 'ยืนยันรหัสผ่าน'}</label>
                   <Input type="password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} placeholder="••••••••"
-                    className="bg-black border-2 border-slate-800 rounded-xl h-11 px-4 text-sm text-amber-400 focus:border-amber-500/50 placeholder:text-slate-700" />
+                    className="bg-black border-2 border-slate-800 rounded-xl h-11 px-4 text-sm text-amber-400 focus:border-amber-500/50 placeholder:text-slate-500" />
                 </div>
                 <button onClick={handleChangePassword} disabled={isChangingPassword || !newPassword || !confirmNewPassword}
                   className="w-full py-3.5 bg-slate-950 border-2 border-amber-500 text-amber-500 font-black text-[10px] rounded-xl flex items-center justify-center gap-2 hover:bg-amber-500 hover:text-black transition-all shadow-lg shadow-amber-500/10 uppercase tracking-[0.15em] disabled:opacity-30 disabled:cursor-not-allowed">
@@ -606,19 +606,19 @@ export default function Settings() {
               </div>
               <div>
                 <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">Identity Matrix</h3>
-                <p className="text-[9px] text-slate-500 font-mono">{isEn ? 'Display name & contact — cloud synced' : 'ชื่อแสดงผลและช่องทางติดต่อ — ซิงค์กับระบบ'}</p>
+                <p className="text-[9px] text-slate-400 font-mono">{isEn ? 'Display name & contact — cloud synced' : 'ชื่อแสดงผลและช่องทางติดต่อ — ซิงค์กับระบบ'}</p>
               </div>
             </div>
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-[9px] font-bold text-slate-600 uppercase ml-1 tracking-wider">{isEn ? 'Display Name' : 'ชื่อที่แสดง'}</label>
+                <label className="text-[9px] font-bold text-slate-400 uppercase ml-1 tracking-wider">{isEn ? 'Display Name' : 'ชื่อที่แสดง'}</label>
                 <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder={isEn ? 'Your name' : 'ชื่อของคุณ'}
-                  className="bg-black border-2 border-slate-800 rounded-xl h-11 px-4 text-sm text-cyan-400 focus:border-cyan-500/50 placeholder:text-slate-700" />
+                  className="bg-black border-2 border-slate-800 rounded-xl h-11 px-4 text-sm text-cyan-400 focus:border-cyan-500/50 placeholder:text-slate-500" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[9px] font-bold text-slate-600 uppercase ml-1 tracking-wider">Line ID</label>
+                <label className="text-[9px] font-bold text-slate-400 uppercase ml-1 tracking-wider">Line ID</label>
                 <Input value={lineId} onChange={(e) => setLineId(e.target.value)} placeholder="@yourlineid"
-                  className="bg-black border-2 border-slate-800 rounded-xl h-11 px-4 text-sm text-cyan-400 focus:border-cyan-500/50 placeholder:text-slate-700" />
+                  className="bg-black border-2 border-slate-800 rounded-xl h-11 px-4 text-sm text-cyan-400 focus:border-cyan-500/50 placeholder:text-slate-500" />
               </div>
               <button onClick={handleSave} disabled={isSavingProfile}
                 className="w-full py-3.5 bg-cyan-600 text-black font-black text-[10px] rounded-xl flex items-center justify-center gap-2 hover:bg-cyan-500 transition-all shadow-lg shadow-cyan-500/10 uppercase tracking-[0.15em] disabled:opacity-30">
@@ -641,7 +641,7 @@ export default function Settings() {
                 </div>
                 <div>
                   <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">{t.settings.facebookConnection}</h3>
-                  <p className="text-[9px] text-slate-500 font-mono">{t.settings.facebookDesc}</p>
+                  <p className="text-[9px] text-slate-400 font-mono">{t.settings.facebookDesc}</p>
                 </div>
               </div>
               <div className="flex sm:flex-col items-center sm:items-end gap-2 sm:gap-0">
@@ -652,7 +652,7 @@ export default function Settings() {
                     )} />
                   ))}
                 </div>
-                <p className="text-[9px] text-slate-500 sm:mt-1 font-mono">{fbConnectedCount}/{pkgLimits.fbAccounts} sessions ({pkgTheme.label})</p>
+                <p className="text-[9px] text-slate-400 sm:mt-1 font-mono">{fbConnectedCount}/{pkgLimits.fbAccounts} sessions ({pkgTheme.label})</p>
               </div>
             </div>
           <div className="space-y-4">
@@ -921,7 +921,7 @@ export default function Settings() {
             </div>
             <div>
               <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">{s.themeSettings || 'Theme Engine'}</h3>
-              <p className="text-[9px] text-slate-500 font-mono">{s.themeSettingsDesc || 'เลือกโทนสีที่เหมาะกับสไตล์ของคุณ'}</p>
+              <p className="text-[9px] text-slate-400 font-mono">{s.themeSettingsDesc || 'เลือกโทนสีที่เหมาะกับสไตล์ของคุณ'}</p>
             </div>
           </div>
           <div className="space-y-5">
@@ -1010,7 +1010,7 @@ export default function Settings() {
             </div>
             <div>
               <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">{isEn ? 'Data Management' : 'จัดการข้อมูล'}</h3>
-              <p className="text-[9px] text-slate-500 font-mono">{isEn ? 'Export, reset & system info' : 'ส่งออก, รีเซ็ต และข้อมูลระบบ'}</p>
+              <p className="text-[9px] text-slate-400 font-mono">{isEn ? 'Export, reset & system info' : 'ส่งออก, รีเซ็ต และข้อมูลระบบ'}</p>
             </div>
           </div>
           <div className="space-y-3">
@@ -1024,23 +1024,23 @@ export default function Settings() {
             </button>
             <div className="p-3 bg-slate-950/50 border border-slate-800 rounded-xl space-y-1.5">
               <div className="flex items-center justify-between text-[9px]">
-                <span className="text-slate-500 uppercase tracking-wider font-bold">Package</span>
+                <span className="text-slate-400 uppercase tracking-wider font-bold">Package</span>
                 <span className={accent.text + " font-black"}>{pkgTheme.label}</span>
               </div>
               {licenseDaysLeft !== null && (
                 <div className="flex items-center justify-between text-[9px]">
-                  <span className="text-slate-500 uppercase tracking-wider font-bold">{isEn ? 'Expires' : 'หมดอายุ'}</span>
+                  <span className="text-slate-400 uppercase tracking-wider font-bold">{isEn ? 'Expires' : 'หมดอายุ'}</span>
                   <span className={cn("font-bold", licenseDaysLeft <= 7 ? 'text-red-400' : licenseDaysLeft <= 30 ? 'text-amber-400' : 'text-slate-300')}>
                     {authLicense?.expiresAt ? new Date(authLicense.expiresAt).toLocaleDateString('th-TH') : '—'}
                   </span>
                 </div>
               )}
               <div className="flex items-center justify-between text-[9px]">
-                <span className="text-slate-500 uppercase tracking-wider font-bold">FB Sessions</span>
+                <span className="text-slate-400 uppercase tracking-wider font-bold">FB Sessions</span>
                 <span className="text-blue-400 font-bold">{fbConnectedCount}/{pkgLimits.fbAccounts}</span>
               </div>
               <div className="flex items-center justify-between text-[9px]">
-                <span className="text-slate-500 uppercase tracking-wider font-bold">Version</span>
+                <span className="text-slate-400 uppercase tracking-wider font-bold">Version</span>
                 <span className="text-slate-400 font-mono">Grand$tate v1.0</span>
               </div>
             </div>
@@ -1061,7 +1061,7 @@ export default function Settings() {
                 </div>
                 <div>
                   <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">{isEn ? 'Support Terminal' : 'ศูนย์ช่วยเหลือ'}</h3>
-                  <p className="text-[9px] text-slate-500 font-mono">{isEn ? 'Report issues & track responses' : 'แจ้งปัญหาและติดตามการตอบกลับ'}</p>
+                  <p className="text-[9px] text-slate-400 font-mono">{isEn ? 'Report issues & track responses' : 'แจ้งปัญหาและติดตามการตอบกลับ'}</p>
                 </div>
               </div>
               <button onClick={() => setShowSupportTicket(true)}
@@ -1071,14 +1071,14 @@ export default function Settings() {
             </div>
 
             {ticketsLoading ? (
-              <div className="flex items-center justify-center py-8 text-slate-500 gap-2">
+              <div className="flex items-center justify-center py-8 text-slate-400 gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span className="text-[10px] font-mono">Loading tickets...</span>
               </div>
             ) : myTickets.length === 0 ? (
               <div className="text-center py-6">
-                <MessageCircle className="w-8 h-8 mx-auto text-slate-800 mb-2" />
-                <p className="text-[10px] text-slate-600">{isEn ? 'No tickets yet' : 'ยังไม่มีเรื่องแจ้งปัญหา'}</p>
+                <MessageCircle className="w-8 h-8 mx-auto text-slate-600 mb-2" />
+                <p className="text-[10px] text-slate-400">{isEn ? 'No tickets yet' : 'ยังไม่มีเรื่องแจ้งปัญหา'}</p>
               </div>
             ) : (
               <ScrollArea className="max-h-[250px]">
@@ -1095,14 +1095,14 @@ export default function Settings() {
                               <Badge variant="outline" className="text-[8px] font-bold px-1.5 py-0 h-4 border-slate-700">{ticket.category}</Badge>
                               <div className="flex items-center gap-1">
                                 <div className={cn('w-1.5 h-1.5 rounded-full', statusColor)} />
-                                <span className="text-[8px] font-medium text-slate-500">{statusLabel}</span>
+                                <span className="text-[8px] font-medium text-slate-400">{statusLabel}</span>
                               </div>
                             </div>
                             <p className="text-[11px] font-semibold text-white truncate">{ticket.subject}</p>
-                            <p className="text-[9px] text-slate-500 mt-0.5 line-clamp-1">{ticket.description}</p>
-                            <p className="text-[8px] text-slate-700 mt-1 font-mono">{createdDate}</p>
+                            <p className="text-[9px] text-slate-400 mt-0.5 line-clamp-1">{ticket.description}</p>
+                            <p className="text-[8px] text-slate-500 mt-1 font-mono">{createdDate}</p>
                           </div>
-                          <Button variant="ghost" size="icon" className="w-7 h-7 text-slate-600 hover:text-red-400 hover:bg-red-500/10 flex-shrink-0"
+                          <Button variant="ghost" size="icon" className="w-7 h-7 text-slate-400 hover:text-red-400 hover:bg-red-500/10 flex-shrink-0"
                             onClick={() => handleDeleteTicket(ticket.id)} disabled={deletingTicketId === ticket.id}>
                             {deletingTicketId === ticket.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                           </Button>
@@ -1112,7 +1112,7 @@ export default function Settings() {
                             <div className="flex items-center gap-1.5 mb-1">
                               <MessageCircle className="w-2.5 h-2.5 text-amber-500" />
                               <span className="text-[8px] font-bold text-amber-400 uppercase tracking-wider">{isEn ? 'Admin Reply' : 'ผู้ดูแลตอบกลับ'}</span>
-                              {ticket.admin_replied_at && <span className="text-[8px] text-slate-600 font-mono ml-auto">{new Date(ticket.admin_replied_at).toLocaleString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>}
+                              {ticket.admin_replied_at && <span className="text-[8px] text-slate-400 font-mono ml-auto">{new Date(ticket.admin_replied_at).toLocaleString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>}
                             </div>
                             <p className="text-[10px] text-slate-300 leading-relaxed">{ticket.admin_reply}</p>
                           </div>
@@ -1152,9 +1152,9 @@ export default function Settings() {
         <footer className="bg-black/60 border-2 border-slate-800 rounded-2xl p-5 font-mono text-[10px]">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse" />
-            <span className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em]">Console Stream // {authUser?.email || 'user@grandstate.io'}</span>
+            <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">Console Stream // {authUser?.email || 'user@grandstate.io'}</span>
           </div>
-          <div className="space-y-0.5 text-cyan-500/50 italic">
+          <div className="space-y-0.5 text-cyan-500/70 italic">
             <p>{'>'} Identity sync initialized for node_{(displayName || 'unknown').toLowerCase().replace(/\s/g, '_')}...</p>
             <p>{'>'} Protocol {pkgTheme.label} validated // Hardware Masking: ON</p>
             <p>{'>'} Cloud sync: ACTIVE — mirrored to Global Nodes</p>

@@ -1156,7 +1156,7 @@ export default function Landing() {
 
                     {/* Name + Description */}
                     <h3 className="text-xl font-black text-white mb-1">{isEn ? pkg.nameEn : pkg.name}</h3>
-                    <p className="text-xs text-slate-500 mb-5">{isEn ? pkg.descEn : pkg.desc}</p>
+                    <p className="text-xs text-slate-400 mb-5">{isEn ? pkg.descEn : pkg.desc}</p>
 
                     {/* Price */}
                     <div className="flex items-baseline gap-1.5 mb-2">
@@ -1169,7 +1169,7 @@ export default function Landing() {
                           <span className="text-4xl font-black text-white">
                             {isEn ? pkg.priceLabelEn : pkg.priceLabel}
                           </span>
-                          <span className="text-slate-500 text-sm">{isEn ? pkg.periodEn : pkg.period}</span>
+                          <span className="text-slate-400 text-sm">{isEn ? pkg.periodEn : pkg.period}</span>
                         </>
                       )}
                     </div>
@@ -1204,11 +1204,11 @@ export default function Landing() {
                             </div>
                           ) : (
                             <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 bg-slate-800/50">
-                              <Lock className="w-2.5 h-2.5 text-slate-600" />
+                              <Lock className="w-2.5 h-2.5 text-slate-500" />
                             </div>
                           )}
                           <span className={`${
-                            f.included ? 'text-slate-300' : 'text-slate-600'
+                            f.included ? 'text-slate-300' : 'text-slate-500'
                           } ${f.highlight ? `font-semibold ${c.text}` : ''}`}>
                             {isEn ? f.en : f.th}
                           </span>
@@ -1236,7 +1236,7 @@ export default function Landing() {
 
                     {/* Contact hint for paid plans */}
                     {pkg.price > 0 && (
-                      <p className="text-center text-[10px] text-slate-500 mt-2">
+                      <p className="text-center text-[10px] text-slate-400 mt-2">
                         {isEn ? 'or contact via ' : 'หรือติดต่อทาง '}
                         <a href="https://line.me/ti/p/@897hrloe" target="_blank" rel="noopener noreferrer" className="text-green-400 hover:underline font-medium">LINE</a>
                       </p>

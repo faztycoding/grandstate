@@ -290,7 +290,7 @@ export default function Pricing() {
 
                     {/* Name + Description */}
                     <h3 className="text-xl font-black text-white mb-1">{isEn ? plan.nameEn : plan.name}</h3>
-                    <p className="text-xs text-slate-500 mb-5">{isEn ? plan.descriptionEn : plan.description}</p>
+                    <p className="text-xs text-slate-400 mb-5">{isEn ? plan.descriptionEn : plan.description}</p>
 
                     {/* Price */}
                     <div className="flex items-baseline gap-1.5 mb-2">
@@ -303,7 +303,7 @@ export default function Pricing() {
                           <span className="text-4xl font-black text-white">
                             <AnimCounter target={plan.price} />
                           </span>
-                          <span className="text-slate-500 text-sm">{isEn ? 'THB/mo' : 'บาท/เดือน'}</span>
+                          <span className="text-slate-400 text-sm">{isEn ? 'THB/mo' : 'บาท/เดือน'}</span>
                         </>
                       )}
                     </div>
@@ -340,11 +340,11 @@ export default function Pricing() {
                             </div>
                           ) : (
                             <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 bg-slate-800/50 group-hover/lock:bg-amber-500/20 transition-colors">
-                              <Lock className="w-2.5 h-2.5 text-slate-600 group-hover/lock:text-amber-400 transition-colors" />
+                              <Lock className="w-2.5 h-2.5 text-slate-500 group-hover/lock:text-amber-400 transition-colors" />
                             </div>
                           )}
                           <span className={cn(
-                            feature.included ? 'text-slate-300' : 'text-slate-600 group-hover/lock:text-slate-400 transition-colors',
+                            feature.included ? 'text-slate-300' : 'text-slate-500 group-hover/lock:text-slate-400 transition-colors',
                             feature.highlight && cn('font-semibold', c.text)
                           )}>
                             {feature.text}
@@ -364,7 +364,7 @@ export default function Pricing() {
                         className={cn(
                           'w-full h-12 font-black text-xs uppercase tracking-widest gap-2 rounded-xl transition-all duration-300',
                           isCurrentPlan
-                            ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+                            ? 'bg-slate-800 text-slate-400 border border-slate-700 cursor-not-allowed'
                             : cn('bg-gradient-to-r text-white shadow-lg hover:shadow-xl hover:scale-[1.02]',
                                 c.btnFrom, c.btnTo, c.shadow),
                         )}
@@ -413,7 +413,7 @@ export default function Pricing() {
                   </motion.div>
                   <div>
                     <p className="font-semibold text-white text-sm">{item.title}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">{item.desc}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{item.desc}</p>
                   </div>
                 </motion.div>
               ))}
@@ -423,7 +423,7 @@ export default function Pricing() {
 
         {/* ═══ CONTACT ═══ */}
         <div className="text-center py-8 relative z-10">
-          <p className="text-slate-500 text-sm">
+          <p className="text-slate-400 text-sm">
             {isEn ? 'Questions? Contact us via' : 'มีคำถาม? ติดต่อเราได้ที่'}{' '}
             <a href="https://line.me/ti/p/@897hrloe" target="_blank" rel="noopener noreferrer"
               className="text-accent hover:underline inline-flex items-center gap-1">
@@ -433,7 +433,7 @@ export default function Pricing() {
               LINE @grandstate
             </a>
           </p>
-          <p className="text-[10px] text-slate-700 font-mono mt-3 tracking-widest">GRAND$TATE ENGINE v1.0</p>
+          <p className="text-[10px] text-slate-400 font-mono mt-3 tracking-widest">GRAND$TATE ENGINE v1.0</p>
         </div>
       </div>
     </DashboardLayout>

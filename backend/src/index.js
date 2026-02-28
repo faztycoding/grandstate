@@ -1765,7 +1765,17 @@ app.post('/api/admin/change-package', ...adminAuth, async (req, res) => {
         // Create admin-assigned license for this user
         const key = `GSADM-${Math.random().toString(36).substring(2, 7).toUpperCase()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
         const expiresAt = new Date();
-        expiresAt.setFullYear(expiresAt.getFullYear() + 1); // 1 year
+        const durationDays = req.body.durationDays || 365;
+        expiresAt.setDate(expiresAt.getDate() + durationDays);
+
+        // Resolve user's display name
+        let ownerName = req.body.displayName || null;
+        if (!ownerName) {
+          try {
+            const { data: authUser } = await supa.auth.admin.getUserById(targetUserId);
+            ownerName = authUser?.user?.user_metadata?.display_name || authUser?.user?.user_metadata?.full_name || authUser?.user?.email?.split('@')[0] || null;
+          } catch { /* fallback */ }
+        }
 
         const { error } = await supa
           .from('license_keys')
@@ -1776,8 +1786,8 @@ app.post('/api/admin/change-package', ...adminAuth, async (req, res) => {
             expires_at: expiresAt.toISOString(),
             is_active: true,
             bound_user_id: targetUserId,
-            owner_name: 'Admin Assigned',
-            note: `Admin-assigned ${newPackage} package`,
+            owner_name: ownerName || `User ${targetUserId.substring(0, 8)}`,
+            note: `Admin-assigned ${newPackage} package (${durationDays}d)`,
           });
         if (error) throw error;
         res.json({ success: true, package: newPackage, licenseKey: key, message: `Created ${newPackage} license` });

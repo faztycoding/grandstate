@@ -51,6 +51,12 @@ import {
   Terminal,
   ShieldCheck,
   Save,
+  Clock,
+  Power,
+  GripHorizontal,
+  CalendarDays,
+  HardDrive,
+  Gauge,
 } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
@@ -403,209 +409,261 @@ export default function Settings() {
     toast.success(t.common.success);
   };
 
+  // Derived data for industrial gauges
+  const pkgAccent = pkg === 'elite' ? 'purple' : pkg === 'agent' ? 'amber' : 'emerald';
+  const accentMap = { purple: { text: 'text-purple-400', bg: 'bg-purple-500', border: 'border-purple-500', shadow: 'shadow-purple-500/30', glow: 'shadow-[0_0_30px_rgba(168,85,247,0.3)]' }, amber: { text: 'text-amber-400', bg: 'bg-amber-500', border: 'border-amber-500', shadow: 'shadow-amber-500/30', glow: 'shadow-[0_0_30px_rgba(245,158,11,0.3)]' }, emerald: { text: 'text-emerald-400', bg: 'bg-emerald-500', border: 'border-emerald-500', shadow: 'shadow-emerald-500/30', glow: 'shadow-[0_0_30px_rgba(52,211,153,0.3)]' } };
+  const accent = accentMap[pkgAccent];
+  const licenseDaysLeft = authLicense?.expiresAt ? Math.max(0, Math.ceil((new Date(authLicense.expiresAt).getTime() - Date.now()) / 86400000)) : null;
+  const syncTime = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
+
   return (
     <DashboardLayout title={t.settings.title} subtitle={t.settings.subtitle}>
-      <div className="relative rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(180deg, hsl(222 47% 6%) 0%, hsl(222 47% 4%) 100%)' }}>
-        {/* Blueprint Grid BG */}
+      {/* ═══ GRANDSTATE INDUSTRIAL IDENTITY CONSOLE ═══ */}
+      <div className="relative rounded-[2rem] overflow-hidden border-[6px] border-slate-800/80" style={{ background: 'linear-gradient(180deg, hsl(222 47% 6%) 0%, hsl(222 47% 3.5%) 100%)' }}>
+        {/* Blueprint Grid */}
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(148,163,184,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.5) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
         {/* Scanning Line */}
-        <motion.div animate={{ top: ['-5%', '105%'] }} transition={{ duration: 8, repeat: Infinity, ease: 'linear' }} className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-purple-500/20 to-transparent pointer-events-none z-20" />
+        <motion.div animate={{ top: ['-5%', '105%'] }} transition={{ duration: 8, repeat: Infinity, ease: 'linear' }} className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent pointer-events-none z-20" />
+        {/* Corner Bolts */}
+        {[[6,6],[6,'auto'],[,'auto',6],['auto','auto']].map((_, i) => (
+          <div key={`bolt-${i}`} className={cn("absolute w-4 h-4 rounded-full bg-slate-700/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.8)] border border-slate-600/30 z-30",
+            i === 0 && "top-3 left-3", i === 1 && "top-3 right-3", i === 2 && "bottom-3 left-3", i === 3 && "bottom-3 right-3"
+          )} />
+        ))}
+        {/* Floating particles */}
+        {[...Array(6)].map((_, i) => (
+          <motion.div key={`sp-${i}`} className={cn("absolute w-1 h-1 rounded-full pointer-events-none", i % 2 === 0 ? 'bg-cyan-500/20' : `bg-${pkgAccent}-500/20`)}
+            style={{ left: `${8 + i * 16}%`, top: `${15 + (i % 3) * 30}%` }}
+            animate={{ y: [0, -15, 0], opacity: [0.1, 0.4, 0.1] }}
+            transition={{ duration: 3 + i * 0.7, repeat: Infinity, delay: i * 0.5 }}
+          />
+        ))}
 
-        <div className="relative z-10 p-6 max-w-3xl mx-auto space-y-6">
+        <div className="relative z-10 p-5 lg:p-8 space-y-6">
 
-        {/* ═══ IDENTITY ENGINE HEADER ═══ */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className={cn('relative overflow-hidden rounded-[2rem] p-8 border-2 shadow-[0_0_50px_rgba(168,85,247,0.15)]',
-            pkg === 'elite' ? 'bg-gradient-to-r from-purple-900/40 to-slate-900 border-purple-500/30' :
-            pkg === 'agent' ? 'bg-gradient-to-r from-amber-900/30 to-slate-900 border-amber-500/30' :
-            'bg-gradient-to-r from-emerald-900/30 to-slate-900 border-emerald-500/30'
-          )}
-        >
-          {/* Animated Background Gear */}
-          <motion.div animate={{ rotate: 360 }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }} className={cn("absolute -right-20 -top-20 opacity-10", pkg === 'elite' ? 'text-purple-400' : pkg === 'agent' ? 'text-amber-400' : 'text-emerald-400')}>
-            <SettingsIcon size={300} strokeWidth={0.5} />
-          </motion.div>
+        {/* ═══ 1. UPPER CONTROL DECK: IDENTITY CORE ═══ */}
+        <motion.div initial={{ opacity: 0, y: -15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-5 items-start">
 
-          <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
-            {/* Profile Avatar with Camera Action */}
-            <div className="relative group">
-              <div className={cn(
-                "w-28 h-28 rounded-[2rem] bg-slate-950 border-4 flex items-center justify-center shadow-[0_0_30px] overflow-hidden",
-                pkg === 'elite' ? 'border-purple-500/50 shadow-purple-500/30' :
-                pkg === 'agent' ? 'border-amber-500/50 shadow-amber-500/30' :
-                'border-emerald-500/50 shadow-emerald-500/30'
-              )}>
-                {profileAvatar ? (
-                  <img src={profileAvatar} alt={displayName} className="w-full h-full object-cover" />
-                ) : (
-                  <span className={cn("text-4xl font-black", pkg === 'elite' ? 'text-purple-500' : pkg === 'agent' ? 'text-amber-500' : 'text-emerald-500')}>
-                    {displayName ? displayName.charAt(0).toUpperCase() : 'U'}
-                  </span>
-                )}
+            {/* LEFT: Quota Gauges */}
+            <div className="space-y-3 order-2 lg:order-1">
+              {[
+                { label: s.postsPerDay || 'Posts/Day', val: pkgLimits.postsPerDay, icon: Zap, color: 'cyan' },
+                { label: s.groupsLabel || 'Groups', val: pkgLimits.maxGroups, icon: Activity, color: 'amber' },
+                { label: s.propertiesLabel || 'Properties', val: pkgLimits.maxProperties === Infinity ? '∞' : pkgLimits.maxProperties, icon: Database, color: pkgAccent },
+              ].map((g, i) => (
+                <motion.div key={i} initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.1 + i * 0.08 }}
+                  className="bg-slate-950/80 border-2 border-slate-800 p-4 rounded-2xl flex flex-col items-center">
+                  <div className="flex items-center gap-2 w-full mb-2">
+                    <g.icon size={14} className={`text-${g.color}-500`} />
+                    <span className="text-[9px] font-black uppercase text-slate-500 tracking-[0.15em] flex-1">{g.label}</span>
+                    <span className="text-lg font-black text-white font-mono">{g.val}</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                    <motion.div initial={{ width: 0 }} animate={{ width: '100%' }} transition={{ delay: 0.3 + i * 0.15, duration: 0.8 }}
+                      className={`h-full rounded-full bg-${g.color}-500 shadow-[0_0_8px] shadow-${g.color}-500/50`} />
+                  </div>
+                </motion.div>
+              ))}
+              {/* Sync Status Indicator */}
+              <div className="bg-slate-950/80 border-2 border-slate-800 p-3 rounded-2xl flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_green]" />
+                <span className="text-[9px] font-bold text-green-500 uppercase tracking-[0.15em]">Online — Synced</span>
+                <span className="text-[9px] text-slate-600 ml-auto font-mono">{authUser?.email?.split('@')[0] || '—'}</span>
               </div>
-              <button
-                onClick={() => profileFileRef.current?.click()}
-                className={cn("absolute -bottom-2 -right-2 p-2.5 rounded-2xl opacity-0 group-hover:opacity-100 transition-all shadow-lg text-black",
-                  pkg === 'elite' ? 'bg-purple-500' : pkg === 'agent' ? 'bg-amber-500' : 'bg-emerald-500'
-                )}
-              >
-                <Camera size={16} />
-              </button>
-              <input ref={profileFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleProfileImageUpload(e.target.files)} />
             </div>
 
-            <div className="flex-1 text-center md:text-left">
-              <div className="flex flex-wrap items-center gap-3 justify-center md:justify-start mb-4">
-                <h1 className="text-3xl font-black text-white tracking-tighter uppercase">{displayName || 'User'}</h1>
-                <span className={cn("flex items-center gap-2 text-black px-4 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg",
-                  pkg === 'elite' ? 'bg-purple-500' : pkg === 'agent' ? 'bg-amber-500' : 'bg-emerald-500'
-                )}>
-                  <PkgIcon size={14} /> {pkgTheme.label}
-                </span>
+            {/* CENTER: Profile Port */}
+            <div className="relative flex flex-col items-center order-1 lg:order-2 pb-2">
+              {/* Package Crown */}
+              <motion.div animate={{ y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }} className="mb-2">
+                <PkgIcon size={36} className={cn(accent.text, 'filter drop-shadow-lg')} fill="currentColor" />
+                <span className={cn("text-[9px] block text-center font-black uppercase tracking-widest mt-0.5", accent.text)}>{pkgTheme.label}</span>
+              </motion.div>
+
+              {/* Avatar Port */}
+              <div className="relative group">
+                <div className={cn("w-36 h-36 lg:w-44 lg:h-44 bg-slate-950 border-[6px] border-slate-800 rounded-full flex items-center justify-center shadow-[inset_0_0_40px_rgba(0,0,0,1)]", accent.glow)}>
+                  <div className={cn("absolute inset-0 rounded-full border", `border-${pkgAccent}-500/30`, "animate-pulse")} />
+                  <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 25, ease: "linear" }} className="absolute inset-3 text-cyan-500/[0.07] pointer-events-none">
+                    <SettingsIcon size={140} strokeWidth={0.5} />
+                  </motion.div>
+                  {/* Scanning line inside port */}
+                  <motion.div animate={{ top: ['0%', '100%', '0%'] }} transition={{ duration: 4, repeat: Infinity }} className="absolute inset-x-3 h-[1px] bg-cyan-500/40 shadow-[0_0_8px_cyan] rounded-full pointer-events-none" />
+
+                  {profileAvatar ? (
+                    <img src={profileAvatar} alt={displayName} className="w-24 h-24 lg:w-28 lg:h-28 rounded-full object-cover relative z-10 ring-2 ring-slate-700" />
+                  ) : (
+                    <span className={cn("text-5xl lg:text-6xl font-black relative z-10", accent.text)}>
+                      {displayName ? displayName.charAt(0).toUpperCase() : 'U'}
+                    </span>
+                  )}
+                </div>
+                <button onClick={() => profileFileRef.current?.click()}
+                  className={cn("absolute -bottom-1 -right-1 p-2.5 rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-lg text-black z-20", accent.bg)}>
+                  <Camera size={14} />
+                </button>
+                <input ref={profileFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleProfileImageUpload(e.target.files)} />
+              </div>
+
+              {/* Name + Upgrade */}
+              <div className="mt-3 text-center">
+                <h1 className="text-xl font-black text-white uppercase tracking-tight">{displayName || 'User'}</h1>
                 {pkg !== 'elite' && (
-                  <Button size="sm" variant="outline" onClick={() => navigate('/pricing')} className="border-slate-700 text-slate-300 text-[10px] hover:bg-white/10">
-                    {s.upgrade} <ArrowRight className="w-3 h-3 ml-1" />
+                  <Button size="sm" variant="outline" onClick={() => navigate('/pricing')} className="mt-2 border-slate-700 text-slate-400 text-[9px] h-7 hover:bg-white/5 gap-1">
+                    {s.upgrade} <ArrowRight className="w-3 h-3" />
                   </Button>
                 )}
               </div>
+            </div>
 
-              {/* Package Specs Gauges */}
-              <div className="grid grid-cols-3 gap-4">
-                {[
-                  { label: s.postsPerDay || 'โพสต์/วัน', val: pkgLimits.postsPerDay, icon: <Zap size={12} /> },
-                  { label: s.groupsLabel || 'กลุ่ม', val: pkgLimits.maxGroups, icon: <Activity size={12} /> },
-                  { label: s.propertiesLabel || 'สินทรัพย์', val: pkgLimits.maxProperties === Infinity ? '∞' : pkgLimits.maxProperties, icon: <Database size={12} /> },
-                ].map((spec, i) => (
-                  <div key={i} className="bg-slate-950/50 p-3 rounded-2xl border border-white/5">
-                    <div className="text-[8px] text-slate-500 uppercase font-black tracking-widest flex items-center gap-1 mb-1">
-                      {spec.icon} {spec.label}
-                    </div>
-                    <div className="text-lg font-mono font-black text-white">{spec.val}</div>
+            {/* RIGHT: Sync + License Info */}
+            <div className="space-y-3 order-3">
+              {/* Sync Clock */}
+              <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.15 }}
+                className="bg-slate-950/80 border-2 border-slate-800 p-4 rounded-2xl flex flex-col items-center">
+                <Clock size={18} className="text-cyan-500 mb-1" />
+                <span className="text-2xl font-black text-white font-mono leading-none">{syncTime}</span>
+                <span className="text-[8px] font-bold text-slate-500 mt-1.5 uppercase tracking-[0.2em]">Sync Time</span>
+              </motion.div>
+
+              {/* License Days Remaining */}
+              <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.25 }}
+                className="bg-slate-950/80 border-2 border-slate-800 p-4 rounded-2xl flex flex-col items-center">
+                <CalendarDays size={16} className={accent.text} />
+                <span className={cn("text-xl font-black font-mono leading-none mt-1", licenseDaysLeft !== null && licenseDaysLeft <= 7 ? 'text-red-400' : licenseDaysLeft !== null && licenseDaysLeft <= 30 ? 'text-amber-400' : 'text-white')}>
+                  {licenseDaysLeft !== null ? licenseDaysLeft : '∞'}
+                </span>
+                <span className="text-[8px] font-bold text-slate-500 mt-1 uppercase tracking-[0.2em]">{isEn ? 'Days Left' : 'วันคงเหลือ'}</span>
+              </motion.div>
+
+              {/* License Key */}
+              {authLicense?.licenseKey && (
+                <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.35 }}
+                  className="bg-slate-950/80 border-2 border-slate-800 p-3 rounded-2xl">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Key size={12} className="text-amber-500" />
+                    <span className="text-[8px] font-black text-slate-500 uppercase tracking-[0.15em]">License Key</span>
                   </div>
-                ))}
-              </div>
+                  <code className="text-[9px] font-mono text-cyan-400 select-all block truncate">{authLicense.licenseKey}</code>
+                </motion.div>
+              )}
+
+              {/* Email */}
+              {authUser?.email && (
+                <div className="p-3 flex items-center gap-2">
+                  <Lock size={10} className="text-slate-600" />
+                  <span className="text-[9px] text-slate-500 font-mono truncate">{authUser.email}</span>
+                </div>
+              )}
             </div>
           </div>
         </motion.div>
 
-        {/* ═══ SECURITY CALIBRATION ═══ */}
-        {authUser && (
-          <motion.div initial={{ x: -30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.2 }}
-            className="bg-slate-900/60 border border-slate-800 rounded-[2rem] p-7">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2.5 bg-slate-800 rounded-xl text-amber-500"><Key size={20} /></div>
+        {/* ═══ 2. LOWER DECK: SECURITY + IDENTITY SIDE-BY-SIDE ═══ */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+          {/* SECURITY CALIBRATION */}
+          {authUser && (
+            <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.3 }}
+              className="bg-slate-900/60 border-2 border-slate-800 rounded-2xl p-6 relative overflow-hidden">
+              <motion.div animate={{ left: ['-10%', '110%'] }} transition={{ duration: 5, repeat: Infinity, ease: 'linear', repeatDelay: 3 }} className="absolute top-0 h-[1px] w-[30%] bg-gradient-to-r from-transparent via-amber-500/30 to-transparent pointer-events-none" />
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-9 h-9 bg-slate-950 border-2 border-amber-500/30 rounded-xl flex items-center justify-center">
+                  <ShieldCheck size={16} className="text-amber-500" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">Security Calibration</h3>
+                  <p className="text-[9px] text-slate-500 font-mono">{isEn ? 'Change your access credentials' : 'เปลี่ยนรหัสผ่านเข้าสู่ระบบ'}</p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-bold text-slate-600 uppercase ml-1 tracking-wider">{isEn ? 'New Password' : 'รหัสผ่านใหม่'}</label>
+                  <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••"
+                    className="bg-black border-2 border-slate-800 rounded-xl h-11 px-4 text-sm text-amber-400 focus:border-amber-500/50 placeholder:text-slate-700" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-bold text-slate-600 uppercase ml-1 tracking-wider">{isEn ? 'Confirm Password' : 'ยืนยันรหัสผ่าน'}</label>
+                  <Input type="password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} placeholder="••••••••"
+                    className="bg-black border-2 border-slate-800 rounded-xl h-11 px-4 text-sm text-amber-400 focus:border-amber-500/50 placeholder:text-slate-700" />
+                </div>
+                <button onClick={handleChangePassword} disabled={isChangingPassword || !newPassword || !confirmNewPassword}
+                  className="w-full py-3.5 bg-slate-950 border-2 border-amber-500 text-amber-500 font-black text-[10px] rounded-xl flex items-center justify-center gap-2 hover:bg-amber-500 hover:text-black transition-all shadow-lg shadow-amber-500/10 uppercase tracking-[0.15em] disabled:opacity-30 disabled:cursor-not-allowed">
+                  {isChangingPassword ? <><Loader2 className="w-4 h-4 animate-spin" />{isEn ? 'Changing...' : 'กำลังเปลี่ยน...'}</> : <><ShieldCheck size={16} />{isEn ? 'Change Password' : 'เปลี่ยนรหัสผ่าน'}</>}
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* IDENTITY MATRIX */}
+          <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.35 }}
+            className="bg-slate-900/60 border-2 border-slate-800 rounded-2xl p-6 relative overflow-hidden">
+            <motion.div animate={{ top: ['0%', '100%', '0%'] }} transition={{ duration: 6, repeat: Infinity }} className="absolute inset-x-0 h-[1px] bg-cyan-500/15 shadow-[0_0_6px_rgba(0,200,255,0.3)] pointer-events-none" />
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-9 h-9 bg-slate-950 border-2 border-cyan-500/30 rounded-xl flex items-center justify-center">
+                <User size={16} className="text-cyan-500" />
+              </div>
               <div>
-                <h3 className="text-base font-black text-white uppercase tracking-tight">{isEn ? 'Security Calibration' : 'Security Calibration'}</h3>
-                <p className="text-[10px] text-slate-500 font-mono">{isEn ? 'Change your access credentials' : 'เปลี่ยนรหัสผ่านเข้าสู่ระบบ'}</p>
+                <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">Identity Matrix</h3>
+                <p className="text-[9px] text-slate-500 font-mono">{isEn ? 'Display name & contact — cloud synced' : 'ชื่อแสดงผลและช่องทางติดต่อ — ซิงค์กับระบบ'}</p>
               </div>
             </div>
-            <div className="space-y-5">
-              <div className="space-y-2">
-                <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest ml-1">{isEn ? 'New Password' : 'รหัสผ่านใหม่'}</label>
-                <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder={isEn ? 'At least 6 characters' : 'อย่างน้อย 6 ตัวอักษร'} className="bg-slate-950 border-slate-800 rounded-2xl py-5 px-5 text-sm text-white focus:border-amber-500/50 placeholder:text-slate-700" />
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-bold text-slate-600 uppercase ml-1 tracking-wider">{isEn ? 'Display Name' : 'ชื่อที่แสดง'}</label>
+                <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder={isEn ? 'Your name' : 'ชื่อของคุณ'}
+                  className="bg-black border-2 border-slate-800 rounded-xl h-11 px-4 text-sm text-cyan-400 focus:border-cyan-500/50 placeholder:text-slate-700" />
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest ml-1">{isEn ? 'Confirm New Password' : 'ยืนยันรหัสผ่านใหม่'}</label>
-                <Input type="password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} placeholder={isEn ? 'Confirm new password' : 'กรอกรหัสผ่านใหม่อีกครั้ง'} className="bg-slate-950 border-slate-800 rounded-2xl py-5 px-5 text-sm text-white focus:border-amber-500/50 placeholder:text-slate-700" />
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-bold text-slate-600 uppercase ml-1 tracking-wider">Line ID</label>
+                <Input value={lineId} onChange={(e) => setLineId(e.target.value)} placeholder="@yourlineid"
+                  className="bg-black border-2 border-slate-800 rounded-xl h-11 px-4 text-sm text-cyan-400 focus:border-cyan-500/50 placeholder:text-slate-700" />
               </div>
-              <button
-                onClick={handleChangePassword}
-                disabled={isChangingPassword || !newPassword || !confirmNewPassword}
-                className="w-full py-4 bg-amber-500 text-black font-black text-xs rounded-2xl flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(245,158,11,0.3)] hover:bg-amber-400 transition-all uppercase tracking-[0.15em] disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {isChangingPassword ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" />{isEn ? 'Changing...' : 'กำลังเปลี่ยน...'}</>
-                ) : (
-                  <><ShieldCheck size={18} />{isEn ? 'Change Password' : 'เปลี่ยนรหัสผ่าน'}</>
-                )}
+              <button onClick={handleSave} disabled={isSavingProfile}
+                className="w-full py-3.5 bg-cyan-600 text-black font-black text-[10px] rounded-xl flex items-center justify-center gap-2 hover:bg-cyan-500 transition-all shadow-lg shadow-cyan-500/10 uppercase tracking-[0.15em] disabled:opacity-30">
+                {isSavingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save size={16} />}
+                {isEn ? 'Save Account Details' : 'บันทึกข้อมูลบัญชี'}
               </button>
             </div>
           </motion.div>
-        )}
+        </div>
 
-        {/* ═══ IDENTITY MATRIX ═══ */}
-        <motion.div initial={{ x: 30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.3 }}
-          className="bg-slate-900/60 border border-slate-800 rounded-[2rem] p-7 relative overflow-hidden">
-          {/* Animated Laser Scan */}
-          <motion.div animate={{ top: ['0%', '100%', '0%'] }} transition={{ duration: 5, repeat: Infinity }} className="absolute inset-x-0 h-[1px] bg-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.5)] pointer-events-none" />
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2.5 bg-slate-800 rounded-xl text-blue-500"><User size={20} /></div>
-            <div>
-              <h3 className="text-base font-black text-white uppercase tracking-tight">{isEn ? 'Identity Matrix' : 'Identity Matrix'}</h3>
-              <p className="text-[10px] text-slate-500 font-mono">{isEn ? 'Your display name and contact info — synced to cloud' : 'ชื่อแสดงผลและช่องทางติดต่อ — ซิงค์กับระบบ'}</p>
-            </div>
-          </div>
-          <div className="space-y-5">
-            <div className="space-y-2">
-              <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest ml-1">{isEn ? 'Display Name' : 'ชื่อที่แสดง'}</label>
-              <div className="relative group">
-                <User className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-blue-500 transition-colors" />
-                <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder={isEn ? 'Your name' : 'ชื่อของคุณ'} className="bg-slate-950 border-slate-800 rounded-2xl py-5 pl-12 pr-5 text-sm text-white focus:border-blue-500/50 placeholder:text-slate-700" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest ml-1">Line ID</label>
-              <div className="relative group">
-                <Activity className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-blue-500 transition-colors" />
-                <Input value={lineId} onChange={(e) => setLineId(e.target.value)} placeholder="@yourlineid" className="bg-slate-950 border-slate-800 rounded-2xl py-5 pl-12 pr-5 text-sm text-white focus:border-blue-500/50 placeholder:text-slate-700" />
-              </div>
-            </div>
-            {authUser?.email && (
-              <p className="text-[10px] text-slate-500 font-mono italic flex items-center gap-2 pt-2">
-                <Lock size={12} /> {isEn ? 'Login email' : 'อีเมลเข้าสู่ระบบ'}: <span className="text-blue-400">{authUser.email}</span>
-              </p>
-            )}
-          </div>
-        </motion.div>
-
-        {/* ═══ FACEBOOK CONNECTION MODULE ═══ */}
-        <Card className={cn(
-          "overflow-hidden transition-all bg-slate-900/60 border-slate-800 rounded-[2rem]",
-          isConnected && "ring-1 ring-[#1877F2]/20"
-        )}>
-          {/* Card gradient accent bar — always Facebook blue */}
+        {/* ═══ 3. FACEBOOK CONNECTION MODULE ═══ */}
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+          className={cn("bg-slate-900/60 border-2 border-slate-800 rounded-2xl overflow-hidden", isConnected && "ring-1 ring-[#1877F2]/20")}>
           <div className="h-1 bg-gradient-to-r from-[#1877F2] to-[#0D47A1]" />
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-[#1877F2] flex items-center justify-center flex-shrink-0">
-                    <Facebook className="w-4.5 h-4.5 text-white" />
-                  </div>
-                  <span className="truncate">{t.settings.facebookConnection}</span>
-                </CardTitle>
-                <CardDescription className="mt-1">
-                  {t.settings.facebookDesc}
-                </CardDescription>
+          <div className="p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-slate-950 border-2 border-[#1877F2]/30 rounded-xl flex items-center justify-center">
+                  <Facebook className="w-4 h-4 text-[#1877F2]" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">{t.settings.facebookConnection}</h3>
+                  <p className="text-[9px] text-slate-500 font-mono">{t.settings.facebookDesc}</p>
+                </div>
               </div>
-              {/* Session Slots Indicator */}
               <div className="flex sm:flex-col items-center sm:items-end gap-2 sm:gap-0">
                 <div className="flex items-center gap-1">
                   {Array.from({ length: pkgLimits.fbAccounts }, (_, i) => (
-                    <div key={i} className={cn(
-                      "w-3 h-3 rounded-full border-2 transition-all",
-                      i < fbConnectedCount
-                        ? "bg-[#1877F2] border-[#1877F2] shadow-sm shadow-[#1877F2]/30"
-                        : "border-muted-foreground/30 bg-transparent"
+                    <div key={i} className={cn("w-3 h-3 rounded-full border-2 transition-all",
+                      i < fbConnectedCount ? "bg-[#1877F2] border-[#1877F2] shadow-sm shadow-[#1877F2]/30" : "border-slate-700 bg-transparent"
                     )} />
                   ))}
                 </div>
-                <p className="text-[10px] text-muted-foreground sm:mt-1">{fbConnectedCount}/{pkgLimits.fbAccounts} sessions ({pkgTheme.label})</p>
+                <p className="text-[9px] text-slate-500 sm:mt-1 font-mono">{fbConnectedCount}/{pkgLimits.fbAccounts} sessions ({pkgTheme.label})</p>
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
+          <div className="space-y-4">
             {/* Active Posting Account — shows which FB ID will be used in automation */}
             {isChecking ? (
-              <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/50">
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-slate-950/50 border border-slate-800">
                 <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                 <p className="text-sm font-medium text-muted-foreground">{t.settings.checking}</p>
               </div>
             ) : fbConnectedCount > 0 ? (
-              <div className="p-4 rounded-xl bg-gradient-to-r from-[#1877F2]/5 to-[#0D47A1]/5 dark:from-[#1877F2]/10 dark:to-[#0D47A1]/5 border border-[#1877F2]/20 dark:border-[#1877F2]/30">
+              <div className="p-4 rounded-xl bg-[#1877F2]/5 border border-[#1877F2]/20">
                 <p className="text-[10px] font-semibold text-[#1877F2] dark:text-blue-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
                   <Send className="w-3 h-3" /> บัญชีที่ใช้โพสต์อัตโนมัติ
                 </p>
@@ -644,7 +702,7 @@ export default function Settings() {
                 })()}
               </div>
             ) : isConnecting ? (
-              <div className="p-4 rounded-xl bg-gradient-to-b from-blue-50 to-white dark:from-blue-950/20 dark:to-background border border-blue-200 dark:border-blue-800">
+              <div className="p-4 rounded-xl bg-slate-950/50 border border-blue-800">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-[#1877F2]/10 flex items-center justify-center">
                     <Loader2 className="w-4 h-4 text-[#1877F2] animate-spin" />
@@ -677,7 +735,7 @@ export default function Settings() {
             )}
 
             {/* Session Slots Detail — Interactive per-slot with active selector */}
-            <div className="p-4 rounded-xl bg-muted/40 space-y-3">
+            <div className="p-4 rounded-xl bg-slate-950/40 border border-slate-800 space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold flex items-center gap-1.5"><Monitor className="w-4 h-4" /> FB Sessions ({fbConnectedCount}/{pkgLimits.fbAccounts})</p>
                 <Badge variant="outline" className="text-[10px] h-5">{pkgTheme.label}</Badge>
@@ -697,10 +755,10 @@ export default function Settings() {
                       className={cn(
                         "relative flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-xl border-2 transition-all group",
                         hasUser && isActive
-                          ? "border-[#1877F2] bg-[#1877F2]/5 dark:bg-[#1877F2]/10 ring-1 ring-[#1877F2]/20 shadow-sm"
+                          ? "border-[#1877F2] bg-[#1877F2]/10 ring-1 ring-[#1877F2]/20 shadow-sm"
                           : hasUser
-                            ? "border-border bg-background hover:border-[#1877F2]/40 dark:hover:border-[#1877F2]/30 cursor-pointer"
-                            : "border-dashed border-muted-foreground/20 bg-background/50 hover:border-[#1877F2]/40 cursor-pointer"
+                            ? "border-slate-700 bg-slate-900/60 hover:border-[#1877F2]/40 cursor-pointer"
+                            : "border-dashed border-slate-700 bg-slate-900/30 hover:border-[#1877F2]/40 cursor-pointer"
                       )}
                       onClick={() => {
                         if (hasUser) {
@@ -738,14 +796,14 @@ export default function Settings() {
                             <span className="text-white text-sm font-bold">{session.name?.charAt(0) || 'F'}</span>
                           </div>
                         ) : (
-                          <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center group-hover:bg-[#1877F2]/10 transition-colors">
+                          <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-[#1877F2]/10 transition-colors">
                             <Facebook className="w-5 h-5 text-muted-foreground/30 group-hover:text-[#1877F2] transition-colors" />
                           </div>
                         )}
                         {/* Online dot */}
                         {hasUser && (
                           <div className={cn(
-                            "absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-gray-900",
+                            "absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-slate-900",
                             isActive ? "bg-[#1877F2]" : "bg-gray-400"
                           )} />
                         )}
@@ -831,39 +889,44 @@ export default function Settings() {
 
             {/* Trust Signals + Info */}
             <div className="space-y-2">
-              <div className="flex items-center gap-3 p-2.5 rounded-lg bg-green-50/50 dark:bg-green-950/10 border border-green-100 dark:border-green-900/30">
-                <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
+              <div className="flex items-center gap-3 p-2.5 rounded-lg bg-green-950/10 border border-green-900/30">
+                <div className="w-6 h-6 rounded-full bg-green-900/30 flex items-center justify-center flex-shrink-0">
                   <Key className="w-3 h-3 text-green-600" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-[10px] font-medium text-green-700 dark:text-green-400">Session เข้ารหัสในเครื่อง</p>
+                  <p className="text-[10px] font-medium text-green-400">Session เข้ารหัสในเครื่อง</p>
                   <p className="text-[9px] text-muted-foreground">เราไม่เก็บรหัสผ่าน Facebook ของคุณ — ใช้ browser profile ที่เข้ารหัสบน server</p>
                 </div>
               </div>
-              <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/30 text-xs">
+              <div className="flex items-start gap-2 p-2.5 rounded-lg bg-slate-950/30 border border-slate-800/50 text-xs">
                 <Info className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 mt-0.5" />
                 <p className="text-muted-foreground leading-relaxed">
                   {t.settings.connectionInfo} แพ็คเกจ {pkgTheme.label} รองรับ {pkgLimits.fbAccounts} FB session{pkgLimits.fbAccounts > 1 ? 's' : ''} • Logout จะล้าง cookies ออกจริง
                 </p>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>{/* end fb content */}
+          </div>{/* end p-6 */}
+        </motion.div>
 
-        {/* ═══ THEME & APPEARANCE MODULE ═══ */}
-        <Card className="bg-slate-900/60 border-slate-800 rounded-[2rem]">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Palette className="w-5 h-5 text-accent" />
-              {s.themeSettings || 'ธีมและการแสดงผล'}
-            </CardTitle>
-            <CardDescription>
-              {s.themeSettingsDesc || 'เลือกโทนสีที่เหมาะกับสไตล์ของคุณ'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
+        {/* ═══ 4. SYSTEM CONTROL: THEME + DATA ═══ */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+        {/* THEME ENGINE */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
+          className="bg-slate-900/60 border-2 border-slate-800 rounded-2xl p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-9 h-9 bg-slate-950 border-2 border-purple-500/30 rounded-xl flex items-center justify-center">
+              <Palette size={16} className="text-purple-400" />
+            </div>
+            <div>
+              <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">{s.themeSettings || 'Theme Engine'}</h3>
+              <p className="text-[9px] text-slate-500 font-mono">{s.themeSettingsDesc || 'เลือกโทนสีที่เหมาะกับสไตล์ของคุณ'}</p>
+            </div>
+          </div>
+          <div className="space-y-5">
             {/* Dark Mode Toggle */}
-            <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/50 border border-slate-800">
               <div className="flex items-center gap-3">
                 {isDark ? <Moon className="w-5 h-5 text-indigo-400" /> : <Sun className="w-5 h-5 text-amber-500" />}
                 <div>
@@ -935,110 +998,123 @@ export default function Settings() {
                 })}
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>{/* end theme space-y-5 */}
+        </motion.div>
 
-        {/* ═══ SUPPORT TERMINAL ═══ */}
-        <Card className="relative overflow-hidden bg-slate-900/60 border-slate-800 rounded-[2rem]">
-          <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-cyan-500/40 to-transparent" />
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2.5 text-sm">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-                  <MessageCircle className="w-4 h-4 text-white" />
+        {/* DATA MANAGEMENT */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
+          className="bg-slate-900/60 border-2 border-slate-800 rounded-2xl p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-9 h-9 bg-slate-950 border-2 border-emerald-500/30 rounded-xl flex items-center justify-center">
+              <HardDrive size={16} className="text-emerald-400" />
+            </div>
+            <div>
+              <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">{isEn ? 'Data Management' : 'จัดการข้อมูล'}</h3>
+              <p className="text-[9px] text-slate-500 font-mono">{isEn ? 'Export, reset & system info' : 'ส่งออก, รีเซ็ต และข้อมูลระบบ'}</p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            <button onClick={handleExportData}
+              className="w-full py-3 bg-slate-950 border-2 border-emerald-500/30 text-emerald-400 font-black text-[10px] rounded-xl flex items-center justify-center gap-2 hover:bg-emerald-500/10 transition-all uppercase tracking-[0.12em]">
+              <Download size={14} /> {isEn ? 'Export All Data' : 'ส่งออกข้อมูลทั้งหมด'}
+            </button>
+            <button onClick={handleClearHistory}
+              className="w-full py-3 bg-slate-950 border-2 border-amber-500/20 text-amber-400/70 font-black text-[10px] rounded-xl flex items-center justify-center gap-2 hover:bg-amber-500/10 transition-all uppercase tracking-[0.12em]">
+              <RotateCcw size={14} /> {s.resetData || (isEn ? 'Clear Post History' : 'ล้างประวัติการโพสต์')}
+            </button>
+            <div className="p-3 bg-slate-950/50 border border-slate-800 rounded-xl space-y-1.5">
+              <div className="flex items-center justify-between text-[9px]">
+                <span className="text-slate-500 uppercase tracking-wider font-bold">Package</span>
+                <span className={accent.text + " font-black"}>{pkgTheme.label}</span>
+              </div>
+              {licenseDaysLeft !== null && (
+                <div className="flex items-center justify-between text-[9px]">
+                  <span className="text-slate-500 uppercase tracking-wider font-bold">{isEn ? 'Expires' : 'หมดอายุ'}</span>
+                  <span className={cn("font-bold", licenseDaysLeft <= 7 ? 'text-red-400' : licenseDaysLeft <= 30 ? 'text-amber-400' : 'text-slate-300')}>
+                    {authLicense?.expiresAt ? new Date(authLicense.expiresAt).toLocaleDateString('th-TH') : '—'}
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center justify-between text-[9px]">
+                <span className="text-slate-500 uppercase tracking-wider font-bold">FB Sessions</span>
+                <span className="text-blue-400 font-bold">{fbConnectedCount}/{pkgLimits.fbAccounts}</span>
+              </div>
+              <div className="flex items-center justify-between text-[9px]">
+                <span className="text-slate-500 uppercase tracking-wider font-bold">Version</span>
+                <span className="text-slate-400 font-mono">Grand$tate v1.0</span>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        </div>{/* end 2-col grid */}
+
+        {/* ═══ 5. SUPPORT TERMINAL ═══ */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}
+          className="bg-slate-900/60 border-2 border-slate-800 rounded-2xl overflow-hidden relative">
+          <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent" />
+          <div className="p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-slate-950 border-2 border-cyan-500/30 rounded-xl flex items-center justify-center">
+                  <MessageCircle size={16} className="text-cyan-400" />
                 </div>
                 <div>
-                  <span>{isEn ? 'Support Center' : 'ศูนย์ช่วยเหลือ'}</span>
-                  <p className="text-[10px] font-normal text-muted-foreground mt-0.5">{isEn ? 'Report issues & track responses' : 'แจ้งปัญหาและติดตามการตอบกลับ'}</p>
+                  <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">{isEn ? 'Support Terminal' : 'ศูนย์ช่วยเหลือ'}</h3>
+                  <p className="text-[9px] text-slate-500 font-mono">{isEn ? 'Report issues & track responses' : 'แจ้งปัญหาและติดตามการตอบกลับ'}</p>
                 </div>
-              </CardTitle>
-              <Button
-                onClick={() => setShowSupportTicket(true)}
-                className="h-8 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold shadow-lg shadow-cyan-500/15 hover:shadow-cyan-500/30 transition-all text-xs px-3"
-              >
-                <Send className="w-3 h-3 mr-1.5" />
-                {isEn ? 'New Report' : 'แจ้งปัญหาใหม่'}
-              </Button>
+              </div>
+              <button onClick={() => setShowSupportTicket(true)}
+                className="px-3 py-2 bg-slate-950 border-2 border-cyan-500/30 text-cyan-400 font-black text-[9px] rounded-xl flex items-center gap-1.5 hover:bg-cyan-500/10 transition-all uppercase tracking-wider">
+                <Send size={12} /> {isEn ? 'New Report' : 'แจ้งปัญหาใหม่'}
+              </button>
             </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {/* My Tickets */}
+
             {ticketsLoading ? (
-              <div className="flex items-center justify-center py-8 text-muted-foreground gap-2">
+              <div className="flex items-center justify-center py-8 text-slate-500 gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-xs">กำลังโหลด...</span>
+                <span className="text-[10px] font-mono">Loading tickets...</span>
               </div>
             ) : myTickets.length === 0 ? (
               <div className="text-center py-6">
-                <MessageCircle className="w-8 h-8 mx-auto text-muted-foreground/20 mb-2" />
-                <p className="text-xs text-muted-foreground">{isEn ? 'No tickets yet' : 'ยังไม่มีเรื่องแจ้งปัญหา'}</p>
+                <MessageCircle className="w-8 h-8 mx-auto text-slate-800 mb-2" />
+                <p className="text-[10px] text-slate-600">{isEn ? 'No tickets yet' : 'ยังไม่มีเรื่องแจ้งปัญหา'}</p>
               </div>
             ) : (
-              <ScrollArea className="max-h-[300px]">
+              <ScrollArea className="max-h-[250px]">
                 <div className="space-y-2">
                   {myTickets.map((ticket) => {
-                    const statusColor = ticket.status === 'open' ? 'bg-blue-500'
-                      : ticket.status === 'in_progress' ? 'bg-amber-500'
-                      : ticket.status === 'resolved' ? 'bg-emerald-500'
-                      : 'bg-muted-foreground';
-                    const statusLabel = ticket.status === 'open' ? (isEn ? 'Open' : 'เปิด')
-                      : ticket.status === 'in_progress' ? (isEn ? 'In Progress' : 'ดำเนินการ')
-                      : ticket.status === 'resolved' ? (isEn ? 'Resolved' : 'แก้ไขแล้ว')
-                      : ticket.status === 'closed' ? (isEn ? 'Closed' : 'ปิด') : ticket.status;
-                    const createdDate = new Date(ticket.created_at).toLocaleString('th-TH', {
-                      day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
-                    });
+                    const statusColor = ticket.status === 'open' ? 'bg-blue-500' : ticket.status === 'in_progress' ? 'bg-amber-500' : ticket.status === 'resolved' ? 'bg-emerald-500' : 'bg-slate-500';
+                    const statusLabel = ticket.status === 'open' ? (isEn ? 'Open' : 'เปิด') : ticket.status === 'in_progress' ? (isEn ? 'In Progress' : 'ดำเนินการ') : ticket.status === 'resolved' ? (isEn ? 'Resolved' : 'แก้ไขแล้ว') : ticket.status === 'closed' ? (isEn ? 'Closed' : 'ปิด') : ticket.status;
+                    const createdDate = new Date(ticket.created_at).toLocaleString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
                     return (
-                      <div key={ticket.id} className="p-3 rounded-xl border bg-card/60 hover:border-cyan-500/20 transition-colors">
+                      <div key={ticket.id} className="p-3 rounded-xl border border-slate-800 bg-slate-950/50 hover:border-cyan-500/20 transition-colors">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <Badge variant="outline" className="text-[9px] font-bold px-1.5 py-0 h-4">
-                                {ticket.category}
-                              </Badge>
+                              <Badge variant="outline" className="text-[8px] font-bold px-1.5 py-0 h-4 border-slate-700">{ticket.category}</Badge>
                               <div className="flex items-center gap-1">
                                 <div className={cn('w-1.5 h-1.5 rounded-full', statusColor)} />
-                                <span className="text-[9px] font-medium text-muted-foreground">{statusLabel}</span>
+                                <span className="text-[8px] font-medium text-slate-500">{statusLabel}</span>
                               </div>
                             </div>
-                            <p className="text-xs font-semibold truncate">{ticket.subject}</p>
-                            <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{ticket.description}</p>
-                            <p className="text-[9px] text-muted-foreground/50 mt-1 font-mono">{createdDate}</p>
+                            <p className="text-[11px] font-semibold text-white truncate">{ticket.subject}</p>
+                            <p className="text-[9px] text-slate-500 mt-0.5 line-clamp-1">{ticket.description}</p>
+                            <p className="text-[8px] text-slate-700 mt-1 font-mono">{createdDate}</p>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="w-7 h-7 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 flex-shrink-0"
-                            onClick={() => handleDeleteTicket(ticket.id)}
-                            disabled={deletingTicketId === ticket.id}
-                          >
-                            {deletingTicketId === ticket.id ? (
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            ) : (
-                              <Trash2 className="w-3.5 h-3.5" />
-                            )}
+                          <Button variant="ghost" size="icon" className="w-7 h-7 text-slate-600 hover:text-red-400 hover:bg-red-500/10 flex-shrink-0"
+                            onClick={() => handleDeleteTicket(ticket.id)} disabled={deletingTicketId === ticket.id}>
+                            {deletingTicketId === ticket.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                           </Button>
                         </div>
-
-                        {/* Admin Reply */}
                         {ticket.admin_reply && (
                           <div className="mt-2 p-2.5 rounded-lg bg-amber-500/5 border border-amber-500/20">
                             <div className="flex items-center gap-1.5 mb-1">
-                              <div className="w-4 h-4 rounded-md bg-amber-500/10 flex items-center justify-center">
-                                <MessageCircle className="w-2.5 h-2.5 text-amber-500" />
-                              </div>
-                              <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
-                                {isEn ? 'Admin Reply' : 'ผู้ดูแลตอบกลับ'}
-                              </span>
-                              {ticket.admin_replied_at && (
-                                <span className="text-[9px] text-muted-foreground/50 font-mono ml-auto">
-                                  {new Date(ticket.admin_replied_at).toLocaleString('th-TH', {
-                                    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
-                                  })}
-                                </span>
-                              )}
+                              <MessageCircle className="w-2.5 h-2.5 text-amber-500" />
+                              <span className="text-[8px] font-bold text-amber-400 uppercase tracking-wider">{isEn ? 'Admin Reply' : 'ผู้ดูแลตอบกลับ'}</span>
+                              {ticket.admin_replied_at && <span className="text-[8px] text-slate-600 font-mono ml-auto">{new Date(ticket.admin_replied_at).toLocaleString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>}
                             </div>
-                            <p className="text-[11px] text-foreground leading-relaxed">{ticket.admin_reply}</p>
+                            <p className="text-[10px] text-slate-300 leading-relaxed">{ticket.admin_reply}</p>
                           </div>
                         )}
                       </div>
@@ -1047,31 +1123,43 @@ export default function Settings() {
                 </div>
               </ScrollArea>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </motion.div>
 
-        {/* ═══ SAVE BUTTON — FACTORY SWITCH ═══ */}
-        <div className="flex justify-end">
-          <button
-            onClick={handleSave}
-            disabled={isSavingProfile}
-            className="px-8 py-4 bg-blue-600 text-white font-black text-xs rounded-2xl flex items-center justify-center gap-3 hover:bg-blue-500 transition-all uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(37,99,235,0.2)] disabled:opacity-40"
-          >
-            {isSavingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save size={18} />}
+        {/* ═══ 6. MECHANICAL LEVER (Decoration) + MASTER SAVE ═══ */}
+        <div className="flex items-center justify-between">
+          {/* Lever decoration */}
+          <div className="flex items-center gap-3 opacity-30">
+            <GripHorizontal className="text-slate-700" size={20} />
+            <div className="w-24 h-1.5 bg-slate-800 rounded-full relative overflow-hidden">
+              <motion.div animate={{ x: ['-100%', '200%'] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute inset-y-0 w-8 bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent" />
+            </div>
+            <span className="text-[7px] font-black text-slate-700 uppercase tracking-[0.2em]">Mechanical Override</span>
+          </div>
+
+          {/* Master Save */}
+          <button onClick={handleSave} disabled={isSavingProfile}
+            className={cn("px-8 py-3.5 font-black text-[10px] rounded-2xl flex items-center justify-center gap-2.5 transition-all uppercase tracking-[0.2em] disabled:opacity-30 border-2",
+              `bg-slate-950 ${accent.border.replace('border-', 'border-')} ${accent.text} hover:${accent.bg} hover:text-black shadow-lg ${accent.shadow}`
+            )}>
+            {isSavingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save size={16} />}
             {t.common.saveChanges}
           </button>
         </div>
 
-        {/* ═══ TERMINAL LOG FOOTER ═══ */}
-        <footer className="bg-black/40 border border-slate-800 rounded-3xl p-5 font-mono text-[10px]">
-          <div className="flex items-center gap-2 text-slate-500 mb-2 uppercase tracking-widest font-bold">
-            <Terminal size={14} /> Identity Sync Stream
+        {/* ═══ 7. TERMINAL LOG FOOTER ═══ */}
+        <footer className="bg-black/60 border-2 border-slate-800 rounded-2xl p-5 font-mono text-[10px]">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse" />
+            <span className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em]">Console Stream // {authUser?.email || 'user@grandstate.io'}</span>
           </div>
-          <div className="space-y-0.5 text-green-500/60 tracking-tight">
-            <p>{'>'} Session validated for user: {displayName || 'Unknown'}</p>
-            <p>{'>'} Cloud synchronization active — all changes mirrored to Global Nodes</p>
+          <div className="space-y-0.5 text-cyan-500/50 italic">
+            <p>{'>'} Identity sync initialized for node_{(displayName || 'unknown').toLowerCase().replace(/\s/g, '_')}...</p>
+            <p>{'>'} Protocol {pkgTheme.label} validated // Hardware Masking: ON</p>
+            <p>{'>'} Cloud sync: ACTIVE — mirrored to Global Nodes</p>
             <p>{'>'} {s.appVersion}: Grand$tate v1.0 — Engine Core Online</p>
-            <p className="animate-pulse">{'>'} Awaiting configuration input...</p>
+            <p className="animate-pulse text-amber-500/30">{'>'} Awaiting configuration input...</p>
           </div>
         </footer>
 

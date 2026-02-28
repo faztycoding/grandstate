@@ -167,9 +167,12 @@ export default function AdminDashboard() {
     // Modal states
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<{ id: string; key: string } | null>(null);
+    const [extendTarget, setExtendTarget] = useState<{ id: string; key: string; currentExpiry: string } | null>(null);
+    const [extendDays, setExtendDays] = useState(30);
     const [newLicense, setNewLicense] = useState({
         package: 'agent',
         durationDays: 30,
+        customDays: '',
         ownerName: '',
         ownerContact: '',
         note: '',
@@ -244,10 +247,10 @@ export default function AdminDashboard() {
 
     // User management: change package
     const [changingPkgUser, setChangingPkgUser] = useState<string | null>(null);
-    const handleChangePackage = async (fullUserId: string, newPkg: string) => {
+    const handleChangePackage = async (fullUserId: string, newPkg: string, displayName?: string) => {
         setChangingPkgUser(fullUserId);
         try {
-            const res = await apiFetch('/api/admin/change-package', { method: 'POST', body: JSON.stringify({ targetUserId: fullUserId, newPackage: newPkg }) });
+            const res = await apiFetch('/api/admin/change-package', { method: 'POST', body: JSON.stringify({ targetUserId: fullUserId, newPackage: newPkg, displayName }) });
             const data = await res.json();
             if (data.success) { toast.success(`เปลี่ยนเป็น ${newPkg.toUpperCase()} สำเร็จ`); fetchUserLicenses(); fetchAllUsers(); } else { toast.error(data.error); }
         } catch { toast.error('Failed'); } finally { setChangingPkgUser(null); }
@@ -625,8 +628,9 @@ export default function AdminDashboard() {
     const handleCreateLicense = async () => {
         try {
             const licenseKey = generateKey();
+            const effectiveDays = newLicense.customDays ? (parseInt(newLicense.customDays) || 30) : newLicense.durationDays;
             const expiresAt = new Date();
-            expiresAt.setDate(expiresAt.getDate() + newLicense.durationDays);
+            expiresAt.setDate(expiresAt.getDate() + effectiveDays);
 
             const { error } = await supabase.from('license_keys').insert({
                 license_key: licenseKey,
@@ -641,11 +645,12 @@ export default function AdminDashboard() {
 
             if (error) throw error;
 
-            toast.success('สร้าง License สำเร็จ');
+            toast.success(`สร้าง License สำเร็จ (${effectiveDays} วัน)`);
             setShowCreateModal(false);
             setNewLicense({
                 package: 'agent',
                 durationDays: 30,
+                customDays: '',
                 ownerName: '',
                 ownerContact: '',
                 note: '',
@@ -1252,7 +1257,7 @@ export default function AdminDashboard() {
                                                                         <button key={pkg}
                                                                             className={cn("flex-1 py-2 rounded-lg border text-[9px] font-black transition-all", styles[pkg], isActive && "pointer-events-none shadow-sm")}
                                                                             disabled={changingPkgUser === u.fullUserId}
-                                                                            onClick={(e) => { e.stopPropagation(); handleChangePackage(u.fullUserId!, pkg); }}>
+                                                                            onClick={(e) => { e.stopPropagation(); handleChangePackage(u.fullUserId!, pkg, u.displayName || u.email?.split('@')[0]); }}>
                                                                             {changingPkgUser === u.fullUserId ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : labels[pkg]}
                                                                         </button>
                                                                     );
@@ -1324,81 +1329,217 @@ export default function AdminDashboard() {
                 </div>
                 </>)}
 
-                {/* ═══════════════ TAB: LICENSES ═══════════════ */}
+                {/* ═══════════════ TAB: LICENSES — PREMIUM VAULT ═══════════════ */}
                 {activeTab === 'licenses' && (<>
                 <div className="relative rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(180deg, hsl(222 47% 6%) 0%, hsl(222 47% 4%) 100%)' }}>
+                    {/* Blueprint grid */}
                     <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(148,163,184,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.5) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+                    {/* Scanning line */}
                     <motion.div animate={{ top: ['-5%', '105%'] }} transition={{ duration: 7, repeat: Infinity, ease: 'linear' }} className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-amber-500/20 to-transparent pointer-events-none z-20" />
-                    <div className="relative z-10 p-6">
-                    {/* Header */}
-                    <div className="flex items-center gap-3 mb-6 border-b border-amber-500/20 pb-4">
-                        <h2 className="text-2xl font-black text-white tracking-tight uppercase">License <span className="text-amber-500">Vault</span></h2>
-                        <Badge variant="outline" className="text-[9px] bg-blue-500/10 text-blue-400 border-blue-500/30 gap-1.5 px-2 py-0.5 font-bold"><Key className="w-2.5 h-2.5" /> {filteredLicenses.length} KEYS</Badge>
-                    </div>
-                    {/* Filters */}
-                    <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 mb-5">
-                            <div className="flex flex-col md:flex-row gap-3">
-                                <div className="flex-1 relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" /><Input placeholder={t.admin.searchLicense} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 bg-slate-900/80 border-slate-700 text-amber-400 font-mono placeholder:text-slate-600 focus:border-amber-500/50" /></div>
-                                <Select value={filterPackage} onValueChange={setFilterPackage}><SelectTrigger className="w-[160px]"><SelectValue placeholder={t.admin.package} /></SelectTrigger><SelectContent><SelectItem value="all">{t.admin.all}</SelectItem><SelectItem value="free">Rookie</SelectItem><SelectItem value="agent">Top Agent</SelectItem><SelectItem value="elite">Elite</SelectItem></SelectContent></Select>
-                                <Select value={filterStatus} onValueChange={setFilterStatus}><SelectTrigger className="w-[160px]"><SelectValue placeholder={t.admin.status} /></SelectTrigger><SelectContent><SelectItem value="all">{t.admin.all}</SelectItem><SelectItem value="active">{t.admin.active}</SelectItem><SelectItem value="inactive">{t.admin.expired}</SelectItem></SelectContent></Select>
-                                <Button variant="outline" onClick={fetchLicenses} className="border-slate-700 text-slate-300 hover:bg-amber-500 hover:text-black hover:border-amber-500"><RefreshCw className={cn("w-4 h-4 mr-2", isLoading && "animate-spin")} />{t.admin.refresh}</Button>
+                    {/* Floating particles */}
+                    {[...Array(5)].map((_, i) => (
+                        <motion.div key={`lp-${i}`} className="absolute w-1 h-1 rounded-full bg-amber-500/20 pointer-events-none"
+                            style={{ left: `${10 + i * 20}%`, top: `${20 + (i % 3) * 25}%` }}
+                            animate={{ y: [0, -12, 0], opacity: [0.15, 0.4, 0.15] }}
+                            transition={{ duration: 3 + i * 0.5, repeat: Infinity, delay: i * 0.6 }}
+                        />
+                    ))}
+
+                    <div className="relative z-10 p-6 space-y-5">
+
+                    {/* ── Header ── */}
+                    <div className="flex items-center justify-between border-b border-amber-500/20 pb-4">
+                        <div className="flex items-center gap-3">
+                            <motion.div
+                                animate={{ rotate: [0, 5, -5, 0] }}
+                                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                                className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-500/30 flex items-center justify-center"
+                            >
+                                <Key className="w-5 h-5 text-amber-500" />
+                            </motion.div>
+                            <div>
+                                <h2 className="text-xl font-black text-white tracking-tight uppercase">License <span className="text-amber-500">Vault</span></h2>
+                                <p className="text-[10px] text-slate-500 font-mono">Manage all license keys & subscriptions</p>
                             </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-[9px] bg-blue-500/10 text-blue-400 border-blue-500/30 gap-1.5 px-2 py-0.5 font-bold">
+                                <Key className="w-2.5 h-2.5" /> {filteredLicenses.length} KEYS
+                            </Badge>
+                            <Button size="sm" onClick={() => setShowCreateModal(true)} className="bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs gap-1.5">
+                                <Plus className="w-3.5 h-3.5" /> สร้าง License
+                            </Button>
+                        </div>
                     </div>
 
-                    {/* License Table */}
-                    <div className="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden">
-                        <div className="px-5 py-3 border-b border-slate-800 flex items-center gap-2">
-                            <Key className="w-4 h-4 text-amber-500" />
-                            <span className="text-sm font-black text-white uppercase tracking-wide">License Keys</span>
-                            <span className="text-[10px] font-mono text-slate-500 ml-auto">{filteredLicenses.length} records</span>
-                        </div>
-                        <div className="p-3">
-                            <ScrollArea className="h-[500px]">
-                                <div className="overflow-x-auto">
-                                    <Table className="min-w-[700px]">
-                                        <TableHeader><TableRow className="border-slate-800 hover:bg-transparent">
-                                            <TableHead className="text-slate-500 font-mono text-[10px] uppercase tracking-wider">License Key</TableHead><TableHead className="text-slate-500 font-mono text-[10px] uppercase tracking-wider">{t.admin.package}</TableHead><TableHead className="text-slate-500 font-mono text-[10px] uppercase tracking-wider">{t.admin.owner}</TableHead><TableHead className="text-slate-500 font-mono text-[10px] uppercase tracking-wider">{t.admin.user}</TableHead><TableHead className="text-slate-500 font-mono text-[10px] uppercase tracking-wider">{t.admin.expiryDate}</TableHead><TableHead className="text-slate-500 font-mono text-[10px] uppercase tracking-wider">{t.admin.status}</TableHead><TableHead className="text-right text-slate-500 font-mono text-[10px] uppercase tracking-wider">{t.admin.colManage}</TableHead>
-                                        </TableRow></TableHeader>
-                                        <TableBody>
-                                            {filteredLicenses.length === 0 ? (
-                                                <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground"><Key className="w-12 h-12 mx-auto mb-4 opacity-20" />{t.admin.noLicenseFound}</TableCell></TableRow>
-                                            ) : filteredLicenses.map(license => {
-                                                const expired = isExpired(license.expires_at);
-                                                const expiringSoon = isExpiringSoon(license.expires_at);
-                                                const activation = licenseActivations.find((a: any) => a.license_key_id === license.id);
-                                                const pkgColor = license.package === 'elite'
-                                                    ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30'
-                                                    : license.package === 'agent'
-                                                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
-                                                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30';
-                                                const pkgDot = license.package === 'elite' ? 'bg-purple-500' : license.package === 'agent' ? 'bg-amber-500' : 'bg-emerald-500';
-                                                return (
-                                                    <TableRow key={license.id} className={cn(expired && "opacity-60")}>
-                                                        <TableCell><code className="text-[11px] font-mono bg-muted/60 px-2 py-1 rounded-md border border-border/50 select-all">{license.license_key}</code></TableCell>
-                                                        <TableCell><Badge variant="outline" className={cn("font-semibold text-[10px] gap-1 border", pkgColor)}><div className={cn("w-1.5 h-1.5 rounded-full", pkgDot)} />{packageLabels[license.package]}</Badge></TableCell>
-                                                        <TableCell><div><div className="font-medium text-sm">{license.owner_name || '—'}</div>{license.owner_contact && <div className="text-[10px] text-muted-foreground truncate max-w-[100px]">{license.owner_contact}</div>}</div></TableCell>
-                                                        <TableCell>{activation ? (
-                                                            <div className="min-w-0">
-                                                                <p className="text-xs font-medium truncate max-w-[120px]">{activation.device_name || activation.device_id?.substring(0, 12) + '...'}</p>
-                                                                <p className="text-[10px] text-muted-foreground">{activation.activated_at ? formatDate(activation.activated_at) : ''}</p>
-                                                            </div>
-                                                        ) : <span className="text-[10px] text-muted-foreground italic">—</span>}</TableCell>
-                                                        <TableCell><div className={cn("flex items-center gap-1.5 text-sm tabular-nums", expired ? "text-red-500 font-semibold" : expiringSoon ? "text-amber-500 font-semibold" : "")}>{expired && <span className="text-[9px] px-1 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-bold mr-1">EXP</span>}{formatDate(license.expires_at)}{expiringSoon && !expired && <AlertCircle className="w-3.5 h-3.5 text-amber-500" />}</div></TableCell>
-                                                        <TableCell><Badge variant={license.is_active && !expired ? 'outline' : 'destructive'} className={cn("text-[10px] font-bold", license.is_active && !expired ? "border-emerald-500 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5" : "")}>{license.is_active && !expired ? '● Active' : '● Inactive'}</Badge></TableCell>
-                                                        <TableCell className="text-right"><div className="flex justify-end gap-1">
-                                                            <Button size="sm" variant="outline" className="h-7 w-7 p-0 hover:bg-blue-50 dark:hover:bg-blue-950/20 hover:border-blue-300" title="Copy Key" onClick={() => { navigator.clipboard.writeText(license.license_key); toast.success('Copied!'); }}><Copy className="w-3 h-3" /></Button>
-                                                            <Button size="sm" variant="outline" className="h-7 w-7 p-0 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 hover:border-emerald-300" title="Extend 30 days" onClick={() => extendLicense(license.id, 30)}><Calendar className="w-3 h-3 text-emerald-600" /></Button>
-                                                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20" title="Delete" onClick={() => setDeleteTarget({ id: license.id, key: license.license_key })}><Trash2 className="w-3 h-3" /></Button>
-                                                        </div></TableCell>
-                                                    </TableRow>
-                                                );
-                                            })}
-                                        </TableBody>
-                                    </Table>
+                    {/* ── Quick Stats ── */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                        {[
+                            { label: t.admin.totalLicenses, value: stats.totalLicenses, color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20', icon: Key },
+                            { label: t.admin.activeLicenses, value: stats.activeLicenses, color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20', icon: Check },
+                            { label: t.admin.expiringSoon, value: stats.expiringLicenses, color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20', icon: AlertCircle },
+                            { label: t.admin.totalRevenue, value: `฿${stats.totalRevenue.toLocaleString()}`, color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/20', icon: TrendingUp },
+                        ].map((s, i) => (
+                            <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 * i }}
+                                className={cn("p-3.5 rounded-xl border", s.bg)}>
+                                <div className="flex items-center justify-between mb-1">
+                                    <s.icon className={cn("w-4 h-4", s.color)} />
                                 </div>
-                            </ScrollArea>
+                                <p className={cn("text-xl font-black tabular-nums", s.color)}>
+                                    {typeof s.value === 'number' ? <AnimatedCounter value={s.value} /> : s.value}
+                                </p>
+                                <p className="text-[9px] text-slate-500 uppercase tracking-wider font-mono mt-0.5">{s.label}</p>
+                            </motion.div>
+                        ))}
+                    </div>
+
+                    {/* ── Filters ── */}
+                    <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3">
+                        <div className="flex flex-col md:flex-row gap-2.5">
+                            <div className="flex-1 relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                                <Input placeholder={t.admin.searchLicense} value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                                    className="pl-10 bg-slate-900/80 border-slate-700 text-amber-400 font-mono placeholder:text-slate-600 focus:border-amber-500/50 h-9" />
+                            </div>
+                            <Select value={filterPackage} onValueChange={setFilterPackage}>
+                                <SelectTrigger className="w-[140px] h-9 bg-slate-900/80 border-slate-700"><SelectValue placeholder={t.admin.package} /></SelectTrigger>
+                                <SelectContent><SelectItem value="all">{t.admin.all}</SelectItem><SelectItem value="free">Rookie</SelectItem><SelectItem value="agent">Top Agent</SelectItem><SelectItem value="elite">Elite</SelectItem></SelectContent>
+                            </Select>
+                            <Select value={filterStatus} onValueChange={setFilterStatus}>
+                                <SelectTrigger className="w-[140px] h-9 bg-slate-900/80 border-slate-700"><SelectValue placeholder={t.admin.status} /></SelectTrigger>
+                                <SelectContent><SelectItem value="all">{t.admin.all}</SelectItem><SelectItem value="active">{t.admin.active}</SelectItem><SelectItem value="inactive">{t.admin.expired}</SelectItem></SelectContent>
+                            </Select>
+                            <Button variant="outline" size="sm" onClick={() => { fetchLicenses(); fetchLicenseActivations(); }}
+                                className="h-9 border-slate-700 text-slate-300 hover:bg-amber-500 hover:text-black hover:border-amber-500">
+                                <RefreshCw className={cn("w-3.5 h-3.5 mr-1.5", isLoading && "animate-spin")} />{t.admin.refresh}
+                            </Button>
                         </div>
                     </div>
+
+                    {/* ── License Cards (replaces table for better UX) ── */}
+                    <div className="bg-slate-900/60 border border-slate-800 rounded-xl overflow-hidden">
+                        <div className="px-4 py-2.5 border-b border-slate-800 flex items-center gap-2">
+                            <Key className="w-3.5 h-3.5 text-amber-500" />
+                            <span className="text-xs font-black text-white uppercase tracking-wide">License Keys</span>
+                            <span className="text-[9px] font-mono text-slate-600 ml-auto">{filteredLicenses.length} records</span>
+                        </div>
+                        <ScrollArea className="h-[520px]">
+                            <div className="p-3 space-y-2">
+                                {filteredLicenses.length === 0 ? (
+                                    <div className="text-center py-16 text-muted-foreground">
+                                        <Key className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                                        <p className="text-sm">{t.admin.noLicenseFound}</p>
+                                    </div>
+                                ) : filteredLicenses.map((license, idx) => {
+                                    const expired = isExpired(license.expires_at);
+                                    const expiringSoon = isExpiringSoon(license.expires_at);
+                                    const activation = licenseActivations.find((a: any) => a.license_key_id === license.id);
+                                    const daysLeft = Math.max(0, Math.ceil((new Date(license.expires_at).getTime() - Date.now()) / 86400000));
+                                    const pkgColors: Record<string, { badge: string; dot: string; glow: string }> = {
+                                        elite: { badge: 'bg-purple-500/10 text-purple-400 border-purple-500/30', dot: 'bg-purple-500', glow: 'shadow-purple-500/10' },
+                                        agent: { badge: 'bg-amber-500/10 text-amber-400 border-amber-500/30', dot: 'bg-amber-500', glow: 'shadow-amber-500/10' },
+                                        free: { badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30', dot: 'bg-emerald-500', glow: 'shadow-emerald-500/10' },
+                                    };
+                                    const pkg = pkgColors[license.package] || pkgColors.free;
+
+                                    return (
+                                        <motion.div key={license.id}
+                                            initial={{ opacity: 0, x: -8 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: Math.min(idx * 0.03, 0.3) }}
+                                            className={cn(
+                                                "group p-3.5 rounded-xl border transition-all duration-200 hover:shadow-lg",
+                                                expired
+                                                    ? "bg-slate-950/60 border-red-500/20 opacity-60 hover:opacity-80"
+                                                    : expiringSoon
+                                                    ? "bg-slate-950/60 border-amber-500/20 hover:border-amber-500/40"
+                                                    : "bg-slate-950/40 border-slate-800 hover:border-slate-700",
+                                                pkg.glow
+                                            )}
+                                        >
+                                            {/* Row 1: Key + Package + Status */}
+                                            <div className="flex items-center gap-3 mb-2.5">
+                                                <code className="text-[11px] font-mono bg-slate-800/80 text-slate-300 px-2.5 py-1 rounded-lg border border-slate-700/50 select-all flex-shrink-0">
+                                                    {license.license_key}
+                                                </code>
+                                                <Badge variant="outline" className={cn("text-[9px] font-black gap-1 border px-2 py-0.5", pkg.badge)}>
+                                                    <div className={cn("w-1.5 h-1.5 rounded-full", pkg.dot)} />
+                                                    {packageLabels[license.package]}
+                                                </Badge>
+                                                {expired ? (
+                                                    <Badge className="text-[8px] font-black bg-red-500/15 text-red-400 border border-red-500/30 px-1.5 py-0">EXP</Badge>
+                                                ) : (
+                                                    <Badge className={cn("text-[8px] font-black px-1.5 py-0 border", license.is_active ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" : "bg-red-500/15 text-red-400 border-red-500/30")}>
+                                                        {license.is_active ? '● Active' : '● Inactive'}
+                                                    </Badge>
+                                                )}
+                                                <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10"
+                                                        title="Copy Key" onClick={() => { navigator.clipboard.writeText(license.license_key); toast.success('Copied!'); }}>
+                                                        <Copy className="w-3 h-3" />
+                                                    </Button>
+                                                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10"
+                                                        title="Extend" onClick={() => { setExtendTarget({ id: license.id, key: license.license_key, currentExpiry: license.expires_at }); setExtendDays(30); }}>
+                                                        <Calendar className="w-3 h-3" />
+                                                    </Button>
+                                                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-slate-400 hover:text-red-400 hover:bg-red-500/10"
+                                                        title="Delete" onClick={() => setDeleteTarget({ id: license.id, key: license.license_key })}>
+                                                        <Trash2 className="w-3 h-3" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+
+                                            {/* Row 2: Owner + User + Expiry + Days remaining */}
+                                            <div className="flex items-center gap-4 text-[11px]">
+                                                <div className="flex items-center gap-1.5 min-w-0">
+                                                    <Users className="w-3 h-3 text-slate-600 flex-shrink-0" />
+                                                    <span className="text-slate-400 truncate max-w-[140px]" title={license.owner_name || ''}>
+                                                        {license.owner_name || <span className="italic text-slate-600">ไม่ระบุ</span>}
+                                                    </span>
+                                                    {license.owner_contact && (
+                                                        <span className="text-[9px] text-slate-600 truncate max-w-[80px]">({license.owner_contact})</span>
+                                                    )}
+                                                </div>
+                                                <div className="w-px h-3 bg-slate-800" />
+                                                <div className="flex items-center gap-1.5">
+                                                    <Monitor className="w-3 h-3 text-slate-600 flex-shrink-0" />
+                                                    {activation ? (
+                                                        <span className="text-cyan-400 truncate max-w-[100px]">{activation.device_name || activation.device_id?.substring(0, 10) + '…'}</span>
+                                                    ) : (
+                                                        <span className="text-slate-600 italic">ยังไม่มีผู้ใช้</span>
+                                                    )}
+                                                </div>
+                                                <div className="w-px h-3 bg-slate-800" />
+                                                <div className="flex items-center gap-1.5">
+                                                    <Clock className="w-3 h-3 text-slate-600 flex-shrink-0" />
+                                                    <span className={cn("tabular-nums", expired ? "text-red-400" : expiringSoon ? "text-amber-400" : "text-slate-400")}>
+                                                        {formatDate(license.expires_at)}
+                                                    </span>
+                                                </div>
+                                                {!expired && (
+                                                    <>
+                                                        <div className="w-px h-3 bg-slate-800" />
+                                                        <span className={cn("text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded",
+                                                            daysLeft <= 7 ? "bg-red-500/10 text-red-400" : daysLeft <= 30 ? "bg-amber-500/10 text-amber-400" : "bg-slate-800 text-slate-400"
+                                                        )}>
+                                                            เหลือ {daysLeft} วัน
+                                                        </span>
+                                                    </>
+                                                )}
+                                                {license.note && (
+                                                    <>
+                                                        <div className="w-px h-3 bg-slate-800" />
+                                                        <span className="text-[9px] text-slate-600 truncate max-w-[120px]" title={license.note}>📝 {license.note}</span>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })}
+                            </div>
+                        </ScrollArea>
+                    </div>
+
                     </div>{/* end z-10 */}
                 </div>{/* end factory wrapper */}
                 </>)}
@@ -2786,30 +2927,190 @@ export default function AdminDashboard() {
 
             </div>{/* end max-w container */}
 
-            {/* Create License Modal */}
+            {/* Create License Modal — Enhanced */}
             <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-lg">
                     <DialogHeader>
-                        <DialogTitle>{t.admin.createTitle}</DialogTitle>
+                        <DialogTitle className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center">
+                                <Key className="w-4 h-4 text-amber-500" />
+                            </div>
+                            {t.admin.createTitle}
+                        </DialogTitle>
                         <DialogDescription>{t.admin.createDesc}</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
-                        <div className="grid gap-2"><Label>{t.admin.package}</Label><Select value={newLicense.package} onValueChange={val => setNewLicense({ ...newLicense, package: val })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="agent">Top Agent (฿1,390)</SelectItem><SelectItem value="elite">Elite (฿2,990)</SelectItem><SelectItem value="free">Rookie (Free)</SelectItem></SelectContent></Select></div>
-                        <div className="grid gap-2"><Label>{t.admin.duration}</Label><Select value={newLicense.durationDays.toString()} onValueChange={val => setNewLicense({ ...newLicense, durationDays: parseInt(val) })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="30">{t.admin.days30}</SelectItem><SelectItem value="90">{t.admin.days90}</SelectItem><SelectItem value="180">{t.admin.days180}</SelectItem><SelectItem value="365">{t.admin.days365}</SelectItem></SelectContent></Select></div>
-                        <div className="grid gap-2"><Label>{t.admin.customerName}</Label><Input value={newLicense.ownerName} onChange={e => setNewLicense({ ...newLicense, ownerName: e.target.value })} placeholder={t.admin.customerNamePlaceholder} /></div>
-                        <div className="grid gap-2"><Label>{t.admin.contact}</Label><Input value={newLicense.ownerContact} onChange={e => setNewLicense({ ...newLicense, ownerContact: e.target.value })} placeholder={t.admin.contactPlaceholder} /></div>
-                        <div className="grid gap-2"><Label>{t.admin.note}</Label><Input value={newLicense.note} onChange={e => setNewLicense({ ...newLicense, note: e.target.value })} placeholder={t.admin.notePlaceholder} /></div>
+                        {/* Package */}
+                        <div className="grid gap-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider">{t.admin.package}</Label>
+                            <div className="grid grid-cols-3 gap-2">
+                                {([
+                                    { val: 'free', label: 'Rookie', price: 'Free', color: 'border-emerald-500 bg-emerald-500/10 text-emerald-400' },
+                                    { val: 'agent', label: 'Top Agent', price: '฿1,390', color: 'border-amber-500 bg-amber-500/10 text-amber-400' },
+                                    { val: 'elite', label: 'Elite', price: '฿2,990', color: 'border-purple-500 bg-purple-500/10 text-purple-400' },
+                                ] as const).map(p => (
+                                    <button key={p.val}
+                                        onClick={() => setNewLicense({ ...newLicense, package: p.val })}
+                                        className={cn("p-3 rounded-xl border-2 text-center transition-all", newLicense.package === p.val ? p.color : "border-border hover:border-muted-foreground/30")}>
+                                        <p className="text-sm font-black">{p.label}</p>
+                                        <p className="text-[10px] opacity-70">{p.price}</p>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Duration — presets + custom */}
+                        <div className="grid gap-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider">{t.admin.duration}</Label>
+                            <div className="flex flex-wrap gap-1.5">
+                                {[
+                                    { days: 7, label: '7 วัน' },
+                                    { days: 30, label: '30 วัน' },
+                                    { days: 90, label: '90 วัน' },
+                                    { days: 180, label: '180 วัน' },
+                                    { days: 365, label: '1 ปี' },
+                                ].map(d => (
+                                    <button key={d.days}
+                                        onClick={() => setNewLicense({ ...newLicense, durationDays: d.days, customDays: '' })}
+                                        className={cn("px-3 py-1.5 rounded-lg border text-xs font-bold transition-all",
+                                            newLicense.durationDays === d.days && !newLicense.customDays
+                                                ? "bg-accent text-accent-foreground border-accent"
+                                                : "border-border hover:border-accent/50")}>
+                                        {d.label}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    type="number"
+                                    min={1}
+                                    max={3650}
+                                    value={newLicense.customDays}
+                                    onChange={e => {
+                                        const v = e.target.value;
+                                        setNewLicense({ ...newLicense, customDays: v, durationDays: parseInt(v) || 30 });
+                                    }}
+                                    placeholder="กำหนดเอง (จำนวนวัน)"
+                                    className="h-9 text-sm"
+                                />
+                                <span className="text-xs text-muted-foreground whitespace-nowrap">วัน</span>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground">
+                                หมดอายุ: {new Date(Date.now() + (newLicense.customDays ? parseInt(newLicense.customDays) || 30 : newLicense.durationDays) * 86400000).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
+                            </p>
+                        </div>
+
+                        {/* Customer Info */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="grid gap-1.5">
+                                <Label className="text-xs">{t.admin.customerName}</Label>
+                                <Input value={newLicense.ownerName} onChange={e => setNewLicense({ ...newLicense, ownerName: e.target.value })} placeholder={t.admin.customerNamePlaceholder} className="h-9" />
+                            </div>
+                            <div className="grid gap-1.5">
+                                <Label className="text-xs">{t.admin.contact}</Label>
+                                <Input value={newLicense.ownerContact} onChange={e => setNewLicense({ ...newLicense, ownerContact: e.target.value })} placeholder={t.admin.contactPlaceholder} className="h-9" />
+                            </div>
+                        </div>
+                        <div className="grid gap-1.5">
+                            <Label className="text-xs">{t.admin.note}</Label>
+                            <Input value={newLicense.note} onChange={e => setNewLicense({ ...newLicense, note: e.target.value })} placeholder={t.admin.notePlaceholder} className="h-9" />
+                        </div>
                     </div>
-                    <DialogFooter><Button variant="outline" onClick={() => setShowCreateModal(false)}>{t.admin.cancel}</Button><Button onClick={handleCreateLicense}>{t.admin.confirmCreate}</Button></DialogFooter>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowCreateModal(false)}>{t.admin.cancel}</Button>
+                        <Button onClick={handleCreateLicense} className="bg-amber-500 hover:bg-amber-600 text-black font-bold gap-1.5">
+                            <Key className="w-3.5 h-3.5" /> {t.admin.confirmCreate}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Extend License Dialog */}
+            <Dialog open={!!extendTarget} onOpenChange={open => !open && setExtendTarget(null)}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
+                                <Calendar className="w-4 h-4 text-emerald-500" />
+                            </div>
+                            ต่ออายุ License
+                        </DialogTitle>
+                        <DialogDescription>เลือกจำนวนวันที่ต้องการต่ออายุ</DialogDescription>
+                    </DialogHeader>
+                    {extendTarget && (
+                        <div className="space-y-4 py-2">
+                            <div className="p-3 rounded-lg bg-muted/50 border text-center">
+                                <code className="text-sm font-mono font-bold">{extendTarget.key}</code>
+                                <p className="text-[10px] text-muted-foreground mt-1">
+                                    หมดอายุเดิม: {formatDate(extendTarget.currentExpiry)}
+                                </p>
+                            </div>
+
+                            {/* Duration presets */}
+                            <div className="flex flex-wrap gap-1.5">
+                                {[7, 14, 30, 60, 90, 180, 365].map(d => (
+                                    <button key={d}
+                                        onClick={() => setExtendDays(d)}
+                                        className={cn("px-3 py-1.5 rounded-lg border text-xs font-bold transition-all",
+                                            extendDays === d ? "bg-emerald-500/10 text-emerald-400 border-emerald-500" : "border-border hover:border-emerald-500/50")}>
+                                        +{d} วัน
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Custom input */}
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    type="number"
+                                    min={1}
+                                    max={3650}
+                                    value={extendDays}
+                                    onChange={e => setExtendDays(parseInt(e.target.value) || 30)}
+                                    className="h-9 text-sm w-32"
+                                />
+                                <span className="text-xs text-muted-foreground">วัน</span>
+                            </div>
+
+                            <p className="text-[11px] text-muted-foreground border-t pt-2">
+                                วันหมดอายุใหม่: <span className="font-bold text-emerald-500">
+                                    {(() => {
+                                        const base = new Date(extendTarget.currentExpiry) > new Date() ? new Date(extendTarget.currentExpiry) : new Date();
+                                        return new Date(base.getTime() + extendDays * 86400000).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+                                    })()}
+                                </span>
+                            </p>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setExtendTarget(null)}>{t.admin.cancel}</Button>
+                        <Button onClick={() => { if (extendTarget) { extendLicense(extendTarget.id, extendDays); setExtendTarget(null); } }}
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold gap-1.5">
+                            <Calendar className="w-3.5 h-3.5" /> ต่ออายุ +{extendDays} วัน
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
 
             {/* Delete Confirmation */}
             <Dialog open={!!deleteTarget} onOpenChange={open => !open && setDeleteTarget(null)}>
                 <DialogContent>
-                    <DialogHeader><DialogTitle className="flex items-center gap-2 text-red-600"><Trash2 className="w-5 h-5" />{t.admin.deleteTitle}</DialogTitle><DialogDescription>{t.admin.deleteDesc}</DialogDescription></DialogHeader>
-                    {deleteTarget && <div className="py-3"><div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800"><p className="font-mono text-sm font-semibold text-center">{deleteTarget.key}</p></div></div>}
-                    <DialogFooter><Button variant="outline" onClick={() => setDeleteTarget(null)}>{t.admin.cancel}</Button><Button variant="destructive" onClick={() => deleteTarget && deleteLicense(deleteTarget.id)}><Trash2 className="w-4 h-4 mr-2" />{t.admin.deleteLicense}</Button></DialogFooter>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-red-600"><Trash2 className="w-5 h-5" />{t.admin.deleteTitle}</DialogTitle>
+                        <DialogDescription>{t.admin.deleteDesc}</DialogDescription>
+                    </DialogHeader>
+                    {deleteTarget && (
+                        <div className="py-3">
+                            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800">
+                                <p className="font-mono text-sm font-semibold text-center">{deleteTarget.key}</p>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setDeleteTarget(null)}>{t.admin.cancel}</Button>
+                        <Button variant="destructive" onClick={() => deleteTarget && deleteLicense(deleteTarget.id)}>
+                            <Trash2 className="w-4 h-4 mr-2" />{t.admin.deleteLicense}
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>

@@ -11,6 +11,7 @@ import {
   Sparkles,
   TrendingUp,
   X,
+  Lock,
 } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { cn } from '@/lib/utils';
@@ -324,7 +325,11 @@ export default function Pricing() {
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: 0.3 + index * 0.15 + fIdx * 0.04 }}
-                          className="flex items-center gap-2.5 text-sm"
+                          className={cn(
+                            'flex items-center gap-2.5 text-sm rounded-lg px-2 py-1.5 -mx-2 transition-all duration-300',
+                            !feature.included && 'group/lock cursor-not-allowed hover:bg-slate-800/60',
+                            feature.included && 'hover:bg-slate-800/30',
+                          )}
                         >
                           {feature.included ? (
                             <div className={cn(
@@ -334,16 +339,21 @@ export default function Pricing() {
                               <Check className="w-3 h-3" />
                             </div>
                           ) : (
-                            <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 bg-slate-800/50">
-                              <X className="w-3 h-3 text-slate-600" />
+                            <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 bg-slate-800/50 group-hover/lock:bg-amber-500/20 transition-colors">
+                              <Lock className="w-2.5 h-2.5 text-slate-600 group-hover/lock:text-amber-400 transition-colors" />
                             </div>
                           )}
                           <span className={cn(
-                            feature.included ? 'text-slate-300' : 'text-slate-600',
+                            feature.included ? 'text-slate-300' : 'text-slate-600 group-hover/lock:text-slate-400 transition-colors',
                             feature.highlight && cn('font-semibold', c.text)
                           )}>
                             {feature.text}
                           </span>
+                          {!feature.included && (
+                            <span className="ml-auto text-[9px] font-bold text-amber-500/0 group-hover/lock:text-amber-500/80 transition-all duration-300 uppercase tracking-wider whitespace-nowrap">
+                              {isEn ? 'Upgrade' : 'อัพเกรด'}
+                            </span>
+                          )}
                         </motion.li>
                       ))}
                     </ul>

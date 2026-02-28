@@ -2824,13 +2824,21 @@ export class GroupPostingWorker {
     try {
       if (!this.browser || !this.browser.isConnected() || !this.page) return false;
       const url = this.page.url();
-      // If on facebook.com (not login page), likely logged in
+      // If on facebook.com, check DOM for login form elements
       if (url.includes('facebook.com') && !url.includes('/login') && !url.includes('m.facebook.com/login')) {
         const isLoggedIn = await this.page.evaluate(() => {
-          // No login form visible = logged in
-          return !document.querySelector('input[name="email"]') &&
-            !document.querySelector('button[name="login"]') &&
-            !document.querySelector('#m_login_email');
+          // Any of these = NOT logged in (login form visible)
+          if (document.querySelector('input[name="email"]')) return false;
+          if (document.querySelector('input[name="pass"]')) return false;
+          if (document.querySelector('#email')) return false;
+          if (document.querySelector('#pass')) return false;
+          if (document.querySelector('button[name="login"]')) return false;
+          if (document.querySelector('#m_login_email')) return false;
+          if (document.querySelector('form[action*="login"]')) return false;
+          // Extra: check page title for login keywords
+          const title = (document.title || '').toLowerCase();
+          if (title.includes('log in') || title.includes('เข้าสู่ระบบ') || title === 'facebook') return false;
+          return true;
         }).catch(() => false);
         return isLoggedIn;
       }
@@ -2861,8 +2869,14 @@ export class GroupPostingWorker {
       await this.delay(2000);
 
       const isLoggedIn = await this.page.evaluate(() => {
-        return !document.querySelector('input[name="email"]') &&
-          !document.querySelector('button[name="login"]');
+        if (document.querySelector('input[name="email"]')) return false;
+        if (document.querySelector('input[name="pass"]')) return false;
+        if (document.querySelector('#email')) return false;
+        if (document.querySelector('#pass')) return false;
+        if (document.querySelector('button[name="login"]')) return false;
+        const title = (document.title || '').toLowerCase();
+        if (title.includes('log in') || title.includes('เข้าสู่ระบบ') || title === 'facebook') return false;
+        return true;
       });
 
       if (!isLoggedIn) {

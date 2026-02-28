@@ -1606,272 +1606,149 @@ app.post('/api/group-automation/generate-caption', ...auth, async (req, res) => 
 // ====================================
 
 // Helper: scrape FB user info from current page
+// Uses page.title() as primary strategy (most reliable), then /me/ fallback
 async function scrapeFbUserInfo(page) {
-  // ── Top-level login page check — skip ALL scraping if on login page ──
-  const isLoginPage = await page.evaluate(() => {
-    return !!document.querySelector('input[name="email"], input[name="pass"], #email, #login_form, form[action*="login"]');
-  }).catch(() => false);
-  if (isLoginPage) {
-    console.log('⚠️ scrapeFbUserInfo: Page is login page — returning empty');
-    return { name: '', profilePic: '' };
-  }
+  const BLACKLIST = ['facebook', 'log in', 'log into', 'sign up', 'เข้าสู่ระบบ', 'สมัครสมาชิก', 'messenger', 'watch', 'marketplace'];
+  const isValidName = (n) => {
+    if (!n || n.length < 2 || n.length > 60) return false;
+    const lower = n.toLowerCase();
+    return !BLACKLIST.some(b => lower === b || lower.startsWith(b + ' ') || lower.includes(b));
+  };
 
-  // Try scraping from the current page first
-  let result = await page.evaluate(() => {
-    let name = '';
-    let profilePic = '';
-    const blacklist = ['Facebook', 'Messenger', 'Watch', 'Marketplace', 'Gaming', 'หน้าหลัก', 'Home', 'การแจ้งเตือน', 'Notifications', 'เมนู', 'Menu', 'สร้าง', 'Create', 'กลุ่ม', 'Groups', 'แชท', 'Chat', 'เข้าสู่ระบบ', 'เข้าสู่ระบบ Facebook', 'Log in', 'Log In', 'Sign Up', 'สมัครสมาชิก', 'ลืมรหัสผ่าน', 'ลืมรหัสผ่านใช่ไหม', 'Forgotten password', 'Create new account', 'สร้างบัญชีใหม่', 'See more on Facebook'];
-    const isBlacklisted = (t) => !t || t.length < 2 || t.length > 60 || blacklist.some(b => t.toLowerCase() === b.toLowerCase() || t.startsWith(b + ' ') || t.startsWith(b));
+  let name = '';
+  let profilePic = '';
 
-    // Early exit: if page has a login form, don't try to extract user info
-    const hasLoginForm = !!document.querySelector('input[name="email"], input[name="pass"], #email, #login_form, form[action*="login"]');
-    if (hasLoginForm) return { name: '', profilePic: '' };
+  try {
+    // ── Step 1: Check if page is a login page → skip entirely ──
+    const pageUrl = page.url();
+    const pageTitle = await page.title().catch(() => '');
+    console.log(`🔍 [scrapeFbUserInfo] URL: ${pageUrl} | Title: "${pageTitle}"`);
 
-    try {
-      // ── Strategy 1: Navigation bar profile link (top-right user menu) ──
-      // Facebook shows profile link with SVG avatar + name in the left sidebar or top nav
-      const navLinks = document.querySelectorAll('a[role="link"]');
-      for (const link of navLinks) {
-        const href = link.getAttribute('href') || '';
-        // Profile links often point to the user's profile page
-        if (!href.includes('/me') && !href.match(/facebook\.com\/[a-zA-Z0-9.]+\/?$/)) continue;
-        const svgImg = link.querySelector('image');
-        const spans = link.querySelectorAll('span');
-        for (const span of spans) {
-          const text = span.textContent?.trim() || '';
-          if (!isBlacklisted(text)) {
-            name = text;
-            if (svgImg) {
-              profilePic = svgImg.getAttribute('xlink:href') || svgImg.getAttribute('href') || '';
-            }
-            break;
-          }
-        }
-        if (name) break;
+    const isLoginPage = await page.evaluate(() => {
+      return !!(document.querySelector('input[name="email"]') || 
+               document.querySelector('input[name="pass"]') || 
+               document.querySelector('#email') || 
+               document.querySelector('#pass'));
+    }).catch(() => false);
+
+    if (isLoginPage) {
+      console.log('⚠️ scrapeFbUserInfo: Login page detected — returning empty');
+      return { name: '', profilePic: '' };
+    }
+
+    // ── Step 2: Extract name from page title ──
+    // Facebook titles: "(1) Name | Facebook", "Name | Facebook", "Name - Facebook"
+    if (pageTitle) {
+      const cleaned = pageTitle.replace(/^\(\d+\)\s*/, '');
+      let candidate = '';
+      if (cleaned.includes(' | ')) candidate = cleaned.split(' | ')[0].trim();
+      else if (cleaned.includes(' - ')) candidate = cleaned.split(' - ')[0].trim();
+      if (isValidName(candidate)) {
+        name = candidate;
+        console.log(`✅ [scrapeFbUserInfo] Got name from page title: "${name}"`);
       }
+    }
 
-      // ── Strategy 2: Account switcher / user menu area ──
-      if (!name) {
-        // The user account section often has aria-label with the user's name
-        const userMenuItems = document.querySelectorAll('[aria-label][role="button"], [aria-label][role="link"]');
-        for (const el of userMenuItems) {
-          const label = el.getAttribute('aria-label') || '';
-          // "Your profile" button or user name button — skip generic labels
-          if (label.includes('โปรไฟล์ของคุณ') || label.includes('Your profile')) continue;
-          if (label.includes('Account') || label.includes('บัญชี')) continue;
-          // Check if this is a user-specific element with a profile image
-          const img = el.querySelector('img[src*="scontent"], image');
-          if (img && !isBlacklisted(label)) {
-            name = label;
-            profilePic = img.getAttribute('src') || img.getAttribute('xlink:href') || img.getAttribute('href') || '';
-            break;
-          }
-        }
+    // ── Step 3: Extract profile pic from current page ──
+    profilePic = await page.evaluate(() => {
+      // SVG image elements (FB uses these for avatars)
+      const svgImgs = document.querySelectorAll('image');
+      for (const img of svgImgs) {
+        const href = img.getAttribute('xlink:href') || img.getAttribute('href') || '';
+        if (href.includes('scontent')) return href;
       }
-
-      // ── Strategy 3: Profile shortcut in left sidebar ──
-      if (!name) {
-        const sidebarLinks = document.querySelectorAll('a[href*="facebook.com/"][role="link"]');
-        for (const link of sidebarLinks) {
-          const img = link.querySelector('img[src*="scontent"]');
-          if (!img) continue;
-          const spans = link.querySelectorAll('span');
-          for (const span of spans) {
-            const text = span.textContent?.trim() || '';
-            if (!isBlacklisted(text)) {
-              name = text;
-              profilePic = img.getAttribute('src') || '';
-              break;
-            }
-          }
-          if (name) break;
-        }
+      // Regular img elements with scontent
+      const imgs = document.querySelectorAll('img[src*="scontent"]');
+      for (const img of imgs) {
+        const src = img.getAttribute('src') || '';
+        if (src.includes('scontent')) return src;
       }
+      return '';
+    }).catch(() => '');
 
-      // ── Strategy 4: Any <a> with both image and span children ──
-      if (!name) {
-        const allLinks = document.querySelectorAll('a[role="link"]');
-        for (const link of allLinks) {
-          const svgImg = link.querySelector('image');
-          const imgEl = link.querySelector('img[src*="scontent"]');
-          const picEl = svgImg || imgEl;
-          if (!picEl) continue;
-          const nameSpan = link.querySelector('span');
-          if (nameSpan) {
-            const text = nameSpan.textContent?.trim() || '';
-            if (!isBlacklisted(text)) {
-              name = text;
-              if (svgImg) profilePic = svgImg.getAttribute('xlink:href') || svgImg.getAttribute('href') || '';
-              else if (imgEl) profilePic = imgEl.getAttribute('src') || '';
-              break;
-            }
-          }
-        }
-      }
-
-      // ── Strategy 5: Meta tags (og:title on profile-like pages) ──
-      if (!name) {
-        const ogTitle = document.querySelector('meta[property="og:title"]');
-        if (ogTitle) {
-          const t = ogTitle.getAttribute('content')?.trim() || '';
-          if (t && !isBlacklisted(t) && !t.includes('|') && !t.includes('Facebook')) name = t;
-        }
-      }
-
-      // ── Profile pic fallback: any SVG image or img with scontent ──
-      if (!profilePic) {
-        const svgImages = document.querySelectorAll('image');
-        for (const img of svgImages) {
-          const href = img.getAttribute('xlink:href') || img.getAttribute('href') || '';
-          if (href.includes('scontent')) { profilePic = href; break; }
-        }
-      }
-      if (!profilePic) {
-        const imgElements = document.querySelectorAll('img[src*="scontent"]');
-        for (const img of imgElements) {
-          const src = img.getAttribute('src') || '';
-          const w = img.naturalWidth || parseInt(img.getAttribute('width') || '0');
-          // Profile pics are usually small (36-50px)
-          if (src.includes('scontent') && (w <= 60 || src.includes('_s40x40') || src.includes('_s36x36') || src.includes('_n.'))) {
-            profilePic = src;
-            break;
-          }
-        }
-      }
-    } catch (e) { }
-    return { name, profilePic };
-  });
-
-  // ── Fallback: Navigate to profile page to get name ──
-  if (!result.name) {
-    try {
-      console.log('🔍 scrapeFbUserInfo: Trying /me/ fallback...');
-      const currentUrl = page.url();
-      console.log(`🔍 scrapeFbUserInfo: Current page before /me/: ${currentUrl}`);
-
-      // First try extracting from the current page (FB home after login)
-      const homeResult = await page.evaluate(() => {
-        let name = '';
-        let profilePic = '';
-        const debug = [];
-
-        // Skip if login page
-        if (document.querySelector('input[name="email"], input[name="pass"], #email')) {
-          debug.push('LOGIN PAGE - skipping');
-          return { name: '', profilePic: '', debug };
-        }
-
-        // The user's name appears in the left sidebar shortcut
-        // Facebook class: x1lliihq is used for profile name spans
-        const nameSpans = document.querySelectorAll('span.x1lliihq');
-        for (const span of nameSpans) {
-          const text = span.textContent?.trim() || '';
-          // Look for Thai/non-ASCII names or names that aren't FB UI elements
-          if (text.length >= 2 && text.length <= 50 && !/^(Facebook|Home|Watch|Marketplace|Gaming|Messenger|Groups|Notifications|Menu|Create|หน้าหลัก|การแจ้งเตือน|แชท|เมนู|สร้าง|กลุ่ม|วิดีโอ|ตลาด|เกม|เข้าสู่ระบบ|Log in|Sign Up|สมัครสมาชิก|ลืมรหัสผ่าน|Forgotten password|สร้างบัญชีใหม่|Create new account|See more on Facebook)$/i.test(text)) {
-            debug.push(`span.x1lliihq: "${text}"`);
-            // First non-UI span with a reasonable name length is likely the user
-            if (!name && text.length >= 2) name = text;
-          }
-        }
-
-        // Also try: aria-label on profile link in navigation
-        const profileLink = document.querySelector('a[aria-label][href*="/me"], a[aria-label][href*="facebook.com/"][data-type="profile"]');
-        if (profileLink) {
-          const label = profileLink.getAttribute('aria-label') || '';
-          debug.push(`profileLink aria-label: "${label}"`);
-          if (!name && label.length >= 2 && label.length <= 50) name = label;
-        }
-
-        // Profile pic: look for SVG image or img with scontent
-        const svgImgs = document.querySelectorAll('image');
-        for (const img of svgImgs) {
-          const href = img.getAttribute('xlink:href') || img.getAttribute('href') || '';
-          if (href.includes('scontent')) { profilePic = href; break; }
-        }
-        if (!profilePic) {
-          const imgs = document.querySelectorAll('img[src*="scontent"]');
-          for (const img of imgs) {
-            const src = img.src || '';
-            if (src.includes('scontent')) { profilePic = src; break; }
-          }
-        }
-
-        return { name, profilePic, debug };
-      });
-
-      if (homeResult.debug?.length > 0) {
-        console.log(`🔍 [HOME DEBUG] Found spans:`, homeResult.debug.slice(0, 5).join(' | '));
-      }
-      if (homeResult.name) result.name = homeResult.name;
-      if (homeResult.profilePic) result.profilePic = homeResult.profilePic;
-
-      // If still no name, navigate to /me/
-      if (!result.name) {
-        await page.goto('https://www.facebook.com/me/', { waitUntil: 'domcontentloaded', timeout: 15000 });
+    // ── Step 4: If no name yet, navigate to /me/ profile page ──
+    if (!name) {
+      console.log('🔍 [scrapeFbUserInfo] No name from current page, trying /me/...');
+      try {
+        await page.goto('https://www.facebook.com/me/', { waitUntil: 'networkidle2', timeout: 20000 });
         await new Promise(r => setTimeout(r, 4000));
 
         const meUrl = page.url();
-        const meTitle = await page.title();
-        console.log(`🔍 [/me/] URL: ${meUrl} | Title: ${meTitle}`);
+        const meTitle = await page.title().catch(() => '');
+        console.log(`🔍 [/me/] URL: ${meUrl} | Title: "${meTitle}"`);
 
-        const profileResult = await page.evaluate(() => {
-          let name = '';
-          let profilePic = '';
-          const debug = [];
+        // Check if /me/ also shows login page
+        const meIsLogin = await page.evaluate(() => {
+          return !!(document.querySelector('input[name="email"]') || document.querySelector('input[name="pass"]'));
+        }).catch(() => false);
 
-          // h1 on profile page
-          const h1s = document.querySelectorAll('h1');
-          for (const h1 of h1s) {
-            const text = h1.textContent?.trim() || '';
-            debug.push(`h1: "${text}"`);
-            if (text.length > 1 && text.length < 60 && !text.includes('Facebook')) { name = text; break; }
-          }
-
-          // title tag: "Name | Facebook" or "(1) Name | Facebook"
-          if (!name) {
-            const title = document.title || '';
-            debug.push(`title: "${title}"`);
-            const cleaned = title.replace(/^\(\d+\)\s*/, '');
-            if (cleaned.includes('|')) {
-              const candidate = cleaned.split('|')[0].trim();
-              if (candidate.length > 1 && candidate.length < 60) name = candidate;
-            } else if (cleaned.includes('-')) {
-              const candidate = cleaned.split('-')[0].trim();
-              if (candidate.length > 1 && candidate.length < 60) name = candidate;
-            }
-          }
-
-          // span.x1lliihq on profile page
-          if (!name) {
-            const spans = document.querySelectorAll('span.x1lliihq');
-            for (const span of spans) {
-              const text = span.textContent?.trim() || '';
-              if (text.length >= 2 && text.length <= 50) { debug.push(`span: "${text}"`); if (!name) name = text; }
-            }
-          }
-
-          // Profile pic
-          const profileImg = document.querySelector('image, img[src*="scontent"][alt]');
-          if (profileImg) {
-            profilePic = profileImg.getAttribute('xlink:href') || profileImg.getAttribute('href') || profileImg.getAttribute('src') || '';
-          }
-
-          return { name, profilePic, debug };
-        });
-
-        if (profileResult.debug?.length > 0) {
-          console.log(`🔍 [/me/ DEBUG]`, profileResult.debug.slice(0, 5).join(' | '));
+        if (meIsLogin) {
+          console.log('⚠️ [/me/] Still on login page — not logged in');
+          return { name: '', profilePic: '' };
         }
-        if (profileResult.name && !result.name) result.name = profileResult.name;
-        if (profileResult.profilePic && !result.profilePic) result.profilePic = profileResult.profilePic;
+
+        // Try name from /me/ page title
+        if (meTitle) {
+          const cleaned = meTitle.replace(/^\(\d+\)\s*/, '');
+          let candidate = '';
+          if (cleaned.includes(' | ')) candidate = cleaned.split(' | ')[0].trim();
+          else if (cleaned.includes(' - ')) candidate = cleaned.split(' - ')[0].trim();
+          if (isValidName(candidate)) {
+            name = candidate;
+            console.log(`✅ [/me/] Got name from title: "${name}"`);
+          }
+        }
+
+        // Try h1 element on profile page
+        if (!name) {
+          const h1Text = await page.evaluate(() => {
+            const h1 = document.querySelector('h1');
+            return h1?.textContent?.trim() || '';
+          }).catch(() => '');
+          if (isValidName(h1Text)) {
+            name = h1Text;
+            console.log(`✅ [/me/] Got name from h1: "${name}"`);
+          }
+        }
+
+        // Try og:title meta
+        if (!name) {
+          const ogName = await page.evaluate(() => {
+            const og = document.querySelector('meta[property="og:title"]');
+            return og?.getAttribute('content')?.trim() || '';
+          }).catch(() => '');
+          if (isValidName(ogName)) {
+            name = ogName;
+            console.log(`✅ [/me/] Got name from og:title: "${name}"`);
+          }
+        }
+
+        // Get profile pic from /me/ if not already found
+        if (!profilePic) {
+          profilePic = await page.evaluate(() => {
+            const svgImgs = document.querySelectorAll('image');
+            for (const img of svgImgs) {
+              const href = img.getAttribute('xlink:href') || img.getAttribute('href') || '';
+              if (href.includes('scontent')) return href;
+            }
+            const imgs = document.querySelectorAll('img[src*="scontent"]');
+            for (const img of imgs) {
+              const src = img.getAttribute('src') || '';
+              if (src.includes('scontent')) return src;
+            }
+            return '';
+          }).catch(() => '');
+        }
+      } catch (e) {
+        console.log('⚠️ [/me/] Navigation error:', e.message);
       }
-    } catch (e) {
-      console.log('⚠️ scrapeFbUserInfo fallback error:', e.message);
     }
+  } catch (e) {
+    console.log('⚠️ scrapeFbUserInfo error:', e.message);
   }
 
-  console.log(`👤 [FB Profile] Name: "${result.name}" | Pic: ${result.profilePic ? 'YES' : 'NO'}`);
-  return result;
+  console.log(`👤 [FB Profile] Name: "${name}" | Pic: ${profilePic ? 'YES' : 'NO'}`);
+  return { name, profilePic };
 }
 
 // Connect to Facebook — slot-aware (opens browser for a specific session slot)
@@ -1938,29 +1815,35 @@ app.post('/api/facebook/auto-login', ...auth, async (req, res) => {
     }
 
     const page = req.groupWorker.page;
-    console.log('🔑 Auto-login: navigating to facebook.com...');
+    const shortId = req.userId.substring(0, 8);
 
-    // Navigate to login page
-    await page.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    // ── Step 1: Navigate to facebook.com ──
+    console.log(`🔑 [${shortId}] Auto-login: navigating to facebook.com...`);
+    await page.goto('https://www.facebook.com/', { waitUntil: 'networkidle2', timeout: 30000 });
     await new Promise(r => setTimeout(r, 3000));
 
-    // Check if already logged in
+    const initialTitle = await page.title().catch(() => '');
+    console.log(`🔑 [${shortId}] Page title: "${initialTitle}" | URL: ${page.url()}`);
+
+    // ── Step 2: Check if already logged in ──
     const alreadyLoggedIn = await page.evaluate(() => {
-      return !document.querySelector('input[name="email"]') && !document.querySelector('#email');
+      return !document.querySelector('input[name="email"]') &&
+             !document.querySelector('input[name="pass"]') &&
+             !document.querySelector('#email') &&
+             !document.querySelector('#pass');
     }).catch(() => false);
 
     if (alreadyLoggedIn) {
+      console.log(`🔑 [${shortId}] Already logged in! Scraping user info...`);
       const activeSlot = sessionManager.getActiveSlot(req.userId);
-      try {
-        const userInfo = await scrapeFbUserInfo(page);
-        if (userInfo.name) {
-          sessionManager.setFbSession(req.userId, activeSlot, { name: userInfo.name, profilePic: userInfo.profilePic || '' });
-        }
-      } catch (e) { }
+      const userInfo = await scrapeFbUserInfo(page);
+      if (userInfo.name) {
+        sessionManager.setFbSession(req.userId, activeSlot, { name: userInfo.name, profilePic: userInfo.profilePic || '' });
+      }
       return res.json({ success: true, message: 'Login สำเร็จ! (session ยังอยู่)', slot: activeSlot });
     }
 
-    // Handle cookie consent dialogs
+    // ── Step 3: Handle cookie consent dialogs ──
     try {
       const cookieSelectors = [
         'button[data-cookiebanner="accept_button"]',
@@ -1971,120 +1854,161 @@ app.post('/api/facebook/auto-login', ...auth, async (req, res) => {
       ];
       for (const sel of cookieSelectors) {
         const btn = await page.$(sel);
-        if (btn) { await btn.click().catch(() => { }); await new Promise(r => setTimeout(r, 1500)); break; }
+        if (btn) {
+          console.log(`🍪 [${shortId}] Clicked cookie consent: ${sel}`);
+          await btn.click().catch(() => { });
+          await new Promise(r => setTimeout(r, 2000));
+          break;
+        }
       }
     } catch (e) { }
 
-    // Find and fill email — wait for the field to appear
+    // ── Step 4: Find and fill email ──
     const emailSelectors = ['#email', 'input[name="email"]', '#m_login_email', 'input[type="email"]'];
     let emailInput = null;
     for (const sel of emailSelectors) {
-      try { emailInput = await page.waitForSelector(sel, { timeout: 5000, visible: true }); if (emailInput) break; } catch (e) { }
+      try {
+        emailInput = await page.waitForSelector(sel, { timeout: 5000, visible: true });
+        if (emailInput) {
+          console.log(`🔑 [${shortId}] Found email input: ${sel}`);
+          break;
+        }
+      } catch (e) { }
     }
     if (!emailInput) {
-      // Try one more time — maybe page hasn't fully loaded
       await new Promise(r => setTimeout(r, 3000));
       for (const sel of emailSelectors) { emailInput = await page.$(sel); if (emailInput) break; }
     }
-    if (!emailInput) return res.json({ success: false, error: 'ไม่พบช่องกรอก Email — Facebook อาจ block หน้า Login' });
+    if (!emailInput) {
+      console.log(`❌ [${shortId}] No email input found`);
+      return res.json({ success: false, error: 'ไม่พบช่องกรอก Email — Facebook อาจ block หน้า Login' });
+    }
 
-    // Clear and type email
+    // Clear existing text and type email
     await emailInput.click({ clickCount: 3 }).catch(() => { });
-    await new Promise(r => setTimeout(r, 300));
-    await emailInput.type(email, { delay: 50 });
+    await new Promise(r => setTimeout(r, 200));
+    await page.keyboard.press('Backspace').catch(() => { });
+    await new Promise(r => setTimeout(r, 200));
+    await emailInput.type(email, { delay: 80 });
+    console.log(`🔑 [${shortId}] Typed email: ${email.substring(0, 4)}***`);
     await new Promise(r => setTimeout(r, 500));
 
-    // Find and fill password
+    // ── Step 5: Find and fill password ──
     const passSelectors = ['#pass', 'input[name="pass"]', '#m_login_password', 'input[type="password"]'];
     let passInput = null;
     for (const sel of passSelectors) { passInput = await page.$(sel); if (passInput) break; }
-    if (!passInput) return res.json({ success: false, error: 'ไม่พบช่องกรอก Password' });
+    if (!passInput) {
+      console.log(`❌ [${shortId}] No password input found`);
+      return res.json({ success: false, error: 'ไม่พบช่องกรอก Password' });
+    }
     await passInput.click({ clickCount: 3 }).catch(() => { });
-    await new Promise(r => setTimeout(r, 300));
-    await passInput.type(password, { delay: 50 });
+    await new Promise(r => setTimeout(r, 200));
+    await page.keyboard.press('Backspace').catch(() => { });
+    await new Promise(r => setTimeout(r, 200));
+    await passInput.type(password, { delay: 80 });
+    console.log(`🔑 [${shortId}] Typed password (${password.length} chars)`);
     await new Promise(r => setTimeout(r, 500));
 
-    // Click login button — try multiple approaches
-    const btnSelectors = ['button[name="login"]', '#loginbutton', 'button[type="submit"]', 'input[name="login"]', 'button[data-testid="royal_login_button"]'];
+    // ── Step 6: Click login button ──
+    const btnSelectors = [
+      'button[name="login"]',
+      '#loginbutton',
+      'button[type="submit"]',
+      'input[name="login"]',
+      'button[data-testid="royal_login_button"]',
+    ];
     let clicked = false;
     for (const sel of btnSelectors) {
       try {
         const btn = await page.$(sel);
         if (btn) {
-          // Use evaluate click to avoid "not clickable" error
           await page.evaluate(el => el.click(), btn);
           clicked = true;
-          console.log(`🔑 Clicked login button: ${sel}`);
+          console.log(`🔑 [${shortId}] Clicked login button: ${sel}`);
           break;
         }
       } catch (e) { }
     }
     if (!clicked) {
       // Fallback: press Enter on password field
-      try { await passInput.press('Enter'); clicked = true; } catch (e) { }
+      try { await passInput.press('Enter'); clicked = true; console.log(`🔑 [${shortId}] Pressed Enter on password field`); } catch (e) { }
     }
-    if (!clicked) return res.json({ success: false, error: 'ไม่สามารถกดปุ่ม Login ได้' });
+    if (!clicked) {
+      console.log(`❌ [${shortId}] Could not click login button`);
+      return res.json({ success: false, error: 'ไม่สามารถกดปุ่ม Login ได้' });
+    }
 
-    // Wait for navigation after login
-    console.log('🔑 Waiting for login response...');
-    await new Promise(r => setTimeout(r, 8000));
+    // ── Step 7: Wait for navigation after login ──
+    console.log(`🔑 [${shortId}] Waiting for login response...`);
+    // Use Promise.race: wait for navigation OR timeout
+    await Promise.race([
+      page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 20000 }).catch(() => {}),
+      new Promise(r => setTimeout(r, 15000)),
+    ]);
 
     const postLoginUrl = page.url();
+    const postLoginTitle = await page.title().catch(() => '');
+    console.log(`🔑 [${shortId}] Post-login URL: ${postLoginUrl}`);
+    console.log(`🔑 [${shortId}] Post-login title: "${postLoginTitle}"`);
 
-    // Check various outcomes
-    if (postLoginUrl.includes('checkpoint') || postLoginUrl.includes('two_step_verification')) {
-      return res.json({ success: false, error: 'Facebook ต้องการยืนยันตัวตน — เช็ค Email/SMS แล้วลองใหม่' });
+    // ── Step 8: Check various outcomes ──
+    if (postLoginUrl.includes('checkpoint') || postLoginUrl.includes('two_step_verification') || postLoginUrl.includes('recover') || postLoginUrl.includes('captcha')) {
+      console.log(`⚠️ [${shortId}] Checkpoint/verification required`);
+      return res.json({ success: false, error: 'Facebook ต้องการยืนยันตัวตน (2FA/Checkpoint) — กรุณาลองเปิดหน้าต่าง Browser ด้วยตนเอง' });
     }
 
-    // Check if logged in now
-    const isLoggedIn = await page.evaluate(() => {
-      return !document.querySelector('input[name="email"]') &&
-        !document.querySelector('#email') &&
-        !document.querySelector('button[name="login"]');
-    }).catch(() => false);
-
-    if (isLoggedIn) {
-      // Navigate to homepage to scrape user info
-      await page.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => { });
-      await new Promise(r => setTimeout(r, 3000));
-
-      const activeSlot = sessionManager.getActiveSlot(req.userId);
-      try {
-        const userInfo = await scrapeFbUserInfo(page);
-        if (userInfo.name) {
-          sessionManager.setFbSession(req.userId, activeSlot, { name: userInfo.name, profilePic: userInfo.profilePic || '' });
-        }
-      } catch (e) { }
-      return res.json({ success: true, message: 'Login สำเร็จ!', slot: activeSlot });
-    }
-
-    // Check for error messages on the page
+    // Check for error messages
     const errorMsg = await page.evaluate(() => {
       const errEl = document.querySelector('#login_error, .login_error_box, [data-sigil="m_login_notice"], [role="alert"]');
       return errEl ? errEl.textContent?.trim() : '';
     }).catch(() => '');
 
     if (errorMsg) {
+      console.log(`❌ [${shortId}] Login error: ${errorMsg.substring(0, 100)}`);
       return res.json({ success: false, error: errorMsg });
     }
 
-    // Final check — maybe redirected to a different FB page
-    // Must verify no login form exists (facebook.com/ without /login in URL still shows login)
-    const finalHasLoginForm = await page.evaluate(() => {
-      return !!document.querySelector('input[name="email"], input[name="pass"], #email');
-    }).catch(() => false);
-    if (postLoginUrl.includes('facebook.com') && !finalHasLoginForm) {
-      const activeSlot = sessionManager.getActiveSlot(req.userId);
-      try {
-        const userInfo = await scrapeFbUserInfo(page);
-        if (userInfo.name) {
-          sessionManager.setFbSession(req.userId, activeSlot, { name: userInfo.name, profilePic: userInfo.profilePic || '' });
-        }
-      } catch (e) { }
-      return res.json({ success: true, message: 'Login สำเร็จ!', slot: activeSlot });
+    // Check if login form is still present → login failed
+    const stillHasLoginForm = await page.evaluate(() => {
+      return !!(document.querySelector('input[name="email"]') ||
+                document.querySelector('input[name="pass"]') ||
+                document.querySelector('#email') ||
+                document.querySelector('#pass'));
+    }).catch(() => true);
+
+    if (stillHasLoginForm) {
+      console.log(`❌ [${shortId}] Login form still visible — login failed`);
+      // Take screenshot of the page for debugging
+      const bodyText = await page.evaluate(() => document.body.innerText?.substring(0, 500) || '').catch(() => '');
+      console.log(`❌ [${shortId}] Page text: ${bodyText.substring(0, 200)}`);
+      return res.json({ success: false, error: 'Login ไม่สำเร็จ — รหัสผ่านอาจไม่ถูกต้อง หรือ Facebook ต้องการยืนยันตัวตน' });
     }
 
-    res.json({ success: false, error: 'Email หรือ Password ไม่ถูกต้อง' });
+    // ── Step 9: Login appears successful — scrape user info ──
+    console.log(`✅ [${shortId}] Login successful! Scraping user info...`);
+
+    // Wait a bit more for the page to fully settle
+    await new Promise(r => setTimeout(r, 3000));
+
+    const activeSlot = sessionManager.getActiveSlot(req.userId);
+    const userInfo = await scrapeFbUserInfo(page);
+    
+    if (userInfo.name) {
+      sessionManager.setFbSession(req.userId, activeSlot, { name: userInfo.name, profilePic: userInfo.profilePic || '' });
+      console.log(`✅ [${shortId}] Saved FB session: "${userInfo.name}" (slot ${activeSlot})`);
+    } else {
+      // Login worked but couldn't get name — save with "Facebook User" as last resort
+      sessionManager.setFbSession(req.userId, activeSlot, { name: 'Facebook User', profilePic: userInfo.profilePic || '' });
+      console.log(`⚠️ [${shortId}] Login OK but couldn't scrape name — saved as "Facebook User"`);
+    }
+
+    return res.json({ 
+      success: true, 
+      message: `Login สำเร็จ!${userInfo.name ? ` ยินดีต้อนรับ ${userInfo.name}` : ''}`, 
+      slot: activeSlot,
+      user: { name: userInfo.name || 'Facebook User', profilePic: userInfo.profilePic || '' }
+    });
+
   } catch (error) {
     const msg = error.message || '';
     if (msg.includes('not clickable') || msg.includes('Target closed') || msg.includes('context was destroyed')) {
@@ -2125,7 +2049,7 @@ app.get('/api/facebook/status', ...auth, async (req, res) => {
       success: true,
       // Backward compat
       connected: liveConnected || connectedCount > 0,
-      user: liveUser || (firstConnected ? { name: firstConnected.name, profilePic: firstConnected.profilePic, connectedAt: firstConnected.connectedAt } : null),
+      user: firstConnected ? { name: firstConnected.name, profilePic: firstConnected.profilePic, connectedAt: firstConnected.connectedAt } : null,
       // Multi-session data
       sessions: sessions.map((s, i) => s ? { slot: i, name: s.name, profilePic: s.profilePic, connectedAt: s.connectedAt } : { slot: i, name: null, profilePic: null, connectedAt: null }),
       activeSlot,
@@ -2181,40 +2105,37 @@ app.post('/api/facebook/disconnect', ...auth, async (req, res) => {
 });
 
 // Confirm Facebook login (after user logs in manually) — saves to active slot
-// IMPORTANT: Uses checkLoginQuick() to avoid navigating away from login page
 app.post('/api/facebook/confirm-login', ...auth, async (req, res) => {
   try {
     if (!req.groupWorker.browser || !req.groupWorker.page) {
       return res.json({ success: false, connected: false, message: 'Browser not ready' });
     }
 
-    let isLoggedIn = await req.groupWorker.checkLoginQuick();
+    const page = req.groupWorker.page;
     const activeSlot = sessionManager.getActiveSlot(req.userId);
+    const shortId = req.userId.substring(0, 8);
 
-    // Double-check: verify the page isn't actually a login page
-    if (isLoggedIn) {
-      const pageUrl = req.groupWorker.page.url();
-      const hasLoginForm = await req.groupWorker.page.evaluate(() => {
-        return !!document.querySelector('input[name="email"], input[name="pass"], #email, form[action*="login"]');
-      }).catch(() => false);
-      if (hasLoginForm || pageUrl.includes('/login')) {
-        console.log(`⚠️ [confirm-login] False positive — page has login form (URL: ${pageUrl})`);
-        isLoggedIn = false;
-      }
-    }
+    // Check if login form is present on current page
+    const hasLoginForm = await page.evaluate(() => {
+      return !!(document.querySelector('input[name="email"]') ||
+                document.querySelector('input[name="pass"]') ||
+                document.querySelector('#email') ||
+                document.querySelector('#pass'));
+    }).catch(() => true);
+
+    // Also check page title
+    const pageTitle = await page.title().catch(() => '');
+    const titleLower = pageTitle.toLowerCase();
+    const titleIsLogin = titleLower.includes('log in') || titleLower.includes('เข้าสู่ระบบ') || titleLower === 'facebook';
+
+    const isLoggedIn = !hasLoginForm && !titleIsLogin;
+    console.log(`🔍 [confirm-login] [${shortId}] hasLoginForm=${hasLoginForm} titleIsLogin=${titleIsLogin} title="${pageTitle}" → logged_in=${isLoggedIn}`);
 
     if (isLoggedIn) {
-      const userInfo = await scrapeFbUserInfo(req.groupWorker.page);
+      const userInfo = await scrapeFbUserInfo(page);
       const userData = { name: userInfo.name || 'Facebook User', profilePic: userInfo.profilePic || '', connectedAt: new Date().toISOString() };
-
-      // Only save if we got a real name (not fallback)
-      if (userInfo.name) {
-        sessionManager.setFbSession(req.userId, activeSlot, userData);
-      } else {
-        // Save with generic name but mark as needs-refresh
-        sessionManager.setFbSession(req.userId, activeSlot, { ...userData, needsRefresh: true });
-      }
-
+      sessionManager.setFbSession(req.userId, activeSlot, userData);
+      console.log(`✅ [confirm-login] [${shortId}] Saved: "${userData.name}" (slot ${activeSlot})`);
       res.json({ success: true, connected: true, user: userData, slot: activeSlot, message: 'เชื่อมต่อ Facebook สำเร็จ!' });
     } else {
       res.json({ success: false, connected: false, message: 'กรุณา Login Facebook ในหน้าต่างที่เปิดอยู่' });

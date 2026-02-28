@@ -615,16 +615,6 @@ export default function Landing() {
               </a>
             </motion.div>
 
-            {/* Ghost Posting Effect — Live Automation Terminal */}
-            <motion.div
-              initial={{ opacity: 0, y: 25 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.6, duration: 0.7 }}
-              className="mt-10"
-            >
-              <GhostPostingEffect isEn={isEn} />
-            </motion.div>
-
             {/* Floating glass stat mini-cards below CTA */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}

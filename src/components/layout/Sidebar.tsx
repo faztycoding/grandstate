@@ -650,7 +650,7 @@ function SidebarContent({
           <div className="px-2 py-1 text-center">
             <p className="text-[10px] text-sidebar-foreground/50 truncate">{user.email}</p>
             {displayId && (
-              <p className="text-[9px] font-mono font-bold text-accent/80 mt-0.5">{displayId}</p>
+              <p className="text-[9px] font-mono text-accent/80 mt-0.5"><span className="text-sidebar-foreground/40 font-normal">User ID :</span> <span className="font-bold">{displayId}</span></p>
             )}
           </div>
         )}

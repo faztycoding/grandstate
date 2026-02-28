@@ -349,13 +349,55 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
     await page.goto(aboutUrl, { waitUntil: 'networkidle2', timeout: 30000 });
 
     // Debug: log actual URL and page title after navigation
-    const actualUrl = page.url();
+    let actualUrl = page.url();
     const pageTitle = await page.title();
     console.log(`🔍 [DEBUG] Landed on: ${actualUrl}`);
     console.log(`🔍 [DEBUG] Page title: ${pageTitle}`);
 
+    // If Facebook redirected to login page, go back to aboutUrl directly
+    // Facebook will still show group content with a login popup overlay
+    if (actualUrl.includes('/login') || actualUrl.includes('login.php')) {
+      console.log('🔄 [DEBUG] Redirected to login — navigating to about page directly...');
+      await page.goto(aboutUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      actualUrl = page.url();
+      console.log(`🔍 [DEBUG] Re-navigated to: ${actualUrl}`);
+    }
+
     // Wait for initial render
-    await new Promise(r => setTimeout(r, 3000));
+    await new Promise(r => setTimeout(r, 2000));
+
+    // Close Facebook login popup overlay ("See more on Facebook" dialog)
+    // This appears when not logged in — the data is visible behind it
+    try {
+      const closedPopup = await page.evaluate(() => {
+        // Strategy 1: aria-label="Close" button
+        const closeBtn = document.querySelector('[aria-label="Close"][role="button"]');
+        if (closeBtn) { closeBtn.click(); return 'aria-label'; }
+        // Strategy 2: role="dialog" close button
+        const dialog = document.querySelector('[role="dialog"]');
+        if (dialog) {
+          const btn = dialog.querySelector('[aria-label="Close"], [aria-label="ปิด"]');
+          if (btn) { btn.click(); return 'dialog-close'; }
+        }
+        // Strategy 3: Any overlay with close icon
+        const overlays = document.querySelectorAll('[role="button"]');
+        for (const el of overlays) {
+          const label = el.getAttribute('aria-label') || '';
+          if (label === 'Close' || label === 'ปิด') { el.click(); return 'overlay-close'; }
+        }
+        return null;
+      });
+      if (closedPopup) {
+        console.log(`✅ [DEBUG] Closed login popup via: ${closedPopup}`);
+        await new Promise(r => setTimeout(r, 1500));
+      } else {
+        console.log('ℹ️ [DEBUG] No login popup found — page may already be accessible');
+      }
+    } catch (e) {
+      console.log('⚠️ [DEBUG] Popup close attempt error:', e.message);
+    }
+
+    await new Promise(r => setTimeout(r, 1000));
 
     // Scroll down to trigger lazy-loaded activity section
     await page.evaluate(() => {
@@ -643,6 +685,10 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
         new RegExp(`โพสต์\\s*(?:\\/|ต่อ)\\s*เดือน\\s*${countToken}`, 'i'),
         // "last month X posts"
         new RegExp(`last\\s*month\\s*[:\\-]?\\s*${countToken}\\s*posts?`, 'i'),
+        // KEY: Facebook English shows just "10,000 in the last month" (no "posts" word!)
+        new RegExp(`${countToken}\\s*in\\s*the\\s*last\\s*month`, 'i'),
+        // "X in the last 30 days" (without "posts")
+        new RegExp(`${countToken}\\s*in\\s*the\\s*last\\s*30\\s*days`, 'i'),
       ];
 
       const extractMetricFromText = (text, patterns) => {

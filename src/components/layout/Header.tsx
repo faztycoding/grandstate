@@ -172,8 +172,23 @@ export function Header({ title, subtitle }: HeaderProps) {
     };
   }, []);
 
+  // Re-sync from Supabase metadata after login (localStorage was cleared on logout)
+  useEffect(() => {
+    if (authUser?.user_metadata) {
+      const currentLocal = localStorage.getItem('profile_display_name');
+      if (!currentLocal) {
+        const meta = authUser.user_metadata;
+        const name = meta.display_name || meta.full_name || '';
+        if (name) {
+          localStorage.setItem('profile_display_name', name);
+          setProfileName(name);
+        }
+      }
+    }
+  }, [authUser]);
+
   // Use real profile data, fallback to license owner, FB user, auth email, then default
-  const displayName = profileName || license?.ownerName || fbUser?.name || authUser?.user_metadata?.full_name || authUser?.email?.split('@')[0] || 'User';
+  const displayName = profileName || license?.ownerName || fbUser?.name || authUser?.user_metadata?.display_name || authUser?.user_metadata?.full_name || authUser?.email?.split('@')[0] || 'User';
   const displayAvatar = profileAvatar || fbUser?.profilePic || '';
   const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 

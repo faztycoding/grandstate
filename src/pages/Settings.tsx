@@ -360,7 +360,7 @@ export default function Settings() {
     try {
       // Save to Supabase auth metadata
       const { error } = await supabase.auth.updateUser({
-        data: { display_name: displayName, line_id: lineId }
+        data: { display_name: displayName, full_name: displayName, line_id: lineId }
       });
       if (error) throw error;
 

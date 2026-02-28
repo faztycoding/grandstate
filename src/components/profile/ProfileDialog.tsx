@@ -123,7 +123,7 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
             setProfileAvatar(savedAvatar);
 
             // Determine best fallback name and sync to localStorage if needed
-            const supabaseName = authUser?.user_metadata?.full_name || '';
+            const supabaseName = authUser?.user_metadata?.display_name || authUser?.user_metadata?.full_name || '';
             const fallbackName = savedName || supabaseName || license?.ownerName || '';
             if (!savedName && fallbackName) {
                 // Sync the best name we have to localStorage so Header picks it up
@@ -234,7 +234,7 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
 
         // Persist to Supabase user_metadata so name survives across devices/browsers
         try {
-            await supabase.auth.updateUser({ data: { full_name: trimmed } });
+            await supabase.auth.updateUser({ data: { display_name: trimmed, full_name: trimmed } });
         } catch {
             // Silent — localStorage is the primary store, Supabase is backup
         }
@@ -268,7 +268,7 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
     };
 
     // --- Display Logic ---
-    const displayName = profileName || license?.ownerName || fbUser?.name || authUser?.user_metadata?.full_name || authUser?.email?.split('@')[0] || 'User';
+    const displayName = profileName || license?.ownerName || fbUser?.name || authUser?.user_metadata?.display_name || authUser?.user_metadata?.full_name || authUser?.email?.split('@')[0] || 'User';
     const displayAvatar = profileAvatar || fbUser?.profilePic || '';
     const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 

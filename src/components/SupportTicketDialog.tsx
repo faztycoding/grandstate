@@ -74,7 +74,7 @@ export function SupportTicketDialog({ open, onOpenChange }: SupportTicketDialogP
       const { error } = await supabase.from('support_tickets').insert({
         user_id: user.id,
         user_email: user.email || '',
-        user_name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+        user_name: user.user_metadata?.display_name || user.user_metadata?.full_name || user.email?.split('@')[0] || '',
         subject: subject.trim(),
         description: description.trim(),
         category,

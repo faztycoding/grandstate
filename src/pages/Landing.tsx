@@ -656,7 +656,7 @@ export default function Landing() {
             </motion.div>
           </motion.div>
 
-          {/* Scroll indicator — hides on scroll */}
+          {/* Scroll/Swipe indicator — hides on scroll */}
           <AnimatePresence>
             {!scrolled && (
               <motion.div
@@ -664,9 +664,13 @@ export default function Landing() {
                 initial={{ opacity: 1 }}
                 exit={{ opacity: 0, y: 20 }}
                 transition={{ duration: 0.4 }}
-                animate={{ y: [0, 10, 0] }}
               >
-                <div className="flex flex-col items-center gap-2">
+                {/* Desktop: Mouse scroll indicator */}
+                <motion.div
+                  className="hidden sm:flex flex-col items-center gap-2"
+                  animate={{ y: [0, 8, 0] }}
+                  transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                >
                   <span className="text-white/40 text-[10px] uppercase tracking-widest">{isEn ? 'Scroll' : 'เลื่อนลง'}</span>
                   <div className="w-7 h-11 rounded-full border-2 border-white/20 flex justify-center pt-2 backdrop-blur-sm">
                     <motion.div
@@ -675,6 +679,35 @@ export default function Landing() {
                       transition={{ duration: 2, repeat: Infinity }}
                     />
                   </div>
+                </motion.div>
+
+                {/* Mobile: Swipe up hand gesture */}
+                <div className="flex sm:hidden flex-col items-center gap-1.5">
+                  <span className="text-white/40 text-[10px] uppercase tracking-widest">{isEn ? 'Swipe Up' : 'ปัดขึ้น'}</span>
+                  <motion.div
+                    animate={{ y: [0, -12, 0] }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                    className="relative"
+                  >
+                    {/* Hand SVG — swipe up gesture */}
+                    <svg width="28" height="36" viewBox="0 0 28 36" fill="none" className="text-white/50">
+                      {/* Finger */}
+                      <rect x="11" y="2" width="6" height="16" rx="3" fill="currentColor" />
+                      {/* Palm */}
+                      <rect x="5" y="14" width="18" height="14" rx="5" fill="currentColor" />
+                      {/* Thumb */}
+                      <rect x="1" y="16" width="6" height="8" rx="3" fill="currentColor" />
+                      {/* Motion lines */}
+                      <motion.g
+                        animate={{ opacity: [0.2, 0.6, 0.2], y: [0, -3, 0] }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                      >
+                        <line x1="14" y1="0" x2="14" y2="4" stroke="hsl(38 92% 50%)" strokeWidth="1.5" strokeLinecap="round" opacity="0.6" />
+                        <line x1="9" y1="1" x2="10" y2="5" stroke="hsl(38 92% 50%)" strokeWidth="1" strokeLinecap="round" opacity="0.4" />
+                        <line x1="19" y1="1" x2="18" y2="5" stroke="hsl(38 92% 50%)" strokeWidth="1" strokeLinecap="round" opacity="0.4" />
+                      </motion.g>
+                    </svg>
+                  </motion.div>
                 </div>
               </motion.div>
             )}

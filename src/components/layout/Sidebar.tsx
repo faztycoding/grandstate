@@ -436,131 +436,6 @@ function SidebarContent({
                 )}
               </AnimatePresence>
 
-              {/* ══ ADMIN EPIC ENTRANCE — Lightning + Giant Crown + ADMIN Slam ══ */}
-              <AnimatePresence>
-                {adminJustArrived && (
-                  <>
-                    {/* Golden screen flash */}
-                    <motion.div key="admin-flash" className="pointer-events-none absolute inset-0 z-50 rounded-xl"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: [0, 0.9, 0.6, 0.9, 0] }}
-                      transition={{ duration: 1.2, times: [0, 0.1, 0.2, 0.3, 1] }}
-                      style={{ background: 'radial-gradient(ellipse at center, rgba(251,191,36,0.8) 0%, rgba(245,158,11,0.4) 50%, transparent 80%)' }}
-                    />
-
-                    {/* Shockwave rings */}
-                    {[0, 1, 2].map(i => (
-                      <motion.div key={`admin-shock-${i}`}
-                        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-amber-400/60 z-50"
-                        initial={{ width: 0, height: 0, opacity: 1 }}
-                        animate={{ width: 300, height: 300, opacity: 0 }}
-                        transition={{ duration: 1.5, ease: 'easeOut', delay: 0.3 + i * 0.2 }}
-                      />
-                    ))}
-
-                    {/* Lightning bolts — left */}
-                    <motion.svg key="lightning-left" className="pointer-events-none absolute z-50" width="60" height="80"
-                      viewBox="0 0 60 80" fill="none"
-                      style={{ left: '15%', top: '-10px' }}
-                      initial={{ opacity: 0, scaleY: 0 }}
-                      animate={{ opacity: [0, 1, 1, 0.8, 0], scaleY: [0, 1, 1, 1, 0] }}
-                      transition={{ duration: 1.5, times: [0, 0.1, 0.4, 0.7, 1], delay: 0.2 }}>
-                      <path d="M30 0 L22 28 L35 25 L18 55 L28 35 L16 38 L26 80" stroke="#fbbf24" strokeWidth="3" fill="none"
-                        filter="drop-shadow(0 0 8px rgba(251,191,36,1)) drop-shadow(0 0 20px rgba(251,191,36,0.6))" />
-                      <path d="M30 0 L22 28 L35 25 L18 55 L28 35 L16 38 L26 80" stroke="white" strokeWidth="1.2" fill="none" opacity="0.8" />
-                    </motion.svg>
-
-                    {/* Lightning bolts — right */}
-                    <motion.svg key="lightning-right" className="pointer-events-none absolute z-50" width="60" height="80"
-                      viewBox="0 0 60 80" fill="none"
-                      style={{ right: '15%', top: '-10px' }}
-                      initial={{ opacity: 0, scaleY: 0 }}
-                      animate={{ opacity: [0, 1, 1, 0.8, 0], scaleY: [0, 1, 1, 1, 0] }}
-                      transition={{ duration: 1.5, times: [0, 0.1, 0.4, 0.7, 1], delay: 0.35 }}>
-                      <path d="M30 0 L38 28 L25 25 L42 55 L32 35 L44 38 L34 80" stroke="#fbbf24" strokeWidth="3" fill="none"
-                        filter="drop-shadow(0 0 8px rgba(251,191,36,1)) drop-shadow(0 0 20px rgba(251,191,36,0.6))" />
-                      <path d="M30 0 L38 28 L25 25 L42 55 L32 35 L44 38 L34 80" stroke="white" strokeWidth="1.2" fill="none" opacity="0.8" />
-                    </motion.svg>
-
-                    {/* Spark particles from lightning impact */}
-                    {[...Array(12)].map((_, i) => (
-                      <motion.div key={`spark-${i}`}
-                        className="pointer-events-none absolute w-1.5 h-1.5 rounded-full z-50"
-                        style={{
-                          left: '50%', top: '30%',
-                          background: i % 3 === 0 ? '#fbbf24' : i % 3 === 1 ? '#ffffff' : '#f59e0b',
-                          boxShadow: '0 0 6px rgba(251,191,36,0.9)',
-                        }}
-                        initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
-                        animate={{
-                          x: Math.cos((i / 12) * Math.PI * 2) * (40 + Math.random() * 60),
-                          y: Math.sin((i / 12) * Math.PI * 2) * (30 + Math.random() * 40),
-                          opacity: 0,
-                          scale: 0,
-                        }}
-                        transition={{ duration: 0.8 + Math.random() * 0.5, delay: 0.4, ease: 'easeOut' }}
-                      />
-                    ))}
-
-                    {/* ADMIN text slams from right — crashes into position */}
-                    <motion.div key="admin-slam" className="pointer-events-none absolute inset-x-0 z-50 flex items-center justify-center"
-                      style={{ top: '50%', transform: 'translateY(-50%)' }}
-                      initial={{ x: 200, opacity: 0, scale: 1.8 }}
-                      animate={{ x: [200, -8, 4, 0], opacity: [0, 1, 1, 1], scale: [1.8, 1.1, 0.95, 1] }}
-                      exit={{ opacity: 0, scale: 0.5, y: -20 }}
-                      transition={{ duration: 0.6, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}>
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg"
-                        style={{
-                          background: 'linear-gradient(135deg, rgba(251,191,36,0.95) 0%, rgba(245,158,11,0.9) 50%, rgba(217,119,6,0.95) 100%)',
-                          boxShadow: '0 0 20px rgba(251,191,36,0.8), 0 0 40px rgba(251,191,36,0.4), inset 0 1px 0 rgba(255,255,255,0.3)',
-                          border: '1px solid rgba(255,215,0,0.6)',
-                        }}>
-                        {/* Mini crown in badge */}
-                        <svg width="16" height="13" viewBox="0 0 28 22" fill="none">
-                          <rect x="4" y="15" width="20" height="5" rx="1.5" fill="#fcd34d"/>
-                          <path d="M4 15 L1 5 L7 10 L14 2 L21 10 L27 5 L24 15Z" fill="#b91c1c" stroke="#ffd700" strokeWidth="0.8"/>
-                          <circle cx="14" cy="4" r="1.2" fill="#ef4444"/>
-                          <circle cx="14" cy="11" r="1.5" fill="#38bdf8"/>
-                        </svg>
-                        <span className="text-xs font-black text-white tracking-[0.15em]"
-                          style={{ textShadow: '0 1px 3px rgba(0,0,0,0.4), 0 0 10px rgba(255,255,255,0.3)' }}>
-                          ADMIN
-                        </span>
-                        <Zap className="w-3.5 h-3.5 text-white" style={{ filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.6))' }} />
-                      </div>
-                    </motion.div>
-
-                    {/* Announcement text below */}
-                    <motion.p key="admin-announce" className="pointer-events-none absolute inset-x-0 bottom-1 z-50 text-center"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: [0, 1, 1, 0], y: [10, 0, 0, -5] }}
-                      transition={{ duration: 3, times: [0, 0.2, 0.7, 1], delay: 1.2 }}>
-                      <span className="text-[8px] font-bold text-amber-300/90 tracking-widest uppercase"
-                        style={{ textShadow: '0 0 8px rgba(251,191,36,0.6)' }}>
-                        {language === 'th' ? '⚡ แอดมินเข้าสู่ระบบแล้ว ⚡' : '⚡ ADMIN HAS ENTERED ⚡'}
-                      </span>
-                    </motion.p>
-                  </>
-                )}
-              </AnimatePresence>
-
-              {/* ── ADMIN ONLINE: Golden border glow on the card ── */}
-              <AnimatePresence>
-                {adminOnline && (
-                  <motion.div key="admin-border-glow" className="pointer-events-none absolute inset-0 z-5 rounded-xl"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.5 }}
-                    style={{
-                      boxShadow: '0 0 15px rgba(251,191,36,0.4), 0 0 30px rgba(251,191,36,0.15), inset 0 0 15px rgba(251,191,36,0.1)',
-                      border: '1px solid rgba(251,191,36,0.3)',
-                      borderRadius: '0.75rem',
-                    }}
-                  />
-                )}
-              </AnimatePresence>
-
               {/* ── Main content ── */}
               <div className="relative flex items-center justify-between gap-3 z-10">
                 <div>
@@ -568,23 +443,20 @@ function SidebarContent({
                     <p className="text-[9px] uppercase tracking-[0.2em] text-white/50 font-semibold">
                       {activeUsersLabel}
                     </p>
-                    {/* Admin badge — visible to ALL when admin is online */}
+                    {/* Admin badge — simple indicator visible to ALL users */}
                     <AnimatePresence>
                       {adminOnline && (
                         <motion.span
-                          initial={{ scale: 0, opacity: 0, x: 30 }}
-                          animate={{ scale: 1, opacity: 1, x: 0 }}
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
                           exit={{ scale: 0, opacity: 0 }}
-                          transition={{ type: 'spring', stiffness: 300, damping: 12, delay: adminJustArrived ? 1.8 : 0 }}
-                          className="inline-flex items-center gap-0.5 px-1.5 py-px rounded-full"
+                          transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded"
                           style={{
-                            background: 'linear-gradient(135deg, rgba(251,191,36,0.35) 0%, rgba(245,158,11,0.25) 100%)',
-                            boxShadow: '0 0 12px rgba(251,191,36,0.4), 0 0 4px rgba(251,191,36,0.6)',
-                            border: '1px solid rgba(255,215,0,0.5)',
+                            background: 'linear-gradient(135deg, #5c1a1a 0%, #7f1d1d 50%, #5c1a1a 100%)',
+                            border: '1px solid rgba(239,68,68,0.3)',
                           }}>
-                          <Zap className="w-2.5 h-2.5 text-amber-300" style={{ filter: 'drop-shadow(0 0 3px rgba(251,191,36,0.8))' }} />
-                          <span className="text-[7px] font-black text-amber-200 tracking-[0.12em]"
-                            style={{ textShadow: '0 0 6px rgba(251,191,36,0.6)' }}>ADMIN</span>
+                          <span className="text-[8px] font-bold text-red-200/90 tracking-wider">ADMIN</span>
                         </motion.span>
                       )}
                     </AnimatePresence>

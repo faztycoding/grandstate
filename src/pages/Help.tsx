@@ -35,12 +35,18 @@ import {
   CircuitBoard,
   Gauge,
   ScanLine,
+  Monitor,
+  Activity,
+  Share2,
+  Home,
+  Settings,
 } from 'lucide-react';
 import { GrandStateLogo } from '@/components/GrandStateLogo';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useState, useEffect } from 'react';
 
 /* ── Reusable Components ── */
 
@@ -59,9 +65,9 @@ function MachinePanel({ children, className, glow = false }: { children: React.R
     <div className={cn(
       "relative rounded-xl border overflow-hidden",
       "bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50 dark:from-slate-900 dark:via-[#0f172a] dark:to-slate-900",
-      "border-cyan-500/20 dark:border-cyan-500/15",
+      "border-[hsl(var(--accent)/0.2)] dark:border-[hsl(var(--accent)/0.15)]",
       "shadow-[inset_0_0_15px_rgba(0,0,0,0.03)] dark:shadow-[inset_0_0_15px_rgba(0,0,0,0.5)]",
-      glow && "shadow-[0_0_20px_rgba(0,255,255,0.05)] dark:shadow-[0_0_20px_rgba(0,255,255,0.08)]",
+      glow && "shadow-[0_0_20px_hsl(var(--accent)/0.08)]",
       className
     )}>
       <Rivet className="top-2 left-2" />
@@ -73,19 +79,72 @@ function MachinePanel({ children, className, glow = false }: { children: React.R
   );
 }
 
-function SectionHeader({ icon: Icon, title, subtitle, color = 'text-cyan-500' }: { icon: any; title: string; subtitle?: string; color?: string }) {
+function SectionHeader({ icon: Icon, title, subtitle, color = 'text-accent', gear = false }: { icon: any; title: string; subtitle?: string; color?: string; gear?: boolean }) {
   return (
     <div className="flex items-center gap-3 mb-4 sm:mb-5">
       <div className="relative">
-        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-800 dark:to-slate-700 border border-cyan-500/20 flex items-center justify-center">
-          <Icon className={cn("w-5 h-5", color)} />
-        </div>
-        <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+        {gear ? (
+          <motion.div
+            animate={{ rotate: -360 }}
+            transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+            className="w-10 h-10 rounded-lg bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-800 dark:to-slate-700 border border-[hsl(var(--accent)/0.2)] flex items-center justify-center"
+          >
+            <Settings className={cn("w-5 h-5", color)} />
+          </motion.div>
+        ) : (
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-800 dark:to-slate-700 border border-[hsl(var(--accent)/0.2)] flex items-center justify-center">
+            <Icon className={cn("w-5 h-5", color)} />
+          </div>
+        )}
+        <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-accent animate-pulse" />
       </div>
       <div>
         <h2 className="text-base sm:text-lg font-bold tracking-tight">{title}</h2>
         {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
       </div>
+    </div>
+  );
+}
+
+function ChainDivider() {
+  return (
+    <div className="relative py-6 overflow-hidden">
+      <div className="absolute inset-0 flex items-center">
+        <div className="w-full border-b border-dashed border-slate-300 dark:border-slate-700" />
+      </div>
+      <motion.div
+        animate={{ x: [0, -160] }}
+        transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+        className="relative flex gap-0 text-slate-400/30 dark:text-slate-700/60 whitespace-nowrap select-none"
+      >
+        {Array.from({ length: 30 }).map((_, i) => (
+          <span key={i} className="text-lg tracking-tight">🔗</span>
+        ))}
+      </motion.div>
+    </div>
+  );
+}
+
+function AutomationMonitor({ side, children }: { side: 'left' | 'right'; children: React.ReactNode }) {
+  const isLeft = side === 'left';
+  return (
+    <div className={cn(
+      "bg-card/80 backdrop-blur-sm border rounded-lg p-2.5 shadow-sm",
+      isLeft
+        ? "border-accent/30 shadow-[0_0_12px_hsl(var(--accent)/0.06)]"
+        : "border-accent/30 shadow-[0_0_12px_hsl(var(--accent)/0.06)]",
+      !isLeft && "text-right"
+    )}>
+      {children}
+    </div>
+  );
+}
+
+function TerminalLine({ prefix, children, color = 'text-emerald-500' }: { prefix: string; children: React.ReactNode; color?: string }) {
+  return (
+    <div className="flex gap-2">
+      <span className="text-muted-foreground/50 flex-shrink-0">[{prefix}]</span>
+      <span className={color}>{children}</span>
     </div>
   );
 }
@@ -102,123 +161,188 @@ export default function Help() {
       {/* Blueprint Grid Background Overlay */}
       <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8 relative">
         <div
-          className="pointer-events-none fixed inset-0 z-0 opacity-[0.03] dark:opacity-[0.06]"
+          className="pointer-events-none fixed inset-0 z-0 opacity-[0.02] dark:opacity-[0.04]"
           style={{
             backgroundImage: `
-              linear-gradient(rgba(0,255,255,0.4) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(0,255,255,0.4) 1px, transparent 1px)
+              linear-gradient(hsl(var(--accent) / 0.5) 1px, transparent 1px),
+              linear-gradient(90deg, hsl(var(--accent) / 0.5) 1px, transparent 1px)
             `,
             backgroundSize: '30px 30px',
           }}
         />
 
-        {/* ═══ QUICK START — 4 Steps ═══ */}
+        {/* Background spinning gear (decorative) */}
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+          className="pointer-events-none fixed -top-32 -right-32 z-0 text-muted-foreground/[0.03]"
+        >
+          <Settings size={350} strokeWidth={0.5} />
+        </motion.div>
+        <motion.div
+          animate={{ rotate: -360 }}
+          transition={{ duration: 35, repeat: Infinity, ease: "linear" }}
+          className="pointer-events-none fixed -bottom-40 -left-40 z-0 text-muted-foreground/[0.03]"
+        >
+          <Settings size={400} strokeWidth={0.5} />
+        </motion.div>
+
+        {/* ═══ AUTOMATION MONITORS (Top Bar) ═══ */}
+        <div className="flex flex-col sm:flex-row justify-between gap-3">
+          <AutomationMonitor side="left">
+            <div className="flex items-center gap-2 text-accent text-[11px] font-mono mb-0.5">
+              <Monitor size={13} className="animate-pulse" />
+              <span className="font-bold tracking-wider">AUTOMATION ENGINE</span>
+            </div>
+            <div className="text-[10px] text-muted-foreground">ID: GS-MAIN-01 | STATUS: STANDBY</div>
+          </AutomationMonitor>
+
+          <AutomationMonitor side="right">
+            <div className="flex items-center justify-end gap-2 text-accent text-[11px] font-mono mb-0.5">
+              <span className="font-bold tracking-wider">SYSTEM LOAD</span>
+              <Activity size={13} className="animate-bounce" />
+            </div>
+            <div className="text-[10px] text-muted-foreground">OPTIMAL | LATENCY: 0.04ms</div>
+          </AutomationMonitor>
+        </div>
+
+        {/* ═══ QUICK START — Initialization Sequence ═══ */}
         <MachinePanel glow>
           <div className="p-4 sm:p-6">
             <SectionHeader
               icon={Cog}
-              title={isEn ? 'System Boot Sequence' : 'ลำดับการเริ่มต้นระบบ'}
+              title={isEn ? '01. Initialization Sequence' : '01. ลำดับการเริ่มต้นระบบ'}
               subtitle={isEn ? '4 steps to activate your posting engine' : '4 ขั้นตอน เปิดใช้งานเครื่องยนต์โพสต์อัตโนมัติ'}
-              color="text-cyan-400"
+              color="text-accent"
+              gear
             />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {[
-                { n: 1, icon: Building2, title: isEn ? 'Add Property' : 'เพิ่มสินทรัพย์', desc: isEn ? 'Fill in details, upload photos, set price & location' : 'กรอกข้อมูล อัพรูป ตั้งราคา และที่ตั้ง', link: '/properties', color: 'from-blue-500 to-cyan-500' },
-                { n: 2, icon: Users, title: isEn ? 'Add Groups' : 'เพิ่มกลุ่ม', desc: isEn ? 'Paste Facebook group URLs — add as many as you need' : 'วาง URL กลุ่ม Facebook — เพิ่มได้ไม่จำกัด', link: '/groups', color: 'from-green-500 to-emerald-500' },
-                { n: 3, icon: Facebook, title: isEn ? 'Connect Facebook' : 'เชื่อมต่อ Facebook', desc: isEn ? 'Log in once — the system remembers your session' : 'Login ครั้งเดียว ระบบจำ session อัตโนมัติ', link: '/settings', color: 'from-[#1877F2] to-blue-600' },
-                { n: 4, icon: Zap, title: isEn ? 'Start Posting' : 'เริ่มโพสต์', desc: isEn ? 'Select property & groups, then let automation handle the rest' : 'เลือกสินทรัพย์ + กลุ่ม แล้วปล่อยระบบทำงาน', link: '/automation', color: 'from-amber-500 to-orange-500' },
+                { n: 1, icon: Home, title: isEn ? 'Add Property' : 'เพิ่มสินทรัพย์', desc: isEn ? 'LOAD ASSET DATA' : 'โหลดข้อมูลสินทรัพย์', detail: isEn ? 'Fill in details, upload photos, set price & location' : 'กรอกข้อมูล อัพรูป ตั้งราคา และที่ตั้ง', link: '/properties' },
+                { n: 2, icon: Share2, title: isEn ? 'Add Groups' : 'เพิ่มกลุ่ม', desc: isEn ? 'TARGETING FB GROUPS' : 'กำหนดกลุ่มเป้าหมาย', detail: isEn ? 'Paste Facebook group URLs — add as many as you need' : 'วาง URL กลุ่ม Facebook — เพิ่มได้ไม่จำกัด', link: '/groups' },
+                { n: 3, icon: Monitor, title: isEn ? 'Connect FB' : 'เชื่อมต่อ FB', desc: isEn ? 'ENCRYPT SESSION' : 'เข้ารหัส Session', detail: isEn ? 'Log in once — the system remembers your session' : 'Login ครั้งเดียว ระบบจำ session อัตโนมัติ', link: '/settings' },
+                { n: 4, icon: Zap, title: isEn ? 'Launch Engine' : 'เริ่มโพสต์', desc: isEn ? 'LAUNCH ENGINE' : 'สตาร์ทเครื่องยนต์', detail: isEn ? 'Select property & groups, then let automation handle the rest' : 'เลือกสินทรัพย์ + กลุ่ม แล้วปล่อยระบบทำงาน', link: '/automation' },
               ].map((step, i) => (
                 <Link key={step.n} to={step.link}>
                   <motion.div
                     initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.08 }}
-                    className="group relative p-4 rounded-lg border transition-all h-full bg-white/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 hover:border-cyan-400/40 hover:shadow-[0_0_12px_rgba(0,255,255,0.08)]"
+                    whileHover={{ scale: 1.02, backgroundColor: 'hsl(var(--accent) / 0.04)' }}
+                    className="group relative p-4 rounded-lg border-t-2 border-accent border-x border-b border-x-border border-b-border transition-all h-full bg-white/50 dark:bg-slate-800/50 overflow-hidden"
                   >
-                    <div className="flex items-center gap-2.5 mb-3">
-                      <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${step.color} flex items-center justify-center shadow-md`}>
-                        <step.icon className="w-4 h-4 text-white" />
-                      </div>
-                      <span className="text-[10px] font-mono font-bold text-cyan-600 dark:text-cyan-400 tracking-wider">STEP_{step.n}</span>
+                    {/* Corner gear decoration */}
+                    <Settings className="absolute -right-2 -bottom-2 text-foreground/[0.03] group-hover:text-accent/10 transition-colors" size={50} />
+                    <div className="text-[10px] text-accent mb-2 font-bold font-mono tracking-[0.15em]">STEP_{String(step.n).padStart(2, '0')}</div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <step.icon className="w-4 h-4 text-accent" />
+                      <span className="text-sm font-bold">{step.title}</span>
                     </div>
-                    <p className="text-sm font-semibold mb-1">{step.title}</p>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{step.desc}</p>
-                    <ArrowRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-cyan-500 absolute top-4 right-4 transition-colors" />
+                    <p className="text-[10px] text-muted-foreground font-mono mb-1.5">{step.desc}</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{step.detail}</p>
+                    <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/20 group-hover:text-accent absolute top-4 right-4 transition-colors" />
                   </motion.div>
                 </Link>
               ))}
             </div>
-            {/* Connection lines between steps (desktop only) */}
+            {/* Connection chain between steps (desktop only) */}
             <div className="hidden lg:flex items-center justify-center gap-0 mt-3">
               {[1, 2, 3].map(i => (
                 <div key={i} className="flex items-center">
-                  <div className="w-16 lg:w-24 h-px bg-gradient-to-r from-cyan-500/30 to-cyan-500/10" />
-                  <div className="w-1.5 h-1.5 rounded-full bg-cyan-500/40" />
-                  <div className="w-16 lg:w-24 h-px bg-gradient-to-r from-cyan-500/10 to-cyan-500/30" />
+                  <div className="w-16 lg:w-24 h-px bg-gradient-to-r from-accent/30 to-accent/10" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-accent/40" />
+                  <div className="w-16 lg:w-24 h-px bg-gradient-to-r from-accent/10 to-accent/30" />
                 </div>
               ))}
             </div>
           </div>
         </MachinePanel>
 
-        {/* ═══ POSTING MODES ═══ */}
+        {/* ═══ CHAIN DIVIDER ═══ */}
+        <ChainDivider />
+
+        {/* ═══ OPERATION MODES ═══ */}
         <MachinePanel>
           <div className="p-4 sm:p-6">
             <SectionHeader
               icon={Target}
-              title={isEn ? 'Operation Modes' : 'โหมดปฏิบัติการ'}
+              title={isEn ? '02. Operation Modes' : '02. โหมดปฏิบัติการ'}
               subtitle={isEn ? 'Choose the approach that fits your strategy' : 'เลือกโหมดที่ตอบโจทย์กลยุทธ์การตลาดของคุณ'}
-              color="text-amber-400"
+              color="text-accent"
+              gear
             />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Marketplace */}
-              <div className="relative p-5 rounded-lg border border-blue-300/30 dark:border-blue-500/20 bg-blue-50/40 dark:bg-blue-950/20 space-y-3">
-                <div className="absolute top-3 right-3 w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
-                <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300 font-mono text-[10px]">
-                  <ScanLine className="w-3 h-3 mr-1" /> MARKETPLACE
-                </Badge>
-                <p className="text-sm font-bold">{isEn ? 'Marketplace Mode' : 'โหมด Marketplace'}</p>
+              {/* Marketplace Module */}
+              <div className="relative p-5 rounded-lg border-l-4 border-l-blue-500 border border-blue-300/20 dark:border-blue-500/15 bg-blue-50/30 dark:bg-blue-950/15 space-y-3 overflow-hidden">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
+                  className="absolute -right-3 -top-3 text-blue-500/[0.06]"
+                >
+                  <Settings size={60} />
+                </motion.div>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300 font-mono text-[10px] mb-2">
+                      <ScanLine className="w-3 h-3 mr-1" /> MARKETPLACE MODULE
+                    </Badge>
+                    <p className="text-sm font-bold">{isEn ? 'Automated Asset Distribution' : 'กระจายสินทรัพย์อัตโนมัติ'}</p>
+                  </div>
+                </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   {isEn
-                    ? 'Creates a listing on Facebook Marketplace and automatically shares to selected groups. Ideal for maximizing exposure.'
-                    : 'สร้างประกาศบน Facebook Marketplace และแชร์ไปยังกลุ่มที่เลือกอัตโนมัติ เหมาะกับการเข้าถึงทั้งคนเข้าดู Marketplace และสมาชิกในกลุ่ม'}
+                    ? 'Creates a listing on Facebook Marketplace with human-like behavior and shares to selected groups. Anti-detection system ensures maximum safety.'
+                    : 'สร้าง Listing บน Facebook Marketplace จำลองพฤติกรรมมนุษย์ และแชร์ไปยังกลุ่มที่เลือก ระบบ Anti-detection ช่วยให้ปลอดภัยสูงสุด'}
                 </p>
                 <div className="flex flex-wrap gap-1.5 pt-1">
-                  {(isEn ? ['Auto listing', 'Group sharing', 'Photo gallery'] : ['สร้างประกาศอัตโนมัติ', 'แชร์ไปกลุ่ม', 'แกลเลอรี่รูป']).map(t => (
-                    <Badge key={t} variant="secondary" className="text-[10px] font-mono bg-blue-50 dark:bg-blue-900/30 border-blue-200/50 dark:border-blue-700/30">{t}</Badge>
+                  {['#ANTI-DETECTION', '#SMART_RESIZE', '#AUTO_FILL'].map(t => (
+                    <span key={t} className="px-2 py-0.5 bg-blue-500/8 border border-blue-500/20 text-[10px] text-blue-600 dark:text-blue-400 font-mono rounded">{t}</span>
                   ))}
                 </div>
               </div>
-              {/* Group Post */}
-              <div className="relative p-5 rounded-lg border border-green-300/30 dark:border-green-500/20 bg-green-50/40 dark:bg-green-950/20 space-y-3">
-                <div className="absolute top-3 right-3 w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                <Badge className="bg-green-100 text-green-700 dark:bg-green-900/60 dark:text-green-300 font-mono text-[10px]">
-                  <CircuitBoard className="w-3 h-3 mr-1" /> GROUP_POST
-                </Badge>
-                <p className="text-sm font-bold">{isEn ? 'Group Post Mode' : 'โหมด Group Post'}</p>
+              {/* Mass Group Deploy */}
+              <div className="relative p-5 rounded-lg border-l-4 border-l-accent border border-accent/20 dark:border-accent/15 bg-[hsl(var(--accent)/0.03)] space-y-3 overflow-hidden">
+                <motion.div
+                  animate={{ rotate: -360 }}
+                  transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
+                  className="absolute -right-3 -top-3 text-accent/[0.06]"
+                >
+                  <Settings size={60} />
+                </motion.div>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <Badge className="bg-[hsl(var(--accent)/0.1)] text-accent font-mono text-[10px] mb-2">
+                      <CircuitBoard className="w-3 h-3 mr-1" /> MASS GROUP DEPLOY
+                    </Badge>
+                    <p className="text-sm font-bold">{isEn ? 'Cluster Deployment System' : 'ระบบกระจายแบบคลัสเตอร์'}</p>
+                  </div>
+                </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   {isEn
-                    ? 'Posts directly to each Facebook group with full automation — including buy/sell groups with form auto-fill.'
-                    : 'โพสต์ตรงไปยังแต่ละกลุ่มพร้อม automation เต็มรูปแบบ — รองรับกลุ่มซื้อขาย กรอกฟอร์มอัตโนมัติ (ประเภท, ราคา, ที่ตั้ง)'}
+                    ? 'Distributes property data to target groups simultaneously with content rotation to prevent spam detection.'
+                    : 'กระจายข้อมูลทรัพย์สินลงสู่กลุ่มเป้าหมายพร้อมกัน พร้อมระบบหมุนเวียน Content ป้องกันการตรวจจับ Spam'}
                 </p>
                 <div className="flex flex-wrap gap-1.5 pt-1">
-                  {(isEn ? ['Direct post', 'Buy/sell forms', 'Custom caption'] : ['โพสต์ตรง', 'ฟอร์มซื้อขาย', 'Caption กำหนดเอง']).map(t => (
-                    <Badge key={t} variant="secondary" className="text-[10px] font-mono bg-green-50 dark:bg-green-900/30 border-green-200/50 dark:border-green-700/30">{t}</Badge>
+                  {['#MASS_BROADCAST', '#CAPTION_AI', '#BUY_SELL'].map(t => (
+                    <span key={t} className="px-2 py-0.5 bg-[hsl(var(--accent)/0.08)] border border-[hsl(var(--accent)/0.2)] text-[10px] text-accent font-mono rounded">{t}</span>
                   ))}
                 </div>
               </div>
             </div>
           </div>
         </MachinePanel>
+
+        {/* ═══ CHAIN DIVIDER ═══ */}
+        <ChainDivider />
 
         {/* ═══ FEATURES OVERVIEW ═══ */}
         <MachinePanel>
           <div className="p-4 sm:p-6">
             <SectionHeader
               icon={Wrench}
-              title={isEn ? 'System Modules' : 'โมดูลของระบบ'}
+              title={isEn ? '03. System Modules' : '03. โมดูลของระบบ'}
               subtitle={isEn ? 'Core capabilities of the engine' : 'ความสามารถหลักของเครื่องยนต์'}
-              color="text-violet-400"
+              color="text-accent"
             />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {[
@@ -234,7 +358,7 @@ export default function Help() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className="flex items-start gap-3 p-3.5 rounded-lg border border-slate-200 dark:border-slate-700/60 bg-white/40 dark:bg-slate-800/40 hover:border-cyan-400/30 transition-colors"
+                  className="flex items-start gap-3 p-3.5 rounded-lg border border-slate-200 dark:border-slate-700/60 bg-white/40 dark:bg-slate-800/40 hover:border-[hsl(var(--accent)/0.3)] transition-colors"
                 >
                   <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 border border-slate-200 dark:border-slate-600", f.bg)}>
                     <f.icon className={cn("w-4.5 h-4.5", f.color)} />
@@ -250,13 +374,13 @@ export default function Help() {
         </MachinePanel>
 
         {/* ═══ PRO TIPS ═══ */}
-        <MachinePanel className="border-amber-500/20 dark:border-amber-500/15">
+        <MachinePanel>
           <div className="p-4 sm:p-6">
             <SectionHeader
               icon={Gauge}
-              title={isEn ? 'Performance Optimization' : 'ปรับแต่งประสิทธิภาพ'}
+              title={isEn ? '04. Performance Optimization' : '04. ปรับแต่งประสิทธิภาพ'}
               subtitle={isEn ? 'Tuning tips for maximum output' : 'เคล็ดลับเพื่อผลลัพธ์สูงสุด'}
-              color="text-amber-400"
+              color="text-accent"
             />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {[
@@ -281,12 +405,15 @@ export default function Help() {
           </div>
         </MachinePanel>
 
+        {/* ═══ CHAIN DIVIDER ═══ */}
+        <ChainDivider />
+
         {/* ═══ FAQ ═══ */}
         <MachinePanel>
           <div className="p-4 sm:p-6">
             <SectionHeader
               icon={Terminal}
-              title={isEn ? 'Troubleshoot & FAQ' : 'แก้ปัญหา & คำถามที่พบบ่อย'}
+              title={isEn ? '05. Troubleshoot & FAQ' : '05. แก้ปัญหา & คำถามที่พบบ่อย'}
               color="text-emerald-400"
             />
             <Accordion type="single" collapsible className="w-full">
@@ -308,9 +435,9 @@ export default function Help() {
                 { q: 'ข้อมูลของฉันปลอดภัยไหม?', a: 'ข้อมูลทั้งหมดเก็บในเครื่องของคุณเท่านั้น Session Facebook จัดการภายในเครื่อง แอปไม่เก็บรหัสผ่าน Claude API Key ส่งตรงไปยัง Anthropic เท่านั้น' },
               ]).map((faq, i) => (
                 <AccordionItem key={i} value={`faq-${i}`} className="border-slate-200/50 dark:border-slate-700/50">
-                  <AccordionTrigger className="text-left text-sm font-medium hover:no-underline hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">
+                  <AccordionTrigger className="text-left text-sm font-medium hover:no-underline hover:text-accent transition-colors">
                     <span className="flex items-center gap-2">
-                      <span className="text-[10px] font-mono text-cyan-500/60 dark:text-cyan-500/40">#{String(i + 1).padStart(2, '0')}</span>
+                      <span className="text-[10px] font-mono text-accent/60">#{String(i + 1).padStart(2, '0')}</span>
                       {faq.q}
                     </span>
                   </AccordionTrigger>
@@ -381,16 +508,33 @@ export default function Help() {
           </div>
         </MachinePanel>
 
+        {/* ═══ TERMINAL LOGS ═══ */}
+        <MachinePanel>
+          <div className="p-4 font-mono text-[11px] leading-[1.8] bg-[hsl(217,71%,6%)] dark:bg-black/60 rounded-lg border border-slate-800 space-y-0">
+            <TerminalLine prefix="SYS" color="text-emerald-500/80">Grand$tate Help Terminal v2.0.0 initialized...</TerminalLine>
+            <TerminalLine prefix="CFG" color="text-accent/70">Timeout: 30m per session</TerminalLine>
+            <TerminalLine prefix="SEC" color="text-blue-400/70">Anti-detection modules loaded — stealth active</TerminalLine>
+            <TerminalLine prefix="NET" color="text-emerald-500/70">SSE connection stable — heartbeat OK</TerminalLine>
+            <div className="flex gap-2">
+              <span className="text-muted-foreground/50 flex-shrink-0">[SYS]</span>
+              <span className="text-emerald-500/60 flex items-center gap-1.5">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Waiting for user input...
+              </span>
+            </div>
+          </div>
+        </MachinePanel>
+
         {/* ═══ QUICK LINKS ═══ */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: isEn ? 'Automation' : 'Automation', link: '/automation', icon: Zap, color: 'text-cyan-500' },
+            { label: isEn ? 'Automation' : 'Automation', link: '/automation', icon: Zap, color: 'text-accent' },
             { label: isEn ? 'Properties' : 'สินทรัพย์', link: '/properties', icon: Building2, color: 'text-blue-500' },
             { label: isEn ? 'Analytics' : 'วิเคราะห์', link: '/analytics', icon: BarChart3, color: 'text-violet-500' },
             { label: isEn ? 'Settings' : 'ตั้งค่า', link: '/settings', icon: Cog, color: 'text-slate-500' },
           ].map((item) => (
             <Link key={item.link} to={item.link}>
-              <Button variant="outline" className="w-full justify-start gap-2 h-11 border-slate-200 dark:border-slate-700 hover:border-cyan-400/40 hover:bg-cyan-500/5 transition-all font-mono text-xs">
+              <Button variant="outline" className="w-full justify-start gap-2 h-11 border-slate-200 dark:border-slate-700 hover:border-[hsl(var(--accent)/0.4)] hover:bg-[hsl(var(--accent)/0.04)] transition-all font-mono text-xs">
                 <item.icon className={cn("w-4 h-4", item.color)} />
                 {item.label}
                 <ChevronRight className="w-3.5 h-3.5 ml-auto text-muted-foreground" />
@@ -402,10 +546,11 @@ export default function Help() {
         {/* ═══ VERSION ═══ */}
         <div className="text-center py-4 flex flex-col items-center gap-1.5">
           <GrandStateLogo className="w-7 h-7" />
-          <p className="text-xs font-bold font-mono tracking-wider bg-gradient-to-r from-cyan-400 via-slate-400 to-cyan-400 bg-clip-text text-transparent">
+          <p className="text-xs font-bold font-mono tracking-wider gradient-text">
             GRAND$TATE ENGINE
           </p>
-          <p className="text-[9px] text-muted-foreground/60 font-mono tracking-[0.2em]">BUILD v2.0.0</p>
+          <p className="text-[9px] text-muted-foreground/60 font-mono tracking-[0.2em]">OPERATIONAL COMMAND CENTER v2.0</p>
+          <p className="text-[8px] text-muted-foreground/40 font-mono">© 2026 GRAND$TATE CORE ENGINE</p>
         </div>
       </div>
     </DashboardLayout>

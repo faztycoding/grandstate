@@ -1607,7 +1607,7 @@ export class GroupPostingWorker {
         if (dialogType === 'category') break;
         if (dialogType === 'notifications') {
           console.log(`   ⚠️ Notifications still blocking! Reloading page...`);
-          await page.reload({ waitUntil: 'networkidle2', timeout: 60000 });
+          await page.reload({ waitUntil: 'domcontentloaded', timeout: 45000 });
           await this.delay(3000);
           // Re-find and re-click sell button after reload
           console.log(`   🔄 Re-finding sell button after reload...`);
@@ -3068,8 +3068,8 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
 
     try {
       await this.page.goto(groupUrl, {
-        waitUntil: 'networkidle2',
-        timeout: 60000,
+        waitUntil: 'domcontentloaded',
+        timeout: 45000,
       });
 
       await this.delay(3000);
@@ -3614,10 +3614,25 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
     console.log(`📋 Task expects group: "${taskGroupName}"`);
 
     try {
-      // ── Step 1: ALWAYS navigate to the group URL ──
+      // ── Step 1: Navigate to the group URL ──
       console.log(`🔄 Navigating to group: ${groupUrl}`);
-      await page.goto(groupUrl, { waitUntil: 'networkidle2', timeout: 60000 });
-      await this.delay(2000);
+      try {
+        await page.goto(groupUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
+      } catch (navErr) {
+        console.log(`   ⚠️ First nav attempt failed: ${navErr.message}, retrying...`);
+        await this.delay(2000);
+        await page.goto(groupUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
+      }
+      // Wait for Facebook SPA to render content
+      await this.delay(3000);
+
+      // ── Pre-post micro-interactions: simulate human browsing ──
+      try {
+        await humanScroll(page, { minScrolls: 1, maxScrolls: 3, direction: 'down' });
+        await humanMouseMovement(page);
+        await new Promise(r => setTimeout(r, gaussianDelay(800, 300, 400, 1500)));
+        await humanScroll(page, { minScrolls: 1, maxScrolls: 2, direction: 'up' });
+      } catch (e) { /* non-critical */ }
 
       // ── Step 1.2: AGGRESSIVELY dismiss Notifications overlay ──
       // Facebook Notifications panel is [role="dialog"] and blocks everything
@@ -3647,12 +3662,12 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
       // NUCLEAR OPTION: if Notifications STILL open, reload the page to kill all overlays
       if (await hasNotifDialog()) {
         console.log('   ☢️ Notifications won\'t close — reloading page...');
-        await page.reload({ waitUntil: 'networkidle2', timeout: 60000 });
+        await page.reload({ waitUntil: 'domcontentloaded', timeout: 45000 });
         await this.delay(3000);
         // One more check after reload
         if (await hasNotifDialog()) {
           console.log('   ☢️ Still there after reload — navigating directly...');
-          await page.goto(groupUrl, { waitUntil: 'networkidle2', timeout: 60000 });
+          await page.goto(groupUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
           await this.delay(3000);
         }
         console.log('   ✅ Page reloaded — overlays cleared');
@@ -3851,9 +3866,22 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
         return { success: false, error: 'ไม่สามารถเปิดช่องเขียนโพสต์ได้' };
       }
 
-      // Wait for dialog to actually appear in DOM
+      // Wait for the POST dialog to appear (not notification dialog)
       console.log('⏳ Waiting for post dialog...');
-      await page.waitForSelector('[role="dialog"]', { timeout: 8000 });
+      try {
+        await page.waitForFunction(() => {
+          const dialogs = document.querySelectorAll('[role="dialog"]');
+          for (const d of dialogs) {
+            const text = (d.textContent || '').toLowerCase();
+            if (text.includes('notification') || text.includes('การแจ้งเตือน') || text.includes('unread') || text.includes('push notification')) continue;
+            // Found a non-notification dialog (likely the post composer)
+            return true;
+          }
+          return false;
+        }, { timeout: 10000 });
+      } catch (e) {
+        console.log('⚠️ Post dialog did not appear within 10s');
+      }
       await this.delay(1000);
 
       // ── Step 3: Upload images ──
@@ -3923,23 +3951,51 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
       }
       if (!submitted) throw new Error('Failed to submit — Post button disabled or not found');
 
-      // Wait for dialog to close (= post submitted successfully)
+      // Wait for post dialog to close (= post submitted successfully)
+      // IMPORTANT: Filter out Notifications dialog — it stays open permanently
       console.log('⏳ Waiting for post to submit...');
       await page.waitForFunction(() => {
-        return !document.querySelector('[role="dialog"]');
-      }, { timeout: 15000 }).catch(() => {
-        console.log('⚠️ Dialog still visible after 15s — post may still be processing');
+        const dialogs = document.querySelectorAll('[role="dialog"]');
+        for (const d of dialogs) {
+          const text = (d.textContent || '').toLowerCase();
+          // Skip notification dialogs
+          if (text.includes('notification') || text.includes('การแจ้งเตือน') || text.includes('unread') || text.includes('push notification')) continue;
+          // A non-notification dialog is still open (post dialog)
+          return false;
+        }
+        // All non-notification dialogs closed = post submitted
+        return true;
+      }, { timeout: 20000 }).catch(() => {
+        console.log('⚠️ Post dialog still visible after 20s — post may still be processing');
       });
-      await this.delay(1000);
+      await this.delay(1500);
 
-      // ── Step 6: Get post URL ──
-      const postUrl = await page.evaluate(() => {
+      // ── Step 6: Check for pending approval + Get post URL ──
+      const postResult = await page.evaluate(() => {
+        const bodyText = (document.body?.innerText || document.body?.textContent || '').toLowerCase();
+        const pendingKws = ['pending approval', 'awaiting approval', 'pending', 'รอการอนุมัติ', 'กำลังรอการอนุมัติ', 'รอดำเนินการ', 'your post is pending', 'โพสต์ของคุณกำลังรอ'];
+        const pendingApproval = pendingKws.some(kw => bodyText.includes(kw));
+
+        // Check toasts/alerts too
+        const alerts = document.querySelectorAll('[role="alert"], [role="status"], [aria-live="polite"], [aria-live="assertive"]');
+        let alertPending = false;
+        for (const el of alerts) {
+          const t = (el.textContent || '').toLowerCase();
+          if (pendingKws.some(kw => t.includes(kw))) { alertPending = true; break; }
+        }
+
         const links = document.querySelectorAll('a[href*="/posts/"], a[href*="/permalink/"]');
-        return links.length > 0 ? links[0].href : null;
+        const postUrl = links.length > 0 ? links[0].href : null;
+        return { pendingApproval: pendingApproval || alertPending, postUrl };
       });
+
+      if (postResult.pendingApproval) {
+        console.log(`🕓 Post pending approval: ${actualGroupName || groupUrl}`);
+        return { success: true, pendingApproval: true, postUrl: postResult.postUrl, actualGroupName };
+      }
 
       console.log(`✅ Successfully posted to group: ${actualGroupName || groupUrl}`);
-      return { success: true, postUrl, actualGroupName };
+      return { success: true, postUrl: postResult.postUrl, actualGroupName };
 
     } catch (error) {
       console.error(`❌ Failed to post to group: ${error.message}`);
@@ -4295,33 +4351,23 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
           }
           activeTabs.set(taskIdx, tab);
 
-          // Navigate
-          task.message = 'กำลังเปิดกลุ่ม...';
-          console.log(`   🔄 [${globalIdx}/${this.tasks.length}] Opening: ${task.groupName}`);
-          this.addLog(`🔄 [${globalIdx}/${this.tasks.length}] เปิดกลุ่ม: ${task.groupName}`, 'info');
-          try {
-            await tab.goto(task.groupUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-          } catch (e) {
+          // Validate URL before attempting navigation
+          if (!task.groupUrl || !task.groupUrl.startsWith('http')) {
             task.status = 'failed';
-            task.message = 'เปิดกลุ่มไม่สำเร็จ';
-            console.log(`   ❌ [${globalIdx}] Nav failed: ${task.groupName} — ${e.message}`);
-            this.addLog(`❌ [${globalIdx}] เปิดกลุ่มไม่ได้: ${task.groupName}`, 'error');
+            task.message = 'URL กลุ่มไม่ถูกต้อง';
+            console.log(`   ❌ [${globalIdx}] Invalid URL: "${task.groupUrl}" for ${task.groupName}`);
+            this.addLog(`❌ [${globalIdx}] URL ไม่ถูกต้อง: ${task.groupName}`, 'error');
             if (taskIdx > 0) { try { await tab.close(); } catch { } }
             activeTabs.delete(taskIdx);
             completedCount++;
             return;
           }
 
-          // ── Module 1: Pre-post micro-interactions ──
-          // Simulate human browsing the group before posting (scroll, hover)
-          try {
-            await humanScroll(tab, { minScrolls: 1, maxScrolls: 3, direction: 'down' });
-            await humanMouseMovement(tab);
-            await new Promise(r => setTimeout(r, gaussianDelay(800, 300, 400, 1500)));
-            await humanScroll(tab, { minScrolls: 1, maxScrolls: 2, direction: 'up' });
-          } catch (e) { /* non-critical */ }
+          task.message = 'กำลังเปิดกลุ่ม...';
+          console.log(`   🔄 [${globalIdx}/${this.tasks.length}] Opening: ${task.groupName}`);
+          this.addLog(`🔄 [${globalIdx}/${this.tasks.length}] เปิดกลุ่ม: ${task.groupName}`, 'info');
 
-          // Post
+          // Post (navigation is handled inside postToGroupOnTab)
           let groupCaption = finalCaption;
           if (captionAssignments && captionAssignments[task.groupId]) {
             groupCaption = captionAssignments[task.groupId];

@@ -1611,8 +1611,12 @@ async function scrapeFbUserInfo(page) {
   let result = await page.evaluate(() => {
     let name = '';
     let profilePic = '';
-    const blacklist = ['Facebook', 'Messenger', 'Watch', 'Marketplace', 'Gaming', 'หน้าหลัก', 'Home', 'การแจ้งเตือน', 'Notifications', 'เมนู', 'Menu', 'สร้าง', 'Create', 'กลุ่ม', 'Groups', 'แชท', 'Chat'];
-    const isBlacklisted = (t) => !t || t.length < 2 || t.length > 60 || blacklist.some(b => t === b || t.startsWith(b + ' '));
+    const blacklist = ['Facebook', 'Messenger', 'Watch', 'Marketplace', 'Gaming', 'หน้าหลัก', 'Home', 'การแจ้งเตือน', 'Notifications', 'เมนู', 'Menu', 'สร้าง', 'Create', 'กลุ่ม', 'Groups', 'แชท', 'Chat', 'เข้าสู่ระบบ', 'เข้าสู่ระบบ Facebook', 'Log in', 'Log In', 'Sign Up', 'สมัครสมาชิก', 'ลืมรหัสผ่าน', 'ลืมรหัสผ่านใช่ไหม', 'Forgotten password', 'Create new account', 'สร้างบัญชีใหม่', 'See more on Facebook'];
+    const isBlacklisted = (t) => !t || t.length < 2 || t.length > 60 || blacklist.some(b => t.toLowerCase() === b.toLowerCase() || t.startsWith(b + ' ') || t.startsWith(b));
+
+    // Early exit: if page has a login form, don't try to extract user info
+    const hasLoginForm = !!document.querySelector('input[name="email"], input[name="pass"], #email, #login_form, form[action*="login"]');
+    if (hasLoginForm) return { name: '', profilePic: '' };
 
     try {
       // ── Strategy 1: Navigation bar profile link (top-right user menu) ──
@@ -1748,7 +1752,7 @@ async function scrapeFbUserInfo(page) {
         for (const span of nameSpans) {
           const text = span.textContent?.trim() || '';
           // Look for Thai/non-ASCII names or names that aren't FB UI elements
-          if (text.length >= 2 && text.length <= 50 && !/^(Facebook|Home|Watch|Marketplace|Gaming|Messenger|Groups|Notifications|Menu|Create|หน้าหลัก|การแจ้งเตือน|แชท|เมนู|สร้าง|กลุ่ม|วิดีโอ|ตลาด|เกม)$/i.test(text)) {
+          if (text.length >= 2 && text.length <= 50 && !/^(Facebook|Home|Watch|Marketplace|Gaming|Messenger|Groups|Notifications|Menu|Create|หน้าหลัก|การแจ้งเตือน|แชท|เมนู|สร้าง|กลุ่ม|วิดีโอ|ตลาด|เกม|เข้าสู่ระบบ|Log in|Sign Up|สมัครสมาชิก|ลืมรหัสผ่าน|Forgotten password|สร้างบัญชีใหม่|Create new account|See more on Facebook)$/i.test(text)) {
             debug.push(`span.x1lliihq: "${text}"`);
             // First non-UI span with a reasonable name length is likely the user
             if (!name && text.length >= 2) name = text;
@@ -2165,8 +2169,20 @@ app.post('/api/facebook/confirm-login', ...auth, async (req, res) => {
       return res.json({ success: false, connected: false, message: 'Browser not ready' });
     }
 
-    const isLoggedIn = await req.groupWorker.checkLoginQuick();
+    let isLoggedIn = await req.groupWorker.checkLoginQuick();
     const activeSlot = sessionManager.getActiveSlot(req.userId);
+
+    // Double-check: verify the page isn't actually a login page
+    if (isLoggedIn) {
+      const pageUrl = req.groupWorker.page.url();
+      const hasLoginForm = await req.groupWorker.page.evaluate(() => {
+        return !!document.querySelector('input[name="email"], input[name="pass"], #email, form[action*="login"]');
+      }).catch(() => false);
+      if (hasLoginForm || pageUrl.includes('/login')) {
+        console.log(`⚠️ [confirm-login] False positive — page has login form (URL: ${pageUrl})`);
+        isLoggedIn = false;
+      }
+    }
 
     if (isLoggedIn) {
       const userInfo = await scrapeFbUserInfo(req.groupWorker.page);

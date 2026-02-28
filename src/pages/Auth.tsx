@@ -306,7 +306,7 @@ export default function Auth() {
           className="text-center mb-8">
           <div className="inline-flex items-center gap-3">
             <GrandStateLogo heroMode className="w-12 h-12 drop-shadow-[0_0_12px_rgba(247,181,0,0.3)]" />
-            <span className="text-[26px] font-bold text-white tracking-wide">GrandState</span>
+            <span className="text-[26px] font-bold text-white tracking-wide">Grand<span style={{ color: '#fbbf24', textShadow: '0 0 10px rgba(251,191,36,0.7), 0 0 20px rgba(251,191,36,0.4)' }}>$</span>tate</span>
           </div>
         </motion.div>
 

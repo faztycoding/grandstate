@@ -415,7 +415,7 @@ export default function Landing() {
               <GrandStateLogo heroMode={!scrolled} className="w-10 h-10 md:w-11 md:h-11 drop-shadow-lg" />
             </motion.div>
             <span className={`font-bold text-lg md:text-xl transition-colors duration-500 ${scrolled ? 'text-foreground' : 'text-white'}`}>
-              GrandState
+              Grand<span style={{ color: '#fbbf24', textShadow: '0 0 8px rgba(251,191,36,0.6), 0 0 16px rgba(251,191,36,0.3)' }}>$</span>tate
             </span>
           </Link>
           <div className="flex items-center gap-2 md:gap-4">
@@ -1129,7 +1129,7 @@ export default function Landing() {
             <div>
               <div className="flex items-center gap-3 mb-3">
                 <GrandStateLogo className="w-10 h-10" />
-                <span className="font-bold text-lg">GrandState</span>
+                <span className="font-bold text-lg">Grand<span style={{ color: '#fbbf24', textShadow: '0 0 8px rgba(251,191,36,0.6), 0 0 16px rgba(251,191,36,0.3)' }}>$</span>tate</span>
               </div>
               <p className="text-sm text-muted-foreground">
                 {isEn ? 'Auto real estate posting system' : 'ระบบโพสต์อสังหาริมทรัพย์อัตโนมัติ'}<br />

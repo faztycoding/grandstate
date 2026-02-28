@@ -693,7 +693,7 @@ export function Sidebar() {
             <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
               <Link to="/automation" className="flex items-center gap-3" onClick={() => setOpen(false)}>
                 <GrandStateLogo heroMode className="w-10 h-10 drop-shadow-lg" />
-                <span className="font-bold text-lg text-sidebar-foreground">GrandState</span>
+                <span className="font-bold text-lg text-sidebar-foreground">Grand<span style={{ color: '#fbbf24', textShadow: '0 0 8px rgba(251,191,36,0.6), 0 0 16px rgba(251,191,36,0.3)' }}>$</span>tate</span>
               </Link>
               <Button variant="ghost" size="icon-sm" onClick={() => setOpen(false)} className="text-sidebar-foreground">
                 <X className="w-5 h-5" />
@@ -734,7 +734,7 @@ export function Sidebar() {
               exit={{ opacity: 0 }}
               className="font-bold text-lg text-sidebar-foreground"
             >
-              GrandState
+              Grand<span style={{ color: '#fbbf24', textShadow: '0 0 8px rgba(251,191,36,0.6), 0 0 16px rgba(251,191,36,0.3)' }}>$</span>tate
             </motion.span>
           )}
         </Link>

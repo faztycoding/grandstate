@@ -68,6 +68,8 @@ export class PostScheduler {
       captionStyle: config.captionStyle || 'friendly',
       userPackage: config.userPackage || 'free',
       browser: config.browser || 'chrome',
+      fbSlot: config.fbSlot ?? 0,
+      fbAccountName: config.fbAccountName || null,
       result: null,
     };
     this.schedules.push(schedule);
@@ -134,7 +136,7 @@ export class PostScheduler {
 
         // Pre-flight: check browser/session health before starting
         if (this._preflightCheck) {
-          const preflight = await this._preflightCheck();
+          const preflight = await this._preflightCheck(job);
           if (!preflight.ok) {
             console.log(`⏰ [${shortId}] Pre-flight FAILED: ${preflight.error}`);
 
@@ -143,7 +145,7 @@ export class PostScheduler {
               console.log(`⏰ [${shortId}] Attempting recovery...`);
               try {
                 if (preflight.reinit) await preflight.reinit();
-                const retry = await this._preflightCheck();
+                const retry = await this._preflightCheck(job);
                 if (!retry.ok) {
                   job.status = 'failed';
                   job.result = { error: `Pre-flight failed after retry: ${retry.error}` };

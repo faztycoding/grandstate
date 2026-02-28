@@ -2033,6 +2033,9 @@ app.post('/api/facebook/auto-login', ...auth, async (req, res) => {
       console.log(`⚠️ [${shortId}] Login OK but couldn't scrape name — saved as "Facebook User"`);
     }
 
+    // Store encrypted credentials for scheduled auto re-login
+    sessionManager.saveFbCredentials(req.userId, activeSlot, email, password);
+
     return res.json({ 
       success: true, 
       message: `Login สำเร็จ!${userInfo.name ? ` ยินดีต้อนรับ ${userInfo.name}` : ''}`, 
@@ -2351,15 +2354,35 @@ app.get('/api/schedules', ...auth, (req, res) => {
   res.json({ success: true, schedules: req.scheduler.getSchedules() });
 });
 
+// Poll schedule notifications (consumed on read) — must be before :id routes
+app.get('/api/schedules/notifications', ...auth, (req, res) => {
+  const notifications = sessionManager.pollScheduleNotifications(req.userId);
+  res.json({ success: true, notifications });
+});
+
 // Create a new scheduled post
 app.post('/api/schedules', ...auth, (req, res) => {
   try {
-    const { scheduledAt, mode, property, groups, caption, images, delaySeconds, captionStyle, userPackage, browser } = req.body;
+    const { scheduledAt, mode, property, groups, caption, images, delaySeconds, captionStyle, userPackage, browser, fbSlot, fbAccountName } = req.body;
     if (!scheduledAt || !mode || !property || !groups?.length) {
       return res.status(400).json({ success: false, error: 'Missing required fields' });
     }
-    const schedule = req.scheduler.addSchedule({ scheduledAt, mode, property, groups, caption, images, delaySeconds, captionStyle, userPackage, browser });
-    res.json({ success: true, schedule });
+
+    const slotToUse = fbSlot ?? sessionManager.getActiveSlot(req.userId);
+    const hasCredentials = sessionManager.hasFbCredentials(req.userId, slotToUse);
+
+    const schedule = req.scheduler.addSchedule({
+      scheduledAt, mode, property, groups, caption, images, delaySeconds, captionStyle, userPackage, browser,
+      fbSlot: slotToUse,
+      fbAccountName: fbAccountName || null,
+    });
+
+    res.json({
+      success: true,
+      schedule,
+      hasCredentials,
+      warning: !hasCredentials ? 'ไม่พบข้อมูล Login สำหรับ slot นี้ — หากถึงเวลาแล้ว session หมดอายุ อาจไม่สามารถ re-login ได้อัตโนมัติ กรุณา Login Facebook ก่อนตั้งเวลา' : null,
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

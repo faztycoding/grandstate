@@ -4,7 +4,30 @@ import { PostingTracker } from './postingTracker.js';
 import { PostScheduler } from './scheduler.js';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
+
+// Simple encryption for stored FB credentials (not military-grade, but prevents plaintext on disk)
+const CRED_KEY = process.env.CRED_ENCRYPT_KEY || 'gs_default_key_2024_change_me!!';
+function encryptText(text) {
+  const iv = crypto.randomBytes(16);
+  const key = crypto.scryptSync(CRED_KEY, 'salt', 32);
+  const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+  let encrypted = cipher.update(text, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  return iv.toString('hex') + ':' + encrypted;
+}
+function decryptText(data) {
+  try {
+    const [ivHex, encrypted] = data.split(':');
+    const iv = Buffer.from(ivHex, 'hex');
+    const key = crypto.scryptSync(CRED_KEY, 'salt', 32);
+    const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+  } catch { return null; }
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -113,31 +136,62 @@ class UserSessionManager {
     marketplaceWorker.setTracker(postingTracker);
 
     // Wire pre-flight check: verify browser/session health before scheduled jobs
-    scheduler.setPreflightCheck(async () => {
+    // job is passed from scheduler so we can read fbSlot + credentials
+    scheduler.setPreflightCheck(async (job) => {
       // Check if automation is already running
       if (groupWorker.isRunning || marketplaceWorker.isRunning) {
         return { ok: false, error: 'Automation already running — will retry next cycle', canRetry: false };
       }
 
+      // Determine which FB slot to use (from job or default)
+      const fbSlot = job?.fbSlot ?? this.getActiveSlot(userId);
+
+      // Ensure browser uses correct FB profile slot
+      groupWorker.setProfileSlot(fbSlot);
+
       // Check if browser is alive
       const browserAlive = groupWorker.browser && groupWorker.browser.isConnected();
       if (!browserAlive) {
-        return {
-          ok: false,
-          error: 'Browser not connected',
-          canRetry: true,
-          reinit: async () => {
-            console.log(`⏰ [${shortId}] Re-initializing browser for scheduled job...`);
-            await groupWorker.initialize('chrome');
-          }
-        };
+        console.log(`⏰ [${shortId}] Browser not connected — re-initializing for slot ${fbSlot}...`);
+        try {
+          await groupWorker.initialize('chrome');
+        } catch (initErr) {
+          return { ok: false, error: `Browser init failed: ${initErr.message}`, canRetry: false };
+        }
       }
 
       // Check if Facebook session is still valid
       try {
         const loggedIn = await groupWorker.checkLogin();
         if (!loggedIn) {
-          return { ok: false, error: 'Facebook session expired — need re-login', canRetry: false };
+          console.log(`⏰ [${shortId}] FB session expired on slot ${fbSlot} — attempting auto re-login...`);
+
+          // Try auto re-login using stored credentials
+          const creds = this.loadFbCredentials(userId, fbSlot);
+          if (creds && creds.email && creds.password) {
+            try {
+              const reloginOk = await this._autoReloginFb(groupWorker, creds.email, creds.password, shortId);
+              if (reloginOk) {
+                console.log(`⏰ [${shortId}] Auto re-login successful!`);
+                return { ok: true };
+              }
+            } catch (reloginErr) {
+              console.log(`⏰ [${shortId}] Auto re-login failed: ${reloginErr.message}`);
+            }
+          } else {
+            console.log(`⏰ [${shortId}] No stored credentials for slot ${fbSlot}`);
+          }
+
+          return {
+            ok: false,
+            error: 'Facebook session expired — auto re-login failed',
+            canRetry: true,
+            reinit: async () => {
+              console.log(`⏰ [${shortId}] Re-initializing browser for retry...`);
+              try { await groupWorker.close(); } catch {}
+              await groupWorker.initialize('chrome');
+            }
+          };
         }
       } catch (e) {
         return {
@@ -157,7 +211,16 @@ class UserSessionManager {
 
     // Start scheduler
     scheduler.start(async (job) => {
-      console.log(`⏰ [${shortId}] Scheduler: ${job.mode} for ${job.groups?.length} groups`);
+      const fbSlot = job.fbSlot ?? this.getActiveSlot(userId);
+      const fbName = job.fbAccountName || `Slot ${fbSlot + 1}`;
+      console.log(`⏰ [${shortId}] Scheduler: ${job.mode} for ${job.groups?.length} groups (FB: ${fbName}, slot ${fbSlot})`);
+
+      // Ensure correct FB profile slot is set
+      groupWorker.setProfileSlot(fbSlot);
+
+      // Store notification for the user (they can poll this)
+      this._pushScheduleNotification(userId, job);
+
       if (job.mode === 'marketplace') {
         return await marketplaceWorker.startMarketplaceAutomation({
           property: job.property,
@@ -228,6 +291,111 @@ class UserSessionManager {
     this._saveFbSessions(userId, session.fbSessions, session.activeSlot);
   }
 
+  // ── FB Credential storage (encrypted) ──
+  saveFbCredentials(userId, slot, email, password) {
+    try {
+      const filePath = path.join(PROFILES_DIR, userId, 'fb-credentials.enc.json');
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+      let creds = {};
+      if (fs.existsSync(filePath)) {
+        try { creds = JSON.parse(fs.readFileSync(filePath, 'utf8')); } catch {}
+      }
+
+      creds[String(slot)] = {
+        email: encryptText(email),
+        password: encryptText(password),
+        savedAt: new Date().toISOString(),
+      };
+      fs.writeFileSync(filePath, JSON.stringify(creds, null, 2), 'utf8');
+      console.log(`🔐 Saved FB credentials for slot ${slot} (user ${userId.substring(0, 8)})`);
+    } catch (e) {
+      console.warn(`⚠️ Failed to save FB credentials:`, e.message);
+    }
+  }
+
+  loadFbCredentials(userId, slot) {
+    try {
+      const filePath = path.join(PROFILES_DIR, userId, 'fb-credentials.enc.json');
+      if (!fs.existsSync(filePath)) return null;
+      const creds = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      const entry = creds[String(slot)];
+      if (!entry) return null;
+      return {
+        email: decryptText(entry.email),
+        password: decryptText(entry.password),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  hasFbCredentials(userId, slot) {
+    return !!this.loadFbCredentials(userId, slot);
+  }
+
+  // ── Auto re-login helper ──
+  async _autoReloginFb(groupWorker, email, password, shortId) {
+    const page = groupWorker.page;
+    if (!page) throw new Error('No page available');
+
+    console.log(`🔑 [${shortId}] Auto re-login: navigating to facebook.com...`);
+    await page.goto('https://www.facebook.com/', { waitUntil: 'networkidle2', timeout: 30000 });
+    await new Promise(r => setTimeout(r, 3000));
+
+    // Check if already logged in
+    const alreadyLoggedIn = await page.evaluate(() => {
+      return !document.querySelector('input[name="email"]') &&
+             !document.querySelector('input[name="pass"]') &&
+             !document.querySelector('#email') &&
+             !document.querySelector('#pass');
+    }).catch(() => false);
+
+    if (alreadyLoggedIn) {
+      console.log(`🔑 [${shortId}] Already logged in (cookies valid)`);
+      return true;
+    }
+
+    // Fill email
+    const emailField = await page.$('input[name="email"], #email');
+    if (emailField) {
+      await emailField.click({ clickCount: 3 });
+      await emailField.type(email, { delay: 50 });
+    } else {
+      throw new Error('Email field not found');
+    }
+
+    // Fill password
+    const passField = await page.$('input[name="pass"], #pass');
+    if (passField) {
+      await passField.click({ clickCount: 3 });
+      await passField.type(password, { delay: 50 });
+    } else {
+      throw new Error('Password field not found');
+    }
+
+    // Click login
+    const loginBtn = await page.$('button[name="login"], button[type="submit"], input[type="submit"]');
+    if (loginBtn) {
+      await loginBtn.click();
+    } else {
+      await page.keyboard.press('Enter');
+    }
+
+    await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {});
+    await new Promise(r => setTimeout(r, 3000));
+
+    // Verify login succeeded
+    const isLoggedIn = await page.evaluate(() => {
+      return !document.querySelector('input[name="email"]') &&
+             !document.querySelector('#email') &&
+             !document.querySelector('button[name="login"]');
+    }).catch(() => false);
+
+    return isLoggedIn;
+  }
+
   // ── FB Session persistence ──
   _getFbSessionsPath(userId) {
     return path.join(PROFILES_DIR, userId, 'fb-sessions.json');
@@ -272,6 +440,38 @@ class UserSessionManager {
       }
     } catch (e) { }
     return 0;
+  }
+
+  // ── Schedule notifications (polled by frontend) ──
+  _pushScheduleNotification(userId, job) {
+    const session = this.sessions.get(userId);
+    if (!session) return;
+    if (!session.scheduleNotifications) session.scheduleNotifications = [];
+
+    const propTitle = job.property?.title || job.property?.name || 'สินทรัพย์';
+    const groupCount = job.groups?.length || 0;
+    const fbName = job.fbAccountName || `Slot ${(job.fbSlot ?? 0) + 1}`;
+
+    session.scheduleNotifications.push({
+      id: `sn-${Date.now()}`,
+      type: 'schedule_started',
+      title: '🚀 คิวโพสต์เริ่มทำงานแล้ว',
+      message: `กำลังโพสต์ "${propTitle}" ไปยัง ${groupCount} กลุ่ม ด้วยบัญชี ${fbName}`,
+      jobId: job.id,
+      timestamp: Date.now(),
+      read: false,
+    });
+
+    console.log(`🔔 [${userId.substring(0, 8)}] Schedule notification pushed: ${job.id}`);
+  }
+
+  pollScheduleNotifications(userId) {
+    const session = this.sessions.get(userId);
+    if (!session || !session.scheduleNotifications) return [];
+    const notifs = session.scheduleNotifications.filter(n => !n.read);
+    // Mark all as read
+    for (const n of notifs) n.read = true;
+    return notifs;
   }
 
   canStartBrowser() {

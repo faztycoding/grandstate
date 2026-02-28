@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { apiFetch } from '@/lib/config';
 
 export interface AppNotification {
   id: string;
@@ -11,6 +12,7 @@ export interface AppNotification {
 
 const STORAGE_KEY = 'grandstate_notifications';
 const MAX_NOTIFICATIONS = 50;
+const POLL_INTERVAL_MS = 30_000; // Poll every 30s
 
 function loadNotifications(): AppNotification[] {
   try {
@@ -26,6 +28,7 @@ function saveNotifications(notifs: AppNotification[]) {
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState<AppNotification[]>(loadNotifications);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     saveNotifications(notifications);
@@ -41,6 +44,34 @@ export function useNotifications() {
     setNotifications(prev => [newNotif, ...prev].slice(0, MAX_NOTIFICATIONS));
     return newNotif;
   }, []);
+
+  // Poll backend for schedule notifications
+  const pollScheduleNotifications = useCallback(async () => {
+    try {
+      const res = await apiFetch('/api/schedules/notifications');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.success && Array.isArray(data.notifications) && data.notifications.length > 0) {
+        for (const n of data.notifications) {
+          addNotification({
+            type: 'info',
+            title: n.title || '🚀 คิวโพสต์เริ่มทำงาน',
+            message: n.message || 'ระบบกำลังโพสต์อัตโนมัติตามที่ตั้งเวลาไว้',
+          });
+        }
+      }
+    } catch {
+      // Silently ignore — user might be offline
+    }
+  }, [addNotification]);
+
+  // Start polling on mount
+  useEffect(() => {
+    pollRef.current = setInterval(pollScheduleNotifications, POLL_INTERVAL_MS);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [pollScheduleNotifications]);
 
   const markAsRead = useCallback((id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));

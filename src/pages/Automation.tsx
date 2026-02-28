@@ -64,6 +64,8 @@ import { TaskProgressPopup } from '@/components/automation/TaskProgressPopup';
 import { BulkAddGroupDialog } from '@/components/automation/BulkAddGroupDialog';
 import { DailyUsageCard } from '@/components/automation/DailyUsageCard';
 import { ScheduledPostsCard } from '@/components/automation/ScheduledPostsCard';
+import { AutomationStartEffect } from '@/components/automation/AutomationStartEffect';
+import { AutomationCompleteEffect } from '@/components/automation/AutomationCompleteEffect';
 import { apiFetch } from '@/lib/config';
 
 interface TaskStatus {
@@ -144,6 +146,10 @@ export default function Automation() {
   const [queuePosition, setQueuePosition] = useState<number | null>(null);
   const [queueEstimate, setQueueEstimate] = useState<number>(0);
   const queuePollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Effect states
+  const [showStartEffect, setShowStartEffect] = useState(false);
+  const [showCompleteEffect, setShowCompleteEffect] = useState(false);
 
   // Health Check — fetches real data from backend postingTracker
   const { result: healthResult, clearHistory, refetch: refetchHealth } = useHealthCheck();
@@ -284,10 +290,10 @@ export default function Automation() {
     setAutomationLogs([]);
     setAutomationStartTime(Date.now());
     setAutomationEndTime(null);
+    setShowCompleteEffect(false);
 
-    toast.info(t.automation.automationStarting, {
-      description: `${t.automation.postingTo} ${tasks.length} ${t.automation.groups}`,
-    });
+    // Show start effect
+    setShowStartEffect(true);
 
     // Request notification permission so we can alert when done (even if tab is background)
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
@@ -554,9 +560,9 @@ export default function Automation() {
                 summaryParts.push(`${t.automation.failedCount} ${failed} ${t.automation.groups}`);
               }
               const summaryText = summaryParts.join(', ');
-              toast.success(t.automation.automationDone, {
-                description: summaryText,
-              });
+
+              // Show completion effect with sound + result report
+              setShowCompleteEffect(true);
 
               // Browser push notification (works even if tab is in background)
               if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
@@ -1502,8 +1508,11 @@ export default function Automation() {
                   ? new Date(dateVal + 'T00:00').toLocaleDateString(isEn ? 'en-US' : 'th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
                   : '';
 
+                // Connected FB sessions for slot selector
+                const connectedFbSessions = fbSessions.map((s: any, i: number) => s && s.name ? { ...s, index: i } : null).filter(Boolean);
+
                 return (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="text-[11px] text-muted-foreground font-medium mb-1 block">
@@ -1529,12 +1538,45 @@ export default function Automation() {
                         />
                       </div>
                     </div>
+
+                    {/* FB Account selector for schedule */}
+                    {connectedFbSessions.length > 0 && (
+                      <div>
+                        <label className="text-[11px] text-muted-foreground font-medium mb-1.5 block">
+                          {isEn ? '👤 Facebook Account' : '👤 บัญชี Facebook ที่ใช้โพสต์'}
+                        </label>
+                        <div className="flex gap-2 flex-wrap">
+                          {connectedFbSessions.map((s: any) => {
+                            const isSelected = selectedFbSlot === s.index;
+                            return (
+                              <button key={s.index} type="button" onClick={() => setSelectedFbSlot(s.index)}
+                                className={cn("flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-left text-xs",
+                                  isSelected ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30 ring-1 ring-blue-500/30" : "border-border hover:border-blue-300 bg-background"
+                                )}>
+                                {s.profilePic ? (
+                                  <img src={s.profilePic} alt="" className="w-5 h-5 rounded-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                ) : (
+                                  <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center"><span className="text-white text-[9px] font-bold">{s.name?.charAt(0)}</span></div>
+                                )}
+                                <span className="truncate max-w-[120px]">{s.name}</span>
+                                {isSelected && <Check className="w-3 h-3 text-blue-600 flex-shrink-0" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                     {displayDate && timeVal && (
                       <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-1.5">
                         {isEn ? 'Scheduled:' : 'กำหนดเวลา:'}{' '}
                         <span className="font-medium text-foreground">{displayDate} {isEn ? 'at' : 'เวลา'} {timeVal} {isEn ? '' : 'น.'}</span>
                       </p>
                     )}
+
+                    <p className="text-[10px] text-muted-foreground bg-blue-50 dark:bg-blue-950/20 rounded-lg px-3 py-2 border border-blue-200/50 dark:border-blue-800/30">
+                      💡 {isEn ? 'The system will automatically re-login to Facebook and start posting when the scheduled time arrives, even if you are not online.' : 'ระบบจะ Re-login Facebook อัตโนมัติและเริ่มโพสต์เมื่อถึงเวลาที่ตั้งไว้ แม้คุณไม่ได้ออนไลน์อยู่'}
+                    </p>
                   </div>
                 );
               })()}
@@ -1552,6 +1594,7 @@ export default function Automation() {
                 onClick={async () => {
                   try {
                     const selectedGroupObjects = groups.filter(g => selectedGroups.includes(g.id));
+                    const selectedFbSession = fbSessions[selectedFbSlot];
                     const res = await apiFetch('/api/schedules', {
                       method: 'POST',
                       body: JSON.stringify({
@@ -1563,6 +1606,8 @@ export default function Automation() {
                         delaySeconds: delayBetweenPosts,
                         userPackage,
                         browser: selectedBrowser,
+                        fbSlot: selectedFbSlot,
+                        fbAccountName: selectedFbSession?.name || null,
                       }),
                     });
                     const data = await res.json();
@@ -1570,6 +1615,9 @@ export default function Automation() {
                       toast.success(language === 'en' ? 'Post scheduled!' : 'ตั้งเวลาโพสต์สำเร็จ!', {
                         description: new Date(scheduleDateTime).toLocaleString('th-TH'),
                       });
+                      if (data.warning) {
+                        toast.warning(data.warning, { duration: 8000 });
+                      }
                     } else {
                       toast.error(data.error || 'Failed to schedule');
                     }
@@ -1599,6 +1647,24 @@ export default function Automation() {
           </div>
         </DialogContent>
       </Dialog>
+      {/* Automation Effects */}
+      <AutomationStartEffect
+        show={showStartEffect}
+        groupCount={automation.tasks.length}
+        propertyTitle={selectedProperty?.title}
+        onComplete={() => setShowStartEffect(false)}
+      />
+      <AutomationCompleteEffect
+        show={showCompleteEffect}
+        tasks={automation.tasks}
+        startTime={automationStartTime}
+        endTime={automationEndTime}
+        onDismiss={() => {
+          setShowCompleteEffect(false);
+          // Dismiss the TaskProgressPopup too
+          setAutomation(prev => ({ ...prev, tasks: [] }));
+        }}
+      />
     </DashboardLayout>
   );
 }

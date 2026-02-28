@@ -348,8 +348,23 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
     console.log('Fetching group info from:', aboutUrl);
     await page.goto(aboutUrl, { waitUntil: 'networkidle2', timeout: 30000 });
 
-    // Wait for the page to fully load (about page needs more time)
-    await new Promise(r => setTimeout(r, 4000));
+    // Wait for initial render
+    await new Promise(r => setTimeout(r, 3000));
+
+    // Scroll down to trigger lazy-loaded activity section
+    await page.evaluate(() => {
+      window.scrollTo(0, document.body.scrollHeight * 0.5);
+    });
+    await new Promise(r => setTimeout(r, 2000));
+    await page.evaluate(() => {
+      window.scrollTo(0, document.body.scrollHeight);
+    });
+    await new Promise(r => setTimeout(r, 2000));
+    // Scroll back up so we can capture the full page text
+    await page.evaluate(() => {
+      window.scrollTo(0, 0);
+    });
+    await new Promise(r => setTimeout(r, 500));
 
     // Try to extract group name and member count
     const groupInfo = await page.evaluate(() => {
@@ -582,6 +597,7 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
         return Math.round(base * multiplier);
       };
 
+      // ─── Use \s which matches newlines too, so split-element text still matches ───
       const countToken = '([\\d.,]+\\s*(?:[KkMm]|พัน|หมื่น|แสน|ล้าน)?)';
       const todayPatterns = [
         new RegExp(`${countToken}\\s*โพสต์ใหม่ในวันนี้`, 'i'),
@@ -590,9 +606,14 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
         new RegExp(`${countToken}\\s*new\\s*posts?\\s*today`, 'i'),
         new RegExp(`โพสต์ใหม่ในวันนี้\\s*[:\\-]?\\s*${countToken}`, 'i'),
         new RegExp(`new\\s*posts?\\s*today\\s*[:\\-]?\\s*${countToken}`, 'i'),
-        // Header bar format: "X - โพสต์วันนี้" with dash separator
         new RegExp(`${countToken}\\s*[\\-–]\\s*โพสต์(?:ใหม่)?(?:ใน)?วันนี้`, 'i'),
         new RegExp(`${countToken}\\s*[\\-–]\\s*new\\s*posts?\\s*today`, 'i'),
+        // Facebook sometimes shows: "วันนี้มีโพสต์ใหม่ X โพสต์"
+        new RegExp(`วันนี้.*?(\\d[\\d.,]*)\\s*โพสต์`, 'i'),
+        // "โพสต์วันนี้ X" (label first, then number)
+        new RegExp(`โพสต์(?:ใหม่)?\\s*(?:ใน)?วันนี้\\s*${countToken}`, 'i'),
+        // "today X posts" / "today: X"
+        new RegExp(`today\\s*[:\\-]?\\s*${countToken}\\s*posts?`, 'i'),
       ];
 
       const monthPatterns = [
@@ -607,10 +628,15 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
         new RegExp(`${countToken}\\s*posts?\\s*in\\s*the\\s*last\\s*30\\s*days`, 'i'),
         new RegExp(`โพสต์ในเดือนที่ผ่านมา\\s*[:\\-]?\\s*${countToken}`, 'i'),
         new RegExp(`posts?\\s*in\\s*the\\s*last\\s*month\\s*[:\\-]?\\s*${countToken}`, 'i'),
-        // Header bar format: "X - โพสต์/เดือน" with dash separator
         new RegExp(`${countToken}\\s*[\\-–]\\s*โพสต์\\s*\\/\\s*เดือน`, 'i'),
         new RegExp(`${countToken}\\s*[\\-–]\\s*โพสต์ต่อเดือน`, 'i'),
         new RegExp(`${countToken}\\s*[\\-–]\\s*posts?\\s*\\/\\s*month`, 'i'),
+        // "เดือนที่ผ่านมามีโพสต์ X โพสต์"
+        new RegExp(`เดือน(?:ที่ผ่านมา|ที่แล้ว).*?(\\d[\\d.,]*)\\s*โพสต์`, 'i'),
+        // "โพสต์/เดือน X" or "โพสต์ต่อเดือน X" (label first)
+        new RegExp(`โพสต์\\s*(?:\\/|ต่อ)\\s*เดือน\\s*${countToken}`, 'i'),
+        // "last month X posts"
+        new RegExp(`last\\s*month\\s*[:\\-]?\\s*${countToken}\\s*posts?`, 'i'),
       ];
 
       const extractMetricFromText = (text, patterns) => {
@@ -627,18 +653,20 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
       };
 
       // Search all spans with specific Facebook class patterns
-      // Example: <span class="x193iq5w xeuugli...">780 โพสต์ใหม่ในวันนี้</span>
       const allSpans = document.querySelectorAll('span');
 
-      // DEBUG: Log all span texts that contain numbers to help diagnose
+      // DEBUG: Log texts that contain keywords for diagnosis
       const debugTexts = [];
 
       allSpans.forEach(span => {
         const text = span.textContent?.trim() || '';
 
-        // Collect ALL texts with numbers near post/โพสต์/เดือน/month for debugging
-        if (text.match(/\d+/) && (text.includes('โพสต์') || text.includes('post') || text.includes('เดือน') || text.includes('month'))) {
-          debugTexts.push(text);
+        // Collect ALL texts with numbers near post/โพสต์/เดือน/month/วันนี้ for debugging
+        if (text.length > 0 && text.length < 200 && (
+          (text.match(/\d/) && (text.includes('โพสต์') || text.includes('post') || text.includes('เดือน') || text.includes('month') || text.includes('วันนี้') || text.includes('today'))) ||
+          text.includes('กิจกรรม') || text.includes('activity')
+        )) {
+          debugTexts.push(text.substring(0, 120));
         }
 
         if (postsToday === undefined) {
@@ -652,7 +680,61 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
         }
       });
 
-      // Fallback: Search in bodyText if spans didn't work
+      // ── Fallback A: Adjacent-element extraction ──
+      // Facebook often renders: <span>780</span><span>โพสต์ใหม่ในวันนี้</span>
+      // Walk through spans to find number-only spans next to label spans
+      if (postsToday === undefined || postsLastMonth === undefined) {
+        const todayLabels = ['โพสต์ใหม่ในวันนี้', 'โพสต์ใหม่วันนี้', 'โพสต์วันนี้', 'new posts today', 'new post today'];
+        const monthLabels = ['โพสต์ในเดือนที่ผ่านมา', 'โพสต์เมื่อเดือนที่แล้ว', 'โพสต์ต่อเดือน', 'โพสต์/เดือน', 'โพสต์ในช่วง 30 วันที่ผ่านมา', 'posts in the last month', 'posts last month', 'posts/month'];
+
+        allSpans.forEach(span => {
+          const text = (span.textContent?.trim() || '').toLowerCase();
+
+          const matchLabel = (labels) => labels.some(l => text === l.toLowerCase() || text.includes(l.toLowerCase()));
+
+          // If this span is a label, look for a number in previous sibling or parent's previous child
+          if (matchLabel(todayLabels) && postsToday === undefined) {
+            // Check previous sibling element
+            let prev = span.previousElementSibling;
+            if (!prev && span.parentElement) prev = span.parentElement.previousElementSibling;
+            if (!prev && span.parentElement?.parentElement) {
+              const parent = span.parentElement.parentElement;
+              const children = Array.from(parent.children);
+              const idx = children.indexOf(span.parentElement);
+              if (idx > 0) prev = children[idx - 1];
+            }
+            if (prev) {
+              const prevText = (prev.textContent?.trim() || '');
+              const val = parseCompactMetric(prevText);
+              if (typeof val === 'number') {
+                postsToday = val;
+                debugTexts.push(`[ADJ-TODAY] "${prevText}" + "${text}"`);
+              }
+            }
+          }
+
+          if (matchLabel(monthLabels) && postsLastMonth === undefined) {
+            let prev = span.previousElementSibling;
+            if (!prev && span.parentElement) prev = span.parentElement.previousElementSibling;
+            if (!prev && span.parentElement?.parentElement) {
+              const parent = span.parentElement.parentElement;
+              const children = Array.from(parent.children);
+              const idx = children.indexOf(span.parentElement);
+              if (idx > 0) prev = children[idx - 1];
+            }
+            if (prev) {
+              const prevText = (prev.textContent?.trim() || '');
+              const val = parseCompactMetric(prevText);
+              if (typeof val === 'number') {
+                postsLastMonth = val;
+                debugTexts.push(`[ADJ-MONTH] "${prevText}" + "${text}"`);
+              }
+            }
+          }
+        });
+      }
+
+      // ── Fallback B: Search in bodyText ──
       if (postsToday === undefined || postsLastMonth === undefined) {
         const postsBodyText = document.body.innerText;
 
@@ -668,6 +750,32 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
         const totalMemberMatch = postsBodyText.match(/สมาชิกทั้งหมด\s*([\d,]+)\s*ราย/);
         if (totalMemberMatch) {
           memberCount = parseInt(totalMemberMatch[1].replace(/,/g, ''));
+        }
+      }
+
+      // ── Fallback C: Line-based extraction from bodyText ──
+      // If still no posts data, split bodyText into lines and look for number followed by label on next line
+      if (postsToday === undefined || postsLastMonth === undefined) {
+        const lines = document.body.innerText.split(/\n/).map(l => l.trim()).filter(l => l.length > 0);
+        for (let li = 0; li < lines.length - 1; li++) {
+          const numLine = lines[li];
+          const labelLine = lines[li + 1].toLowerCase();
+
+          if (postsToday === undefined && (labelLine.includes('โพสต์ใหม่') && labelLine.includes('วันนี้') || labelLine.includes('new post') && labelLine.includes('today'))) {
+            const val = parseCompactMetric(numLine);
+            if (typeof val === 'number') {
+              postsToday = val;
+              debugTexts.push(`[LINE-TODAY] "${numLine}" / "${lines[li + 1]}"`);
+            }
+          }
+
+          if (postsLastMonth === undefined && (labelLine.includes('โพสต์') && (labelLine.includes('เดือน') || labelLine.includes('30 วัน')) || labelLine.includes('post') && (labelLine.includes('month') || labelLine.includes('30 day')))) {
+            const val = parseCompactMetric(numLine);
+            if (typeof val === 'number') {
+              postsLastMonth = val;
+              debugTexts.push(`[LINE-MONTH] "${numLine}" / "${lines[li + 1]}"`);
+            }
+          }
         }
       }
 

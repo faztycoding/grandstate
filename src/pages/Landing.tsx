@@ -163,6 +163,92 @@ function GlowVortex() {
 }
 
 /* ═══════════════════════════════════════════
+   GHOST POSTING EFFECT — Live Automation Terminal
+   ═══════════════════════════════════════════ */
+function GhostPostingEffect({ isEn }: { isEn: boolean }) {
+  const [logs, setLogs] = useState<string[]>([]);
+  const messagesRef = useRef(isEn ? [
+    "🤖 AI Generating Caption...",
+    "🚀 Posting to Real Estate Group BKK",
+    "✅ Marketplace Listing Synced",
+    "📈 Reaching 5,000+ Potential Clients",
+    "🛡️ Anti-Detection: Stealth Active",
+    "📊 Analytics Updated — 47/50 Success",
+    "⚡ Batch 3/5 Complete — Sliding Window",
+    "🔗 Session Encrypted — Fingerprint Masked",
+  ] : [
+    "🤖 AI กำลังสร้างแคปชั่น...",
+    "🚀 โพสต์ไปยังกลุ่มอสังหาฯ กรุงเทพ",
+    "✅ Marketplace Listing ซิงค์แล้ว",
+    "📈 เข้าถึงผู้ซื้อ 5,000+ คน",
+    "🛡️ Anti-Detection: Stealth เปิดใช้งาน",
+    "📊 อัพเดตสถิติ — สำเร็จ 47/50 กลุ่ม",
+    "⚡ Batch 3/5 เสร็จ — Sliding Window",
+    "🔗 Session เข้ารหัส — Fingerprint ปลอม",
+  ]);
+
+  useEffect(() => {
+    const msgs = messagesRef.current;
+    let idx = 0;
+    const interval = setInterval(() => {
+      setLogs(prev => [...prev.slice(-2), msgs[idx % msgs.length]]);
+      idx++;
+    }, 2200);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 2.2, duration: 0.8 }}
+      className="relative overflow-hidden bg-black/40 backdrop-blur-xl p-4 rounded-xl border border-white/10 shadow-2xl shadow-amber-500/5 max-w-lg mx-auto"
+    >
+      {/* Background glow */}
+      <div className="absolute -top-8 -left-8 w-24 h-24 bg-amber-500 rounded-full blur-[60px] opacity-20" />
+      <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-purple-500 rounded-full blur-[60px] opacity-15" />
+
+      <div className="relative z-10 font-mono text-[12px]">
+        <div className="flex items-center gap-2 mb-3 text-amber-400/80 border-b border-white/10 pb-2">
+          <div className="flex gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-red-500" />
+            <div className="w-2 h-2 rounded-full bg-amber-500" />
+            <div className="w-2 h-2 rounded-full bg-emerald-500" />
+          </div>
+          <span className="ml-1 text-[10px] tracking-wider">GRAND$TATE_AUTOMATION_ACTIVE</span>
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse ml-auto" />
+        </div>
+
+        <div className="space-y-1.5 h-[72px]">
+          <AnimatePresence mode="popLayout">
+            {logs.map((log, i) => (
+              <motion.div
+                key={`${i}-${log}`}
+                initial={{ opacity: 0, x: -15, filter: 'blur(4px)' }}
+                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.3 }}
+                className="text-emerald-400/80 flex items-center gap-2"
+              >
+                <span className="text-amber-500/60 text-[10px]">{'>'}</span>
+                <span>{log}</span>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Breathing glow overlay */}
+      <motion.div
+        animate={{ opacity: [0.05, 0.15, 0.05] }}
+        transition={{ duration: 3, repeat: Infinity }}
+        className="absolute inset-0 bg-gradient-to-t from-amber-500/10 to-transparent pointer-events-none rounded-xl"
+      />
+    </motion.div>
+  );
+}
+
+/* ═══════════════════════════════════════════
    NEURAL FLOW — AI Core + Light Trails SVG
    ═══════════════════════════════════════════ */
 function NeuralFlowViz() {
@@ -480,7 +566,7 @@ export default function Landing() {
                 transition={{ delay: 0.5, duration: 0.8 }}
                 className="block"
               >
-                {isEn ? 'Auto-Post' : 'โพสต์อสังหาฯ'}
+                {isEn ? 'The Future of' : 'ยกระดับการขายอสังหาฯ'}
               </motion.span>
               <motion.span
                 initial={{ opacity: 0, y: 30, filter: 'blur(10px)' }}
@@ -489,7 +575,7 @@ export default function Landing() {
                 className="block"
                 style={{ background: 'linear-gradient(135deg, #f7b500, #f59e0b, #d97706, #f7b500)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', filter: 'drop-shadow(0 2px 8px rgba(247,181,0,0.4))' }}
               >
-                {isEn ? 'Real Estate' : 'อัตโนมัติ'}
+                {isEn ? 'Real Estate Automation' : 'ด้วย Automation อัจฉริยะ'}
               </motion.span>
               <motion.span
                 initial={{ opacity: 0, y: 30, filter: 'blur(10px)' }}
@@ -497,7 +583,7 @@ export default function Landing() {
                 transition={{ delay: 0.9, duration: 0.8 }}
                 className="block text-3xl md:text-4xl lg:text-5xl font-bold mt-3 text-white/80"
               >
-                {isEn ? 'Smarter. Faster. Safer.' : 'ฉลาดกว่า เร็วกว่า ปลอดภัยกว่า'}
+                {isEn ? 'Smart. Rapid. Secure.' : 'ฉลาดกว่า เข้าถึงไวกว่า ปลอดภัยที่สุด'}
               </motion.span>
             </h1>
 
@@ -508,8 +594,8 @@ export default function Landing() {
               className="text-lg md:text-xl text-white/60 max-w-2xl mx-auto mb-12 leading-relaxed"
             >
               {isEn
-                ? 'Auto-post properties to Facebook Groups + Marketplace with AI captions. Save time, boost sales.'
-                : 'ระบบช่วยโพสต์อสังหาริมทรัพย์ไปยัง Facebook Groups + Marketplace\nอัตโนมัติ พร้อม AI สร้างแคปชั่น ประหยัดเวลา เพิ่มยอดขาย'}
+                ? 'Empower your listings with AI-driven automation. Scale your reach across Facebook Groups and Marketplace effortlessly. Spend less time posting, and more time closing deals.'
+                : 'จัดการทุกโพสต์บน Facebook Groups และ Marketplace ได้ในคลิกเดียว\nพร้อม AI สร้างแคปชั่นระดับมืออาชีพ ให้คุณโฟกัสกับการปิดดีล'}
             </motion.p>
 
             {/* CTA buttons — glassmorphism on dark */}
@@ -527,6 +613,16 @@ export default function Landing() {
                 {isEn ? 'View Plans' : 'ดูแพ็กเกจ'}
                 <Crown className="w-5 h-5" />
               </a>
+            </motion.div>
+
+            {/* Ghost Posting Effect — Live Automation Terminal */}
+            <motion.div
+              initial={{ opacity: 0, y: 25 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.6, duration: 0.7 }}
+              className="mt-10"
+            >
+              <GhostPostingEffect isEn={isEn} />
             </motion.div>
 
             {/* Floating glass stat mini-cards below CTA */}

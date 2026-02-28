@@ -1003,255 +1003,308 @@ export default function AdminDashboard() {
                     </Card>
                 </>)}
 
-                {/* ═══════════════ TAB: USERS (Live) ═══════════════ */}
+                {/* ═══════════════ TAB: USERS — MATRIX CONTROL ═══════════════ */}
                 {activeTab === 'users' && (<>
-                    <Card>
-                        <CardHeader className="pb-3">
-                            <CardTitle className="flex items-center gap-2">
-                                <RadioReceiver className="w-5 h-5 text-red-500 animate-radar-ping" />
-                                {t.admin.usersTitle}
-                                <Badge variant="outline" className="text-xs bg-red-50 text-red-600 border-red-200 dark:bg-red-950/20 dark:border-red-800 gap-1.5 px-2 py-0.5 animate-pulse">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                                    LIVE Stream
-                                </Badge>
-                            </CardTitle>
-                            <CardDescription>{t.admin.usersDesc}</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            {!liveStats ? (
-                                <div className="flex items-center justify-center py-12 text-muted-foreground gap-2"><Loader2 className="w-5 h-5 animate-spin" />{t.admin.connectingBackend}</div>
-                            ) : (
-                                <div className="space-y-4">
-                                    {/* Summary Cards */}
-                                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-                                        <div className="p-3 rounded-xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800"><div className="flex items-center gap-1.5 mb-1"><Wifi className="w-3.5 h-3.5 text-green-600" /><span className="text-[11px] font-medium text-green-700 dark:text-green-400">{t.admin.online}</span></div><p className="text-2xl font-bold text-green-700 dark:text-green-300">{liveStats.onlineUsers}</p></div>
-                                        <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800"><div className="flex items-center gap-1.5 mb-1"><Users className="w-3.5 h-3.5 text-blue-600" /><span className="text-[11px] font-medium text-blue-700 dark:text-blue-400">{t.admin.totalUsers}</span></div><p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{allUsers.length || liveStats.activeUsers}</p></div>
-                                        <div className="p-3 rounded-xl bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800"><div className="flex items-center gap-1.5 mb-1"><Zap className={cn("w-3.5 h-3.5 text-orange-600", liveStats.automation.currentlyRunning > 0 && "animate-pulse")} /><span className="text-[11px] font-medium text-orange-700 dark:text-orange-400">Automation</span></div><p className="text-2xl font-bold text-orange-700 dark:text-orange-300">{liveStats.automation.currentlyRunning}</p></div>
-                                        <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800"><div className="flex items-center gap-1.5 mb-1"><Activity className="w-3.5 h-3.5 text-purple-600" /><span className="text-[11px] font-medium text-purple-700 dark:text-purple-400">{t.admin.runsToday}</span></div><p className="text-2xl font-bold text-purple-700 dark:text-purple-300">{liveStats.automation.totalRunsToday}</p></div>
-                                        <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700"><div className="flex items-center gap-1.5 mb-1"><Monitor className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" /><span className="text-[11px] font-medium text-gray-700 dark:text-gray-400">Browsers</span></div><p className="text-2xl font-bold text-gray-700 dark:text-gray-300">{liveStats.activeBrowsers}/{liveStats.maxBrowsers}</p></div>
-                                    </div>
+                <div className="relative rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(180deg, hsl(222 47% 6%) 0%, hsl(222 47% 4%) 100%)' }}>
+                    {/* Blueprint Grid BG */}
+                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(148,163,184,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.5) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+                    {/* Background Gear */}
+                    <div className="absolute -top-32 -right-32 opacity-[0.02] pointer-events-none">
+                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 120, repeat: Infinity, ease: 'linear' }}>
+                            <Settings size={400} className="text-slate-400" />
+                        </motion.div>
+                    </div>
+                    {/* Scanning line */}
+                    <motion.div animate={{ top: ['-5%', '105%'] }} transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
+                        className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-amber-500/30 to-transparent pointer-events-none z-20" />
 
-                                    {/* Tasks Summary */}
-                                    {(liveStats.automation.totalTasksCompleted > 0 || liveStats.automation.totalTasksFailed > 0 || liveStats.automation.totalTasksPending > 0) && (
-                                        <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 text-sm">
-                                            <span className="text-muted-foreground whitespace-nowrap">Tasks:</span>
-                                            <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">✅ {liveStats.automation.totalTasksCompleted} {t.admin.success}</Badge>
-                                            <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">❌ {liveStats.automation.totalTasksFailed} {t.admin.failed}</Badge>
-                                            {liveStats.automation.totalTasksPending > 0 && <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">⏳ {liveStats.automation.totalTasksPending} {t.admin.inProgress}</Badge>}
+                    <div className="relative z-10 p-6">
+                        {/* ── Header ── */}
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 border-b border-amber-500/20 pb-5 gap-4">
+                            <div>
+                                <div className="flex items-center gap-3 mb-1">
+                                    <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight uppercase">User <span className="text-amber-500">Matrix Control</span></h2>
+                                    <Badge variant="outline" className="text-[9px] bg-red-500/10 text-red-400 border-red-500/30 gap-1.5 px-2 py-0.5 animate-pulse font-bold">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-red-500" /> LIVE
+                                    </Badge>
+                                </div>
+                                <p className="text-[10px] text-slate-500 font-mono tracking-widest uppercase">Master Administration Interface</p>
+                            </div>
+                            <div className="relative w-full md:w-80">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
+                                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="SEARCH BY NAME OR EMAIL..."
+                                    className="w-full bg-slate-900/80 border border-slate-800 rounded-xl py-2.5 pl-9 pr-4 text-[11px] text-amber-400 font-mono placeholder:text-slate-600 focus:border-amber-500/50 focus:outline-none transition-all" />
+                            </div>
+                        </div>
+
+                        {!liveStats ? (
+                            <div className="flex items-center justify-center py-20 text-slate-500 gap-3">
+                                <Loader2 className="w-6 h-6 animate-spin text-amber-500/50" />
+                                <span className="text-sm font-mono">{t.admin.connectingBackend}</span>
+                            </div>
+                        ) : (<>
+                            {/* ── Stats Grid ── */}
+                            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+                                {[
+                                    { label: 'Online', value: liveStats.onlineUsers, icon: <Zap className="w-3.5 h-3.5" />, color: 'text-green-400' },
+                                    { label: 'Total Users', value: allUsers.length || liveStats.activeUsers, icon: <Users className="w-3.5 h-3.5" />, color: 'text-blue-400' },
+                                    { label: 'Automation', value: liveStats.automation.currentlyRunning, icon: <Activity className="w-3.5 h-3.5" />, color: 'text-amber-400' },
+                                    { label: 'Runs Today', value: liveStats.automation.totalRunsToday, icon: <TrendingUp className="w-3.5 h-3.5" />, color: 'text-purple-400' },
+                                    { label: 'Browsers', value: `${liveStats.activeBrowsers}/${liveStats.maxBrowsers}`, icon: <Monitor className="w-3.5 h-3.5" />, color: 'text-slate-400' },
+                                ].map((s, i) => (
+                                    <div key={i} className="bg-slate-900/60 border border-slate-800 p-4 rounded-2xl backdrop-blur-sm hover:border-slate-700 transition-colors">
+                                        <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                                            {s.icon} {s.label}
                                         </div>
-                                    )}
+                                        <p className={cn('text-2xl font-black font-mono', s.color)}>{s.value}</p>
+                                    </div>
+                                ))}
+                            </div>
 
-                                    {/* Per-User Cards — All Registered Users */}
-                                    {(() => {
-                                        const liveMap = new Map<string, LiveUser>();
-                                        for (const lu of (liveStats.users || [])) { if (lu.fullUserId) liveMap.set(lu.fullUserId, lu); }
-                                        const displayUsers: LiveUser[] = allUsersLoaded
-                                            ? allUsers.map(au => { const live = au.fullUserId ? liveMap.get(au.fullUserId) : null; return live ? { ...au, ...live, displayName: au.displayName || live.displayName, fullName: au.fullName || live.fullName } : au; })
-                                            : liveStats.users || [];
-                                        const sorted = [...displayUsers].sort((a, b) => {
-                                            const aRun = (a.isRunningGroup || a.isRunningMarketplace) ? 1 : 0;
-                                            const bRun = (b.isRunningGroup || b.isRunningMarketplace) ? 1 : 0;
-                                            if (bRun !== aRun) return bRun - aRun;
-                                            if (b.isOnline !== a.isOnline) return b.isOnline ? 1 : -1;
-                                            return b.todayPosts - a.todayPosts;
-                                        });
-                                        if (sorted.length === 0) return <p className="text-center text-sm text-muted-foreground py-8">{t.admin.noUsers}</p>;
-                                        return (<div className="space-y-2">{sorted.map(u => {
-                                                const isRunning = u.isRunningGroup || u.isRunningMarketplace;
-                                                const taskPct = u.currentTasks.total > 0 ? Math.round(((u.currentTasks.completed + u.currentTasks.failed) / u.currentTasks.total) * 100) : 0;
-                                                const lic = u.fullUserId ? userLicenses[u.fullUserId] : null;
-                                                const userPkg = lic?.package || 'free';
-                                                const isExpanded = expandedUser === u.fullUserId;
-                                                return (
-                                                <div key={u.userId} className={cn(
-                                                    "rounded-xl border transition-all hover:shadow-md group/card",
-                                                    u.banned ? "bg-red-50/30 dark:bg-red-950/10 border-red-200 dark:border-red-900/50 opacity-70" :
-                                                    isRunning ? "bg-gradient-to-r from-amber-50/50 via-card to-card dark:from-amber-950/10 border-amber-200/70 dark:border-amber-800/40" :
-                                                    "bg-card border-border hover:border-amber-300/50 dark:hover:border-amber-700/30"
-                                                )}>
-                                                    {/* Main row */}
-                                                    <div className="p-3.5 cursor-pointer" onClick={() => setExpandedUser(isExpanded ? null : (u.fullUserId || null))}>
-                                                      {/* Top: Avatar + Info + Arrow */}
-                                                      <div className="flex items-start gap-3">
-                                                        {/* Avatar */}
-                                                        <div className="relative flex-shrink-0">
-                                                            <div className={cn("w-11 h-11 rounded-xl flex items-center justify-center text-sm font-bold shadow-sm",
-                                                                u.banned ? "bg-red-100 dark:bg-red-900/30 text-red-500" :
-                                                                userPkg === 'elite' ? "bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/40 dark:to-purple-800/30 text-purple-600 dark:text-purple-400" :
-                                                                userPkg === 'agent' ? "bg-gradient-to-br from-amber-100 to-amber-200 dark:from-amber-900/40 dark:to-amber-800/30 text-amber-700 dark:text-amber-400" :
-                                                                "bg-gradient-to-br from-emerald-100 to-emerald-200 dark:from-emerald-900/40 dark:to-emerald-800/30 text-emerald-600 dark:text-emerald-400"
-                                                            )}>
-                                                                {u.banned ? '🚫' : (u.displayName || u.email || u.userId)?.[0]?.toUpperCase() || '?'}
-                                                            </div>
-                                                            <div className={cn(
-                                                                "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-card",
-                                                                u.banned ? "bg-red-400" : u.isOnline ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
-                                                            )} />
-                                                        </div>
-
-                                                        {/* User Info */}
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-1.5 flex-wrap">
-                                                                <p className={cn("text-[13px] font-bold truncate", u.banned && "line-through text-red-400")}>{u.displayName || u.email?.split('@')[0] || u.userId}</p>
-                                                                {u.isOnline && !u.banned && <span className="text-[8px] font-semibold text-green-600 dark:text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded-md">Online</span>}
-                                                                <span className={cn("text-[8px] font-bold px-1.5 py-0.5 rounded-md",
-                                                                    userPkg === 'elite' ? "bg-purple-500/10 text-purple-600 dark:text-purple-400" :
-                                                                    userPkg === 'agent' ? "bg-amber-500/10 text-amber-600 dark:text-amber-400" :
-                                                                    "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                                                                )}>{userPkg === 'free' ? 'ROOKIE' : userPkg === 'agent' ? 'AGENT' : 'ELITE'}</span>
-                                                                {u.banned && <span className="text-[8px] font-bold text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded-md">BANNED</span>}
-                                                                {isAdminEmail(u.email) && <span className="inline-flex items-center gap-0.5 text-[8px] font-bold text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded-md"><Crown className="w-2.5 h-2.5" />ADMIN</span>}
-                                                            </div>
-                                                            <div className="flex items-center gap-1.5 mt-0.5">
-                                                                <p className="text-[11px] text-muted-foreground truncate">{u.email || u.userId}</p>
-                                                                {(u as any).displayId && (
-                                                                    <code className="text-[9px] font-mono font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">{(u as any).displayId}</code>
-                                                                )}
-                                                            </div>
-                                                            {u.fullName && <p className="text-[10px] text-muted-foreground/60 mt-0.5 truncate">{u.fullName}</p>}
-                                                        </div>
-
-                                                        {/* Right: Stats + Arrow */}
-                                                        <div className="flex items-center gap-3 flex-shrink-0">
-                                                            {isRunning && (
-                                                                <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                                                                    <Zap className="w-3 h-3 text-amber-500 animate-pulse" />
-                                                                    <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400">
-                                                                        {u.isRunningGroup && u.isRunningMarketplace ? 'GRP+MKT' : u.isRunningGroup ? 'Groups' : 'MKT'}
-                                                                    </span>
-                                                                    {u.fullUserId && (
-                                                                        <button className="ml-1 text-red-400 hover:text-red-500" disabled={forceStoppingUser === u.fullUserId}
-                                                                            onClick={(e) => { e.stopPropagation(); handleForceStop(u.fullUserId!, u.displayName || u.userId); }}>
-                                                                            {forceStoppingUser === u.fullUserId ? <Loader2 className="w-3 h-3 animate-spin" /> : <StopCircle className="w-3 h-3" />}
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                            )}
-                                                            {/* Post & Run stats */}
-                                                            <div className="flex gap-3">
-                                                                <div className="text-center">
-                                                                    <p className="text-base font-bold tabular-nums leading-none">{u.todayPosts}</p>
-                                                                    <p className="text-[8px] text-muted-foreground/70 mt-0.5">โพสต์</p>
-                                                                </div>
-                                                                <div className="text-center">
-                                                                    <p className="text-base font-bold tabular-nums leading-none">{u.automationRuns}</p>
-                                                                    <p className="text-[8px] text-muted-foreground/70 mt-0.5">สั่งการ</p>
-                                                                </div>
-                                                            </div>
-                                                            {u.currentTasks.total > 0 && (
-                                                                <div className="w-14">
-                                                                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                                                                        <div className="h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full transition-all" style={{ width: `${taskPct}%` }} />
-                                                                    </div>
-                                                                    <span className="text-[8px] text-muted-foreground">{taskPct}%</span>
-                                                                </div>
-                                                            )}
-                                                            <motion.div animate={{ rotate: isExpanded ? 90 : 0 }} transition={{ duration: 0.2 }} className="text-muted-foreground/40 group-hover/card:text-amber-500 transition-colors">
-                                                                <ChevronRight className="w-4.5 h-4.5" />
-                                                            </motion.div>
-                                                        </div>
-                                                      </div>
-                                                    </div>
-
-                                                    {/* Expanded management panel */}
-                                                    <AnimatePresence>
-                                                    {isExpanded && u.fullUserId && (
-                                                        <motion.div
-                                                            initial={{ height: 0, opacity: 0 }}
-                                                            animate={{ height: 'auto', opacity: 1 }}
-                                                            exit={{ height: 0, opacity: 0 }}
-                                                            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-                                                            className="overflow-hidden"
-                                                        >
-                                                        <div className="px-3 pb-3 pt-0 border-t border-border/50 space-y-3">
-                                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3">
-                                                                {/* License info */}
-                                                                <div className="p-2.5 rounded-lg bg-muted/50 space-y-1">
-                                                                    <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">License</p>
-                                                                    {lic ? (
-                                                                        <>
-                                                                            <p className="text-xs font-mono truncate">{lic.license_key}</p>
-                                                                            <p className="text-[10px] text-muted-foreground">
-                                                                                หมดอายุ: {new Date(lic.expires_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}
-                                                                                {!lic.is_active && <span className="text-red-500 ml-1">(ระงับ)</span>}
-                                                                            </p>
-                                                                        </>
-                                                                    ) : (
-                                                                        <p className="text-xs text-muted-foreground">ไม่มี License (Free tier)</p>
-                                                                    )}
-                                                                </div>
-
-                                                                {/* Change package */}
-                                                                <div className="p-2.5 rounded-lg bg-muted/50 space-y-1.5">
-                                                                    <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">เปลี่ยนแพ็กเกจ</p>
-                                                                    <div className="flex gap-1">
-                                                                        {(['free', 'agent', 'elite'] as const).map(pkg => {
-                                                                            const pkgColors = {
-                                                                                free: { active: 'bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-500', inactive: 'text-emerald-600 border-emerald-300 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-700 dark:hover:bg-emerald-950/30' },
-                                                                                agent: { active: 'bg-amber-500 hover:bg-amber-600 text-white border-amber-500', inactive: 'text-amber-600 border-amber-300 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-700 dark:hover:bg-amber-950/30' },
-                                                                                elite: { active: 'bg-purple-500 hover:bg-purple-600 text-white border-purple-500', inactive: 'text-purple-600 border-purple-300 hover:bg-purple-50 dark:text-purple-400 dark:border-purple-700 dark:hover:bg-purple-950/30' },
-                                                                            };
-                                                                            const isActive = userPkg === pkg;
-                                                                            const colors = pkgColors[pkg];
-                                                                            const pkgLabels = { free: 'FREE', agent: 'AGENT', elite: 'ELITE' };
-                                                                            const pkgIcons = { free: <Rocket className="w-2.5 h-2.5" />, agent: <Star className="w-2.5 h-2.5" />, elite: <Crown className="w-2.5 h-2.5" /> };
-                                                                            return (
-                                                                                <Button key={pkg} size="sm" variant="outline"
-                                                                                    className={cn("h-7 px-2.5 text-[10px] font-bold gap-1 transition-all", isActive ? colors.active : colors.inactive, isActive && "pointer-events-none shadow-sm")}
-                                                                                    disabled={changingPkgUser === u.fullUserId}
-                                                                                    onClick={(e) => { e.stopPropagation(); handleChangePackage(u.fullUserId!, pkg); }}>
-                                                                                    {changingPkgUser === u.fullUserId ? <Loader2 className="w-3 h-3 animate-spin" /> : <>{pkgIcons[pkg]} {pkgLabels[pkg]}</>}
-                                                                                </Button>
-                                                                            );
-                                                                        })}
-                                                                    </div>
-                                                                </div>
-
-                                                                {/* Ban / Post stats */}
-                                                                <div className="p-2.5 rounded-lg bg-muted/50 space-y-1.5">
-                                                                    <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">จัดการ</p>
-                                                                    <div className="flex items-center gap-2">
-                                                                        {u.banned ? (
-                                                                            <Button size="sm" variant="outline"
-                                                                                className="h-7 px-3 text-xs text-green-600 border-green-200 hover:bg-green-50 dark:border-green-800 dark:hover:bg-green-950/20"
-                                                                                disabled={banningUser === u.fullUserId}
-                                                                                onClick={(e) => { e.stopPropagation(); handleBanUser(u.fullUserId!, u.displayName || u.userId, false); }}>
-                                                                                {banningUser === u.fullUserId ? <Loader2 className="w-3 h-3 animate-spin" /> : '✅ ปลดแบน'}
-                                                                            </Button>
-                                                                        ) : (
-                                                                            <Button size="sm" variant="outline"
-                                                                                className="h-7 px-3 text-xs text-red-600 border-red-200 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-950/20"
-                                                                                disabled={banningUser === u.fullUserId}
-                                                                                onClick={(e) => { e.stopPropagation(); handleBanUser(u.fullUserId!, u.displayName || u.userId, true); }}>
-                                                                                {banningUser === u.fullUserId ? <Loader2 className="w-3 h-3 animate-spin" /> : '🚫 แบนผู้ใช้'}
-                                                                            </Button>
-                                                                        )}
-                                                                        <Button size="sm" variant="outline"
-                                                                            className="h-7 px-3 text-xs text-rose-600 border-rose-300 hover:bg-rose-50 dark:border-rose-800 dark:hover:bg-rose-950/20"
-                                                                            disabled={deletingUser === u.fullUserId}
-                                                                            onClick={(e) => { e.stopPropagation(); handleDeleteUser(u.fullUserId!, u.displayName || u.userId); }}>
-                                                                            {deletingUser === u.fullUserId ? <Loader2 className="w-3 h-3 animate-spin" /> : '🗑️ ลบข้อมูล'}
-                                                                        </Button>
-                                                                        {u.todayPosts > 0 && (
-                                                                            <span className="text-[10px] text-muted-foreground">✅{u.todaySuccess} ❌{u.todayFailed}</span>
-                                                                        )}
-                                                                        {u.lineId && <span className="text-[10px] text-green-600">LINE: {u.lineId}</span>}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        </motion.div>
-                                                    )}
-                                                    </AnimatePresence>
-                                                </div>
-                                                );
-                                            })}
-                                        </div>);
-                                    })()}
+                            {/* Tasks summary bar */}
+                            {(liveStats.automation.totalTasksCompleted > 0 || liveStats.automation.totalTasksFailed > 0 || liveStats.automation.totalTasksPending > 0) && (
+                                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-900/60 border border-slate-800 mb-5 text-[11px]">
+                                    <span className="text-slate-500 font-mono text-[10px] uppercase tracking-wider">Tasks</span>
+                                    <span className="text-emerald-400 font-bold">✅ {liveStats.automation.totalTasksCompleted}</span>
+                                    <span className="text-red-400 font-bold">❌ {liveStats.automation.totalTasksFailed}</span>
+                                    {liveStats.automation.totalTasksPending > 0 && <span className="text-amber-400 font-bold">⏳ {liveStats.automation.totalTasksPending}</span>}
                                 </div>
                             )}
-                        </CardContent>
-                    </Card>
+
+                            {/* ── User Cards ── */}
+                            {(() => {
+                                const liveMap = new Map<string, LiveUser>();
+                                for (const lu of (liveStats.users || [])) { if (lu.fullUserId) liveMap.set(lu.fullUserId, lu); }
+                                const displayUsers: LiveUser[] = allUsersLoaded
+                                    ? allUsers.map(au => { const live = au.fullUserId ? liveMap.get(au.fullUserId) : null; return live ? { ...au, ...live, displayName: au.displayName || live.displayName, fullName: au.fullName || live.fullName } : au; })
+                                    : liveStats.users || [];
+                                // Filter by search
+                                const searched = searchQuery.trim()
+                                    ? displayUsers.filter(u => {
+                                        const q = searchQuery.toLowerCase();
+                                        return (u.displayName || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q) || (u.userId || '').toLowerCase().includes(q);
+                                    })
+                                    : displayUsers;
+                                const sorted = [...searched].sort((a, b) => {
+                                    const aRun = (a.isRunningGroup || a.isRunningMarketplace) ? 1 : 0;
+                                    const bRun = (b.isRunningGroup || b.isRunningMarketplace) ? 1 : 0;
+                                    if (bRun !== aRun) return bRun - aRun;
+                                    if (b.isOnline !== a.isOnline) return b.isOnline ? 1 : -1;
+                                    return b.todayPosts - a.todayPosts;
+                                });
+                                if (sorted.length === 0) return <div className="text-center py-12"><Users className="w-10 h-10 text-slate-700 mx-auto mb-2" /><p className="text-sm text-slate-600 font-mono">{searchQuery ? 'No results found' : t.admin.noUsers}</p></div>;
+                                return (<div className="space-y-3">
+                                    <AnimatePresence>
+                                    {sorted.map((u, idx) => {
+                                        const isRunning = u.isRunningGroup || u.isRunningMarketplace;
+                                        const taskPct = u.currentTasks.total > 0 ? Math.round(((u.currentTasks.completed + u.currentTasks.failed) / u.currentTasks.total) * 100) : 0;
+                                        const lic = u.fullUserId ? userLicenses[u.fullUserId] : null;
+                                        const userPkg = lic?.package || 'free';
+                                        const isExpanded = expandedUser === u.fullUserId;
+                                        const tierConfig = {
+                                            elite: { color: 'text-purple-400', bg: 'bg-purple-500/15', border: 'border-purple-500/30', icon: <Crown className="w-3 h-3" />, label: 'ELITE' },
+                                            agent: { color: 'text-amber-400', bg: 'bg-amber-500/15', border: 'border-amber-500/30', icon: <Star className="w-3 h-3" />, label: 'AGENT' },
+                                            free: { color: 'text-emerald-400', bg: 'bg-emerald-500/15', border: 'border-emerald-500/30', icon: <Rocket className="w-3 h-3" />, label: 'ROOKIE' },
+                                        };
+                                        const tier = tierConfig[userPkg as keyof typeof tierConfig] || tierConfig.free;
+                                        return (
+                                        <motion.div key={u.userId}
+                                            initial={{ opacity: 0, x: -15 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: idx * 0.03 }}
+                                            className={cn(
+                                                "rounded-2xl border overflow-hidden transition-all group/card",
+                                                u.banned ? "bg-red-950/20 border-red-900/40 opacity-60" :
+                                                isRunning ? "bg-slate-900/60 border-amber-500/30 shadow-lg shadow-amber-500/5" :
+                                                "bg-slate-900/40 border-slate-800 hover:border-amber-500/30"
+                                            )}
+                                        >
+                                            {/* Main row */}
+                                            <div className="p-4 cursor-pointer flex items-center gap-4" onClick={() => setExpandedUser(isExpanded ? null : (u.fullUserId || null))}>
+                                                {/* Avatar */}
+                                                <div className="relative flex-shrink-0">
+                                                    <div className={cn(
+                                                        "w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-black border transition-transform group-hover/card:scale-105",
+                                                        u.banned ? "bg-red-500/10 border-red-500/30 text-red-400" :
+                                                        userPkg === 'elite' ? "bg-purple-500/10 border-purple-500/25 text-purple-400" :
+                                                        userPkg === 'agent' ? "bg-amber-500/10 border-amber-500/25 text-amber-400" :
+                                                        "bg-emerald-500/10 border-emerald-500/25 text-emerald-400"
+                                                    )}>
+                                                        {u.banned ? '🚫' : (u.displayName || u.email || u.userId)?.[0]?.toUpperCase() || '?'}
+                                                    </div>
+                                                    {u.isOnline && !u.banned && (
+                                                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-[3px] border-slate-950 rounded-full animate-pulse" />
+                                                    )}
+                                                    {!u.isOnline && !u.banned && (
+                                                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-slate-700 border-[3px] border-slate-950 rounded-full" />
+                                                    )}
+                                                </div>
+
+                                                {/* User Info */}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                                                        <p className={cn("text-sm font-black text-white truncate", u.banned && "line-through text-red-400/70")}>
+                                                            {u.displayName || u.email?.split('@')[0] || u.userId}
+                                                        </p>
+                                                        <span className={cn("text-[8px] font-black px-2 py-0.5 rounded-full border flex items-center gap-1", tier.bg, tier.color, tier.border)}>
+                                                            {tier.icon} {tier.label}
+                                                        </span>
+                                                        {u.banned && <span className="text-[8px] font-black text-red-400 bg-red-500/15 border border-red-500/30 px-2 py-0.5 rounded-full">BANNED</span>}
+                                                        {isAdminEmail(u.email) && <span className="text-[8px] font-black text-amber-400 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full flex items-center gap-0.5"><Crown className="w-2.5 h-2.5" />ADMIN</span>}
+                                                    </div>
+                                                    <p className="text-[11px] text-slate-500 font-mono truncate">
+                                                        {u.email || u.userId}
+                                                        {(u as any).displayId && <> • <span className="text-amber-500/60">{(u as any).displayId}</span></>}
+                                                    </p>
+                                                </div>
+
+                                                {/* Right stats */}
+                                                <div className="flex items-center gap-4 flex-shrink-0">
+                                                    {isRunning && (
+                                                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                                                            <Zap className="w-3 h-3 text-amber-500 animate-pulse" />
+                                                            <span className="text-[9px] font-black text-amber-400">
+                                                                {u.isRunningGroup && u.isRunningMarketplace ? 'GRP+MKT' : u.isRunningGroup ? 'Groups' : 'MKT'}
+                                                            </span>
+                                                            {u.fullUserId && (
+                                                                <button className="ml-1 text-red-400 hover:text-red-300 transition-colors" disabled={forceStoppingUser === u.fullUserId}
+                                                                    onClick={(e) => { e.stopPropagation(); handleForceStop(u.fullUserId!, u.displayName || u.userId); }}>
+                                                                    {forceStoppingUser === u.fullUserId ? <Loader2 className="w-3 h-3 animate-spin" /> : <StopCircle className="w-3 h-3" />}
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    <div className="text-center">
+                                                        <p className="text-lg font-black text-white tabular-nums leading-none">{u.todayPosts}</p>
+                                                        <p className="text-[8px] text-slate-600 font-bold uppercase mt-0.5">Posts</p>
+                                                    </div>
+                                                    <div className="text-center border-l border-slate-800 pl-4">
+                                                        <p className="text-lg font-black text-white tabular-nums leading-none">{u.automationRuns}</p>
+                                                        <p className="text-[8px] text-slate-600 font-bold uppercase mt-0.5">Runs</p>
+                                                    </div>
+                                                    {u.currentTasks.total > 0 && (
+                                                        <div className="w-14">
+                                                            <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                                                <motion.div initial={{ width: 0 }} animate={{ width: `${taskPct}%` }} className="h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full" />
+                                                            </div>
+                                                            <span className="text-[8px] text-slate-600 font-mono">{taskPct}%</span>
+                                                        </div>
+                                                    )}
+                                                    <button className="p-2.5 bg-slate-800 hover:bg-amber-500 hover:text-black text-slate-400 rounded-xl transition-all" onClick={(e) => { e.stopPropagation(); setExpandedUser(isExpanded ? null : (u.fullUserId || null)); }}>
+                                                        <Settings size={16} />
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Expanded management panel */}
+                                            <AnimatePresence>
+                                            {isExpanded && u.fullUserId && (
+                                                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden">
+                                                <div className="px-4 pb-4 pt-0 border-t border-slate-800 space-y-4">
+                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3">
+                                                        {/* License info */}
+                                                        <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1.5">
+                                                            <p className="text-[9px] text-amber-500 font-black uppercase tracking-widest flex items-center gap-1.5"><Key className="w-3 h-3" /> License</p>
+                                                            {lic ? (
+                                                                <>
+                                                                    <p className="text-[11px] font-mono text-slate-300 truncate">{lic.license_key}</p>
+                                                                    <p className="text-[10px] text-slate-500">
+                                                                        Expires: <span className="text-slate-300">{new Date(lic.expires_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                                                                        {!lic.is_active && <span className="text-red-400 ml-1">(suspended)</span>}
+                                                                    </p>
+                                                                </>
+                                                            ) : (
+                                                                <p className="text-[11px] text-slate-600">No License (Free tier)</p>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Change package */}
+                                                        <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+                                                            <p className="text-[9px] text-amber-500 font-black uppercase tracking-widest flex items-center gap-1.5"><Crown className="w-3 h-3" /> Subscription Tier</p>
+                                                            <div className="flex gap-1.5">
+                                                                {(['free', 'agent', 'elite'] as const).map(pkg => {
+                                                                    const isActive = userPkg === pkg;
+                                                                    const styles = {
+                                                                        free: isActive ? 'bg-emerald-500 text-black border-emerald-500' : 'bg-slate-900 border-slate-700 text-slate-400 hover:border-emerald-500/50 hover:text-emerald-400',
+                                                                        agent: isActive ? 'bg-amber-500 text-black border-amber-500' : 'bg-slate-900 border-slate-700 text-slate-400 hover:border-amber-500/50 hover:text-amber-400',
+                                                                        elite: isActive ? 'bg-purple-500 text-black border-purple-500' : 'bg-slate-900 border-slate-700 text-slate-400 hover:border-purple-500/50 hover:text-purple-400',
+                                                                    };
+                                                                    const labels = { free: 'ROOKIE', agent: 'AGENT', elite: 'ELITE' };
+                                                                    return (
+                                                                        <button key={pkg}
+                                                                            className={cn("flex-1 py-2 rounded-lg border text-[9px] font-black transition-all", styles[pkg], isActive && "pointer-events-none shadow-sm")}
+                                                                            disabled={changingPkgUser === u.fullUserId}
+                                                                            onClick={(e) => { e.stopPropagation(); handleChangePackage(u.fullUserId!, pkg); }}>
+                                                                            {changingPkgUser === u.fullUserId ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : labels[pkg]}
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Actions */}
+                                                        <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+                                                            <p className="text-[9px] text-amber-500 font-black uppercase tracking-widest flex items-center gap-1.5"><Shield className="w-3 h-3" /> Actions</p>
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                {u.banned ? (
+                                                                    <button className="px-3 py-1.5 rounded-lg text-[10px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500 hover:text-black transition-all"
+                                                                        disabled={banningUser === u.fullUserId}
+                                                                        onClick={(e) => { e.stopPropagation(); handleBanUser(u.fullUserId!, u.displayName || u.userId, false); }}>
+                                                                        {banningUser === u.fullUserId ? '...' : '✅ UNBAN'}
+                                                                    </button>
+                                                                ) : (
+                                                                    <button className="px-3 py-1.5 rounded-lg text-[10px] font-black bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white transition-all"
+                                                                        disabled={banningUser === u.fullUserId}
+                                                                        onClick={(e) => { e.stopPropagation(); handleBanUser(u.fullUserId!, u.displayName || u.userId, true); }}>
+                                                                        {banningUser === u.fullUserId ? '...' : '🚫 BAN'}
+                                                                    </button>
+                                                                )}
+                                                                <button className="px-3 py-1.5 rounded-lg text-[10px] font-black bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500 hover:text-white transition-all"
+                                                                    disabled={deletingUser === u.fullUserId}
+                                                                    onClick={(e) => { e.stopPropagation(); handleDeleteUser(u.fullUserId!, u.displayName || u.userId); }}>
+                                                                    {deletingUser === u.fullUserId ? '...' : <><Trash2 className="w-3 h-3 inline mr-1" />DELETE</>}
+                                                                </button>
+                                                                {u.todayPosts > 0 && (
+                                                                    <span className="text-[10px] text-slate-500 font-mono">✅{u.todaySuccess} ❌{u.todayFailed}</span>
+                                                                )}
+                                                                {u.lineId && <span className="text-[10px] text-green-400 font-mono">LINE: {u.lineId}</span>}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                </motion.div>
+                                            )}
+                                            </AnimatePresence>
+                                        </motion.div>
+                                        );
+                                    })}
+                                    </AnimatePresence>
+                                </div>);
+                            })()}
+
+                            {/* ── Console Footer ── */}
+                            <div className="mt-6 bg-slate-950/80 border border-slate-800 rounded-2xl p-4 font-mono">
+                                <div className="flex items-center gap-2 text-slate-600 text-[9px] mb-3 uppercase tracking-[0.2em] font-black">
+                                    <Activity size={12} className="text-amber-500/50" /> User Activity Log
+                                </div>
+                                <div className="space-y-1 text-[10px]">
+                                    {(liveStats.users || []).filter(u => u.isOnline).slice(0, 3).map((u, i) => (
+                                        <p key={i} className="text-green-500/70">
+                                            <span className="text-amber-500/50">[{new Date().toLocaleTimeString('th-TH', { hour12: false })}]</span>{' '}
+                                            {u.displayName || u.email?.split('@')[0] || u.userId} — <span className="text-emerald-500/60">online</span>
+                                            {(u.isRunningGroup || u.isRunningMarketplace) && <span className="text-amber-400/70"> • running automation</span>}
+                                        </p>
+                                    ))}
+                                    <p className="text-slate-700">
+                                        <span className="text-slate-800">[SYS]</span> {allUsers.length || liveStats.activeUsers} users registered • {liveStats.onlineUsers} online • {liveStats.automation.currentlyRunning} automating
+                                    </p>
+                                    <p className="animate-pulse text-amber-500/40">{'>'} Awaiting admin commands...</p>
+                                </div>
+                            </div>
+                        </>)}
+                    </div>
+                </div>
                 </>)}
 
                 {/* ═══════════════ TAB: LICENSES ═══════════════ */}

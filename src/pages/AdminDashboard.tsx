@@ -1460,7 +1460,7 @@ export default function AdminDashboard() {
                                                 <div className="relative z-10 p-3 min-h-[120px] flex flex-col justify-between">
                                                     {/* Slot header: ID + gear + status */}
                                                     <div className="flex justify-between items-start mb-2">
-                                                        <span className="text-[10px] text-amber-500/60 font-mono font-bold tracking-widest">ID: {String(i + 1).padStart(3, '0')}</span>
+                                                        <span className="text-[10px] text-amber-500/60 font-mono font-bold tracking-widest">No. {String(i + 1).padStart(3, '0')}</span>
                                                         <div className="flex items-center gap-1.5">
                                                             <motion.div animate={isActive ? { rotate: 360 } : {}} transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
                                                                 className={cn(isActive ? "text-amber-500" : "text-slate-700")}>
@@ -1871,158 +1871,280 @@ export default function AdminDashboard() {
                         </div>
                     </div>)}
 
-                    {/* ═══ Queue Detail Dialog ═══ */}
+                    {/* ═══ Queue Detail — Dark Mechanical Node Inspect ═══ */}
                     <Dialog open={!!queueDetail} onOpenChange={() => setQueueDetail(null)}>
-                        <DialogContent className="max-w-lg">
-                            <DialogHeader>
-                                <DialogTitle className="flex items-center gap-2">
-                                    {queueDetail?.type === 'running' && <><div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />{t.admin.runningJob}</>}
-                                    {queueDetail?.type === 'queued' && <><Clock className="w-4 h-4 text-amber-500" />{t.admin.queuedJob}</>}
-                                    {queueDetail?.type === 'history' && <><Activity className="w-4 h-4 text-purple-500" />{t.admin.jobHistoryTitle}</>}
-                                    {queueDetail?.type === 'stats' && <><BarChart3 className="w-4 h-4" />{t.admin.queueStats}</>}
-                                    {queueDetail?.type === 'system' && <><Monitor className="w-4 h-4 text-blue-500" />{t.admin.systemStatus}</>}
-                                    {queueDetail?.type === 'slots' && <><Zap className="w-4 h-4 text-orange-500" />{t.admin.slotsDetail}</>}
-                                </DialogTitle>
-                                <DialogDescription>
-                                    {queueDetail?.type === 'running' && t.admin.runningJobDesc}
-                                    {queueDetail?.type === 'queued' && t.admin.queuedJobDesc}
-                                    {queueDetail?.type === 'history' && t.admin.historyDesc}
-                                    {queueDetail?.type === 'stats' && t.admin.statsDesc}
-                                    {queueDetail?.type === 'system' && t.admin.systemDesc}
-                                    {queueDetail?.type === 'slots' && t.admin.slotsDesc}
-                                </DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-4">
-                                {/* Running Job Detail */}
-                                {queueDetail?.type === 'running' && queueDetail.data && (
-                                    <div className="space-y-3">
-                                        <div className="p-4 rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
-                                            <div className="grid grid-cols-2 gap-3 text-sm">
-                                                <div><p className="text-muted-foreground text-xs">User</p><p className="font-semibold truncate">{queueDetail.data.displayName || queueDetail.data.userId}</p></div>
-                                                <div><p className="text-muted-foreground text-xs">Groups</p><p className="font-semibold">{queueDetail.data.groupCount} {t.admin.groups}</p></div>
-                                                <div><p className="text-muted-foreground text-xs">Runtime</p><p className="font-mono font-semibold text-green-700 dark:text-green-400">{Math.floor(queueDetail.data.runningSec / 60)}:{String(queueDetail.data.runningSec % 60).padStart(2, '0')}</p></div>
-                                                <div><p className="text-muted-foreground text-xs">Started</p><p className="font-mono text-xs">{new Date(queueDetail.data.startedAt).toLocaleTimeString('th-TH', { hour12: false })}</p></div>
+                        <DialogContent className="max-w-2xl p-0 overflow-hidden border-amber-500/20 bg-[hsl(222,47%,5%)]">
+                            {/* Blueprint grid overlay */}
+                            <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(148,163,184,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.5) 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+                            {/* Scanning line */}
+                            <motion.div animate={{ top: ['-5%', '105%'] }} transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
+                                className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-amber-500/20 to-transparent pointer-events-none z-30" />
+                            {/* Glow orb */}
+                            <div className="absolute -top-20 -right-20 w-48 h-48 rounded-full bg-amber-500/5 blur-[80px] pointer-events-none" />
+
+                            <div className="relative z-10 p-6">
+                                {/* Header */}
+                                <DialogHeader className="pb-5 border-b border-slate-800">
+                                    <DialogTitle className="flex items-center gap-3 text-white">
+                                        <div className="p-2 bg-amber-500/15 rounded-xl border border-amber-500/30">
+                                            {queueDetail?.type === 'running' && <Activity className="w-5 h-5 text-emerald-400" />}
+                                            {queueDetail?.type === 'queued' && <Clock className="w-5 h-5 text-amber-400" />}
+                                            {queueDetail?.type === 'history' && <Activity className="w-5 h-5 text-purple-400" />}
+                                            {queueDetail?.type === 'stats' && <BarChart3 className="w-5 h-5 text-blue-400" />}
+                                            {queueDetail?.type === 'system' && <Monitor className="w-5 h-5 text-cyan-400" />}
+                                            {queueDetail?.type === 'slots' && <motion.div animate={{ rotate: 360 }} transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}><Settings className="w-5 h-5 text-amber-500" /></motion.div>}
+                                        </div>
+                                        <div>
+                                            <span className="font-black uppercase tracking-tight text-base">
+                                                {queueDetail?.type === 'running' && 'Node Inspect — Active'}
+                                                {queueDetail?.type === 'queued' && 'Node Inspect — Queued'}
+                                                {queueDetail?.type === 'history' && 'Job History Log'}
+                                                {queueDetail?.type === 'stats' && 'Engine Statistics'}
+                                                {queueDetail?.type === 'system' && 'System Diagnostics'}
+                                                {queueDetail?.type === 'slots' && 'Engine Slots Overview'}
+                                            </span>
+                                            <p className="text-[9px] text-amber-500/40 font-mono uppercase tracking-[0.2em] mt-0.5">
+                                                {queueDetail?.type === 'running' && `thread_${queueDetail.data?.userId?.slice(0,8) || 'unknown'}`}
+                                                {queueDetail?.type === 'queued' && `queue_pos_${queueDetail.data?.position || 0}`}
+                                                {queueDetail?.type === 'history' && 'historical_data_log'}
+                                                {queueDetail?.type === 'stats' && 'performance_metrics'}
+                                                {queueDetail?.type === 'system' && 'sys_diagnostics_v1.0'}
+                                                {queueDetail?.type === 'slots' && `slots_1-${queueDetail.data?.maxConcurrent || 10}`}
+                                            </p>
+                                        </div>
+                                    </DialogTitle>
+                                    <DialogDescription className="sr-only">Engine detail view</DialogDescription>
+                                </DialogHeader>
+
+                                <div className="space-y-5 pt-5">
+                                    {/* ══ Running Job Detail ══ */}
+                                    {queueDetail?.type === 'running' && queueDetail.data && (
+                                        <div className="space-y-4">
+                                            {/* Simulated Live Browser */}
+                                            <div className="relative bg-slate-950 rounded-2xl border border-slate-800 h-36 overflow-hidden">
+                                                <div className="absolute top-3 left-3 z-20 flex gap-2">
+                                                    <span className="bg-emerald-500 text-[8px] px-2 py-0.5 rounded font-black text-white animate-pulse">LIVE</span>
+                                                    <span className="bg-slate-800/80 text-[8px] px-2 py-0.5 rounded font-bold text-slate-300 backdrop-blur-md">{queueDetail.data.automationType === 'marketplace' ? 'Marketplace' : 'Group Posting'}</span>
+                                                </div>
+                                                <motion.div animate={{ rotate: 360 }} transition={{ duration: 20, repeat: Infinity, ease: 'linear' }} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-amber-500/5"><Settings size={200} /></motion.div>
+                                                <motion.div animate={{ opacity: [0.3, 0.7, 0.3] }} transition={{ duration: 2, repeat: Infinity }} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-mono text-amber-500/60 tracking-[0.3em]">EXECUTING...</motion.div>
+                                                <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_30px_rgba(0,0,0,0.7)]" />
                                             </div>
+
+                                            {/* Data Grid */}
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {[
+                                                    { label: 'User', value: queueDetail.data.displayName || queueDetail.data.userId, color: 'text-white' },
+                                                    { label: 'Groups', value: `${queueDetail.data.groupCount} groups`, color: 'text-amber-400' },
+                                                    { label: 'Runtime', value: `${Math.floor(queueDetail.data.runningSec / 60)}:${String(queueDetail.data.runningSec % 60).padStart(2, '0')}`, color: 'text-emerald-400' },
+                                                    { label: 'Started', value: new Date(queueDetail.data.startedAt).toLocaleTimeString('th-TH', { hour12: false }), color: 'text-slate-400' },
+                                                ].map((item, idx) => (
+                                                    <div key={idx} className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+                                                        <p className="text-[9px] text-slate-600 font-bold uppercase tracking-wider">{item.label}</p>
+                                                        <p className={cn("text-sm font-bold font-mono truncate", item.color)}>{item.value}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            {/* Progress */}
                                             {queueDetail.data.progress && (
-                                                <div className="mt-3 pt-3 border-t border-green-200 dark:border-green-800/50 space-y-1.5">
-                                                    <div className="flex justify-between text-xs">
-                                                        <span className="text-muted-foreground">Progress</span>
-                                                        <span className="font-medium text-green-700 dark:text-green-400">{queueDetail.data.progress.currentStep} / {queueDetail.data.progress.totalSteps}</span>
+                                                <div className="p-3 rounded-xl bg-slate-900/60 border border-emerald-500/20">
+                                                    <div className="flex justify-between text-xs mb-2">
+                                                        <span className="text-slate-500 font-bold uppercase text-[9px]">Progress</span>
+                                                        <span className="font-mono font-bold text-emerald-400">{queueDetail.data.progress.currentStep}/{queueDetail.data.progress.totalSteps}</span>
                                                     </div>
-                                                    <div className="h-2 bg-green-200 dark:bg-green-900/40 rounded-full overflow-hidden">
-                                                        <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${(queueDetail.data.progress.currentStep / Math.max(queueDetail.data.progress.totalSteps, 1)) * 100}%` }} />
+                                                    <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                                                        <motion.div className="h-full bg-emerald-500 rounded-full" style={{ boxShadow: '0 0 10px #10b981' }}
+                                                            initial={{ width: 0 }} animate={{ width: `${(queueDetail.data.progress.currentStep / Math.max(queueDetail.data.progress.totalSteps, 1)) * 100}%` }} />
                                                     </div>
-                                                    {queueDetail.data.progress.isPaused && <p className="text-xs text-amber-600 font-bold mt-1">⚠️ Automation Paused</p>}
-                                                    {queueDetail.data.progress.latestLog && <p className="text-[11px] text-muted-foreground truncate mt-1">Log: {queueDetail.data.progress.latestLog.text}</p>}
+                                                    {queueDetail.data.progress.isPaused && <p className="text-[10px] text-yellow-400 font-bold mt-2">⚠ AUTOMATION PAUSED</p>}
+                                                    {queueDetail.data.progress.latestLog && <p className="text-[10px] text-slate-500 truncate mt-1 font-mono">{queueDetail.data.progress.latestLog.text}</p>}
                                                 </div>
                                             )}
-                                        </div>
-                                        <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">{t.admin.working}</Badge>
-                                    </div>
-                                )}
-                                {/* Queued Job Detail */}
-                                {queueDetail?.type === 'queued' && queueDetail.data && (
-                                    <div className="space-y-3">
-                                        <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
-                                            <div className="grid grid-cols-2 gap-3 text-sm">
-                                                <div><p className="text-muted-foreground text-xs">User</p><p className="font-semibold truncate">{queueDetail.data.displayName || queueDetail.data.userId}</p></div>
-                                                <div><p className="text-muted-foreground text-xs">Position</p><p className="font-semibold text-amber-700 dark:text-amber-400">#{queueDetail.data.position}</p></div>
-                                                <div><p className="text-muted-foreground text-xs">Groups</p><p className="font-semibold">{queueDetail.data.groupCount} {t.admin.groups}</p></div>
-                                                <div><p className="text-muted-foreground text-xs">Waiting</p><p className="font-mono">{Math.floor(queueDetail.data.waitingSec / 60)}:{String(queueDetail.data.waitingSec % 60).padStart(2, '0')}</p></div>
-                                                <div><p className="text-muted-foreground text-xs">Est. Wait</p><p className="font-mono">~{Math.ceil(queueDetail.data.estimatedWaitSec / 60)} {t.admin.minutes}</p></div>
-                                                <div><p className="text-muted-foreground text-xs">Enqueued</p><p className="font-mono text-xs">{new Date(queueDetail.data.enqueuedAt).toLocaleTimeString('th-TH', { hour12: false })}</p></div>
+
+                                            {/* Security Blueprint */}
+                                            <div>
+                                                <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                                    <Shield className="w-3 h-3 text-amber-500" /> Security Blueprint
+                                                </p>
+                                                <div className="grid grid-cols-2 gap-1.5">
+                                                    {['Gaussian Jitter', 'Fingerprint Mask', 'Network Stealth', 'Typing Sim'].map(m => (
+                                                        <div key={m} className="flex items-center gap-2 p-2 bg-slate-950/60 border border-slate-800 rounded-lg">
+                                                            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                                                            <span className="text-[10px] font-bold text-slate-400">{m}</span>
+                                                            <span className="text-[8px] text-emerald-500/50 ml-auto font-mono">OK</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
-                                        <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">{t.admin.waiting}</Badge>
-                                    </div>
-                                )}
-                                {/* History Detail */}
-                                {queueDetail?.type === 'history' && queueDetail.data && (
-                                    <div className="space-y-3">
-                                        <div className={cn("p-4 rounded-xl border", queueDetail.data.success ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800" : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800")}>
-                                            <div className="grid grid-cols-2 gap-3 text-sm">
-                                                <div><p className="text-muted-foreground text-xs">User ID</p><p className="font-mono font-semibold">{queueDetail.data.userId}</p></div>
-                                                <div><p className="text-muted-foreground text-xs">Status</p><p className="font-semibold">{queueDetail.data.success ? `✅ ${t.admin.success}` : `❌ ${t.admin.failed}`}</p></div>
-                                                <div><p className="text-muted-foreground text-xs">Groups</p><p className="font-semibold">{queueDetail.data.groupCount} {t.admin.groups}</p></div>
-                                                <div><p className="text-muted-foreground text-xs">Duration</p><p className="font-mono font-semibold">{queueDetail.data.durationFormatted}</p></div>
-                                                <div><p className="text-muted-foreground text-xs">Completed</p><p className="font-mono text-xs">{queueDetail.data.completedAtFormatted}</p></div>
-                                                <div><p className="text-muted-foreground text-xs">Seconds</p><p className="font-mono">{queueDetail.data.durationSec}s</p></div>
+                                    )}
+
+                                    {/* ══ Queued Job Detail ══ */}
+                                    {queueDetail?.type === 'queued' && queueDetail.data && (
+                                        <div className="space-y-4">
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {[
+                                                    { label: 'User', value: queueDetail.data.displayName || queueDetail.data.userId, color: 'text-white' },
+                                                    { label: 'Position', value: `#${queueDetail.data.position}`, color: 'text-amber-400' },
+                                                    { label: 'Groups', value: `${queueDetail.data.groupCount} groups`, color: 'text-slate-300' },
+                                                    { label: 'Waiting', value: `${Math.floor(queueDetail.data.waitingSec / 60)}:${String(queueDetail.data.waitingSec % 60).padStart(2, '0')}`, color: 'text-amber-400' },
+                                                    { label: 'Est. Wait', value: `~${Math.ceil(queueDetail.data.estimatedWaitSec / 60)} min`, color: 'text-slate-400' },
+                                                    { label: 'Enqueued', value: new Date(queueDetail.data.enqueuedAt).toLocaleTimeString('th-TH', { hour12: false }), color: 'text-slate-400' },
+                                                ].map((item, idx) => (
+                                                    <div key={idx} className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+                                                        <p className="text-[9px] text-slate-600 font-bold uppercase tracking-wider">{item.label}</p>
+                                                        <p className={cn("text-sm font-bold font-mono truncate", item.color)}>{item.value}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                                                <Hourglass className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                                                <span className="text-[10px] text-amber-400 font-black uppercase tracking-wider">{t.admin.waiting}</span>
                                             </div>
                                         </div>
-                                    </div>
-                                )}
-                                {/* Stats Detail */}
-                                {queueDetail?.type === 'stats' && queueDetail.data && (
-                                    <div className="space-y-3">
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div className="p-3 rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 text-center"><p className="text-2xl font-bold text-green-600">{queueDetail.data.totalCompleted}</p><p className="text-xs text-muted-foreground">{t.admin.jobsSuccess}</p></div>
-                                            <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 text-center"><p className="text-2xl font-bold text-red-600">{queueDetail.data.totalFailed}</p><p className="text-xs text-muted-foreground">{t.admin.jobsFailed}</p></div>
-                                        </div>
-                                        <Separator />
-                                        <div className="space-y-2 text-sm">
-                                            <div className="flex justify-between"><span className="text-muted-foreground">Success Rate</span><span className="font-bold text-lg">{queueDetail.data.successRate}%</span></div>
-                                            <div className="h-3 bg-muted rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full transition-all" style={{ width: `${queueDetail.data.successRate}%` }} /></div>
-                                        </div>
-                                        <Separator />
-                                        <div className="grid grid-cols-3 gap-3 text-center">
-                                            <div className="p-2 rounded-lg bg-muted/30"><p className="font-mono font-semibold">{queueDetail.data.avgDurationFormatted}</p><p className="text-[10px] text-muted-foreground">{t.admin.average}</p></div>
-                                            <div className="p-2 rounded-lg bg-muted/30"><p className="font-mono font-semibold">{Math.floor(queueDetail.data.longestJobSec / 60)}:{String(queueDetail.data.longestJobSec % 60).padStart(2, '0')}</p><p className="text-[10px] text-muted-foreground">{t.admin.longest}</p></div>
-                                            <div className="p-2 rounded-lg bg-muted/30"><p className="font-mono font-semibold">{Math.floor(queueDetail.data.shortestJobSec / 60)}:{String(queueDetail.data.shortestJobSec % 60).padStart(2, '0')}</p><p className="text-[10px] text-muted-foreground">{t.admin.shortest}</p></div>
-                                        </div>
-                                        <Separator />
-                                        <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total Processed</span><span className="font-bold">{queueDetail.data.totalProcessed}</span></div>
-                                    </div>
-                                )}
-                                {/* System Detail */}
-                                {queueDetail?.type === 'system' && queueDetail.data && (
-                                    <div className="space-y-3">
-                                        <div className="space-y-2">
-                                            <p className="text-sm font-semibold">Browser Pool</p>
-                                            <div className="flex items-center gap-3">
-                                                <div className="flex-1 h-4 bg-muted rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full transition-all" style={{ width: `${(queueDetail.data.activeBrowsers / (queueDetail.data.maxBrowsers || 10)) * 100}%` }} /></div>
-                                                <span className="font-mono font-semibold text-sm">{queueDetail.data.activeBrowsers}/{queueDetail.data.maxBrowsers}</span>
+                                    )}
+
+                                    {/* ══ History Detail ══ */}
+                                    {queueDetail?.type === 'history' && queueDetail.data && (
+                                        <div className="space-y-4">
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {[
+                                                    { label: 'User ID', value: queueDetail.data.userId, color: 'text-white' },
+                                                    { label: 'Status', value: queueDetail.data.success ? 'SUCCESS' : 'FAILED', color: queueDetail.data.success ? 'text-emerald-400' : 'text-red-400' },
+                                                    { label: 'Groups', value: `${queueDetail.data.groupCount} groups`, color: 'text-slate-300' },
+                                                    { label: 'Duration', value: queueDetail.data.durationFormatted, color: 'text-amber-400' },
+                                                    { label: 'Completed', value: queueDetail.data.completedAtFormatted, color: 'text-slate-400' },
+                                                    { label: 'Seconds', value: `${queueDetail.data.durationSec}s`, color: 'text-slate-400' },
+                                                ].map((item, idx) => (
+                                                    <div key={idx} className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+                                                        <p className="text-[9px] text-slate-600 font-bold uppercase tracking-wider">{item.label}</p>
+                                                        <p className={cn("text-sm font-bold font-mono truncate", item.color)}>{item.value}</p>
+                                                    </div>
+                                                ))}
                                             </div>
                                         </div>
-                                        <Separator />
-                                        <div className="grid grid-cols-2 gap-3 text-sm">
-                                            <div className="p-3 rounded-lg bg-muted/50"><p className="text-xs text-muted-foreground">Sessions</p><p className="font-semibold text-lg">{queueDetail.data.totalSessions}</p></div>
-                                            <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20"><p className="text-xs text-muted-foreground">Online</p><p className="font-semibold text-lg text-green-600">{queueDetail.data.onlineUsers}</p></div>
-                                            <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/20"><p className="text-xs text-muted-foreground">Automation</p><p className="font-semibold text-lg text-orange-600">{queueDetail.data.automationUsers}</p></div>
-                                            <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20"><p className="text-xs text-muted-foreground">Runs Today</p><p className="font-semibold text-lg text-blue-600">{queueDetail.data.automation?.totalRunsToday || 0}</p></div>
+                                    )}
+
+                                    {/* ══ Stats Detail ══ */}
+                                    {queueDetail?.type === 'stats' && queueDetail.data && (
+                                        <div className="space-y-4">
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 text-center">
+                                                    <p className="text-3xl font-black text-emerald-400 tabular-nums">{queueDetail.data.totalCompleted}</p>
+                                                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-1">{t.admin.jobsSuccess}</p>
+                                                </div>
+                                                <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/20 text-center">
+                                                    <p className="text-3xl font-black text-red-400 tabular-nums">{queueDetail.data.totalFailed}</p>
+                                                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-1">{t.admin.jobsFailed}</p>
+                                                </div>
+                                            </div>
+                                            <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+                                                <div className="flex justify-between text-xs mb-2">
+                                                    <span className="text-slate-500 font-bold uppercase text-[9px]">Success Rate</span>
+                                                    <span className="font-mono font-black text-amber-400 text-lg">{queueDetail.data.successRate}%</span>
+                                                </div>
+                                                <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all" style={{ width: `${queueDetail.data.successRate}%`, boxShadow: '0 0 8px #10b981' }} />
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-2 text-center">
+                                                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800"><p className="font-mono font-bold text-white text-sm">{queueDetail.data.avgDurationFormatted}</p><p className="text-[8px] text-slate-600 font-bold uppercase">{t.admin.average}</p></div>
+                                                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800"><p className="font-mono font-bold text-white text-sm">{Math.floor(queueDetail.data.longestJobSec / 60)}:{String(queueDetail.data.longestJobSec % 60).padStart(2, '0')}</p><p className="text-[8px] text-slate-600 font-bold uppercase">{t.admin.longest}</p></div>
+                                                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800"><p className="font-mono font-bold text-white text-sm">{Math.floor(queueDetail.data.shortestJobSec / 60)}:{String(queueDetail.data.shortestJobSec % 60).padStart(2, '0')}</p><p className="text-[8px] text-slate-600 font-bold uppercase">{t.admin.shortest}</p></div>
+                                            </div>
+                                            <div className="flex justify-between items-center p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+                                                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Total Processed</span>
+                                                <span className="font-mono font-black text-white text-lg">{queueDetail.data.totalProcessed}</span>
+                                            </div>
                                         </div>
-                                        <Separator />
-                                        <div className="grid grid-cols-2 gap-3 text-sm">
-                                            <div className="flex justify-between"><span className="text-muted-foreground">Tasks ✅</span><span className="font-semibold text-green-600">{queueDetail.data.automation?.totalTasksCompleted || 0}</span></div>
-                                            <div className="flex justify-between"><span className="text-muted-foreground">Tasks ❌</span><span className="font-semibold text-red-600">{queueDetail.data.automation?.totalTasksFailed || 0}</span></div>
-                                            <div className="flex justify-between"><span className="text-muted-foreground">Tasks Pending</span><span className="font-semibold">{queueDetail.data.automation?.totalTasksPending || 0}</span></div>
-                                            <div className="flex justify-between"><span className="text-muted-foreground">Active Users</span><span className="font-semibold">{queueDetail.data.activeUsers || 0}</span></div>
+                                    )}
+
+                                    {/* ══ System Detail ══ */}
+                                    {queueDetail?.type === 'system' && queueDetail.data && (
+                                        <div className="space-y-4">
+                                            <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+                                                <p className="text-[9px] text-slate-600 font-bold uppercase tracking-wider mb-2">Browser Pool</p>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex-1 h-3 bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full transition-all" style={{ width: `${(queueDetail.data.activeBrowsers / (queueDetail.data.maxBrowsers || 10)) * 100}%`, boxShadow: '0 0 8px #3b82f6' }} /></div>
+                                                    <span className="font-mono font-black text-white text-sm">{queueDetail.data.activeBrowsers}/{queueDetail.data.maxBrowsers}</span>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {[
+                                                    { label: 'Sessions', value: queueDetail.data.totalSessions, color: 'text-white' },
+                                                    { label: 'Online', value: queueDetail.data.onlineUsers, color: 'text-emerald-400' },
+                                                    { label: 'Automation', value: queueDetail.data.automationUsers, color: 'text-amber-400' },
+                                                    { label: 'Runs Today', value: queueDetail.data.automation?.totalRunsToday || 0, color: 'text-blue-400' },
+                                                ].map((item, idx) => (
+                                                    <div key={idx} className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+                                                        <p className="text-[9px] text-slate-600 font-bold uppercase tracking-wider">{item.label}</p>
+                                                        <p className={cn("text-xl font-black font-mono tabular-nums", item.color)}>{item.value}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20 flex justify-between items-center">
+                                                    <span className="text-[9px] text-slate-500 font-bold">Tasks Done</span><span className="font-mono font-bold text-emerald-400">{queueDetail.data.automation?.totalTasksCompleted || 0}</span>
+                                                </div>
+                                                <div className="p-3 rounded-xl bg-red-500/5 border border-red-500/20 flex justify-between items-center">
+                                                    <span className="text-[9px] text-slate-500 font-bold">Tasks Failed</span><span className="font-mono font-bold text-red-400">{queueDetail.data.automation?.totalTasksFailed || 0}</span>
+                                                </div>
+                                                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex justify-between items-center">
+                                                    <span className="text-[9px] text-slate-500 font-bold">Pending</span><span className="font-mono font-bold text-white">{queueDetail.data.automation?.totalTasksPending || 0}</span>
+                                                </div>
+                                                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex justify-between items-center">
+                                                    <span className="text-[9px] text-slate-500 font-bold">Active Users</span><span className="font-mono font-bold text-white">{queueDetail.data.activeUsers || 0}</span>
+                                                </div>
+                                            </div>
                                         </div>
+                                    )}
+
+                                    {/* ══ Slots Detail — Mechanical Grid ══ */}
+                                    {queueDetail?.type === 'slots' && queueDetail.data && (
+                                        <div className="space-y-4">
+                                            <div className="grid grid-cols-5 gap-2">
+                                                {Array.from({ length: queueDetail.data.maxConcurrent }, (_: any, i: number) => {
+                                                    const isActive = i < queueDetail.data.runningCount;
+                                                    const runningJob = isActive ? queueDetail.data.running[i] : null;
+                                                    return (
+                                                        <div key={i} className={cn("p-3 rounded-xl border-2 text-center transition-all relative overflow-hidden",
+                                                            isActive ? "bg-slate-900/80 border-amber-500/40 shadow-lg shadow-amber-500/10" : "bg-slate-950/60 border-slate-800")}>
+                                                            {isActive && <motion.div animate={{ top: ['-10%', '110%'] }} transition={{ duration: 2, repeat: Infinity, ease: 'linear', delay: i * 0.2 }}
+                                                                className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent pointer-events-none" />}
+                                                            <div className="flex justify-center mb-1">
+                                                                <motion.div animate={isActive ? { rotate: 360 } : {}} transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                                                                    className={cn(isActive ? "text-amber-500" : "text-slate-700")}>
+                                                                    <Settings className="w-3.5 h-3.5" />
+                                                                </motion.div>
+                                                            </div>
+                                                            <p className={cn("text-[10px] font-mono font-black", isActive ? "text-amber-400" : "text-slate-600")}>No. {String(i + 1).padStart(3, '0')}</p>
+                                                            {runningJob ? (<>
+                                                                <p className="text-[8px] font-bold text-white truncate px-0.5 mt-1">{runningJob.displayName || runningJob.userId}</p>
+                                                                <p className="text-[8px] text-emerald-400 font-mono">{runningJob.groupCount}g</p>
+                                                            </>) : <p className="text-[8px] text-slate-700 mt-1 font-mono">STANDBY</p>}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                            <div className="h-px bg-slate-800" />
+                                            <div className="grid grid-cols-3 gap-2 text-center">
+                                                <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20"><p className="text-xl font-black text-emerald-400 tabular-nums">{queueDetail.data.runningCount}</p><p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Running</p></div>
+                                                <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20"><p className="text-xl font-black text-amber-400 tabular-nums">{queueDetail.data.queueLength}</p><p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Waiting</p></div>
+                                                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800"><p className="text-xl font-black text-white tabular-nums">{queueDetail.data.maxConcurrent - queueDetail.data.runningCount}</p><p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Available</p></div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Footer terminal line */}
+                                <div className="mt-5 pt-3 border-t border-slate-800 flex items-center justify-between">
+                                    <p className="text-[8px] text-slate-700 font-mono uppercase tracking-[0.3em]">GRAND$TATE ENGINE v1.0</p>
+                                    <div className="flex items-center gap-1.5">
+                                        <div className={cn("w-1.5 h-1.5 rounded-full", sseConnected ? "bg-emerald-400 animate-pulse" : "bg-red-400")} />
+                                        <span className="text-[8px] text-slate-600 font-mono uppercase">{sseConnected ? 'Live' : 'Offline'}</span>
                                     </div>
-                                )}
-                                {/* Slots Detail */}
-                                {queueDetail?.type === 'slots' && queueDetail.data && (
-                                    <div className="space-y-3">
-                                        <div className="grid grid-cols-5 gap-2">
-                                            {Array.from({ length: queueDetail.data.maxConcurrent }, (_: any, i: number) => {
-                                                const isActive = i < queueDetail.data.runningCount;
-                                                const runningJob = isActive ? queueDetail.data.running[i] : null;
-                                                return (<div key={i} className={cn("p-2.5 rounded-xl border text-center transition-all", isActive ? "bg-green-50 dark:bg-green-950/20 border-green-300 dark:border-green-800 shadow-sm" : "bg-muted/50 border-transparent")}>
-                                                    <p className={cn("text-xs font-bold", isActive ? "text-green-700 dark:text-green-400" : "text-muted-foreground")}>{i + 1}</p>
-                                                    {runningJob ? (<>
-                                                        <p className="text-[9px] font-semibold truncate px-0.5 mt-0.5">{runningJob.displayName || runningJob.userId}</p>
-                                                        <p className="text-[9px] text-green-600 dark:text-green-400">{runningJob.groupCount}g</p>
-                                                    </>) : <p className="text-[9px] text-muted-foreground/50 mt-0.5">{t.admin.empty}</p>}
-                                                </div>);
-                                            })}
-                                        </div>
-                                        <Separator />
-                                        <div className="grid grid-cols-3 gap-3 text-center text-sm">
-                                            <div className="p-2 rounded-lg bg-green-50 dark:bg-green-950/20"><p className="font-bold text-green-600">{queueDetail.data.runningCount}</p><p className="text-[10px] text-muted-foreground">Running</p></div>
-                                            <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-950/20"><p className="font-bold text-amber-600">{queueDetail.data.queueLength}</p><p className="text-[10px] text-muted-foreground">Waiting</p></div>
-                                            <div className="p-2 rounded-lg bg-muted/30"><p className="font-bold">{queueDetail.data.maxConcurrent - queueDetail.data.runningCount}</p><p className="text-[10px] text-muted-foreground">Available</p></div>
-                                        </div>
-                                    </div>
-                                )}
+                                </div>
                             </div>
                         </DialogContent>
                     </Dialog>

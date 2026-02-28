@@ -44,9 +44,10 @@ export function FloatingParticles({ count = 30, className = '' }: FloatingPartic
     const draw = () => {
       ctx.clearRect(0, 0, w, h);
 
-      // Adapt to theme
+      // Estate theme colors: warm orange particles
       const isDark = document.documentElement.classList.contains('dark');
-      const color = isDark ? '255,255,255' : '0,0,0';
+      const dotColor = isDark ? '251,191,36' : '249,115,22';
+      const lineColor = isDark ? '251,191,36' : '249,115,22';
 
       for (const p of particles) {
         p.x += p.vx;
@@ -59,11 +60,11 @@ export function FloatingParticles({ count = 30, className = '' }: FloatingPartic
 
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${color}, ${p.o})`;
+        ctx.fillStyle = `rgba(${dotColor}, ${p.o})`;
         ctx.fill();
       }
 
-      // Draw faint connections between close particles
+      // Draw warm connections between close particles
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
           const dx = particles[i].x - particles[j].x;
@@ -73,7 +74,7 @@ export function FloatingParticles({ count = 30, className = '' }: FloatingPartic
             ctx.beginPath();
             ctx.moveTo(particles[i].x, particles[i].y);
             ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.strokeStyle = `rgba(${color}, ${0.03 * (1 - dist / 120)})`;
+            ctx.strokeStyle = `rgba(${lineColor}, ${0.06 * (1 - dist / 120)})`;
             ctx.lineWidth = 0.5;
             ctx.stroke();
           }

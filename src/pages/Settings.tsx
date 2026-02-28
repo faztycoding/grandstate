@@ -44,6 +44,13 @@ import {
   Circle,
   Send,
   MessageCircle,
+  Settings as SettingsIcon,
+  Zap,
+  Activity,
+  Database,
+  Terminal,
+  ShieldCheck,
+  Save,
 } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
@@ -398,161 +405,166 @@ export default function Settings() {
 
   return (
     <DashboardLayout title={t.settings.title} subtitle={t.settings.subtitle}>
-      <div className="max-w-3xl mx-auto space-y-6">
-        {/* Package Banner */}
+      <div className="relative rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(180deg, hsl(222 47% 6%) 0%, hsl(222 47% 4%) 100%)' }}>
+        {/* Blueprint Grid BG */}
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(148,163,184,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.5) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+        {/* Scanning Line */}
+        <motion.div animate={{ top: ['-5%', '105%'] }} transition={{ duration: 8, repeat: Infinity, ease: 'linear' }} className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-purple-500/20 to-transparent pointer-events-none z-20" />
+
+        <div className="relative z-10 p-6 max-w-3xl mx-auto space-y-6">
+
+        {/* ═══ IDENTITY ENGINE HEADER ═══ */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className={cn('relative overflow-hidden rounded-2xl bg-gradient-to-r p-5 group', pkgTheme.gradient)}
+          className={cn('relative overflow-hidden rounded-[2rem] p-8 border-2 shadow-[0_0_50px_rgba(168,85,247,0.15)]',
+            pkg === 'elite' ? 'bg-gradient-to-r from-purple-900/40 to-slate-900 border-purple-500/30' :
+            pkg === 'agent' ? 'bg-gradient-to-r from-amber-900/30 to-slate-900 border-amber-500/30' :
+            'bg-gradient-to-r from-emerald-900/30 to-slate-900 border-emerald-500/30'
+          )}
         >
-          {/* Shimmer */}
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 overflow-hidden pointer-events-none z-20">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent" style={{ animation: 'shimmer 2.5s ease-in-out infinite' }} />
-          </div>
-          <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3 sm:gap-4">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                <PkgIcon className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+          {/* Animated Background Gear */}
+          <motion.div animate={{ rotate: 360 }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }} className={cn("absolute -right-20 -top-20 opacity-10", pkg === 'elite' ? 'text-purple-400' : pkg === 'agent' ? 'text-amber-400' : 'text-emerald-400')}>
+            <SettingsIcon size={300} strokeWidth={0.5} />
+          </motion.div>
+
+          <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
+            {/* Profile Avatar with Camera Action */}
+            <div className="relative group">
+              <div className={cn(
+                "w-28 h-28 rounded-[2rem] bg-slate-950 border-4 flex items-center justify-center shadow-[0_0_30px] overflow-hidden",
+                pkg === 'elite' ? 'border-purple-500/50 shadow-purple-500/30' :
+                pkg === 'agent' ? 'border-amber-500/50 shadow-amber-500/30' :
+                'border-emerald-500/50 shadow-emerald-500/30'
+              )}>
+                {profileAvatar ? (
+                  <img src={profileAvatar} alt={displayName} className="w-full h-full object-cover" />
+                ) : (
+                  <span className={cn("text-4xl font-black", pkg === 'elite' ? 'text-purple-500' : pkg === 'agent' ? 'text-amber-500' : 'text-emerald-500')}>
+                    {displayName ? displayName.charAt(0).toUpperCase() : 'U'}
+                  </span>
+                )}
               </div>
-              <div>
-                <p className="text-white/70 text-xs font-medium uppercase tracking-wider">{s.currentPackage}</p>
-                <p className="text-white text-lg sm:text-xl font-bold">{pkgTheme.label}</p>
-                <p className="text-white/70 text-xs sm:text-sm">{pkgTheme.desc}</p>
+              <button
+                onClick={() => profileFileRef.current?.click()}
+                className={cn("absolute -bottom-2 -right-2 p-2.5 rounded-2xl opacity-0 group-hover:opacity-100 transition-all shadow-lg text-black",
+                  pkg === 'elite' ? 'bg-purple-500' : pkg === 'agent' ? 'bg-amber-500' : 'bg-emerald-500'
+                )}
+              >
+                <Camera size={16} />
+              </button>
+              <input ref={profileFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleProfileImageUpload(e.target.files)} />
+            </div>
+
+            <div className="flex-1 text-center md:text-left">
+              <div className="flex flex-wrap items-center gap-3 justify-center md:justify-start mb-4">
+                <h1 className="text-3xl font-black text-white tracking-tighter uppercase">{displayName || 'User'}</h1>
+                <span className={cn("flex items-center gap-2 text-black px-4 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg",
+                  pkg === 'elite' ? 'bg-purple-500' : pkg === 'agent' ? 'bg-amber-500' : 'bg-emerald-500'
+                )}>
+                  <PkgIcon size={14} /> {pkgTheme.label}
+                </span>
+                {pkg !== 'elite' && (
+                  <Button size="sm" variant="outline" onClick={() => navigate('/pricing')} className="border-slate-700 text-slate-300 text-[10px] hover:bg-white/10">
+                    {s.upgrade} <ArrowRight className="w-3 h-3 ml-1" />
+                  </Button>
+                )}
+              </div>
+
+              {/* Package Specs Gauges */}
+              <div className="grid grid-cols-3 gap-4">
+                {[
+                  { label: s.postsPerDay || 'โพสต์/วัน', val: pkgLimits.postsPerDay, icon: <Zap size={12} /> },
+                  { label: s.groupsLabel || 'กลุ่ม', val: pkgLimits.maxGroups, icon: <Activity size={12} /> },
+                  { label: s.propertiesLabel || 'สินทรัพย์', val: pkgLimits.maxProperties === Infinity ? '∞' : pkgLimits.maxProperties, icon: <Database size={12} /> },
+                ].map((spec, i) => (
+                  <div key={i} className="bg-slate-950/50 p-3 rounded-2xl border border-white/5">
+                    <div className="text-[8px] text-slate-500 uppercase font-black tracking-widest flex items-center gap-1 mb-1">
+                      {spec.icon} {spec.label}
+                    </div>
+                    <div className="text-lg font-mono font-black text-white">{spec.val}</div>
+                  </div>
+                ))}
               </div>
             </div>
-            <div className="flex flex-col items-start sm:items-end gap-2 w-full sm:w-auto">
-              <div className="flex items-center gap-3">
-                <div className="text-left sm:text-right">
-                  <p className="text-white/60 text-[10px] uppercase">{s.postsPerDay}</p>
-                  <p className="text-white font-bold text-base sm:text-lg">{pkgLimits.postsPerDay}</p>
-                </div>
-                <div className="w-px h-8 bg-white/20" />
-                <div className="text-left sm:text-right">
-                  <p className="text-white/60 text-[10px] uppercase">{s.groupsLabel}</p>
-                  <p className="text-white font-bold text-base sm:text-lg">{pkgLimits.maxGroups}</p>
-                </div>
-                <div className="w-px h-8 bg-white/20" />
-                <div className="text-left sm:text-right">
-                  <p className="text-white/60 text-[10px] uppercase">{s.propertiesLabel}</p>
-                  <p className="text-white font-bold text-base sm:text-lg">{pkgLimits.maxProperties === Infinity ? '∞' : pkgLimits.maxProperties}</p>
-                </div>
-              </div>
-              {pkg !== 'elite' && (
-                <Button
-                  size="sm"
-                  className="bg-white/20 hover:bg-white/30 text-white border-white/30 text-xs"
-                  variant="outline"
-                  onClick={() => navigate('/pricing')}
-                >
-                  {s.upgrade} <ArrowRight className="w-3 h-3 ml-1" />
-                </Button>
-              )}
-            </div>
           </div>
-          {/* Decorative circles */}
-          <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10" />
-          <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-white/5" />
         </motion.div>
 
-        {/* Account Info moved to Profile Dialog */}
-
-        {/* Change Password */}
+        {/* ═══ SECURITY CALIBRATION ═══ */}
         {authUser && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Lock className="w-4 h-4" />
-                {isEn ? 'Change Password' : 'เปลี่ยนรหัสผ่าน'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-2">
-                <Label>{isEn ? 'New Password' : 'รหัสผ่านใหม่'}</Label>
-                <Input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder={isEn ? 'At least 6 characters' : 'อย่างน้อย 6 ตัวอักษร'}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{isEn ? 'Confirm New Password' : 'ยืนยันรหัสผ่านใหม่'}</Label>
-                <Input
-                  type="password"
-                  value={confirmNewPassword}
-                  onChange={(e) => setConfirmNewPassword(e.target.value)}
-                  placeholder={isEn ? 'Confirm new password' : 'กรอกรหัสผ่านใหม่อีกครั้ง'}
-                />
-              </div>
-              <Button
-                onClick={handleChangePassword}
-                disabled={isChangingPassword || !newPassword || !confirmNewPassword}
-                className="w-full"
-              >
-                {isChangingPassword ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isEn ? 'Changing...' : 'กำลังเปลี่ยน...'}</>
-                ) : (
-                  <><Lock className="w-4 h-4 mr-2" />{isEn ? 'Change Password' : 'เปลี่ยนรหัสผ่าน'}</>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Profile Settings */}
-        <Card className="card-elevated card-hover-lift">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="w-5 h-5 text-accent" />
-              {isEn ? 'Profile' : 'โปรไฟล์'}
-            </CardTitle>
-            <CardDescription>
-              {isEn ? 'Your display name and contact info — synced to cloud' : 'ชื่อแสดงผลและช่องทางติดต่อ — ซิงค์กับระบบ'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center gap-4">
-              <Avatar className="w-20 h-20 cursor-pointer" onClick={() => profileFileRef.current?.click()}>
-                <AvatarImage src={profileAvatar} />
-                <AvatarFallback className="bg-primary text-primary-foreground text-xl">
-                  {displayName ? displayName.split(' ').map(n => n[0]).join('').substring(0, 2) : 'U'}
-                </AvatarFallback>
-              </Avatar>
+          <motion.div initial={{ x: -30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.2 }}
+            className="bg-slate-900/60 border border-slate-800 rounded-[2rem] p-7">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2.5 bg-slate-800 rounded-xl text-amber-500"><Key size={20} /></div>
               <div>
-                <Button variant="outline" size="sm" onClick={() => profileFileRef.current?.click()}>
-                  <Camera className="w-4 h-4 mr-2" />
-                  {t.settings.changeAvatar}
-                </Button>
-                <input
-                  ref={profileFileRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => handleProfileImageUpload(e.target.files)}
-                />
+                <h3 className="text-base font-black text-white uppercase tracking-tight">{isEn ? 'Security Calibration' : 'Security Calibration'}</h3>
+                <p className="text-[10px] text-slate-500 font-mono">{isEn ? 'Change your access credentials' : 'เปลี่ยนรหัสผ่านเข้าสู่ระบบ'}</p>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-5">
               <div className="space-y-2">
-                <Label>{isEn ? 'Display Name' : 'ชื่อที่แสดง'}</Label>
-                <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder={isEn ? 'Your name' : 'ชื่อของคุณ'} />
+                <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest ml-1">{isEn ? 'New Password' : 'รหัสผ่านใหม่'}</label>
+                <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder={isEn ? 'At least 6 characters' : 'อย่างน้อย 6 ตัวอักษร'} className="bg-slate-950 border-slate-800 rounded-2xl py-5 px-5 text-sm text-white focus:border-amber-500/50 placeholder:text-slate-700" />
               </div>
               <div className="space-y-2">
-                <Label>Line ID</Label>
-                <Input value={lineId} onChange={(e) => setLineId(e.target.value)} placeholder="@yourlineid" />
+                <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest ml-1">{isEn ? 'Confirm New Password' : 'ยืนยันรหัสผ่านใหม่'}</label>
+                <Input type="password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} placeholder={isEn ? 'Confirm new password' : 'กรอกรหัสผ่านใหม่อีกครั้ง'} className="bg-slate-950 border-slate-800 rounded-2xl py-5 px-5 text-sm text-white focus:border-amber-500/50 placeholder:text-slate-700" />
+              </div>
+              <button
+                onClick={handleChangePassword}
+                disabled={isChangingPassword || !newPassword || !confirmNewPassword}
+                className="w-full py-4 bg-amber-500 text-black font-black text-xs rounded-2xl flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(245,158,11,0.3)] hover:bg-amber-400 transition-all uppercase tracking-[0.15em] disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {isChangingPassword ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" />{isEn ? 'Changing...' : 'กำลังเปลี่ยน...'}</>
+                ) : (
+                  <><ShieldCheck size={18} />{isEn ? 'Change Password' : 'เปลี่ยนรหัสผ่าน'}</>
+                )}
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* ═══ IDENTITY MATRIX ═══ */}
+        <motion.div initial={{ x: 30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.3 }}
+          className="bg-slate-900/60 border border-slate-800 rounded-[2rem] p-7 relative overflow-hidden">
+          {/* Animated Laser Scan */}
+          <motion.div animate={{ top: ['0%', '100%', '0%'] }} transition={{ duration: 5, repeat: Infinity }} className="absolute inset-x-0 h-[1px] bg-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.5)] pointer-events-none" />
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2.5 bg-slate-800 rounded-xl text-blue-500"><User size={20} /></div>
+            <div>
+              <h3 className="text-base font-black text-white uppercase tracking-tight">{isEn ? 'Identity Matrix' : 'Identity Matrix'}</h3>
+              <p className="text-[10px] text-slate-500 font-mono">{isEn ? 'Your display name and contact info — synced to cloud' : 'ชื่อแสดงผลและช่องทางติดต่อ — ซิงค์กับระบบ'}</p>
+            </div>
+          </div>
+          <div className="space-y-5">
+            <div className="space-y-2">
+              <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest ml-1">{isEn ? 'Display Name' : 'ชื่อที่แสดง'}</label>
+              <div className="relative group">
+                <User className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-blue-500 transition-colors" />
+                <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder={isEn ? 'Your name' : 'ชื่อของคุณ'} className="bg-slate-950 border-slate-800 rounded-2xl py-5 pl-12 pr-5 text-sm text-white focus:border-blue-500/50 placeholder:text-slate-700" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest ml-1">Line ID</label>
+              <div className="relative group">
+                <Activity className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-blue-500 transition-colors" />
+                <Input value={lineId} onChange={(e) => setLineId(e.target.value)} placeholder="@yourlineid" className="bg-slate-950 border-slate-800 rounded-2xl py-5 pl-12 pr-5 text-sm text-white focus:border-blue-500/50 placeholder:text-slate-700" />
               </div>
             </div>
             {authUser?.email && (
-              <p className="text-xs text-muted-foreground">{isEn ? 'Login email' : 'อีเมลที่ใช้เข้าสู่ระบบ'}: {authUser.email}</p>
+              <p className="text-[10px] text-slate-500 font-mono italic flex items-center gap-2 pt-2">
+                <Lock size={12} /> {isEn ? 'Login email' : 'อีเมลเข้าสู่ระบบ'}: <span className="text-blue-400">{authUser.email}</span>
+              </p>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </motion.div>
 
-        {/* Facebook Connection — World-class UI */}
+        {/* ═══ FACEBOOK CONNECTION MODULE ═══ */}
         <Card className={cn(
-          "card-elevated card-hover-lift overflow-hidden transition-all",
-          isConnected && "ring-1 ring-[#1877F2]/30"
+          "overflow-hidden transition-all bg-slate-900/60 border-slate-800 rounded-[2rem]",
+          isConnected && "ring-1 ring-[#1877F2]/20"
         )}>
           {/* Card gradient accent bar — always Facebook blue */}
           <div className="h-1 bg-gradient-to-r from-[#1877F2] to-[#0D47A1]" />
@@ -838,8 +850,8 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* Theme & Appearance */}
-        <Card className="card-elevated">
+        {/* ═══ THEME & APPEARANCE MODULE ═══ */}
+        <Card className="bg-slate-900/60 border-slate-800 rounded-[2rem]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Palette className="w-5 h-5 text-accent" />
@@ -926,8 +938,8 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* Support Ticket — Create + My Tickets */}
-        <Card className="card-elevated relative overflow-hidden border-cyan-500/20">
+        {/* ═══ SUPPORT TERMINAL ═══ */}
+        <Card className="relative overflow-hidden bg-slate-900/60 border-slate-800 rounded-[2rem]">
           <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-cyan-500/40 to-transparent" />
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -1038,19 +1050,33 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* App Version */}
-        <div className="flex items-center justify-center gap-2 py-4 text-xs text-muted-foreground">
-          <Info className="w-3 h-3" />
-          <span>{s.appVersion}: Grand$tate v1.0</span>
+        {/* ═══ SAVE BUTTON — FACTORY SWITCH ═══ */}
+        <div className="flex justify-end">
+          <button
+            onClick={handleSave}
+            disabled={isSavingProfile}
+            className="px-8 py-4 bg-blue-600 text-white font-black text-xs rounded-2xl flex items-center justify-center gap-3 hover:bg-blue-500 transition-all uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(37,99,235,0.2)] disabled:opacity-40"
+          >
+            {isSavingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save size={18} />}
+            {t.common.saveChanges}
+          </button>
         </div>
 
-        {/* Save Button */}
-        <div className="flex justify-end">
-          <Button variant="accent" onClick={handleSave}>
-            {t.common.saveChanges}
-          </Button>
-        </div>
-      </div>
+        {/* ═══ TERMINAL LOG FOOTER ═══ */}
+        <footer className="bg-black/40 border border-slate-800 rounded-3xl p-5 font-mono text-[10px]">
+          <div className="flex items-center gap-2 text-slate-500 mb-2 uppercase tracking-widest font-bold">
+            <Terminal size={14} /> Identity Sync Stream
+          </div>
+          <div className="space-y-0.5 text-green-500/60 tracking-tight">
+            <p>{'>'} Session validated for user: {displayName || 'Unknown'}</p>
+            <p>{'>'} Cloud synchronization active — all changes mirrored to Global Nodes</p>
+            <p>{'>'} {s.appVersion}: Grand$tate v1.0 — Engine Core Online</p>
+            <p className="animate-pulse">{'>'} Awaiting configuration input...</p>
+          </div>
+        </footer>
+
+        </div>{/* end z-10 inner */}
+      </div>{/* end factory wrapper */}
 
       {/* Support Ticket Dialog */}
       <SupportTicketDialog open={showSupportTicket} onOpenChange={(v) => { setShowSupportTicket(v); if (!v) fetchMyTickets(); }} />

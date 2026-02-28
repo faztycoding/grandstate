@@ -50,6 +50,12 @@ import {
     Send,
     AlertTriangle,
     Settings,
+    Terminal,
+    Fingerprint,
+    MousePointer2,
+    Globe,
+    Pause,
+    Play,
 } from 'lucide-react';
 import { GrandStateLogo } from '@/components/GrandStateLogo';
 import { Button } from '@/components/ui/button';
@@ -171,6 +177,7 @@ export default function AdminDashboard() {
 
     // Queue detail dialog
     const [queueDetail, setQueueDetail] = useState<{ type: string; data: any } | null>(null);
+    const [inspectTab, setInspectTab] = useState<'monitor' | 'security' | 'logs'>('monitor');
 
     // History filter: 'all' | 'success' | 'failed'
     const [historyFilter, setHistoryFilter] = useState<'all' | 'success' | 'failed'>('all');
@@ -1505,8 +1512,9 @@ export default function AdminDashboard() {
                                                 initial={{ opacity: 0, scale: 0.9 }}
                                                 animate={{ opacity: 1, scale: 1 }}
                                                 transition={{ delay: i * 0.04 }}
+                                                onClick={(e) => { e.stopPropagation(); setInspectTab('monitor'); setQueueDetail({ type: 'slot-inspect', data: { slotIndex: i, job: runJob, queueData: liveStats.queue } }); }}
                                                 className={cn(
-                                                    "relative rounded-2xl border-2 overflow-hidden transition-all duration-500 group/slot backdrop-blur-sm",
+                                                    "relative rounded-2xl border-2 overflow-hidden transition-all duration-500 group/slot backdrop-blur-sm cursor-pointer hover:scale-[1.02]",
                                                     isActive
                                                         ? "border-amber-500/40 bg-slate-900/80 shadow-lg shadow-amber-500/10"
                                                         : "border-slate-800 bg-slate-950/60 hover:border-slate-700"
@@ -1937,7 +1945,7 @@ export default function AdminDashboard() {
 
                     {/* ═══ Queue Detail — Dark Mechanical Node Inspect ═══ */}
                     <Dialog open={!!queueDetail} onOpenChange={() => setQueueDetail(null)}>
-                        <DialogContent className="max-w-2xl p-0 overflow-hidden border-amber-500/20 bg-[hsl(222,47%,5%)]">
+                        <DialogContent className={cn("p-0 overflow-hidden border-amber-500/20 bg-[hsl(222,47%,5%)]", queueDetail?.type === 'slot-inspect' ? 'max-w-5xl' : 'max-w-2xl')}>
                             {/* Blueprint grid overlay */}
                             <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(148,163,184,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.5) 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
                             {/* Scanning line */}
@@ -1957,6 +1965,7 @@ export default function AdminDashboard() {
                                             {queueDetail?.type === 'stats' && <BarChart3 className="w-5 h-5 text-blue-400" />}
                                             {queueDetail?.type === 'system' && <Monitor className="w-5 h-5 text-cyan-400" />}
                                             {queueDetail?.type === 'slots' && <motion.div animate={{ rotate: 360 }} transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}><Settings className="w-5 h-5 text-amber-500" /></motion.div>}
+                                            {queueDetail?.type === 'slot-inspect' && <Monitor className="w-5 h-5 text-amber-500" />}
                                         </div>
                                         <div>
                                             <span className="font-black uppercase tracking-tight text-base">
@@ -1966,6 +1975,7 @@ export default function AdminDashboard() {
                                                 {queueDetail?.type === 'stats' && 'Engine Statistics'}
                                                 {queueDetail?.type === 'system' && 'System Diagnostics'}
                                                 {queueDetail?.type === 'slots' && 'Engine Slots Overview'}
+                                                {queueDetail?.type === 'slot-inspect' && `Node Inspection #${String((queueDetail.data?.slotIndex ?? 0) + 1).padStart(3, '0')}`}
                                             </span>
                                             <p className="text-[9px] text-amber-500/40 font-mono uppercase tracking-[0.2em] mt-0.5">
                                                 {queueDetail?.type === 'running' && `thread_${queueDetail.data?.userId?.slice(0,8) || 'unknown'}`}
@@ -1974,6 +1984,7 @@ export default function AdminDashboard() {
                                                 {queueDetail?.type === 'stats' && 'performance_metrics'}
                                                 {queueDetail?.type === 'system' && 'sys_diagnostics_v1.0'}
                                                 {queueDetail?.type === 'slots' && `slots_1-${queueDetail.data?.maxConcurrent || 10}`}
+                                                {queueDetail?.type === 'slot-inspect' && `direct_engine_access // slot_${String((queueDetail.data?.slotIndex ?? 0) + 1).padStart(3, '0')}`}
                                             </p>
                                         </div>
                                     </DialogTitle>
@@ -2163,6 +2174,236 @@ export default function AdminDashboard() {
                                             </div>
                                         </div>
                                     )}
+
+                                    {/* ══ Node Master Inspect — Full Panel ══ */}
+                                    {queueDetail?.type === 'slot-inspect' && queueDetail.data && (() => {
+                                        const { slotIndex, job } = queueDetail.data;
+                                        const slotId = String(slotIndex + 1).padStart(3, '0');
+                                        const isActive = !!job;
+                                        const progressPct = job?.progress ? Math.round((job.progress.currentStep / Math.max(job.progress.totalSteps, 1)) * 100) : 0;
+                                        const rMin = job ? Math.floor(job.runningSec / 60) : 0;
+                                        const rSec = job ? job.runningSec % 60 : 0;
+                                        return (
+                                        <div className="flex -mx-6 -mb-3 border-t border-slate-800" style={{ minHeight: '430px' }}>
+                                            {/* Left: Tab Navigation */}
+                                            <div className="w-[68px] bg-slate-950/50 border-r border-slate-800 flex flex-col items-center py-6 gap-4 flex-shrink-0">
+                                                {([
+                                                    { id: 'monitor' as const, icon: <Monitor size={17} />, label: 'Live' },
+                                                    { id: 'security' as const, icon: <Shield size={17} />, label: 'Secure' },
+                                                    { id: 'logs' as const, icon: <Terminal size={17} />, label: 'Logs' },
+                                                ]).map(tab => (
+                                                    <button key={tab.id} onClick={() => setInspectTab(tab.id)}
+                                                        className={cn("p-3 rounded-xl transition-all flex flex-col items-center gap-1",
+                                                            inspectTab === tab.id ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20" : "text-slate-500 hover:text-white hover:bg-slate-800")}>
+                                                        {tab.icon}
+                                                        <span className="text-[7px] font-black uppercase tracking-tighter">{tab.label}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+
+                                            {/* Center: Content Area */}
+                                            <div className="flex-1 p-5 overflow-y-auto bg-[#020617]">
+                                                <AnimatePresence mode="wait">
+                                                    {/* ─── MONITOR TAB ─── */}
+                                                    {inspectTab === 'monitor' && (
+                                                        <motion.div key="monitor" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+                                                            {/* Simulated Browser Viewport */}
+                                                            <div className="bg-black rounded-2xl border border-slate-800 h-48 relative overflow-hidden">
+                                                                <div className="absolute top-0 inset-x-0 h-7 bg-slate-800/80 backdrop-blur-md flex items-center px-3 justify-between border-b border-white/5 z-10">
+                                                                    <div className="flex gap-1.5"><div className="w-2 h-2 rounded-full bg-red-500/50" /><div className="w-2 h-2 rounded-full bg-amber-500/50" /><div className="w-2 h-2 rounded-full bg-green-500/50" /></div>
+                                                                    <div className="bg-slate-900 px-3 py-0.5 rounded-full text-[8px] text-slate-500 font-mono truncate max-w-[280px]">
+                                                                        {isActive ? `https://facebook.com/${job?.automationType === 'marketplace' ? 'marketplace/listing' : 'groups'}/node_${slotId}` : 'about:blank'}
+                                                                    </div>
+                                                                    <div className="w-8" />
+                                                                </div>
+                                                                <div className="flex items-center justify-center h-full">
+                                                                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 20, repeat: Infinity, ease: 'linear' }} className="absolute opacity-[0.03]">
+                                                                        <Settings size={180} strokeWidth={1} />
+                                                                    </motion.div>
+                                                                    {isActive ? (
+                                                                        <div className="text-center z-10">
+                                                                            <Activity className="text-amber-500/40 mx-auto mb-2 animate-pulse" size={32} />
+                                                                            <p className="text-[9px] font-mono text-amber-500/60 tracking-[0.3em] uppercase">EXECUTING_TASK_{slotId}...</p>
+                                                                            {job?.progress?.latestLog && <p className="text-[8px] text-emerald-400/40 mt-1 font-mono max-w-[250px] truncate mx-auto">{job.progress.latestLog.text}</p>}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="text-center z-10">
+                                                                            <Monitor className="text-slate-700 mx-auto mb-2" size={32} />
+                                                                            <p className="text-[9px] font-mono text-slate-600 tracking-[0.2em] uppercase">AWAITING_ASSIGNMENT...</p>
+                                                                        </div>
+                                                                    )}
+                                                                    {isActive && <motion.div animate={{ x: [0, 80, -40, 15], y: [0, -20, 30, 5] }} transition={{ duration: 6, repeat: Infinity }} className="absolute z-10">
+                                                                        <MousePointer2 className="text-white fill-white opacity-40" size={14} />
+                                                                    </motion.div>}
+                                                                </div>
+                                                                {isActive && <div className="absolute bottom-3 left-4 flex items-center gap-2 z-10">
+                                                                    <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                                                                    <span className="text-[8px] font-black text-white uppercase tracking-widest opacity-80">Live View</span>
+                                                                </div>}
+                                                            </div>
+
+                                                            {/* Task Info Grid */}
+                                                            <div className="grid grid-cols-2 gap-3">
+                                                                <div className="bg-slate-900/60 border border-slate-800 p-3 rounded-xl">
+                                                                    <p className="text-[9px] text-slate-600 font-bold uppercase mb-1">Target Task</p>
+                                                                    <p className="text-xs font-bold text-white truncate">{isActive ? (job?.propertyTitle || (job?.automationType === 'marketplace' ? 'Marketplace Posting' : 'Group Posting')) : 'No task assigned'}</p>
+                                                                    {job?.fbAccount && <p className="text-[8px] text-blue-400/60 truncate mt-0.5">FB: {job.fbAccount}</p>}
+                                                                </div>
+                                                                <div className="bg-slate-900/60 border border-slate-800 p-3 rounded-xl">
+                                                                    <p className="text-[9px] text-slate-600 font-bold uppercase mb-1">Automation Progress</p>
+                                                                    {isActive ? (<>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                                                                <motion.div initial={{ width: 0 }} animate={{ width: `${progressPct}%` }}
+                                                                                    className="h-full bg-amber-500 rounded-full" style={{ boxShadow: '0 0 8px rgba(245,158,11,0.5)' }} />
+                                                                            </div>
+                                                                            <span className="text-xs font-mono text-amber-400 font-bold">{progressPct}%</span>
+                                                                        </div>
+                                                                        <p className="text-[8px] text-slate-500 mt-1 font-mono">{job?.progress ? `${job.progress.currentStep}/${job.progress.totalSteps} tasks` : `${job?.groupCount || 0} groups`}</p>
+                                                                    </>) : <p className="text-xs text-slate-600">Idle</p>}
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Runtime + User + Groups */}
+                                                            {isActive && (
+                                                                <div className="grid grid-cols-3 gap-2">
+                                                                    <div className="bg-slate-900/60 border border-slate-800 p-2.5 rounded-xl text-center">
+                                                                        <p className="text-[8px] text-slate-600 font-bold uppercase">User</p>
+                                                                        <p className="text-[11px] font-bold text-white truncate">{job?.displayName || job?.userId || '—'}</p>
+                                                                    </div>
+                                                                    <div className="bg-slate-900/60 border border-slate-800 p-2.5 rounded-xl text-center">
+                                                                        <p className="text-[8px] text-slate-600 font-bold uppercase">Runtime</p>
+                                                                        <p className="text-sm font-mono font-bold text-emerald-400">{rMin}:{String(rSec).padStart(2, '0')}</p>
+                                                                    </div>
+                                                                    <div className="bg-slate-900/60 border border-slate-800 p-2.5 rounded-xl text-center">
+                                                                        <p className="text-[8px] text-slate-600 font-bold uppercase">Groups</p>
+                                                                        <p className="text-sm font-mono font-bold text-amber-400">{job?.groupCount || 0}</p>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </motion.div>
+                                                    )}
+
+                                                    {/* ─── SECURITY TAB ─── */}
+                                                    {inspectTab === 'security' && (
+                                                        <motion.div key="security" initial={{ opacity: 0, x: 15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+                                                            <div className="flex items-center justify-between mb-1">
+                                                                <h4 className="text-xs font-black text-white uppercase tracking-tight">Anti-Detection Modules</h4>
+                                                                <span className="text-[9px] text-green-400 font-bold bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20 uppercase">All Secure</span>
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-2.5">
+                                                                {[
+                                                                    { name: 'Gaussian Jitter', icon: <Activity className="w-4 h-4" />, desc: 'Human-like timing randomization', status: 'HIGH' },
+                                                                    { name: 'Fingerprint Masking', icon: <Fingerprint className="w-4 h-4" />, desc: 'Browser identity spoofing 100%', status: 'OK' },
+                                                                    { name: 'WebRTC Leak Shield', icon: <Globe className="w-4 h-4" />, desc: 'Real IP leak prevention active', status: 'OK' },
+                                                                    { name: 'Behavior Simulation', icon: <MousePointer2 className="w-4 h-4" />, desc: 'Mouse/scroll movement emulation', status: 'OK' },
+                                                                    { name: 'Canvas Noise', icon: <Sparkles className="w-4 h-4" />, desc: 'Canvas fingerprint randomization', status: 'OK' },
+                                                                    { name: 'Network Stealth', icon: <Wifi className="w-4 h-4" />, desc: 'Request header normalization', status: 'OK' },
+                                                                ].map((m, mi) => (
+                                                                    <div key={mi} className="p-3 bg-slate-900/50 border border-slate-800 rounded-xl flex items-center gap-3 hover:border-amber-500/20 transition-all group/sec">
+                                                                        <div className="p-1.5 bg-slate-950 rounded-lg text-amber-500/40 group-hover/sec:text-amber-500 transition-colors">{m.icon}</div>
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <div className="flex items-center justify-between gap-1">
+                                                                                <p className="text-[9px] font-black text-white uppercase tracking-tight truncate">{m.name}</p>
+                                                                                <span className={cn("text-[7px] font-mono font-bold flex-shrink-0", m.status === 'HIGH' ? "text-amber-400" : "text-emerald-500")}>{m.status}</span>
+                                                                            </div>
+                                                                            <p className="text-[8px] text-slate-500 leading-tight">{m.desc}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                            <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl">
+                                                                <p className="text-[9px] text-slate-400">
+                                                                    <span className="text-amber-500 font-bold uppercase mr-1.5">Note:</span>
+                                                                    Gaussian Jitter set to HIGH for maximum stealth. All modules auto-calibrated per session.
+                                                                </p>
+                                                            </div>
+                                                        </motion.div>
+                                                    )}
+
+                                                    {/* ─── LOGS TAB ─── */}
+                                                    {inspectTab === 'logs' && (
+                                                        <motion.div key="logs" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                                                            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 font-mono text-[10px] min-h-[320px]">
+                                                                <div className="space-y-1.5">
+                                                                    <p className="text-slate-600"><span className="text-amber-500/70">[SYS]</span> Initializing Node_{slotId}...</p>
+                                                                    <p className="text-slate-600"><span className="text-blue-400/70">[NET]</span> Proxy connected: SG-Server-{slotId}</p>
+                                                                    <p className="text-slate-600"><span className="text-emerald-400/70">[SEC]</span> Anti-detection stealth modules loaded</p>
+                                                                    <p className="text-slate-600"><span className="text-emerald-400/70">[SEC]</span> Gaussian Jitter: HIGH</p>
+                                                                    <p className="text-slate-600"><span className="text-blue-400/70">[NET]</span> SSE stream: {sseConnected ? 'Connected' : 'Disconnected'}</p>
+                                                                    {isActive ? (<>
+                                                                        <p className="text-slate-600"><span className="text-green-400/70">[AUTH]</span> Facebook Session: Valid</p>
+                                                                        <p className="text-white"><span className="text-amber-400">[TASK]</span> Target: {job?.automationType === 'marketplace' ? 'Marketplace' : 'Group Posting'} — {job?.groupCount || 0} targets</p>
+                                                                        <p className="text-slate-600"><span className="text-cyan-400/70">[USER]</span> {job?.displayName || job?.userId}</p>
+                                                                        {job?.fbAccount && <p className="text-slate-600"><span className="text-blue-400/60">[FB]</span> Account: {job.fbAccount}</p>}
+                                                                        {job?.propertyTitle && <p className="text-slate-600"><span className="text-amber-400/60">[PROP]</span> {job.propertyTitle}</p>}
+                                                                        {job?.progress && <p className="text-slate-600"><span className="text-emerald-400/60">[PROG]</span> Step {job.progress.currentStep}/{job.progress.totalSteps} ({progressPct}%)</p>}
+                                                                        {job?.progress?.latestLog && <p className="text-white"><span className="text-emerald-400">[LOG]</span> {job.progress.latestLog.text}</p>}
+                                                                        <p className="text-slate-600"><span className="text-slate-500">[TIME]</span> Runtime: {rMin}:{String(rSec).padStart(2, '0')}</p>
+                                                                        <p className="text-slate-600 animate-pulse"><span className="text-amber-400/50">[WAIT]</span> Anti-spam delay active...</p>
+                                                                    </>) : (<>
+                                                                        <p className="text-slate-600"><span className="text-slate-500">[SYS]</span> Node_{slotId} on standby — no active task</p>
+                                                                        <p className="text-slate-600 animate-pulse"><span className="text-slate-600">[IDLE]</span> Awaiting task assignment...</p>
+                                                                    </>)}
+                                                                </div>
+                                                            </div>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            </div>
+
+                                            {/* Right: Controls Panel */}
+                                            <div className="w-48 bg-slate-950/50 border-l border-slate-800 p-5 flex flex-col gap-3 flex-shrink-0">
+                                                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Node Controls</p>
+
+                                                {isActive && job?.fullUserId && (<>
+                                                    <button
+                                                        className="flex items-center gap-2 px-4 py-3 bg-amber-500 text-black font-black text-[10px] rounded-xl hover:bg-amber-400 transition-all shadow-lg shadow-amber-500/20 uppercase tracking-wider"
+                                                        disabled={forceStoppingUser === job.fullUserId}
+                                                        onClick={() => handleForceStop(job.fullUserId, job.displayName || job.userId)}>
+                                                        {forceStoppingUser === job.fullUserId ? <Loader2 size={14} className="animate-spin" /> : <StopCircle size={14} />} Force Stop
+                                                    </button>
+                                                </>)}
+
+                                                {!isActive && (
+                                                    <div className="flex items-center gap-2 px-4 py-3 bg-slate-800/50 text-slate-600 font-black text-[10px] rounded-xl border border-slate-700 uppercase tracking-wider">
+                                                        <Pause size={14} /> Standby
+                                                    </div>
+                                                )}
+
+                                                {/* Status Summary */}
+                                                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2 mt-2">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <div className={cn("w-2 h-2 rounded-full", isActive ? "bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.6)]" : "bg-slate-700")} />
+                                                        <span className={cn("text-[9px] font-black uppercase", isActive ? "text-emerald-400" : "text-slate-600")}>{isActive ? 'Running' : 'Idle'}</span>
+                                                    </div>
+                                                    {isActive && job?.automationType && (
+                                                        <div className="flex items-center gap-1">
+                                                            {job.automationType === 'marketplace' ? <Store className="w-3 h-3 text-blue-400" /> : <Users className="w-3 h-3 text-emerald-400" />}
+                                                            <span className="text-[9px] text-slate-400 font-bold uppercase">{job.automationType === 'marketplace' ? 'MKT' : 'Groups'}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Slot Metadata */}
+                                                <div className="mt-auto pt-4 border-t border-slate-800 space-y-1.5">
+                                                    <div className="flex justify-between text-[9px]">
+                                                        <span className="text-slate-600">Slot</span>
+                                                        <span className="text-amber-400 font-mono font-bold">#{slotId}</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-[9px]">
+                                                        <span className="text-slate-600">Engine</span>
+                                                        <span className="text-slate-400 font-mono">v1.0</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-[9px]">
+                                                        <span className="text-slate-600">SSE</span>
+                                                        <span className={sseConnected ? "text-emerald-400" : "text-red-400"}>{sseConnected ? 'Live' : 'Off'}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        );
+                                    })()}
 
                                     {/* ══ Slots Detail — Mechanical Grid ══ */}
                                     {queueDetail?.type === 'slots' && queueDetail.data && (

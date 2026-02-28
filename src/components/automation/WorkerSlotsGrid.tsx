@@ -27,7 +27,7 @@ import {
   Zap,
   Box,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { apiFetch } from '@/lib/config';
 
@@ -328,6 +328,7 @@ export function WorkerSlotsGrid() {
   const [data, setData] = useState<WorkerSlotsData | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<WorkerSlot | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [expandedSlotId, setExpandedSlotId] = useState<string | null>(null);
 
   const fetchSlots = useCallback(async () => {
     try {
@@ -392,57 +393,125 @@ export function WorkerSlotsGrid() {
           <div className="grid grid-cols-5 gap-2">
             {slots.map((slot) => {
               const isActive = slot.status === 'running' || slot.status === 'paused';
+              const isExpanded = expandedSlotId === slot.slotId;
               return (
-                <motion.button
-                  key={slot.slotId}
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => openInspection(slot)}
-                  className={cn(
-                    'p-3 rounded-xl border-2 text-left transition-all relative overflow-hidden group',
-                    isActive
-                      ? 'border-accent/30 bg-accent/[0.03] shadow-[0_0_15px_hsl(var(--accent)/0.06)]'
-                      : 'border-border hover:border-muted-foreground/30 bg-card/50'
+                <AnimatePresence key={slot.slotId} mode="popLayout">
+                  {isExpanded ? (
+                    /* ═══ EXPANDED CARD (Image 2 style) ═══ */
+                    <motion.div
+                      layoutId={`slot-${slot.slotId}`}
+                      initial={{ opacity: 0.8 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0.8 }}
+                      transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                      className={cn(
+                        'col-span-2 row-span-2 p-4 rounded-xl border-2 text-left relative overflow-hidden cursor-pointer group',
+                        isActive
+                          ? 'border-accent/40 bg-accent/[0.04] shadow-[0_0_20px_hsl(var(--accent)/0.1)]'
+                          : 'border-muted-foreground/30 bg-card/80 shadow-lg'
+                      )}
+                      onClick={() => {
+                        openInspection(slot);
+                        setExpandedSlotId(null);
+                      }}
+                    >
+                      {/* Header */}
+                      <div className="flex items-center justify-between mb-3">
+                        <span className={cn('text-xs font-mono font-black', isActive ? 'text-accent' : 'text-accent/70')}>
+                          No. {slot.slotId}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <Settings className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors" />
+                          <div className={cn(
+                            'w-2.5 h-2.5 rounded-full',
+                            isActive ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-muted-foreground/25'
+                          )} />
+                        </div>
+                      </div>
+
+                      {/* Title + Status */}
+                      <p className="text-sm font-black uppercase tracking-tight leading-tight">
+                        Worker Slot
+                      </p>
+                      <p className={cn(
+                        'text-xs font-bold uppercase mt-0.5',
+                        isActive ? 'text-green-500' : 'text-muted-foreground/40'
+                      )}>
+                        {slot.status === 'paused' ? 'PAUSED' : isActive ? 'RUNNING' : 'STANDBY'}
+                      </p>
+
+                      {/* User / Info */}
+                      <p className="text-[10px] text-muted-foreground/50 truncate mt-2">
+                        {slot.displayName || 'No user'}
+                      </p>
+
+                      {/* Progress bar — larger */}
+                      <div className="mt-3 h-1.5 bg-border rounded-full overflow-hidden">
+                        <div
+                          className={cn('h-full rounded-full transition-all duration-500', isActive ? 'bg-accent' : 'bg-muted-foreground/10')}
+                          style={{ width: `${isActive ? slot.progress.percent : 0}%` }}
+                        />
+                      </div>
+
+                      {/* Hint */}
+                      <p className="text-[8px] text-muted-foreground/30 text-center mt-2 uppercase tracking-widest font-mono">
+                        คลิกเพื่อดู Inspection
+                      </p>
+                    </motion.div>
+                  ) : (
+                    /* ═══ COMPACT CARD (Image 1 style) ═══ */
+                    <motion.button
+                      layoutId={`slot-${slot.slotId}`}
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => setExpandedSlotId(isExpanded ? null : slot.slotId)}
+                      className={cn(
+                        'p-3 rounded-xl border-2 text-left transition-all relative overflow-hidden group',
+                        isActive
+                          ? 'border-accent/30 bg-accent/[0.03] shadow-[0_0_15px_hsl(var(--accent)/0.06)]'
+                          : 'border-border hover:border-muted-foreground/30 bg-card/50'
+                      )}
+                    >
+                      {/* Top: Slot number + status dot */}
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className={cn('text-[9px] font-mono font-bold', isActive ? 'text-accent' : 'text-muted-foreground/50')}>
+                          No. {slot.slotId}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <Settings className="w-3 h-3 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors" />
+                          <div className={cn(
+                            'w-2 h-2 rounded-full',
+                            isActive ? 'bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]' : 'bg-muted-foreground/20'
+                          )} />
+                        </div>
+                      </div>
+
+                      {/* Title */}
+                      <p className="text-[10px] font-bold uppercase tracking-tight leading-tight">
+                        Worker Slot
+                      </p>
+                      <p className={cn(
+                        'text-[9px] font-bold uppercase',
+                        isActive ? 'text-green-500' : 'text-muted-foreground/40'
+                      )}>
+                        {slot.status === 'paused' ? 'PAUSED' : isActive ? 'RUNNING' : 'STANDBY'}
+                      </p>
+
+                      {/* User */}
+                      <p className="text-[8px] text-muted-foreground/40 truncate mt-1">
+                        {slot.displayName || 'No user'}
+                      </p>
+
+                      {/* Progress bar */}
+                      <div className="mt-2 h-1 bg-border rounded-full overflow-hidden">
+                        <div
+                          className={cn('h-full rounded-full transition-all duration-500', isActive ? 'bg-accent' : 'bg-transparent')}
+                          style={{ width: `${slot.progress.percent}%` }}
+                        />
+                      </div>
+                    </motion.button>
                   )}
-                >
-                  {/* Top: Slot number + status dot */}
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className={cn('text-[9px] font-mono font-bold', isActive ? 'text-accent' : 'text-muted-foreground/50')}>
-                      No. {slot.slotId}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <Settings className="w-3 h-3 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors" />
-                      <div className={cn(
-                        'w-2 h-2 rounded-full',
-                        isActive ? 'bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]' : 'bg-muted-foreground/20'
-                      )} />
-                    </div>
-                  </div>
-
-                  {/* Title */}
-                  <p className="text-[10px] font-bold uppercase tracking-tight leading-tight">
-                    Worker Slot
-                  </p>
-                  <p className={cn(
-                    'text-[9px] font-bold uppercase',
-                    isActive ? 'text-green-500' : 'text-muted-foreground/40'
-                  )}>
-                    {slot.status === 'paused' ? 'PAUSED' : isActive ? 'RUNNING' : 'STANDBY'}
-                  </p>
-
-                  {/* User */}
-                  <p className="text-[8px] text-muted-foreground/40 truncate mt-1">
-                    {slot.displayName || 'No user'}
-                  </p>
-
-                  {/* Progress bar */}
-                  <div className="mt-2 h-1 bg-border rounded-full overflow-hidden">
-                    <div
-                      className={cn('h-full rounded-full transition-all duration-500', isActive ? 'bg-accent' : 'bg-transparent')}
-                      style={{ width: `${slot.progress.percent}%` }}
-                    />
-                  </div>
-                </motion.button>
+                </AnimatePresence>
               );
             })}
           </div>

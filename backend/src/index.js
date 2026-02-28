@@ -1607,41 +1607,167 @@ app.post('/api/group-automation/generate-caption', ...auth, async (req, res) => 
 
 // Helper: scrape FB user info from current page
 async function scrapeFbUserInfo(page) {
-  return page.evaluate(() => {
+  // Try scraping from the current page first
+  let result = await page.evaluate(() => {
     let name = '';
     let profilePic = '';
+    const blacklist = ['Facebook', 'Messenger', 'Watch', 'Marketplace', 'Gaming', 'หน้าหลัก', 'Home', 'การแจ้งเตือน', 'Notifications', 'เมนู', 'Menu', 'สร้าง', 'Create', 'กลุ่ม', 'Groups', 'แชท', 'Chat'];
+    const isBlacklisted = (t) => !t || t.length < 2 || t.length > 60 || blacklist.some(b => t === b || t.startsWith(b + ' '));
+
     try {
-      const allLinks = document.querySelectorAll('a[role="link"][href*="facebook.com/"]');
-      for (const link of allLinks) {
-        const img = link.querySelector('image');
-        const nameSpan = link.querySelector('span.x1lliihq');
-        if (img && nameSpan) {
-          const href = img.getAttribute('xlink:href') || img.getAttribute('href') || '';
-          const text = nameSpan.textContent?.trim() || '';
-          if (href.includes('scontent') && text.length > 1 && text.length < 60) {
+      // ── Strategy 1: Navigation bar profile link (top-right user menu) ──
+      // Facebook shows profile link with SVG avatar + name in the left sidebar or top nav
+      const navLinks = document.querySelectorAll('a[role="link"]');
+      for (const link of navLinks) {
+        const href = link.getAttribute('href') || '';
+        // Profile links often point to the user's profile page
+        if (!href.includes('/me') && !href.match(/facebook\.com\/[a-zA-Z0-9.]+\/?$/)) continue;
+        const svgImg = link.querySelector('image');
+        const spans = link.querySelectorAll('span');
+        for (const span of spans) {
+          const text = span.textContent?.trim() || '';
+          if (!isBlacklisted(text)) {
             name = text;
-            profilePic = href;
+            if (svgImg) {
+              profilePic = svgImg.getAttribute('xlink:href') || svgImg.getAttribute('href') || '';
+            }
+            break;
+          }
+        }
+        if (name) break;
+      }
+
+      // ── Strategy 2: Account switcher / user menu area ──
+      if (!name) {
+        // The user account section often has aria-label with the user's name
+        const userMenuItems = document.querySelectorAll('[aria-label][role="button"], [aria-label][role="link"]');
+        for (const el of userMenuItems) {
+          const label = el.getAttribute('aria-label') || '';
+          // "Your profile" button or user name button — skip generic labels
+          if (label.includes('โปรไฟล์ของคุณ') || label.includes('Your profile')) continue;
+          if (label.includes('Account') || label.includes('บัญชี')) continue;
+          // Check if this is a user-specific element with a profile image
+          const img = el.querySelector('img[src*="scontent"], image');
+          if (img && !isBlacklisted(label)) {
+            name = label;
+            profilePic = img.getAttribute('src') || img.getAttribute('xlink:href') || img.getAttribute('href') || '';
             break;
           }
         }
       }
+
+      // ── Strategy 3: Profile shortcut in left sidebar ──
       if (!name) {
-        const profileLinks = document.querySelectorAll('a[href*="/me/"], a[aria-label*="profile"], a[aria-label*="โปรไฟล์"]');
-        for (const link of profileLinks) {
-          const text = link.textContent?.trim();
-          if (text && text.length > 1 && text.length < 60 && !text.includes('Facebook')) { name = text; break; }
+        const sidebarLinks = document.querySelectorAll('a[href*="facebook.com/"][role="link"]');
+        for (const link of sidebarLinks) {
+          const img = link.querySelector('img[src*="scontent"]');
+          if (!img) continue;
+          const spans = link.querySelectorAll('span');
+          for (const span of spans) {
+            const text = span.textContent?.trim() || '';
+            if (!isBlacklisted(text)) {
+              name = text;
+              profilePic = img.getAttribute('src') || '';
+              break;
+            }
+          }
+          if (name) break;
+        }
+      }
+
+      // ── Strategy 4: Any <a> with both image and span children ──
+      if (!name) {
+        const allLinks = document.querySelectorAll('a[role="link"]');
+        for (const link of allLinks) {
+          const svgImg = link.querySelector('image');
+          const imgEl = link.querySelector('img[src*="scontent"]');
+          const picEl = svgImg || imgEl;
+          if (!picEl) continue;
+          const nameSpan = link.querySelector('span');
+          if (nameSpan) {
+            const text = nameSpan.textContent?.trim() || '';
+            if (!isBlacklisted(text)) {
+              name = text;
+              if (svgImg) profilePic = svgImg.getAttribute('xlink:href') || svgImg.getAttribute('href') || '';
+              else if (imgEl) profilePic = imgEl.getAttribute('src') || '';
+              break;
+            }
+          }
+        }
+      }
+
+      // ── Strategy 5: Meta tags (og:title on profile-like pages) ──
+      if (!name) {
+        const ogTitle = document.querySelector('meta[property="og:title"]');
+        if (ogTitle) {
+          const t = ogTitle.getAttribute('content')?.trim() || '';
+          if (t && !isBlacklisted(t) && !t.includes('|') && !t.includes('Facebook')) name = t;
+        }
+      }
+
+      // ── Profile pic fallback: any SVG image or img with scontent ──
+      if (!profilePic) {
+        const svgImages = document.querySelectorAll('image');
+        for (const img of svgImages) {
+          const href = img.getAttribute('xlink:href') || img.getAttribute('href') || '';
+          if (href.includes('scontent')) { profilePic = href; break; }
         }
       }
       if (!profilePic) {
-        const images = document.querySelectorAll('image[*|href*="scontent"]');
-        for (const img of images) {
-          const href = img.getAttribute('xlink:href') || img.getAttribute('href') || '';
-          if (href.includes('scontent') && (href.includes('_s40x40') || href.includes('_s36x36') || href.includes('dst-jpg'))) { profilePic = href; break; }
+        const imgElements = document.querySelectorAll('img[src*="scontent"]');
+        for (const img of imgElements) {
+          const src = img.getAttribute('src') || '';
+          const w = img.naturalWidth || parseInt(img.getAttribute('width') || '0');
+          // Profile pics are usually small (36-50px)
+          if (src.includes('scontent') && (w <= 60 || src.includes('_s40x40') || src.includes('_s36x36') || src.includes('_n.'))) {
+            profilePic = src;
+            break;
+          }
         }
       }
     } catch (e) { }
     return { name, profilePic };
   });
+
+  // ── Fallback: Navigate to profile page to get name ──
+  if (!result.name) {
+    try {
+      console.log('🔍 scrapeFbUserInfo: Trying /me/ fallback...');
+      await page.goto('https://www.facebook.com/me/', { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await new Promise(r => setTimeout(r, 3000));
+      const profileResult = await page.evaluate(() => {
+        let name = '';
+        let profilePic = '';
+        // On profile page, h1 contains the user's name
+        const h1 = document.querySelector('h1');
+        if (h1) {
+          const text = h1.textContent?.trim() || '';
+          if (text && text.length > 1 && text.length < 60) name = text;
+        }
+        // title tag: "Name | Facebook"
+        if (!name) {
+          const title = document.title || '';
+          if (title.includes('|')) {
+            const candidate = title.split('|')[0].trim();
+            if (candidate && candidate.length > 1 && candidate.length < 60) name = candidate;
+          }
+        }
+        // Profile picture from the page
+        const profileImg = document.querySelector('image[xlink\\:href*="scontent"], img[src*="scontent"][alt]');
+        if (profileImg) {
+          profilePic = profileImg.getAttribute('xlink:href') || profileImg.getAttribute('src') || '';
+        }
+        return { name, profilePic };
+      });
+      if (profileResult.name) result.name = profileResult.name;
+      if (profileResult.profilePic && !result.profilePic) result.profilePic = profileResult.profilePic;
+    } catch (e) {
+      console.log('⚠️ scrapeFbUserInfo /me/ fallback error:', e.message);
+    }
+  }
+
+  console.log(`👤 [FB Profile] Name: "${result.name}" | Pic: ${result.profilePic ? 'YES' : 'NO'}`);
+  return result;
 }
 
 // Connect to Facebook — slot-aware (opens browser for a specific session slot)

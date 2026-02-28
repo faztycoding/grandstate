@@ -683,6 +683,97 @@
   animation: tooltipIn 0.15s ease-out;
 }
 
+/* ═══ Machine / CRT Screen Effects ═══ */
+.machine-screen {
+  position: relative;
+  background: #050505;
+  overflow: hidden;
+}
+.machine-screen::before {
+  content: "";
+  display: block;
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.25) 50%),
+    linear-gradient(90deg, rgba(255,0,0,0.04), rgba(0,255,0,0.02), rgba(0,0,255,0.04));
+  background-size: 100% 4px, 3px 100%;
+  z-index: 2;
+  pointer-events: none;
+  animation: scanlineDrift 8s linear infinite;
+}
+.machine-screen::after {
+  content: "";
+  display: block;
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, rgba(18,16,16,0) 50%, rgba(0,0,0,0.7) 100%);
+  z-index: 3;
+  pointer-events: none;
+}
+@keyframes scanlineDrift {
+  0%   { background-position: 0 0, 0 0; }
+  100% { background-position: 0 100%, 0 0; }
+}
+@keyframes typewriter-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.cursor-blink::after {
+  content: "▌";
+  animation: typewriter-blink 0.8s step-end infinite;
+  color: #22d3ee;
+}
+@keyframes glitch-h {
+  0%   { clip-path: inset(40% 0 61% 0); transform: translate(-2px, 0); }
+  20%  { clip-path: inset(92% 0 1% 0);  transform: translate(2px, 0); }
+  40%  { clip-path: inset(43% 0 1% 0);  transform: translate(-1px, 0); }
+  60%  { clip-path: inset(25% 0 58% 0); transform: translate(1px, 0); }
+  80%  { clip-path: inset(54% 0 7% 0);  transform: translate(-2px, 0); }
+  100% { clip-path: inset(58% 0 43% 0); transform: translate(0); }
+}
+.glitch-text { position: relative; }
+.glitch-text::before,
+.glitch-text::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+}
+.glitch-text::before {
+  color: #ff0040;
+  animation: glitch-h 3s infinite linear alternate-reverse;
+  opacity: 0.6;
+}
+.glitch-text::after {
+  color: #00fff9;
+  animation: glitch-h 2s infinite linear alternate;
+  opacity: 0.6;
+}
+@keyframes grid-flow {
+  0%   { background-position: 0 0; }
+  100% { background-position: 0 60px; }
+}
+.grid-flow-bg {
+  background-image:
+    linear-gradient(rgba(34,211,238,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34,211,238,0.06) 1px, transparent 1px);
+  background-size: 60px 60px;
+  animation: grid-flow 4s linear infinite;
+}
+@keyframes radar-sweep {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes neon-pulse {
+  0%, 100% { box-shadow: 0 0 5px rgba(34,211,238,0.3), 0 0 20px rgba(34,211,238,0.1), inset 0 0 10px rgba(34,211,238,0.05); }
+  50%      { box-shadow: 0 0 10px rgba(34,211,238,0.5), 0 0 40px rgba(34,211,238,0.2), inset 0 0 20px rgba(34,211,238,0.1); }
+}
+@keyframes flash-reveal {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 /* Property card specific styles */
 .property-card-image {
   @apply relative overflow-hidden;

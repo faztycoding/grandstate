@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -330,10 +330,14 @@ export function WorkerSlotsGrid() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [expandedSlotId, setExpandedSlotId] = useState<string | null>(null);
 
+  const backoffRef = useRef(false);
+
   const fetchSlots = useCallback(async () => {
     try {
       const res = await apiFetch('/api/worker-slots');
+      if (res.status === 404) { backoffRef.current = true; return; }
       if (!res.ok) return;
+      backoffRef.current = false;
       const json = await res.json();
       if (json.success) setData(json);
     } catch { /* silent */ }
@@ -341,8 +345,14 @@ export function WorkerSlotsGrid() {
 
   useEffect(() => {
     fetchSlots();
-    const interval = setInterval(fetchSlots, 3000);
-    return () => clearInterval(interval);
+    const interval = setInterval(() => {
+      if (!backoffRef.current) fetchSlots();
+    }, 3000);
+    // Slow retry when endpoint is unavailable
+    const retryInterval = setInterval(() => {
+      if (backoffRef.current) fetchSlots();
+    }, 30000);
+    return () => { clearInterval(interval); clearInterval(retryInterval); };
   }, [fetchSlots]);
 
   const openInspection = (slot: WorkerSlot) => {

@@ -71,9 +71,12 @@ export function useNotifications() {
   }, [addNotification]);
 
   // Poll backend for admin ticket reply notifications
+  const pollBackoffRef = useRef(false);
   const pollTicketReplies = useCallback(async () => {
+    if (pollBackoffRef.current) return;
     try {
       const res = await apiFetch('/api/notifications/poll');
+      if (res.status === 404) { pollBackoffRef.current = true; setTimeout(() => { pollBackoffRef.current = false; }, 60000); return; }
       if (!res.ok) return;
       const data = await res.json();
       if (data.success && Array.isArray(data.notifications) && data.notifications.length > 0) {

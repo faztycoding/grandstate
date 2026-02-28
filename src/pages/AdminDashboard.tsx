@@ -157,7 +157,7 @@ function AnimatedCounter({ value, suffix = '', className }: { value: number | st
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
-    const { t } = useLanguage();
+    const { t, language, setLanguage } = useLanguage();
     const [licenses, setLicenses] = useState<LicenseKey[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -240,9 +240,9 @@ export default function AdminDashboard() {
                 fetchAllUsers();
                 fetchUserLicenses();
             } else {
-                toast.error(data.error || 'ลบไม่สำเร็จ');
+                toast.error(data.error || t.admin.toastDeleteFail);
             }
-        } catch (err: any) { toast.error(err?.message || 'เชื่อมต่อ backend ไม่ได้'); } finally { setDeletingUser(null); }
+        } catch (err: any) { toast.error(err?.message || t.admin.toastBackendError); } finally { setDeletingUser(null); }
     };
 
     // User management: change package
@@ -326,7 +326,7 @@ export default function AdminDashboard() {
             if (error) throw error;
             toast.success(`อัปเดตสถานะเป็น ${newStatus}`);
             fetchTickets();
-        } catch { toast.error('อัปเดตไม่สำเร็จ'); }
+        } catch { toast.error(t.admin.toastUpdateFail); }
     };
 
     const handleReplyTicket = async (ticketId: string) => {
@@ -342,11 +342,11 @@ export default function AdminDashboard() {
                 })
                 .eq('id', ticketId);
             if (error) throw error;
-            toast.success('ตอบกลับสำเร็จ');
+            toast.success(t.admin.replySuccess);
             setReplyingTicket(null);
             setReplyText('');
             fetchTickets();
-        } catch { toast.error('ตอบกลับไม่สำเร็จ'); }
+        } catch { toast.error(t.admin.replyError); }
     };
 
     // License activations
@@ -605,7 +605,7 @@ export default function AdminDashboard() {
 
         } catch (error) {
             console.error('Error fetching licenses:', error);
-            toast.error('ไม่สามารถโหลดข้อมูล License ได้');
+            toast.error(t.admin.toastLoadLicenseFail);
         } finally {
             setIsLoading(false);
         }
@@ -675,7 +675,7 @@ export default function AdminDashboard() {
                 return;
             }
 
-            toast.success('ลบ License แล้ว');
+            toast.success(t.admin.toastLicenseDeleted);
             fetchLicenses();
         } catch (error: any) {
             console.error('Delete license error:', error);
@@ -687,7 +687,7 @@ export default function AdminDashboard() {
 
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text);
-        toast.success('คัดลอกแล้ว');
+        toast.success(t.admin.toastCopied);
     };
 
     const extendLicense = async (id: string, days: number) => {
@@ -710,7 +710,7 @@ export default function AdminDashboard() {
             toast.success(`ต่ออายุ ${days} วันสำเร็จ`);
             fetchLicenses();
         } catch (error) {
-            toast.error('ไม่สามารถต่ออายุได้');
+            toast.error(t.admin.toastExtendFail);
         }
     };
 
@@ -733,7 +733,7 @@ export default function AdminDashboard() {
     const handleLogout = async () => {
         await supabase.auth.signOut();
         setAdminUser(null);
-        toast.success('ออกจากระบบ Admin แล้ว');
+        toast.success(t.admin.toastLoggedOut);
         navigate('/');
     };
 
@@ -765,7 +765,7 @@ export default function AdminDashboard() {
         link.href = URL.createObjectURL(blob);
         link.download = `licenses_${new Date().toISOString().split('T')[0]}.csv`;
         link.click();
-        toast.success('ส่งออก CSV สำเร็จ');
+        toast.success(t.admin.toastExportSuccess);
     };
 
     // Filter licenses
@@ -869,7 +869,7 @@ export default function AdminDashboard() {
         { key: 'users', label: t.admin.tabUsers, icon: <Users className="w-4 h-4" /> },
         { key: 'licenses', label: t.admin.tabLicenses, icon: <Key className="w-4 h-4" /> },
         { key: 'system', label: t.admin.tabSystem, icon: <Monitor className="w-4 h-4" /> },
-        { key: 'tickets', label: 'แจ้งปัญหา', icon: <Mail className="w-4 h-4" /> },
+        { key: 'tickets', label: t.admin.tabTickets, icon: <Mail className="w-4 h-4" /> },
     ];
 
     return (
@@ -929,9 +929,13 @@ export default function AdminDashboard() {
                             {liveStats && (
                                 <div className="hidden sm:flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
                                     <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                    {liveStats.onlineUsers} online • {liveStats.automation.currentlyRunning} automation
+                                    {liveStats.onlineUsers} {t.admin.onlineCount} • {liveStats.automation.currentlyRunning} {t.admin.automationCount}
                                 </div>
                             )}
+                            <Button variant="outline" size="sm" onClick={() => setLanguage(language === 'th' ? 'en' : 'th')} className="font-bold text-xs gap-1 px-2.5">
+                                <Globe className="w-3.5 h-3.5" />
+                                {language === 'th' ? 'EN' : 'TH'}
+                            </Button>
                             <Button variant="outline" size="sm" onClick={exportToCSV}>
                                 <Download className="w-4 h-4" />
                             </Button>
@@ -2740,11 +2744,11 @@ export default function AdminDashboard() {
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex gap-1.5 flex-wrap">
                                 {([
-                                    { key: 'all', label: 'ทั้งหมด', count: tickets.length, dot: '' as const },
-                                    { key: 'open', label: 'เปิด', count: tickets.filter(t => t.status === 'open').length, dot: 'bg-red-500' },
-                                    { key: 'in_progress', label: 'ดำเนินการ', count: tickets.filter(t => t.status === 'in_progress').length, dot: 'bg-amber-500' },
-                                    { key: 'resolved', label: 'แก้ไขแล้ว', count: tickets.filter(t => t.status === 'resolved').length, dot: 'bg-emerald-500' },
-                                    { key: 'closed', label: 'ปิด', count: tickets.filter(t => t.status === 'closed').length, dot: 'bg-muted-foreground' },
+                                    { key: 'all', label: t.admin.ticketAll, count: tickets.length, dot: '' as const },
+                                    { key: 'open', label: t.admin.ticketOpen, count: tickets.filter(t => t.status === 'open').length, dot: 'bg-red-500' },
+                                    { key: 'in_progress', label: t.admin.ticketInProgress, count: tickets.filter(t => t.status === 'in_progress').length, dot: 'bg-amber-500' },
+                                    { key: 'resolved', label: t.admin.ticketResolved, count: tickets.filter(t => t.status === 'resolved').length, dot: 'bg-emerald-500' },
+                                    { key: 'closed', label: t.admin.ticketClosed, count: tickets.filter(t => t.status === 'closed').length, dot: 'bg-muted-foreground' },
                                 ] as const).map(f => (
                                     <Button
                                         key={f.key}
@@ -2760,7 +2764,7 @@ export default function AdminDashboard() {
                                 ))}
                             </div>
                             <Button variant="outline" size="sm" onClick={fetchTickets} disabled={ticketsLoading} className="h-8">
-                                <RefreshCw className={cn("w-3.5 h-3.5 mr-1.5", ticketsLoading && "animate-spin")} /> รีเฟรช
+                                <RefreshCw className={cn("w-3.5 h-3.5 mr-1.5", ticketsLoading && "animate-spin")} /> {t.admin.refresh}
                             </Button>
                         </div>
 
@@ -2768,12 +2772,12 @@ export default function AdminDashboard() {
                         <Card className="overflow-hidden">
                             {ticketsLoading && tickets.length === 0 ? (
                                 <div className="flex items-center justify-center py-20 text-muted-foreground gap-2">
-                                    <Loader2 className="w-5 h-5 animate-spin" /> กำลังโหลด...
+                                    <Loader2 className="w-5 h-5 animate-spin" /> {t.admin.checking}
                                 </div>
                             ) : (tickets.filter(t => ticketFilter === 'all' || t.status === ticketFilter)).length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
                                     <Mail className="w-10 h-10 opacity-20" />
-                                    <p className="text-sm">ไม่มีเรื่องแจ้งปัญหา</p>
+                                    <p className="text-sm">{t.admin.noTickets}</p>
                                 </div>
                             ) : (
                                 <div className="divide-y divide-border">
@@ -2789,12 +2793,12 @@ export default function AdminDashboard() {
                                     {/* Ticket Rows */}
                                     {(tickets.filter(t => ticketFilter === 'all' || t.status === ticketFilter)).map((ticket, idx) => {
                                         const catConfig: Record<string, { label: string; color: string; priority: string }> = {
-                                            general: { label: 'ทั่วไป', color: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20', priority: 'Low' },
-                                            bug: { label: 'บัค', color: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20', priority: 'High' },
-                                            feature: { label: 'ฟีเจอร์', color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20', priority: 'Medium' },
-                                            billing: { label: 'ชำระเงิน', color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20', priority: 'High' },
+                                            general: { label: t.admin.categoryGeneral, color: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20', priority: 'Low' },
+                                            bug: { label: t.admin.categoryBug, color: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20', priority: 'High' },
+                                            feature: { label: t.admin.categoryFeature, color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20', priority: 'Medium' },
+                                            billing: { label: t.admin.categoryBilling, color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20', priority: 'High' },
                                             facebook: { label: 'Facebook', color: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20', priority: 'Medium' },
-                                            automation: { label: 'ออโต้', color: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20', priority: 'Medium' },
+                                            automation: { label: t.admin.categoryAutomation, color: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20', priority: 'Medium' },
                                         };
                                         const statusDot: Record<string, string> = {
                                             open: 'bg-red-500 animate-pulse',
@@ -2847,10 +2851,10 @@ export default function AdminDashboard() {
                                                                 </div>
                                                             </SelectTrigger>
                                                             <SelectContent>
-                                                                <SelectItem value="open">เปิด</SelectItem>
-                                                                <SelectItem value="in_progress">กำลังดำเนินการ</SelectItem>
-                                                                <SelectItem value="resolved">แก้ไขแล้ว</SelectItem>
-                                                                <SelectItem value="closed">ปิด</SelectItem>
+                                                                <SelectItem value="open">{t.admin.ticketOpen}</SelectItem>
+                                                                <SelectItem value="in_progress">{t.admin.ticketInProgress}</SelectItem>
+                                                                <SelectItem value="resolved">{t.admin.ticketResolved}</SelectItem>
+                                                                <SelectItem value="closed">{t.admin.ticketClosed}</SelectItem>
                                                             </SelectContent>
                                                         </Select>
                                                     </div>
@@ -2883,7 +2887,7 @@ export default function AdminDashboard() {
                                                                 <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
                                                                     <p className="text-[10px] text-muted-foreground font-mono mb-1">DESCRIPTION</p>
                                                                     <p className="text-sm whitespace-pre-wrap">{ticket.description}</p>
-                                                                    <p className="text-[10px] text-muted-foreground mt-2">จาก: <strong>{ticket.user_name || 'N/A'}</strong> ({ticket.user_email})</p>
+                                                                    <p className="text-[10px] text-muted-foreground mt-2">{language === 'th' ? 'จาก' : 'From'}: <strong>{ticket.user_name || 'N/A'}</strong> ({ticket.user_email})</p>
                                                                 </div>
 
                                                                 {/* Existing admin reply */}
@@ -2900,13 +2904,13 @@ export default function AdminDashboard() {
                                                                     <Textarea
                                                                         value={replyText}
                                                                         onChange={(e) => setReplyText(e.target.value)}
-                                                                        placeholder="พิมพ์ข้อความตอบกลับ..."
+                                                                        placeholder={t.admin.replyPlaceholder}
                                                                         className="min-h-[80px] text-sm resize-none"
                                                                     />
                                                                     <div className="flex justify-end gap-2">
-                                                                        <Button variant="outline" size="sm" onClick={() => setReplyingTicket(null)}>ยกเลิก</Button>
+                                                                        <Button variant="outline" size="sm" onClick={() => setReplyingTicket(null)}>{t.admin.cancel}</Button>
                                                                         <Button size="sm" onClick={() => handleReplyTicket(ticket.id)} disabled={!replyText.trim()} className="bg-accent text-accent-foreground hover:bg-accent/90">
-                                                                            <Send className="w-3.5 h-3.5 mr-1.5" /> ส่งตอบกลับ
+                                                                            <Send className="w-3.5 h-3.5 mr-1.5" /> {language === 'th' ? 'ส่งตอบกลับ' : 'Send Reply'}
                                                                         </Button>
                                                                     </div>
                                                                 </div>
@@ -2964,11 +2968,11 @@ export default function AdminDashboard() {
                             <Label className="text-xs font-bold uppercase tracking-wider">{t.admin.duration}</Label>
                             <div className="flex flex-wrap gap-1.5">
                                 {[
-                                    { days: 7, label: '7 วัน' },
-                                    { days: 30, label: '30 วัน' },
-                                    { days: 90, label: '90 วัน' },
-                                    { days: 180, label: '180 วัน' },
-                                    { days: 365, label: '1 ปี' },
+                                    { days: 7, label: `7 ${t.admin.daysUnit}` },
+                                    { days: 30, label: `30 ${t.admin.daysUnit}` },
+                                    { days: 90, label: `90 ${t.admin.daysUnit}` },
+                                    { days: 180, label: `180 ${t.admin.daysUnit}` },
+                                    { days: 365, label: language === 'th' ? '1 ปี' : '1 year' },
                                 ].map(d => (
                                     <button key={d.days}
                                         onClick={() => setNewLicense({ ...newLicense, durationDays: d.days, customDays: '' })}
@@ -2990,13 +2994,13 @@ export default function AdminDashboard() {
                                         const v = e.target.value;
                                         setNewLicense({ ...newLicense, customDays: v, durationDays: parseInt(v) || 30 });
                                     }}
-                                    placeholder="กำหนดเอง (จำนวนวัน)"
+                                    placeholder={t.admin.customDays}
                                     className="h-9 text-sm"
                                 />
-                                <span className="text-xs text-muted-foreground whitespace-nowrap">วัน</span>
+                                <span className="text-xs text-muted-foreground whitespace-nowrap">{t.admin.daysUnit}</span>
                             </div>
                             <p className="text-[10px] text-muted-foreground">
-                                หมดอายุ: {new Date(Date.now() + (newLicense.customDays ? parseInt(newLicense.customDays) || 30 : newLicense.durationDays) * 86400000).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
+                                {t.admin.expiresOn}: {new Date(Date.now() + (newLicense.customDays ? parseInt(newLicense.customDays) || 30 : newLicense.durationDays) * 86400000).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
                             </p>
                         </div>
 
@@ -3033,16 +3037,16 @@ export default function AdminDashboard() {
                             <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
                                 <Calendar className="w-4 h-4 text-emerald-500" />
                             </div>
-                            ต่ออายุ License
+                            {t.admin.extendTitle}
                         </DialogTitle>
-                        <DialogDescription>เลือกจำนวนวันที่ต้องการต่ออายุ</DialogDescription>
+                        <DialogDescription>{t.admin.extendDesc}</DialogDescription>
                     </DialogHeader>
                     {extendTarget && (
                         <div className="space-y-4 py-2">
                             <div className="p-3 rounded-lg bg-muted/50 border text-center">
                                 <code className="text-sm font-mono font-bold">{extendTarget.key}</code>
                                 <p className="text-[10px] text-muted-foreground mt-1">
-                                    หมดอายุเดิม: {formatDate(extendTarget.currentExpiry)}
+                                    {t.admin.oldExpiry}: {formatDate(extendTarget.currentExpiry)}
                                 </p>
                             </div>
 
@@ -3053,7 +3057,7 @@ export default function AdminDashboard() {
                                         onClick={() => setExtendDays(d)}
                                         className={cn("px-3 py-1.5 rounded-lg border text-xs font-bold transition-all",
                                             extendDays === d ? "bg-emerald-500/10 text-emerald-400 border-emerald-500" : "border-border hover:border-emerald-500/50")}>
-                                        +{d} วัน
+                                        +{d} {t.admin.daysUnit}
                                     </button>
                                 ))}
                             </div>
@@ -3068,11 +3072,11 @@ export default function AdminDashboard() {
                                     onChange={e => setExtendDays(parseInt(e.target.value) || 30)}
                                     className="h-9 text-sm w-32"
                                 />
-                                <span className="text-xs text-muted-foreground">วัน</span>
+                                <span className="text-xs text-muted-foreground">{t.admin.daysUnit}</span>
                             </div>
 
                             <p className="text-[11px] text-muted-foreground border-t pt-2">
-                                วันหมดอายุใหม่: <span className="font-bold text-emerald-500">
+                                {t.admin.newExpiry}: <span className="font-bold text-emerald-500">
                                     {(() => {
                                         const base = new Date(extendTarget.currentExpiry) > new Date() ? new Date(extendTarget.currentExpiry) : new Date();
                                         return new Date(base.getTime() + extendDays * 86400000).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -3085,7 +3089,7 @@ export default function AdminDashboard() {
                         <Button variant="outline" onClick={() => setExtendTarget(null)}>{t.admin.cancel}</Button>
                         <Button onClick={() => { if (extendTarget) { extendLicense(extendTarget.id, extendDays); setExtendTarget(null); } }}
                             className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold gap-1.5">
-                            <Calendar className="w-3.5 h-3.5" /> ต่ออายุ +{extendDays} วัน
+                            <Calendar className="w-3.5 h-3.5" /> {t.admin.extendButton} +{extendDays} {t.admin.daysUnit}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

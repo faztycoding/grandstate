@@ -360,7 +360,7 @@ export function WorkerSlotsGrid() {
     setDialogOpen(true);
   };
 
-  const slots = data?.slots || Array.from({ length: 10 }, (_, i) => ({
+  const slots = data?.slots || Array.from({ length: 15 }, (_, i) => ({
     slotId: String(i + 1).padStart(3, '0'),
     status: 'standby' as const,
     userId: null,
@@ -386,7 +386,7 @@ export function WorkerSlotsGrid() {
               <Box className="w-4 h-4 text-accent" />
               <span>Worker Nodes</span>
               <Badge variant="secondary" className="text-[10px] font-mono ml-1">
-                {data?.activeCount || 0}/{data?.maxSlots || 10}
+                {data?.activeCount || 0}/{data?.maxSlots || 15}
               </Badge>
             </CardTitle>
             {data && data.activeCount > 0 && (

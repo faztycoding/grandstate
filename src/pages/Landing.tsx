@@ -523,10 +523,10 @@ export default function Landing() {
                 {isEn ? 'Start Free' : 'เริ่มต้นใช้งานฟรี'}
                 <ArrowRight className="w-5 h-5" />
               </Link>
-              <Link to="/pricing" className="inline-flex items-center justify-center gap-2 px-10 py-4 rounded-2xl text-base font-semibold bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 hover:scale-105 transition-all duration-300 shadow-lg">
+              <a href="#packages" onClick={(e) => { e.preventDefault(); document.getElementById('packages')?.scrollIntoView({ behavior: 'smooth' }); }} className="inline-flex items-center justify-center gap-2 px-10 py-4 rounded-2xl text-base font-semibold bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 hover:scale-105 transition-all duration-300 shadow-lg cursor-pointer">
                 {isEn ? 'View Plans' : 'ดูแพ็กเกจ'}
                 <Crown className="w-5 h-5" />
-              </Link>
+              </a>
             </motion.div>
 
             {/* Floating glass stat mini-cards below CTA */}

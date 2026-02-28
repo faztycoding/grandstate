@@ -27,8 +27,9 @@ export function WelcomeModal() {
   const [step, setStep] = useState(0);
 
   useEffect(() => {
-    const done = localStorage.getItem(ONBOARDING_KEY);
-    if (!done) setOpen(true);
+    const isNewUser = localStorage.getItem('grandstate_is_new_user');
+    const alreadyOnboarded = localStorage.getItem(ONBOARDING_KEY);
+    if (isNewUser && !alreadyOnboarded) setOpen(true);
   }, []);
 
   const steps: Step[] = [
@@ -60,6 +61,7 @@ export function WelcomeModal() {
 
   const handleFinish = () => {
     localStorage.setItem(ONBOARDING_KEY, 'true');
+    localStorage.removeItem('grandstate_is_new_user');
     setOpen(false);
   };
 

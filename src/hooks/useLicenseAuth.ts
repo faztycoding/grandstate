@@ -149,7 +149,10 @@ export function useLicenseAuth() {
                 return { success: true, error: 'กรุณายืนยันอีเมลของคุณก่อนเข้าสู่ระบบ (ตรวจสอบกล่องจดหมาย)' };
             }
 
-            if (data.user) setUser(data.user);
+            if (data.user) {
+                setUser(data.user);
+                localStorage.setItem('grandstate_is_new_user', 'true');
+            }
             return { success: true };
         } catch (err: any) {
             return { success: false, error: err.message || 'สมัครสมาชิกไม่สำเร็จ' };

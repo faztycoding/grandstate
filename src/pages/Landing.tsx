@@ -404,66 +404,97 @@ const stats = [
   { number: '100%', label: 'ข้อมูลแยก', labelEn: 'Data Isolated', sublabel: 'ปลอดภัยต่อ user', sublabelEn: 'per-user security' },
 ];
 
+const pkgColorMap: Record<string, { glow: string; border: string; bg: string; text: string; icon: string; badgeBg: string; badgeText: string; scanVia: string }> = {
+  emerald: {
+    glow: 'shadow-emerald-500/20', border: 'border-emerald-500/30', bg: 'bg-emerald-500/10',
+    text: 'text-emerald-400', icon: 'bg-emerald-500/20', badgeBg: 'bg-emerald-500/15', badgeText: 'text-emerald-400',
+    scanVia: 'via-emerald-500/40',
+  },
+  amber: {
+    glow: 'shadow-amber-500/20', border: 'border-amber-500/30', bg: 'bg-amber-500/10',
+    text: 'text-amber-400', icon: 'bg-amber-500/20', badgeBg: 'bg-amber-500/15', badgeText: 'text-amber-400',
+    scanVia: 'via-amber-500/40',
+  },
+  purple: {
+    glow: 'shadow-purple-500/20', border: 'border-purple-500/30', bg: 'bg-purple-500/10',
+    text: 'text-purple-400', icon: 'bg-purple-500/20', badgeBg: 'bg-purple-500/15', badgeText: 'text-purple-400',
+    scanVia: 'via-purple-500/40',
+  },
+};
+
 const packages = [
   {
     name: 'Rookie',
     nameEn: 'Rookie',
+    desc: 'เริ่มต้นใช้งานฟรี เหมาะสำหรับมือใหม่',
+    descEn: 'Start for free, perfect for beginners',
     icon: Rocket,
     price: 0,
     priceLabel: 'ฟรี',
     priceLabelEn: 'Free',
     period: '',
     periodEn: '',
-    color: 'from-emerald-500 to-teal-500',
+    colorKey: 'emerald',
+    postsPerDay: '10 โพสต์/วัน',
+    postsPerDayEn: '10 posts/day',
     features: [
-      { th: '10 โพสต์/วัน', en: '10 posts/day' },
-      { th: '10 กลุ่ม', en: '10 groups' },
-      { th: '10 ทรัพย์สิน', en: '10 properties' },
-      { th: '1 บัญชี Facebook', en: '1 Facebook account' },
-      { th: 'โพสต์กลุ่ม', en: 'Group posting' },
+      { th: '10 โพสต์ต่อวัน', en: '10 posts per day', included: true },
+      { th: 'เพิ่มสินทรัพย์ได้ 10 รายการ', en: 'Up to 10 properties', included: true },
+      { th: 'เพิ่มกลุ่มได้ 10 กลุ่ม', en: 'Up to 10 groups', included: true },
+      { th: 'รองรับ 2 ภาษา', en: 'Bilingual Support', included: true },
+      { th: 'หลายบัญชี Facebook', en: 'Multiple Facebook Accounts', included: false },
+      { th: 'ตั้งเวลาโพสต์อัตโนมัติ', en: 'Scheduled Posting', included: false },
     ],
   },
   {
     name: 'Top Agent',
     nameEn: 'Top Agent',
+    desc: 'สำหรับนายหน้ามืออาชีพ ที่ต้องการโพสต์มากขึ้น',
+    descEn: 'For professional agents who need more posts',
     icon: Star,
     price: 1490,
     priceLabel: '1,490',
     priceLabelEn: '1,490',
-    period: '/ เดือน',
-    periodEn: '/ month',
-    color: 'from-amber-500 to-orange-500',
+    period: 'บาท/เดือน',
+    periodEn: 'THB/mo',
+    colorKey: 'amber',
     popular: true,
+    postsPerDay: '300 โพสต์/วัน',
+    postsPerDayEn: '300 posts/day',
     features: [
-      { th: '300 โพสต์/วัน', en: '300 posts/day', highlight: true },
-      { th: '300 กลุ่ม', en: 'Up to 300 groups' },
-      { th: 'ไม่จำกัดทรัพย์สิน', en: 'Unlimited properties' },
-      { th: '3 บัญชี Facebook', en: '3 Facebook accounts', highlight: true },
-      { th: 'กลุ่ม + Marketplace', en: 'Groups + Marketplace' },
-      { th: 'AI แคปชั่น', en: 'AI captions' },
-      { th: 'ตั้งเวลาโพสต์', en: 'Scheduled posting' },
+      { th: '300 โพสต์ต่อวัน', en: '300 posts per day', included: true, highlight: true },
+      { th: 'เพิ่มสินทรัพย์ได้ไม่จำกัด', en: 'Unlimited properties', included: true },
+      { th: 'เพิ่มกลุ่มได้ 300 กลุ่ม', en: 'Up to 300 groups', included: true },
+      { th: 'รองรับ 2 ภาษา', en: 'Bilingual Support', included: true },
+      { th: 'หลายบัญชี Facebook (3)', en: 'Multiple Facebook Accounts (3)', included: true, highlight: true },
+      { th: 'ตั้งเวลาโพสต์อัตโนมัติ', en: 'Scheduled Posting', included: true },
+      { th: 'Analytics & Reports', en: 'Analytics & Reports', included: true },
+      { th: 'Priority Support', en: 'Priority Support', included: true },
     ],
   },
   {
     name: 'Elite',
     nameEn: 'Elite',
+    desc: 'สำหรับเอเจนซี่และบริษัทอสังหาฯ ขนาดใหญ่',
+    descEn: 'For agencies and large real estate companies',
     icon: Crown,
     price: 2990,
     priceLabel: '2,990',
     priceLabelEn: '2,990',
-    period: '/ เดือน',
-    periodEn: '/ month',
-    color: 'from-purple-500 to-pink-500',
+    period: 'บาท/เดือน',
+    periodEn: 'THB/mo',
+    colorKey: 'purple',
+    postsPerDay: '750 โพสต์/วัน',
+    postsPerDayEn: '750 posts/day',
     features: [
-      { th: '750 โพสต์/วัน', en: '750 posts/day', highlight: true },
-      { th: '750 กลุ่ม', en: 'Up to 750 groups' },
-      { th: 'ไม่จำกัดทรัพย์สิน', en: 'Unlimited properties' },
-      { th: '5 บัญชี Facebook', en: '5 Facebook accounts', highlight: true },
-      { th: 'กลุ่ม + Marketplace', en: 'Groups + Marketplace' },
-      { th: 'AI แคปชั่น', en: 'AI captions' },
-      { th: 'ตั้งเวลาโพสต์', en: 'Scheduled posting' },
-      { th: 'สถิติวิเคราะห์', en: 'Analytics & reports' },
-      { th: 'Priority Support 24/7', en: 'Priority Support 24/7', highlight: true },
+      { th: '750 โพสต์ต่อวัน', en: '750 posts per day', included: true, highlight: true },
+      { th: 'เพิ่มสินทรัพย์ได้ไม่จำกัด', en: 'Unlimited properties', included: true },
+      { th: 'เพิ่มกลุ่มได้ 750 กลุ่ม', en: 'Up to 750 groups', included: true },
+      { th: 'รองรับ 2 ภาษา', en: 'Bilingual Support', included: true },
+      { th: 'หลายบัญชี Facebook (5)', en: 'Multiple Facebook Accounts (5)', included: true, highlight: true },
+      { th: 'ตั้งเวลาโพสต์อัตโนมัติ', en: 'Scheduled Posting', included: true },
+      { th: 'Analytics & Reports', en: 'Analytics & Reports', included: true },
+      { th: 'Priority Support 24/7', en: 'Priority Support 24/7', included: true, highlight: true },
     ],
   },
 ];
@@ -1036,9 +1067,20 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ═══════════════ PACKAGES — Glassmorphism Cards ═══════════════ */}
-      <section id="packages" className="py-20 px-6 relative scroll-mt-20">
-        <div className="absolute inset-0 data-circuit opacity-10" />
+      {/* ═══════════════ PACKAGES — Dark Factory Cards ═══════════════ */}
+      <section id="packages" className="py-20 px-6 relative scroll-mt-20 overflow-hidden" style={{ background: 'linear-gradient(180deg, hsl(222 47% 6%) 0%, hsl(222 47% 4%) 100%)' }}>
+        {/* Blueprint Grid BG */}
+        <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(148,163,184,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.5) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+        {/* Floating particles */}
+        {[...Array(10)].map((_, i) => (
+          <motion.div key={`pkg-p-${i}`}
+            className="absolute w-1 h-1 rounded-full bg-amber-500/20 pointer-events-none"
+            style={{ left: `${8 + i * 9}%`, top: `${10 + (i % 3) * 30}%` }}
+            animate={{ y: [0, -20, 0], opacity: [0.2, 0.6, 0.2] }}
+            transition={{ duration: 3 + i * 0.4, repeat: Infinity, delay: i * 0.3 }}
+          />
+        ))}
+
         <div className="container mx-auto relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1046,83 +1088,141 @@ export default function Landing() {
             viewport={{ once: true }}
             className="text-center mb-14"
           >
-            <Badge className="mb-4 bg-accent/10 text-accent border-accent/20" variant="outline">
-              {isEn ? 'Packages' : 'แพ็กเกจ'}
-            </Badge>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              {isEn ? 'Choose the Right Plan' : 'เลือกแพ็กเกจที่เหมาะกับคุณ'}
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 backdrop-blur-sm mb-4">
+              <Sparkles className="w-4 h-4" />
+              <span className="text-sm font-medium">
+                {isEn ? 'Select your engine spec' : 'เลือกสเปกเครื่องยนต์ของคุณ'}
+              </span>
+            </div>
+            <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-4">
+              {isEn ? 'Transparent ' : 'ราคาชัดเจน '}
+              <span className="bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
+                {isEn ? 'Pricing' : 'โปร่งใส'}
+              </span>
             </h2>
-            <p className="text-muted-foreground text-lg">
-              {isEn ? 'Start free, upgrade when ready.' : 'เริ่มต้นฟรี อัพเกรดเมื่อพร้อม'}
+            <p className="text-slate-400 max-w-2xl mx-auto text-sm">
+              {isEn
+                ? 'Start free and upgrade when you need more power. All plans include our core features.'
+                : 'เริ่มต้นใช้งานฟรี อัพเกรดเมื่อต้องการพลังเพิ่ม ทุกแพ็คเกจมีฟีเจอร์หลักครบครัน'}
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {packages.map((pkg, index) => (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+            {packages.map((pkg, index) => {
+              const c = pkgColorMap[pkg.colorKey];
+              const PkgIcon = pkg.icon;
+              return (
               <motion.div
                 key={pkg.name}
-                initial={{ opacity: 0, y: 40, scale: 0.95 }}
+                initial={{ opacity: 0, y: 50, scale: 0.92 }}
                 whileInView={{ opacity: 1, y: 0, scale: 1 }}
                 viewport={{ once: true, margin: '-30px' }}
-                transition={{ delay: index * 0.12, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                className={pkg.popular ? 'md:-mt-4 md:mb-4' : ''}
+                transition={{ delay: index * 0.15, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                whileHover={{ y: -8, scale: 1.02 }}
+                className="relative group"
               >
-                <Card className={`h-full relative overflow-hidden transition-all duration-500 group ${pkg.popular ? 'neon-card border-accent shadow-xl shadow-accent/10 ring-1 ring-accent/20' : 'card-glow'}`}>
+                <div className={`relative h-full rounded-[1.5rem] border-2 overflow-hidden transition-all duration-500 bg-slate-900/80 backdrop-blur-sm ${pkg.popular ? `${c.border} shadow-xl ${c.glow}` : 'border-slate-800 hover:border-slate-700'}`}>
+
+                  {/* Glow Orb */}
+                  <div className={`absolute -top-20 -right-20 w-40 h-40 rounded-full blur-[80px] transition-all duration-700 pointer-events-none ${c.bg} opacity-40 group-hover:opacity-70`} />
+
+                  {/* Scanning Line */}
+                  <motion.div
+                    animate={{ top: ['-10%', '110%'] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: 'linear', delay: index * 0.5 }}
+                    className={`absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent to-transparent pointer-events-none z-20 ${c.scanVia}`}
+                  />
+
+                  {/* Popular Badge */}
                   {pkg.popular && (
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-accent to-orange-500" />
-                  )}
-                  {/* Shimmer */}
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-accent/5 to-transparent" style={{ animation: 'shimmer 2.5s ease-in-out infinite' }} />
-                  </div>
-                  <CardContent className="p-6 md:p-7 relative z-10">
-                    <div className="flex items-center gap-3 mb-4">
-                      <motion.div
-                        whileHover={{ scale: 1.1, rotate: 5 }}
-                        transition={{ type: 'spring', stiffness: 400 }}
-                        className={`w-12 h-12 rounded-xl bg-gradient-to-br ${pkg.color} flex items-center justify-center shadow-lg`}
-                      >
-                        <pkg.icon className="w-6 h-6 text-white" />
-                      </motion.div>
-                      <div>
-                        <h3 className="text-lg font-bold">{isEn ? pkg.nameEn : pkg.name}</h3>
-                        {pkg.popular && <Badge className="bg-accent/10 text-accent text-[10px] h-5">{isEn ? 'Most Popular' : 'ยอดนิยม'}</Badge>}
+                    <div className="absolute top-0 right-0 z-20">
+                      <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-black px-4 py-1.5 rounded-bl-xl shadow-lg uppercase tracking-widest">
+                        <Sparkles className="w-3 h-3 inline mr-1" />
+                        {isEn ? 'POPULAR' : 'ยอดนิยม'}
                       </div>
                     </div>
+                  )}
+
+                  {/* Content */}
+                  <div className="relative z-10 p-7 pt-8">
+                    {/* Icon */}
+                    <motion.div
+                      whileHover={{ scale: 1.1, rotate: 12 }}
+                      transition={{ type: 'spring', stiffness: 400 }}
+                      className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-5 ${c.icon}`}
+                    >
+                      <PkgIcon className={`w-7 h-7 ${c.text}`} />
+                    </motion.div>
+
+                    {/* Name + Description */}
+                    <h3 className="text-xl font-black text-white mb-1">{isEn ? pkg.nameEn : pkg.name}</h3>
+                    <p className="text-xs text-slate-500 mb-5">{isEn ? pkg.descEn : pkg.desc}</p>
 
                     {/* Price */}
-                    <div className="mb-5 pb-5 border-b border-border/50">
+                    <div className="flex items-baseline gap-1.5 mb-2">
                       {pkg.price === 0 ? (
-                        <div>
-                          <span className="text-4xl font-extrabold">{isEn ? 'Free' : 'ฟรี'}</span>
-                          <p className="text-xs text-muted-foreground mt-1">{isEn ? 'No credit card required' : 'ไม่ต้องผูกบัตร'}</p>
-                        </div>
+                        <span className={`text-4xl font-black ${c.text}`}>
+                          {isEn ? 'Free' : 'ฟรี'}
+                        </span>
                       ) : (
-                        <div>
-                          <span className="text-sm text-muted-foreground">฿</span>
-                          <span className="text-4xl font-extrabold">{isEn ? pkg.priceLabelEn : pkg.priceLabel}</span>
-                          <span className="text-muted-foreground text-sm ml-1">{isEn ? pkg.periodEn : pkg.period}</span>
-                        </div>
+                        <>
+                          <span className="text-4xl font-black text-white">
+                            {isEn ? pkg.priceLabelEn : pkg.priceLabel}
+                          </span>
+                          <span className="text-slate-500 text-sm">{isEn ? pkg.periodEn : pkg.period}</span>
+                        </>
                       )}
                     </div>
 
+                    {/* Posts per day badge */}
+                    <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold mb-6 ${c.badgeBg} ${c.badgeText}`}>
+                      <Zap className="w-3 h-3" />
+                      {isEn ? pkg.postsPerDayEn : pkg.postsPerDay}
+                    </div>
+
+                    {/* Divider */}
+                    <div className="h-px bg-slate-800 mb-5" />
+
                     {/* Features */}
-                    <ul className="space-y-2.5">
+                    <ul className="space-y-3 mb-7">
                       {pkg.features.map((f, fi) => (
-                        <li key={fi} className="flex items-start gap-2.5 text-sm">
-                          <Check className={`w-4 h-4 flex-shrink-0 mt-0.5 ${f.highlight ? 'text-accent' : 'text-emerald-500'}`} />
-                          <span className={f.highlight ? 'font-semibold' : ''}>{isEn ? f.en : f.th}</span>
-                        </li>
+                        <motion.li
+                          key={fi}
+                          initial={{ opacity: 0, x: -10 }}
+                          whileInView={{ opacity: 1, x: 0 }}
+                          viewport={{ once: true }}
+                          transition={{ delay: 0.3 + index * 0.15 + fi * 0.04 }}
+                          className={`flex items-center gap-2.5 text-sm rounded-lg px-2 py-1.5 -mx-2 transition-all duration-300 ${
+                            !f.included ? 'opacity-40' : 'hover:bg-slate-800/30'
+                          }`}
+                        >
+                          {f.included ? (
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
+                              f.highlight ? `${c.bg} ${c.text}` : 'bg-slate-800 text-slate-400'
+                            }`}>
+                              <Check className="w-3 h-3" />
+                            </div>
+                          ) : (
+                            <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 bg-slate-800/50">
+                              <Lock className="w-2.5 h-2.5 text-slate-600" />
+                            </div>
+                          )}
+                          <span className={`${
+                            f.included ? 'text-slate-300' : 'text-slate-600'
+                          } ${f.highlight ? `font-semibold ${c.text}` : ''}`}>
+                            {isEn ? f.en : f.th}
+                          </span>
+                        </motion.li>
                       ))}
                     </ul>
 
-                    {/* CTA */}
+                    {/* CTA Button */}
                     <Link
-                      to={pkg.price === 0 ? '/auth' : '/auth'}
-                      className={`w-full mt-6 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                      to="/auth"
+                      className={`w-full inline-flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl text-sm font-bold transition-all duration-300 ${
                         pkg.popular
-                          ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 hover:scale-[1.02]'
-                          : 'btn-glass'
+                          ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.02]'
+                          : 'border-2 border-slate-700 text-slate-300 hover:border-slate-500 hover:bg-slate-800/50'
                       }`}
                     >
                       {pkg.price === 0
@@ -1136,15 +1236,16 @@ export default function Landing() {
 
                     {/* Contact hint for paid plans */}
                     {pkg.price > 0 && (
-                      <p className="text-center text-[10px] text-muted-foreground mt-2">
+                      <p className="text-center text-[10px] text-slate-500 mt-2">
                         {isEn ? 'or contact via ' : 'หรือติดต่อทาง '}
-                        <a href="https://line.me/ti/p/@897hrloe" target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline font-medium">LINE</a>
+                        <a href="https://line.me/ti/p/@897hrloe" target="_blank" rel="noopener noreferrer" className="text-green-400 hover:underline font-medium">LINE</a>
                       </p>
                     )}
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </motion.div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>

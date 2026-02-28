@@ -59,8 +59,7 @@ import { useFacebookConnection } from '@/hooks/useFacebookConnection';
 import { getUserPackage, getPackageLimits } from '@/hooks/usePackageLimits';
 import { useHealthCheck, type RiskFactor } from '@/hooks/useHealthCheck';
 import { useNotifications } from '@/hooks/useNotifications';
-import { HealthCheckCard } from '@/components/automation/HealthCheckCard';
-import { AntiDetectionPanel } from '@/components/automation/AntiDetectionPanel';
+import { SecurityCenter } from '@/components/automation/SecurityCenter';
 import { BulkAddGroupDialog } from '@/components/automation/BulkAddGroupDialog';
 import { useGlobalAutomation } from '@/components/layout/DashboardLayout';
 import { DailyUsageCard } from '@/components/automation/DailyUsageCard';
@@ -127,7 +126,7 @@ export default function Automation() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [scheduleMode, setScheduleMode] = useState(false);
   const [scheduleDateTime, setScheduleDateTime] = useState('');
-  // showGuide removed — AntiDetectionPanel manages its own state
+  // showGuide removed — SecurityCenter manages its own state
 
   // Automation state
   const [automation, setAutomation] = useState<AutomationState>({
@@ -1199,8 +1198,12 @@ export default function Automation() {
             </CardContent>
           </Card>
 
-          {/* Health Check Card — prominent center placement */}
-          <HealthCheckCard result={healthResult} />
+          {/* Security Center — merged Health Check + Anti-Detection */}
+          <SecurityCenter
+            result={healthResult}
+            delayBetweenPosts={delayBetweenPosts}
+            selectedGroupsCount={selectedGroups.length}
+          />
 
           {/* Worker Nodes — Real-time slot monitor */}
           <WorkerSlotsGrid />
@@ -1415,13 +1418,6 @@ export default function Automation() {
                   <span className="text-xs text-muted-foreground">วินาที</span>
                 </div>
               </div>
-
-              {/* Anti-Ban Safety Guide — World-Class Anti-Detection */}
-              <AntiDetectionPanel
-                delayBetweenPosts={delayBetweenPosts}
-                selectedGroupsCount={selectedGroups.length}
-                healthResult={healthResult}
-              />
 
               {/* Action Buttons */}
               <div className="space-y-2 pt-1">

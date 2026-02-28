@@ -400,7 +400,7 @@ export function WorkerSlotsGrid() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-10 gap-2.5">
             {slots.map((slot) => {
               const isActive = slot.status === 'running' || slot.status === 'paused';
               const isExpanded = expandedSlotId === slot.slotId;

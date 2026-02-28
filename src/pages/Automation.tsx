@@ -1204,9 +1204,6 @@ export default function Automation() {
             delayBetweenPosts={delayBetweenPosts}
             selectedGroupsCount={selectedGroups.length}
           />
-
-          {/* Worker Nodes — Real-time slot monitor */}
-          <WorkerSlotsGrid />
         </div>
 
         {/* ═══ RIGHT WING: Ignition Panel ═══ */}
@@ -1529,6 +1526,11 @@ export default function Automation() {
             </motion.div>
           )}
 
+        </div>
+
+        {/* ═══ BOTTOM: Worker Nodes (full width) ═══ */}
+        <div className="col-span-12">
+          <WorkerSlotsGrid />
         </div>
 
         {/* ═══ BOTTOM: Production Dashboard ═══ */}

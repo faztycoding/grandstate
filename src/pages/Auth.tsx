@@ -9,7 +9,6 @@ import {
   ArrowRight,
   ArrowLeft,
   Loader2,
-  Shield,
   CheckCircle2,
   AlertCircle,
   Sparkles,
@@ -574,11 +573,6 @@ export default function Auth() {
               <a href="https://line.me/ti/p/@897hrloe" target="_blank" rel="noopener noreferrer"
                 className="text-amber-400/70 hover:text-amber-400 font-medium transition-colors">{isEn ? 'Contact via LINE' : 'ติดต่อทาง LINE'}</a>
             </p>
-            <div className="mt-3 pt-3 border-t border-white/[0.04]">
-              <Button variant="ghost" className="w-full text-white/20 hover:text-white/50 hover:bg-white/[0.03]" onClick={() => navigate('/adminfaz')}>
-                <Shield className="w-4 h-4 mr-2" />{isEn ? 'Admin Panel' : 'สำหรับผู้ดูแลระบบ'}
-              </Button>
-            </div>
           </>
         )}
 

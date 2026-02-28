@@ -7,10 +7,12 @@ import {
   Activity, Lock, Cpu, Radio
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import type { HealthCheckResult } from '@/hooks/useHealthCheck';
 
 interface AntiDetectionPanelProps {
   delayBetweenPosts: number;
   selectedGroupsCount: number;
+  healthResult?: HealthCheckResult;
 }
 
 const MODULES = [
@@ -35,9 +37,20 @@ function getRiskLevel(delay: number, groups: number) {
   return { level: 'high', label: 'เสี่ยงสูง', emoji: '🔴', percent: 85, color: 'red', gradient: 'from-red-500 to-orange-400' };
 }
 
-export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: AntiDetectionPanelProps) {
+export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount, healthResult }: AntiDetectionPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const risk = getRiskLevel(delayBetweenPosts, selectedGroupsCount);
+  const staticRisk = getRiskLevel(delayBetweenPosts, selectedGroupsCount);
+
+  // Use real-time health data if available, otherwise fall back to static
+  const hasRealData = healthResult && healthResult.stats.postsToday > 0;
+  const risk = hasRealData ? {
+    level: healthResult.overallLevel === 'safe' ? 'low' : healthResult.overallLevel === 'moderate' ? 'medium' : 'high',
+    label: healthResult.overallLevel === 'safe' ? 'ปลอดภัย' : healthResult.overallLevel === 'moderate' ? 'ปานกลาง' : healthResult.overallLevel === 'high' ? 'เสี่ยงสูง' : 'วิกฤต',
+    emoji: healthResult.overallLevel === 'safe' ? '🟢' : healthResult.overallLevel === 'moderate' ? '🟡' : healthResult.overallLevel === 'high' ? '🟠' : '🔴',
+    percent: healthResult.overallScore,
+    color: healthResult.overallLevel === 'safe' ? 'emerald' : healthResult.overallLevel === 'moderate' ? 'amber' : healthResult.overallLevel === 'critical' ? 'red' : 'red',
+    gradient: healthResult.overallLevel === 'safe' ? 'from-emerald-500 to-green-400' : healthResult.overallLevel === 'moderate' ? 'from-amber-500 to-yellow-400' : healthResult.overallLevel === 'high' ? 'from-orange-500 to-amber-400' : 'from-red-500 to-orange-400',
+  } : staticRisk;
 
   const isTipSafe = (key: string) => {
     if (key === 'delay') return delayBetweenPosts >= 15;
@@ -71,7 +84,7 @@ export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: A
               </Badge>
             </p>
             <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5 font-mono">
-              6 Modules · World-Class Anti-Detection
+              {hasRealData ? `Score ${healthResult.overallScore}/100 · ` : ''}6 Modules · World-Class Anti-Detection
             </p>
           </div>
           <motion.div
@@ -131,7 +144,28 @@ export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: A
                       transition={{ delay: 0.3, duration: 0.8, ease: 'easeOut' }}
                     />
                   </div>
-                  <p className="text-[10px] text-muted-foreground mt-1 font-mono">{selectedGroupsCount} กลุ่ม · delay {delayBetweenPosts}s</p>
+                  <p className="text-[10px] text-muted-foreground mt-1 font-mono">
+                    {hasRealData
+                      ? `${healthResult.stats.postsToday} โพสต์วันนี้ · ${healthResult.stats.postsThisHour} โพสต์/ชม. · delay ${healthResult.stats.avgDelayMinutes < 999 ? `${healthResult.stats.avgDelayMinutes}m` : '-'}`
+                      : `${selectedGroupsCount} กลุ่ม · delay ${delayBetweenPosts}s`
+                    }
+                  </p>
+                  {hasRealData && (
+                    <div className="grid grid-cols-3 gap-1.5 mt-2">
+                      <div className="text-center p-1.5 rounded-md bg-muted/30 border border-border/30">
+                        <p className="text-sm font-bold text-foreground">{healthResult.stats.postsToday}</p>
+                        <p className="text-[8px] text-muted-foreground">โพสต์วันนี้</p>
+                      </div>
+                      <div className="text-center p-1.5 rounded-md bg-muted/30 border border-border/30">
+                        <p className="text-sm font-bold text-foreground">{healthResult.stats.postsThisHour}</p>
+                        <p className="text-[8px] text-muted-foreground">โพสต์/ชั่วโมง</p>
+                      </div>
+                      <div className="text-center p-1.5 rounded-md bg-muted/30 border border-border/30">
+                        <p className="text-sm font-bold text-foreground">{healthResult.stats.avgDelayMinutes < 999 ? `${healthResult.stats.avgDelayMinutes}m` : '-'}</p>
+                        <p className="text-[8px] text-muted-foreground">ห่างเฉลี่ย</p>
+                      </div>
+                    </div>
+                  )}
                 </motion.div>
 
                 {/* ── Active Modules ── */}

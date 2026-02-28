@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiFetch } from '@/lib/config';
 
 // ============================================================
@@ -243,8 +243,11 @@ const DEFAULT_RESULT: HealthCheckResult = {
 // MAIN HOOK
 // ============================================================
 
-export function useHealthCheck() {
+type RiskNotifyFn = (level: 'moderate' | 'high' | 'critical', score: number, factors: RiskFactor[]) => void;
+
+export function useHealthCheck(onRiskEscalation?: RiskNotifyFn) {
   const [result, setResult] = useState<HealthCheckResult>(DEFAULT_RESULT);
+  const prevLevelRef = useRef<string>('safe');
 
   const fetchHealthCheck = useCallback(async () => {
     try {
@@ -252,12 +255,22 @@ export function useHealthCheck() {
       if (!resp.ok) throw new Error('Health check API failed');
       const json = await resp.json();
       if (json.success && json.data) {
-        setResult(calculateFromBackend(json.data));
+        const newResult = calculateFromBackend(json.data);
+        setResult(newResult);
+
+        // Trigger notification when risk level escalates
+        const prevLevel = prevLevelRef.current;
+        const newLevel = newResult.overallLevel;
+        const levelOrder = { safe: 0, moderate: 1, high: 2, critical: 3 };
+        if (levelOrder[newLevel] > levelOrder[prevLevel as keyof typeof levelOrder] && newLevel !== 'safe') {
+          onRiskEscalation?.(newLevel as 'moderate' | 'high' | 'critical', newResult.overallScore, newResult.factors);
+        }
+        prevLevelRef.current = newLevel;
       }
     } catch {
       // Backend not reachable — keep current result
     }
-  }, []);
+  }, [onRiskEscalation]);
 
   // Fetch on mount + poll every 15 seconds
   useEffect(() => {

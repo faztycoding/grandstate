@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { apiFetch } from '@/lib/config';
 
-export type NotificationCategory = 'admin' | 'system' | 'update' | 'automation' | 'general';
+export type NotificationCategory = 'admin' | 'system' | 'update' | 'automation' | 'general' | 'warning' | 'risk' | 'danger';
 
 export interface AppNotification {
   id: string;

@@ -57,7 +57,8 @@ import { cn } from '@/lib/utils';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useFacebookConnection } from '@/hooks/useFacebookConnection';
 import { getUserPackage, getPackageLimits } from '@/hooks/usePackageLimits';
-import { useHealthCheck } from '@/hooks/useHealthCheck';
+import { useHealthCheck, type RiskFactor } from '@/hooks/useHealthCheck';
+import { useNotifications } from '@/hooks/useNotifications';
 import { HealthCheckCard } from '@/components/automation/HealthCheckCard';
 import { AntiDetectionPanel } from '@/components/automation/AntiDetectionPanel';
 import { BulkAddGroupDialog } from '@/components/automation/BulkAddGroupDialog';
@@ -148,8 +149,40 @@ export default function Automation() {
   const [queueRunningJobs, setQueueRunningJobs] = useState<Array<{ displayName: string; groupCount: number; runningSec: number; automationType: string }> | null>(null);
   const queuePollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Notification hook — for risk-level alerts
+  const { addNotification } = useNotifications();
+
+  // Risk escalation callback → push notification to bell
+  const handleRiskEscalation = useCallback((level: 'moderate' | 'high' | 'critical', score: number, factors: RiskFactor[]) => {
+    const topFactors = factors.filter(f => f.score > 40).sort((a, b) => b.weightedScore - a.weightedScore).slice(0, 2);
+    const factorNames = topFactors.map(f => f.id).join(', ');
+
+    if (level === 'moderate') {
+      addNotification({
+        type: 'warning',
+        category: 'warning',
+        title: '⚠️ แจ้งเตือนความเสี่ยง',
+        message: `คะแนนความเสี่ยง ${score}/100 — ระดับปานกลาง | ปัจจัย: ${factorNames || 'พฤติกรรมโพสต์'} — แนะนำลดความถี่หรือเพิ่ม Delay`,
+      });
+    } else if (level === 'high') {
+      addNotification({
+        type: 'warning',
+        category: 'risk',
+        title: '🟠 ระดับเสี่ยงสูง',
+        message: `คะแนนความเสี่ยง ${score}/100 — ระดับเสี่ยงสูง | ปัจจัย: ${factorNames || 'กิจกรรมผิดปกติ'} — ควรหยุดพักบัญชีชั่วคราว`,
+      });
+    } else if (level === 'critical') {
+      addNotification({
+        type: 'error',
+        category: 'danger',
+        title: '🔴 อันตราย — เสี่ยงถูกแบน',
+        message: `คะแนนความเสี่ยง ${score}/100 — ระดับวิกฤต | ปัจจัย: ${factorNames || 'พฤติกรรมซ้ำซ้อน'} — หยุดการใช้งานทันทีเพื่อป้องกันบัญชี`,
+      });
+    }
+  }, [addNotification]);
+
   // Health Check — fetches real data from backend postingTracker
-  const { result: healthResult, clearHistory, refetch: refetchHealth } = useHealthCheck();
+  const { result: healthResult, clearHistory, refetch: refetchHealth } = useHealthCheck(handleRiskEscalation);
 
   // ONE-TIME RESET: Clear post history + health check to new-user state
   useEffect(() => {
@@ -1279,6 +1312,7 @@ export default function Automation() {
               <AntiDetectionPanel
                 delayBetweenPosts={delayBetweenPosts}
                 selectedGroupsCount={selectedGroups.length}
+                healthResult={healthResult}
               />
 
               {/* Action Buttons */}

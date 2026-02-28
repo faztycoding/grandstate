@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, CheckCheck, Trash2, X, Shield, Zap, RefreshCw, MessageCircle, Info } from 'lucide-react';
+import { Bell, CheckCheck, Trash2, X, Shield, ShieldAlert, Zap, RefreshCw, MessageCircle, Info, AlertTriangle, AlertOctagon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNotifications, type AppNotification, type NotificationCategory } from '@/hooks/useNotifications';
 import { cn } from '@/lib/utils';
@@ -10,6 +10,9 @@ const categoryMeta: Record<NotificationCategory, { label: string; icon: typeof S
   update: { label: 'อัพเดทระบบ', icon: RefreshCw, color: 'text-purple-500', dot: 'bg-purple-500' },
   system: { label: 'ระบบ', icon: Info, color: 'text-cyan-500', dot: 'bg-cyan-500' },
   general: { label: 'ทั่วไป', icon: MessageCircle, color: 'text-muted-foreground', dot: 'bg-muted-foreground' },
+  warning: { label: 'แจ้งเตือน', icon: AlertTriangle, color: 'text-yellow-500', dot: 'bg-yellow-500' },
+  risk: { label: 'เสี่ยง', icon: ShieldAlert, color: 'text-orange-500', dot: 'bg-orange-500' },
+  danger: { label: 'อันตราย', icon: AlertOctagon, color: 'text-red-500', dot: 'bg-red-500' },
 };
 
 const typeStyles: Record<AppNotification['type'], { dot: string }> = {

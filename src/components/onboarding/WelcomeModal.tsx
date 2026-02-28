@@ -4,6 +4,9 @@ import { cn } from '@/lib/utils';
 import { Building2, Users, Zap, ShieldCheck, ChevronRight, Crosshair, Database, Radio, Cpu, Shield, BarChart3 } from 'lucide-react';
 
 const ONBOARDING_KEY = 'grandstate_onboarded';
+const DISMISS_UNTIL_KEY = 'grandstate_tutorial_dismiss_until';
+const PERMANENT_DISMISS_KEY = 'grandstate_tutorial_never';
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 /* ────────────────────────────────────────────
    Typewriter hook — characters appear one by one
@@ -114,12 +117,29 @@ export function WelcomeModal() {
   const [step, setStep] = useState(0);
   const [bootLine, setBootLine] = useState(0);
   const [showFlash, setShowFlash] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Never show if user permanently dismissed
+    if (localStorage.getItem(PERMANENT_DISMISS_KEY)) return;
+
     const isNewUser = localStorage.getItem('grandstate_is_new_user');
     const alreadyOnboarded = localStorage.getItem(ONBOARDING_KEY);
-    if (isNewUser && !alreadyOnboarded) setOpen(true);
+
+    // Case 1: Brand new user who just signed up
+    if (isNewUser && !alreadyOnboarded) {
+      setOpen(true);
+      return;
+    }
+
+    // Case 2: Returning user — show every 7 days
+    if (alreadyOnboarded) {
+      const dismissUntil = localStorage.getItem(DISMISS_UNTIL_KEY);
+      if (!dismissUntil || Date.now() > Number(dismissUntil)) {
+        setOpen(true);
+      }
+    }
   }, []);
 
   // Boot sequence lines
@@ -152,16 +172,25 @@ export function WelcomeModal() {
     currentStep?.desc || '', 18, phase === 'steps' && titleDone
   );
 
+  const dismiss = useCallback(() => {
+    localStorage.setItem(ONBOARDING_KEY, 'true');
+    localStorage.removeItem('grandstate_is_new_user');
+    if (dontShowAgain) {
+      localStorage.setItem(PERMANENT_DISMISS_KEY, 'true');
+    } else {
+      localStorage.setItem(DISMISS_UNTIL_KEY, String(Date.now() + SEVEN_DAYS_MS));
+    }
+  }, [dontShowAgain]);
+
   const handleFinish = useCallback(() => {
     setPhase('complete');
     setShowFlash(true);
     setTimeout(() => {
       setShowFlash(false);
-      localStorage.setItem(ONBOARDING_KEY, 'true');
-      localStorage.removeItem('grandstate_is_new_user');
+      dismiss();
       setOpen(false);
     }, 1200);
-  }, []);
+  }, [dismiss]);
 
   const handleNext = useCallback(() => {
     if (step < STEPS.length - 1) {
@@ -172,10 +201,9 @@ export function WelcomeModal() {
   }, [step, handleFinish]);
 
   const handleSkip = useCallback(() => {
-    localStorage.setItem(ONBOARDING_KEY, 'true');
-    localStorage.removeItem('grandstate_is_new_user');
+    dismiss();
     setOpen(false);
-  }, []);
+  }, [dismiss]);
 
   if (!open) return null;
 
@@ -422,13 +450,26 @@ export function WelcomeModal() {
                       </motion.button>
                     </div>
 
-                    {/* Skip */}
-                    <button
-                      onClick={handleSkip}
-                      className="w-full text-[10px] text-cyan-800 hover:text-cyan-500 transition-colors tracking-widest uppercase"
-                    >
-                      [ SKIP CALIBRATION ]
-                    </button>
+                    {/* Don't show again checkbox + Skip */}
+                    <div className="space-y-2">
+                      <label className="flex items-center justify-center gap-2 cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={dontShowAgain}
+                          onChange={(e) => setDontShowAgain(e.target.checked)}
+                          className="w-3 h-3 rounded border-cyan-700 bg-transparent accent-cyan-500"
+                        />
+                        <span className="text-[9px] text-cyan-700 group-hover:text-cyan-500 transition-colors tracking-wider uppercase">
+                          {dontShowAgain ? '[ PERMANENTLY DISMISSED ]' : '[ DO NOT SHOW AGAIN ]'}
+                        </span>
+                      </label>
+                      <button
+                        onClick={handleSkip}
+                        className="w-full text-[10px] text-cyan-800 hover:text-cyan-500 transition-colors tracking-widest uppercase"
+                      >
+                        {dontShowAgain ? '[ CLOSE ]' : '[ SKIP — SEE YOU IN 7 DAYS ]'}
+                      </button>
+                    </div>
                   </motion.div>
                 )}
 

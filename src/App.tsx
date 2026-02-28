@@ -12,21 +12,37 @@ import { AdminRoute } from "@/components/AdminRoute";
 import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
 
+// Auto-retry: if dynamic import fails (stale chunk after deploy), reload page once
+function lazyRetry(importer: () => Promise<any>) {
+  return lazy(() =>
+    importer().catch(() => {
+      const key = 'grandstate_chunk_retry';
+      if (!sessionStorage.getItem(key)) {
+        sessionStorage.setItem(key, '1');
+        window.location.reload();
+        return new Promise(() => {}); // never resolves — page reloads
+      }
+      sessionStorage.removeItem(key);
+      return importer(); // 2nd attempt — let it throw to ErrorBoundary if still fails
+    })
+  );
+}
+
 // Lazy-load all pages for smaller initial bundle
-const Auth = lazy(() => import("./pages/Auth"));
-const Automation = lazy(() => import("./pages/Automation"));
-const CreateMarketplaceListing = lazy(() => import("./pages/CreateMarketplaceListing"));
-const PropertyGallery = lazy(() => import("./pages/PropertyGallery"));
-const Properties = lazy(() => import("./pages/Properties"));
-const Settings = lazy(() => import("./pages/Settings"));
-const Groups = lazy(() => import("./pages/Groups"));
-const Help = lazy(() => import("./pages/Help"));
-const Pricing = lazy(() => import("./pages/Pricing"));
-const Analytics = lazy(() => import("./pages/Analytics"));
-const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
-const UserProfile = lazy(() => import("./pages/UserProfile"));
-const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
-const TermsOfService = lazy(() => import("./pages/TermsOfService"));
+const Auth = lazyRetry(() => import("./pages/Auth"));
+const Automation = lazyRetry(() => import("./pages/Automation"));
+const CreateMarketplaceListing = lazyRetry(() => import("./pages/CreateMarketplaceListing"));
+const PropertyGallery = lazyRetry(() => import("./pages/PropertyGallery"));
+const Properties = lazyRetry(() => import("./pages/Properties"));
+const Settings = lazyRetry(() => import("./pages/Settings"));
+const Groups = lazyRetry(() => import("./pages/Groups"));
+const Help = lazyRetry(() => import("./pages/Help"));
+const Pricing = lazyRetry(() => import("./pages/Pricing"));
+const Analytics = lazyRetry(() => import("./pages/Analytics"));
+const AdminDashboard = lazyRetry(() => import("./pages/AdminDashboard"));
+const UserProfile = lazyRetry(() => import("./pages/UserProfile"));
+const PrivacyPolicy = lazyRetry(() => import("./pages/PrivacyPolicy"));
+const TermsOfService = lazyRetry(() => import("./pages/TermsOfService"));
 
 const queryClient = new QueryClient();
 

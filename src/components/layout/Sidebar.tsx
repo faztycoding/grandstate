@@ -634,7 +634,7 @@ function SidebarContent({
             <p className="text-sm font-bold bg-gradient-to-r from-purple-400 via-violet-300 to-purple-400 bg-clip-text text-transparent tracking-wide">
               GrandState
             </p>
-            <p className="text-[9px] text-sidebar-foreground/30 tracking-widest">VERSION 2.0</p>
+            <p className="text-[9px] text-sidebar-foreground/30 tracking-widest">VERSION 1.0</p>
           </div>
         )}
         {collapsed && (

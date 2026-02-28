@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect } from 'react';
+import { ReactNode, Suspense, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Sidebar, MobileSidebarProvider } from './Sidebar';
 import { Header } from './Header';
@@ -114,8 +114,17 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
         <Sidebar />
         <div className="md:pl-[280px] transition-all duration-200 relative z-10">
           <Header title={title} subtitle={subtitle} />
-          <main key={location.pathname} className="p-4 md:p-6 page-enter">
-            {children}
+          <main className="p-4 md:p-6">
+            <Suspense fallback={
+              <div className="flex items-center justify-center py-32 flex-col gap-3">
+                <div className="w-8 h-8 border-3 border-accent border-t-transparent rounded-full animate-spin" />
+                <p className="text-xs text-muted-foreground animate-pulse">Loading...</p>
+              </div>
+            }>
+              <div key={location.pathname} className="page-enter">
+                {children}
+              </div>
+            </Suspense>
           </main>
         </div>
       </div>

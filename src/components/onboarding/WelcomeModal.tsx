@@ -5,6 +5,7 @@ import { Building2, Users, Zap, ChevronRight, Sparkles, Home, Shield, BarChart3,
 const ONBOARDING_KEY = 'grandstate_onboarded';
 const DISMISS_UNTIL_KEY = 'grandstate_tutorial_dismiss_until';
 const PERMANENT_DISMISS_KEY = 'grandstate_tutorial_never';
+const SESSION_SHOWN_KEY = 'grandstate_tutorial_shown_this_session';
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 /* ────────────────────────────────────────────
@@ -64,6 +65,7 @@ export function WelcomeModal() {
 
   useEffect(() => {
     if (localStorage.getItem(PERMANENT_DISMISS_KEY)) return;
+    if (sessionStorage.getItem(SESSION_SHOWN_KEY)) return;
     const isNewUser = localStorage.getItem('grandstate_is_new_user');
     const alreadyOnboarded = localStorage.getItem(ONBOARDING_KEY);
     if (isNewUser && !alreadyOnboarded) { setOpen(true); return; }
@@ -76,6 +78,7 @@ export function WelcomeModal() {
   const dismiss = useCallback(() => {
     localStorage.setItem(ONBOARDING_KEY, 'true');
     localStorage.removeItem('grandstate_is_new_user');
+    sessionStorage.setItem(SESSION_SHOWN_KEY, '1');
     if (dontShowAgain) {
       localStorage.setItem(PERMANENT_DISMISS_KEY, 'true');
     } else {

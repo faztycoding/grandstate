@@ -64,8 +64,6 @@ import { TaskProgressPopup } from '@/components/automation/TaskProgressPopup';
 import { BulkAddGroupDialog } from '@/components/automation/BulkAddGroupDialog';
 import { DailyUsageCard } from '@/components/automation/DailyUsageCard';
 import { ScheduledPostsCard } from '@/components/automation/ScheduledPostsCard';
-import { AutomationStartEffect } from '@/components/automation/AutomationStartEffect';
-import { AutomationCompleteEffect } from '@/components/automation/AutomationCompleteEffect';
 import { apiFetch } from '@/lib/config';
 
 interface TaskStatus {
@@ -146,10 +144,6 @@ export default function Automation() {
   const [queuePosition, setQueuePosition] = useState<number | null>(null);
   const [queueEstimate, setQueueEstimate] = useState<number>(0);
   const queuePollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Effect states
-  const [showStartEffect, setShowStartEffect] = useState(false);
-  const [showCompleteEffect, setShowCompleteEffect] = useState(false);
 
   // Health Check — fetches real data from backend postingTracker
   const { result: healthResult, clearHistory, refetch: refetchHealth } = useHealthCheck();
@@ -290,10 +284,10 @@ export default function Automation() {
     setAutomationLogs([]);
     setAutomationStartTime(Date.now());
     setAutomationEndTime(null);
-    setShowCompleteEffect(false);
 
-    // Show start effect
-    setShowStartEffect(true);
+    toast.info(t.automation.automationStarting, {
+      description: `${t.automation.postingTo} ${selectedGroups.length} ${t.automation.groups}`,
+    });
 
     // Request notification permission so we can alert when done (even if tab is background)
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
@@ -561,8 +555,9 @@ export default function Automation() {
               }
               const summaryText = summaryParts.join(', ');
 
-              // Show completion effect with sound + result report
-              setShowCompleteEffect(true);
+              toast.success(t.automation.automationDone, {
+                description: summaryText,
+              });
 
               // Browser push notification (works even if tab is in background)
               if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
@@ -1647,24 +1642,6 @@ export default function Automation() {
           </div>
         </DialogContent>
       </Dialog>
-      {/* Automation Effects */}
-      <AutomationStartEffect
-        show={showStartEffect}
-        groupCount={automation.tasks.length}
-        propertyTitle={selectedProperty?.title}
-        onComplete={() => setShowStartEffect(false)}
-      />
-      <AutomationCompleteEffect
-        show={showCompleteEffect}
-        tasks={automation.tasks}
-        startTime={automationStartTime}
-        endTime={automationEndTime}
-        onDismiss={() => {
-          setShowCompleteEffect(false);
-          // Dismiss the TaskProgressPopup too
-          setAutomation(prev => ({ ...prev, tasks: [] }));
-        }}
-      />
     </DashboardLayout>
   );
 }

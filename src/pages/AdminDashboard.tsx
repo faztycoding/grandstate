@@ -1343,80 +1343,96 @@ export default function AdminDashboard() {
                             )}
                         </motion.div>
 
-                        {/* ── HERO: Grand$tate Engine — Automation Core ── */}
+                        {/* ── HERO: Grand$tate Mechanical Engine — Dark Luxury ── */}
                         <TooltipProvider delayDuration={200}>
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="relative overflow-hidden rounded-3xl text-white cursor-pointer group shadow-2xl border border-orange-200/30 dark:border-white/10"
-                            style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.9) 0%, rgba(245,158,11,0.85) 30%, rgba(59,130,246,0.8) 100%)', backdropFilter: 'blur(12px)' }}
+                            className="relative overflow-hidden rounded-3xl text-white cursor-pointer group shadow-2xl border border-amber-500/20"
+                            style={{ background: 'linear-gradient(180deg, hsl(222 47% 6%) 0%, hsl(222 47% 4%) 100%)' }}
                             onClick={() => setQueueDetail({ type: 'slots', data: liveStats.queue })}
                         >
-                            {/* Subtle grid overlay */}
-                            <div className="absolute inset-0 opacity-[0.06] pointer-events-none" style={{
-                                backgroundImage: 'linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px)',
+                            {/* Blueprint Grid */}
+                            <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{
+                                backgroundImage: 'linear-gradient(rgba(148,163,184,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.5) 1px, transparent 1px)',
                                 backgroundSize: '40px 40px'
                             }} />
 
-                            {/* Ambient glow orbs */}
+                            {/* Rotating Gear BG */}
+                            <motion.div animate={{ rotate: 360 }} transition={{ duration: 60, repeat: Infinity, ease: 'linear' }}
+                                className="absolute -top-[200px] -right-[200px] w-[600px] h-[600px] text-amber-500/[0.03] pointer-events-none">
+                                <Settings size={600} strokeWidth={0.3} />
+                            </motion.div>
+                            <motion.div animate={{ rotate: -360 }} transition={{ duration: 45, repeat: Infinity, ease: 'linear' }}
+                                className="absolute -bottom-[150px] -left-[150px] w-[400px] h-[400px] text-blue-500/[0.03] pointer-events-none">
+                                <Settings size={400} strokeWidth={0.3} />
+                            </motion.div>
+
+                            {/* Scanning Laser Line */}
+                            <motion.div
+                                animate={{ top: ['-5%', '105%'] }}
+                                transition={{ duration: 5, repeat: Infinity, ease: 'linear' }}
+                                className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-amber-500/30 to-transparent pointer-events-none z-30"
+                            />
+
+                            {/* Amber glow orbs */}
                             <div className={cn(
-                                "absolute -top-20 -left-20 w-64 h-64 rounded-full blur-[100px] transition-all duration-[3000ms]",
-                                liveStats.queue.runningCount > 0 ? "bg-white/20" : "bg-white/5"
+                                "absolute -top-20 -left-20 w-64 h-64 rounded-full blur-[100px] transition-all duration-[3000ms] pointer-events-none",
+                                liveStats.queue.runningCount > 0 ? "bg-amber-500/15" : "bg-amber-500/5"
                             )} />
                             <div className={cn(
-                                "absolute -bottom-20 -right-20 w-64 h-64 rounded-full blur-[100px] transition-all duration-[3000ms]",
-                                liveStats.queue.runningCount > 0 ? "bg-emerald-300/20" : "bg-emerald-300/5"
+                                "absolute -bottom-20 -right-20 w-64 h-64 rounded-full blur-[100px] transition-all duration-[3000ms] pointer-events-none",
+                                liveStats.queue.runningCount > 0 ? "bg-emerald-500/15" : "bg-emerald-500/5"
                             )} />
 
                             <div className="relative z-10 p-6 md:p-10">
                                 {/* ── Header: Engine Identity + Metrics Panel ── */}
                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10">
                                     <div className="flex items-center gap-4">
-                                        {/* Lightning bolt icon */}
                                         <div className="relative">
-                                            <div className="p-3 bg-blue-500/20 rounded-xl border border-blue-500/50 shadow-lg shadow-blue-500/20">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className={cn("w-6 h-6 text-blue-400", liveStats.queue.runningCount > 0 && "animate-pulse")} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                                </svg>
+                                            <div className="p-3 bg-amber-500/15 rounded-xl border border-amber-500/30 shadow-lg shadow-amber-500/10">
+                                                <motion.div animate={liveStats.queue.runningCount > 0 ? { rotate: 360 } : {}} transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}>
+                                                    <Settings className={cn("w-6 h-6 text-amber-500", liveStats.queue.runningCount > 0 && "drop-shadow-[0_0_6px_rgba(245,158,11,0.5)]")} />
+                                                </motion.div>
                                             </div>
                                             {liveStats.queue.runningCount > 0 && (
                                                 <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50 animate-pulse" />
                                             )}
                                         </div>
                                         <div>
-                                            <h3 className="text-xl md:text-2xl font-bold tracking-tighter uppercase">
-                                                Grand$tate Engine <span className="text-white/60 text-xs font-normal">v1.0</span>
+                                            <h3 className="text-xl md:text-2xl font-black tracking-tighter uppercase">
+                                                Grand$tate Engine <span className="text-amber-500/60 text-xs font-normal">v1.0</span>
                                             </h3>
-                                            <p className="text-[10px] text-white/50 uppercase tracking-[0.2em] mt-0.5">Real Estate Automation Core</p>
+                                            <p className="text-[10px] text-amber-500/40 uppercase tracking-[0.25em] mt-0.5 font-mono">Real Estate Automation Core</p>
                                         </div>
                                     </div>
 
                                     {/* Metrics panel */}
-                                    <div className="flex gap-6 md:gap-8 bg-black/20 backdrop-blur-sm px-5 py-4 rounded-2xl border border-white/15">
+                                    <div className="flex gap-6 md:gap-8 bg-slate-950/60 backdrop-blur-sm px-6 py-4 rounded-2xl border border-amber-500/15 shadow-lg">
                                         <div className="text-center">
-                                            <AnimatedCounter value={liveStats.queue.runningCount} className="text-3xl md:text-4xl font-bold text-white tabular-nums leading-none" />
-                                            <p className="text-[9px] text-white/50 uppercase tracking-[0.15em] mt-1 font-medium">Active Threads</p>
+                                            <AnimatedCounter value={liveStats.queue.runningCount} className="text-3xl md:text-4xl font-black text-white tabular-nums leading-none" />
+                                            <p className="text-[9px] text-slate-500 uppercase tracking-[0.15em] mt-1 font-bold">Active Threads</p>
                                         </div>
-                                        <div className="w-[1px] bg-white/20" />
+                                        <div className="w-[1px] bg-slate-800" />
                                         <div className="text-center">
-                                            <p className="text-3xl md:text-4xl font-bold text-white tabular-nums leading-none">
+                                            <p className="text-3xl md:text-4xl font-black text-amber-500 tabular-nums leading-none">
                                                 {liveStats.queue.runningCount > 0 ? Math.min(Math.round((liveStats.queue.runningCount / liveStats.queue.maxConcurrent) * 100), 100) : 0}%
                                             </p>
-                                            <p className="text-[9px] text-white/50 uppercase tracking-[0.15em] mt-1 font-medium">System Load</p>
+                                            <p className="text-[9px] text-slate-500 uppercase tracking-[0.15em] mt-1 font-bold">System Load</p>
                                         </div>
                                         {liveStats.queue.queueLength > 0 && (
                                             <>
-                                                <div className="w-[1px] bg-white/20" />
+                                                <div className="w-[1px] bg-slate-800" />
                                                 <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center">
-                                                    <p className="text-3xl md:text-4xl font-bold text-yellow-200 tabular-nums leading-none animate-pulse">{liveStats.queue.queueLength}</p>
-                                                    <p className="text-[9px] text-yellow-200/60 uppercase tracking-[0.15em] mt-1 font-medium">{t.admin.inQueue}</p>
+                                                    <p className="text-3xl md:text-4xl font-black text-yellow-400 tabular-nums leading-none animate-pulse">{liveStats.queue.queueLength}</p>
+                                                    <p className="text-[9px] text-yellow-400/50 uppercase tracking-[0.15em] mt-1 font-bold">{t.admin.inQueue}</p>
                                                 </motion.div>
                                             </>
                                         )}
                                     </div>
                                 </div>
 
-                                {/* ── Slot Grid — Worker Cards ── */}
+                                {/* ── Slot Grid — Mechanical Worker Cards ── */}
                                 <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                                     {Array.from({ length: liveStats.queue.maxConcurrent }, (_, i) => {
                                         const isActive = i < liveStats.queue!.runningCount;
@@ -1431,49 +1447,58 @@ export default function AdminDashboard() {
                                                 animate={{ opacity: 1, scale: 1 }}
                                                 transition={{ delay: i * 0.04 }}
                                                 className={cn(
-                                                    "relative rounded-2xl border overflow-hidden transition-all duration-500 group/slot",
+                                                    "relative rounded-2xl border-2 overflow-hidden transition-all duration-500 group/slot backdrop-blur-sm",
                                                     isActive
-                                                        ? "border-emerald-400/40 bg-white/10"
-                                                        : "border-white/10 bg-black/10 hover:border-white/20"
+                                                        ? "border-amber-500/40 bg-slate-900/80 shadow-lg shadow-amber-500/10"
+                                                        : "border-slate-800 bg-slate-950/60 hover:border-slate-700"
                                                 )}
                                             >
-                                                <div className="relative z-10 p-3 min-h-[110px] flex flex-col justify-between">
-                                                    {/* Slot header: ID + status dot */}
+                                                {/* Slot scanning line */}
+                                                {isActive && <motion.div animate={{ top: ['-10%', '110%'] }} transition={{ duration: 3, repeat: Infinity, ease: 'linear', delay: i * 0.3 }}
+                                                    className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent pointer-events-none z-20" />}
+
+                                                <div className="relative z-10 p-3 min-h-[120px] flex flex-col justify-between">
+                                                    {/* Slot header: ID + gear + status */}
                                                     <div className="flex justify-between items-start mb-2">
-                                                        <span className="text-[10px] text-white/40 font-mono">ID: {String(i + 1).padStart(3, '0')}</span>
-                                                        <div className={cn(
-                                                            "w-2 h-2 rounded-full transition-colors",
-                                                            isActive ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]" : "bg-slate-700"
-                                                        )} />
+                                                        <span className="text-[10px] text-amber-500/60 font-mono font-bold tracking-widest">ID: {String(i + 1).padStart(3, '0')}</span>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <motion.div animate={isActive ? { rotate: 360 } : {}} transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                                                                className={cn(isActive ? "text-amber-500" : "text-slate-700")}>
+                                                                <Settings className="w-3.5 h-3.5" />
+                                                            </motion.div>
+                                                            <div className={cn("w-2 h-2 rounded-full transition-colors",
+                                                                isActive ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" : "bg-slate-700"
+                                                            )} />
+                                                        </div>
                                                     </div>
 
                                                     {/* Slot title + status */}
                                                     <div className="mb-2">
-                                                        <h4 className={cn("text-xs font-bold uppercase transition-colors leading-tight", isActive ? "text-white" : "text-white/40 group-hover/slot:text-white/70")}>
+                                                        <h4 className={cn("text-xs font-black uppercase transition-colors leading-tight",
+                                                            isActive ? "text-white" : "text-slate-600 group-hover/slot:text-slate-400")}>
                                                             {isActive ? (runJob?.automationType === 'marketplace' ? 'Marketplace' : 'Group Post') : 'Worker Slot'}
                                                         </h4>
-                                                        <p className={cn("text-[10px] uppercase font-medium", isActive ? "text-emerald-300" : "text-white/30")}>
+                                                        <p className={cn("text-[10px] uppercase font-bold tracking-wider",
+                                                            isActive ? (runJob?.progress?.isPaused ? "text-yellow-400" : "text-emerald-400") : "text-slate-700")}>
                                                             {isActive ? (runJob?.progress?.isPaused ? 'Paused' : 'Processing') : 'Standby'}
                                                         </p>
                                                     </div>
 
                                                     {/* Progress bar */}
-                                                    <div className="w-full bg-white/10 h-[2px] mb-2.5 overflow-hidden">
+                                                    <div className="w-full bg-slate-800 h-[3px] rounded-full mb-2.5 overflow-hidden">
                                                         {isActive ? (
-                                                            <motion.div
-                                                                className="h-full"
+                                                            <motion.div className="h-full rounded-full"
                                                                 style={{
                                                                     background: runJob?.progress?.isPaused ? '#eab308' : '#10b981',
                                                                     boxShadow: runJob?.progress?.isPaused ? '0 0 10px #eab308' : '0 0 10px #10b981'
                                                                 }}
-                                                                initial={{ width: 0 }}
-                                                                animate={{ width: `${progressPct}%` }}
+                                                                initial={{ width: 0 }} animate={{ width: `${progressPct}%` }}
                                                                 transition={{ duration: 0.5, ease: 'easeOut' }}
                                                             />
                                                         ) : <div className="h-full w-0" />}
                                                     </div>
 
-                                                    {/* Job details or idle metrics */}
+                                                    {/* Job details */}
                                                     {runJob ? (
                                                         <div className="space-y-1">
                                                             <p className="text-[10px] font-semibold text-white truncate leading-tight">{runJob.displayName || runJob.userId}</p>
@@ -1487,15 +1512,15 @@ export default function AdminDashboard() {
                                                                 <p className="text-[8px] text-amber-400/70 truncate leading-tight">🏠 {runJob.propertyTitle}</p>
                                                             )}
                                                             <div className="flex justify-between items-center pt-0.5">
-                                                                <span className="text-[9px] text-emerald-300/70 font-mono">
+                                                                <span className="text-[9px] text-emerald-400/70 font-mono">
                                                                     {runJob.progress ? `${runJob.progress.currentStep}/${runJob.progress.totalSteps}` : `${runJob.groupCount}g`}
                                                                 </span>
-                                                                <span className="text-[9px] text-white/60 font-mono">{runMin}:{String(runSec).padStart(2, '0')}</span>
+                                                                <span className="text-[9px] text-slate-500 font-mono">{runMin}:{String(runSec).padStart(2, '0')}</span>
                                                             </div>
                                                         </div>
                                                     ) : (
                                                         <div className="flex-1 flex items-center justify-center opacity-0 group-hover/slot:opacity-100 transition-opacity">
-                                                            <span className="text-[9px] text-white/30">Available</span>
+                                                            <span className="text-[9px] text-slate-600 font-mono">Available</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -1509,7 +1534,7 @@ export default function AdminDashboard() {
                                     <div className="mt-5 p-3 rounded-xl bg-amber-500/5 border border-amber-500/15">
                                         <div className="flex items-center gap-2 mb-2">
                                             <Hourglass className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-                                            <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">Waiting Queue — {liveStats.queue.queue.length} user(s)</span>
+                                            <span className="text-[10px] text-amber-400 font-black uppercase tracking-wider">Waiting Queue — {liveStats.queue.queue.length} user(s)</span>
                                         </div>
                                         <div className="space-y-1.5">
                                             {liveStats.queue.queue.map((q: any, qi: number) => (
@@ -1524,29 +1549,33 @@ export default function AdminDashboard() {
                                     </div>
                                 )}
 
-                                {/* ── System Status Log ── */}
-                                <div className="mt-5 bg-black/20 backdrop-blur-sm rounded-xl p-4 border border-white/10 max-h-28 overflow-y-auto">
+                                {/* ── Terminal Console ── */}
+                                <div className="mt-5 bg-slate-950/80 backdrop-blur-sm rounded-xl p-4 border border-slate-800 max-h-32 overflow-y-auto">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                        <span className="text-[9px] text-amber-500/50 uppercase tracking-[0.2em] font-black">Engine Console</span>
+                                    </div>
                                     <div className="space-y-0.5 font-mono">
-                                        <p className="text-[10px]"><span className="text-white/30">[SYS]</span> <span className="text-white/50">Engine initialized — {liveStats.queue.maxConcurrent} slots configured</span></p>
-                                        <p className="text-[10px]"><span className="text-white/30">[CFG]</span> <span className="text-white/50">Timeout: {liveStats.queue.queueTimeoutMin}m per session</span></p>
-                                        <p className="text-[10px]"><span className="text-white/30">[SEC]</span> <span className="text-white/50">Anti-detection modules loaded — stealth active</span></p>
+                                        <p className="text-[11px]"><span className="text-amber-500/50">[SYS]</span> <span className="text-emerald-400/60">Engine initialized — {liveStats.queue.maxConcurrent} slots configured</span></p>
+                                        <p className="text-[11px]"><span className="text-amber-500/50">[CFG]</span> <span className="text-slate-500">Timeout: {liveStats.queue.queueTimeoutMin}m per session</span></p>
+                                        <p className="text-[11px]"><span className="text-amber-500/50">[SEC]</span> <span className="text-blue-400/50">Anti-detection stealth modules loaded</span></p>
+                                        <p className="text-[11px]"><span className="text-amber-500/50">[NET]</span> <span className="text-emerald-400/50">{sseConnected ? 'SSE connection stable — heartbeat OK' : 'SSE disconnected — reconnecting...'}</span></p>
                                         {liveStats.queue.runningCount > 0 && (
-                                            <p className="text-[10px]"><span className="text-emerald-300/60">[RUN]</span> <span className="text-emerald-200/70">{liveStats.queue.runningCount} thread(s) active — processing requests...</span></p>
+                                            <p className="text-[11px]"><span className="text-emerald-400/60">[RUN]</span> <span className="text-emerald-300/70">{liveStats.queue.runningCount} thread(s) active — processing...</span></p>
                                         )}
                                         {liveStats.queue.queueLength > 0 && (
-                                            <p className="text-[10px]"><span className="text-yellow-200/60">[QUE]</span> <span className="text-yellow-100/70">{liveStats.queue.queueLength} request(s) in queue — awaiting slot...</span></p>
+                                            <p className="text-[11px]"><span className="text-yellow-400/60">[QUE]</span> <span className="text-yellow-300/60">{liveStats.queue.queueLength} request(s) in queue — awaiting slot...</span></p>
                                         )}
-                                        <p className="text-[10px]"><span className="text-white/30">[NET]</span> <span className="text-white/50">{sseConnected ? 'SSE connection stable — heartbeat OK' : 'SSE disconnected — attempting reconnect...'}</span></p>
-                                        <p className="text-[10px]"><span className="text-white/20">[SYS]</span> <span className="text-white/30">Waiting for user input...</span></p>
+                                        <p className="text-[11px] animate-pulse"><span className="text-amber-500/30">{'>'}</span> <span className="text-slate-600">Waiting for user input...</span></p>
                                     </div>
                                 </div>
 
-                                {/* ── Bottom bar: slot label + live indicator ── */}
+                                {/* ── Bottom bar ── */}
                                 <div className="flex items-center justify-between mt-4">
-                                    <p className="text-[8px] text-white/30 uppercase tracking-[0.3em] font-medium font-mono">Slot 1 — {liveStats.queue.maxConcurrent}</p>
+                                    <p className="text-[9px] text-slate-700 uppercase tracking-[0.3em] font-black font-mono">Slot 1 — {liveStats.queue.maxConcurrent}</p>
                                     <div className="flex items-center gap-1.5">
-                                        <div className={cn("w-1.5 h-1.5 rounded-full", sseConnected ? "bg-emerald-300 animate-pulse" : "bg-red-400")} />
-                                        <span className="text-[8px] text-white/40 uppercase tracking-wider font-medium">{sseConnected ? 'Live' : 'Offline'}</span>
+                                        <div className={cn("w-1.5 h-1.5 rounded-full", sseConnected ? "bg-emerald-400 animate-pulse" : "bg-red-400")} />
+                                        <span className="text-[9px] text-slate-600 uppercase tracking-wider font-bold">{sseConnected ? 'Live' : 'Offline'}</span>
                                     </div>
                                 </div>
                             </div>

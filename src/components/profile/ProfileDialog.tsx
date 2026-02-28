@@ -267,6 +267,9 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
                                 <PkgIcon className="w-3 h-3 mr-1" />
                                 {pkg.name} | {currentPackage.toUpperCase()}
                             </Badge>
+                            {authUser?.email && (
+                                <p className="text-white/70 text-xs mt-1 truncate">{authUser.email}</p>
+                            )}
                         </div>
 
                         {/* Logout Button */}

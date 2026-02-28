@@ -397,75 +397,7 @@ export default function Settings() {
           <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-white/5" />
         </motion.div>
 
-        {/* Account Info */}
-        {authUser && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Key className="w-4 h-4" />
-                {isEn ? 'Account' : 'บัญชีผู้ใช้'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground">{isEn ? 'Email' : 'อีเมล'}</p>
-                  <p className="text-sm font-medium">{authUser.email}</p>
-                </div>
-                {authUser.user_metadata?.full_name && (
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">{isEn ? 'Name' : 'ชื่อ'}</p>
-                    <p className="text-sm font-medium">{authUser.user_metadata.full_name}</p>
-                  </div>
-                )}
-              </div>
-              {authLicense ? (
-                <div className="flex items-center justify-between pt-2 border-t">
-                  <div>
-                    <p className="text-xs text-muted-foreground">License Key</p>
-                    <p className="text-sm font-mono">{authLicense.licenseKey}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">{isEn ? 'Expires' : 'หมดอายุ'}</p>
-                    <p className="text-sm">{authLicense.expiresAt.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="pt-2 border-t space-y-2">
-                  <p className="text-xs text-muted-foreground">{isEn ? 'Have a license key? Enter it to upgrade your plan.' : 'มี License Key? กรอกเพื่ออัพเกรดแพ็คเกจ'}</p>
-                  <div className="flex gap-2">
-                    <Input
-                      value={licenseKeyInput}
-                      onChange={(e) => { setLicenseKeyInput(e.target.value.toUpperCase()); setLicenseError(null); setLicenseSuccess(false); }}
-                      placeholder="GSXXX-XXXXX-XXXXX-XXXXX"
-                      className="font-mono text-sm"
-                      maxLength={23}
-                    />
-                    <Button
-                      size="sm"
-                      disabled={isValidating || licenseKeyInput.length < 20}
-                      onClick={async () => {
-                        setLicenseError(null);
-                        const result = await activateLicense(licenseKeyInput);
-                        if (result.valid) {
-                          setLicenseSuccess(true);
-                          setLicenseKeyInput('');
-                          window.location.reload();
-                        } else {
-                          setLicenseError(result.error || (isEn ? 'Invalid key' : 'คีย์ไม่ถูกต้อง'));
-                        }
-                      }}
-                    >
-                      {isValidating ? <Loader2 className="w-4 h-4 animate-spin" /> : (isEn ? 'Activate' : 'เปิดใช้งาน')}
-                    </Button>
-                  </div>
-                  {licenseError && <p className="text-xs text-red-500">{licenseError}</p>}
-                  {licenseSuccess && <p className="text-xs text-green-500">{isEn ? 'License activated!' : 'เปิดใช้งานสำเร็จ!'}</p>}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+        {/* Account Info moved to Profile Dialog */}
 
         {/* Change Password */}
         {authUser && (

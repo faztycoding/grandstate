@@ -1733,36 +1733,121 @@ async function scrapeFbUserInfo(page) {
   if (!result.name) {
     try {
       console.log('🔍 scrapeFbUserInfo: Trying /me/ fallback...');
-      await page.goto('https://www.facebook.com/me/', { waitUntil: 'domcontentloaded', timeout: 15000 });
-      await new Promise(r => setTimeout(r, 3000));
-      const profileResult = await page.evaluate(() => {
+      const currentUrl = page.url();
+      console.log(`🔍 scrapeFbUserInfo: Current page before /me/: ${currentUrl}`);
+
+      // First try extracting from the current page (FB home after login)
+      const homeResult = await page.evaluate(() => {
         let name = '';
         let profilePic = '';
-        // On profile page, h1 contains the user's name
-        const h1 = document.querySelector('h1');
-        if (h1) {
-          const text = h1.textContent?.trim() || '';
-          if (text && text.length > 1 && text.length < 60) name = text;
-        }
-        // title tag: "Name | Facebook"
-        if (!name) {
-          const title = document.title || '';
-          if (title.includes('|')) {
-            const candidate = title.split('|')[0].trim();
-            if (candidate && candidate.length > 1 && candidate.length < 60) name = candidate;
+        const debug = [];
+
+        // The user's name appears in the left sidebar shortcut
+        // Facebook class: x1lliihq is used for profile name spans
+        const nameSpans = document.querySelectorAll('span.x1lliihq');
+        for (const span of nameSpans) {
+          const text = span.textContent?.trim() || '';
+          // Look for Thai/non-ASCII names or names that aren't FB UI elements
+          if (text.length >= 2 && text.length <= 50 && !/^(Facebook|Home|Watch|Marketplace|Gaming|Messenger|Groups|Notifications|Menu|Create|หน้าหลัก|การแจ้งเตือน|แชท|เมนู|สร้าง|กลุ่ม|วิดีโอ|ตลาด|เกม)$/i.test(text)) {
+            debug.push(`span.x1lliihq: "${text}"`);
+            // First non-UI span with a reasonable name length is likely the user
+            if (!name && text.length >= 2) name = text;
           }
         }
-        // Profile picture from the page
-        const profileImg = document.querySelector('image[xlink\\:href*="scontent"], img[src*="scontent"][alt]');
-        if (profileImg) {
-          profilePic = profileImg.getAttribute('xlink:href') || profileImg.getAttribute('src') || '';
+
+        // Also try: aria-label on profile link in navigation
+        const profileLink = document.querySelector('a[aria-label][href*="/me"], a[aria-label][href*="facebook.com/"][data-type="profile"]');
+        if (profileLink) {
+          const label = profileLink.getAttribute('aria-label') || '';
+          debug.push(`profileLink aria-label: "${label}"`);
+          if (!name && label.length >= 2 && label.length <= 50) name = label;
         }
-        return { name, profilePic };
+
+        // Profile pic: look for SVG image or img with scontent
+        const svgImgs = document.querySelectorAll('image');
+        for (const img of svgImgs) {
+          const href = img.getAttribute('xlink:href') || img.getAttribute('href') || '';
+          if (href.includes('scontent')) { profilePic = href; break; }
+        }
+        if (!profilePic) {
+          const imgs = document.querySelectorAll('img[src*="scontent"]');
+          for (const img of imgs) {
+            const src = img.src || '';
+            if (src.includes('scontent')) { profilePic = src; break; }
+          }
+        }
+
+        return { name, profilePic, debug };
       });
-      if (profileResult.name) result.name = profileResult.name;
-      if (profileResult.profilePic && !result.profilePic) result.profilePic = profileResult.profilePic;
+
+      if (homeResult.debug?.length > 0) {
+        console.log(`🔍 [HOME DEBUG] Found spans:`, homeResult.debug.slice(0, 5).join(' | '));
+      }
+      if (homeResult.name) result.name = homeResult.name;
+      if (homeResult.profilePic) result.profilePic = homeResult.profilePic;
+
+      // If still no name, navigate to /me/
+      if (!result.name) {
+        await page.goto('https://www.facebook.com/me/', { waitUntil: 'domcontentloaded', timeout: 15000 });
+        await new Promise(r => setTimeout(r, 4000));
+
+        const meUrl = page.url();
+        const meTitle = await page.title();
+        console.log(`🔍 [/me/] URL: ${meUrl} | Title: ${meTitle}`);
+
+        const profileResult = await page.evaluate(() => {
+          let name = '';
+          let profilePic = '';
+          const debug = [];
+
+          // h1 on profile page
+          const h1s = document.querySelectorAll('h1');
+          for (const h1 of h1s) {
+            const text = h1.textContent?.trim() || '';
+            debug.push(`h1: "${text}"`);
+            if (text.length > 1 && text.length < 60 && !text.includes('Facebook')) { name = text; break; }
+          }
+
+          // title tag: "Name | Facebook" or "(1) Name | Facebook"
+          if (!name) {
+            const title = document.title || '';
+            debug.push(`title: "${title}"`);
+            const cleaned = title.replace(/^\(\d+\)\s*/, '');
+            if (cleaned.includes('|')) {
+              const candidate = cleaned.split('|')[0].trim();
+              if (candidate.length > 1 && candidate.length < 60) name = candidate;
+            } else if (cleaned.includes('-')) {
+              const candidate = cleaned.split('-')[0].trim();
+              if (candidate.length > 1 && candidate.length < 60) name = candidate;
+            }
+          }
+
+          // span.x1lliihq on profile page
+          if (!name) {
+            const spans = document.querySelectorAll('span.x1lliihq');
+            for (const span of spans) {
+              const text = span.textContent?.trim() || '';
+              if (text.length >= 2 && text.length <= 50) { debug.push(`span: "${text}"`); if (!name) name = text; }
+            }
+          }
+
+          // Profile pic
+          const profileImg = document.querySelector('image, img[src*="scontent"][alt]');
+          if (profileImg) {
+            profilePic = profileImg.getAttribute('xlink:href') || profileImg.getAttribute('href') || profileImg.getAttribute('src') || '';
+          }
+
+          return { name, profilePic, debug };
+        });
+
+        if (profileResult.debug?.length > 0) {
+          console.log(`🔍 [/me/ DEBUG]`, profileResult.debug.slice(0, 5).join(' | '));
+        }
+        if (profileResult.name && !result.name) result.name = profileResult.name;
+        if (profileResult.profilePic && !result.profilePic) result.profilePic = profileResult.profilePic;
+      }
     } catch (e) {
-      console.log('⚠️ scrapeFbUserInfo /me/ fallback error:', e.message);
+      console.log('⚠️ scrapeFbUserInfo fallback error:', e.message);
     }
   }
 

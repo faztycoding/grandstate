@@ -443,7 +443,7 @@ function SidebarContent({
                     <p className="text-[9px] uppercase tracking-[0.2em] text-white/50 font-semibold">
                       {activeUsersLabel}
                     </p>
-                    {/* Admin badge — simple indicator visible to ALL users */}
+                    {/* Admin badge — premium indicator visible to ALL users */}
                     <AnimatePresence>
                       {adminOnline && (
                         <motion.span
@@ -451,12 +451,17 @@ function SidebarContent({
                           animate={{ scale: 1, opacity: 1 }}
                           exit={{ scale: 0, opacity: 0 }}
                           transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded"
+                          className="inline-flex items-center gap-[3px] px-2 py-[3px] rounded-md"
                           style={{
-                            background: 'linear-gradient(135deg, #5c1a1a 0%, #7f1d1d 50%, #5c1a1a 100%)',
-                            border: '1px solid rgba(239,68,68,0.3)',
+                            background: 'linear-gradient(135deg, #78350f 0%, #92400e 40%, #b45309 100%)',
+                            border: '1px solid rgba(251,191,36,0.4)',
+                            boxShadow: '0 0 8px rgba(251,191,36,0.15), inset 0 1px 0 rgba(255,255,255,0.1)',
                           }}>
-                          <span className="text-[8px] font-bold text-red-200/90 tracking-wider">ADMIN</span>
+                          <svg width="8" height="9" viewBox="0 0 10 12" fill="none" className="flex-shrink-0">
+                            <path d="M5 0L6.5 3.5L10 4L7.5 6.5L8 10L5 8.5L2 10L2.5 6.5L0 4L3.5 3.5L5 0Z" fill="#fbbf24" opacity="0.9"/>
+                          </svg>
+                          <span className="text-[7px] font-extrabold tracking-[0.15em]"
+                            style={{ color: '#fcd34d', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>ADMIN</span>
                         </motion.span>
                       )}
                     </AnimatePresence>

@@ -345,41 +345,82 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
       aboutUrl = aboutUrl + '/about';
     }
 
+    // Extract group slug from URL for fallback attempts
+    const groupSlug = url.match(/facebook\.com\/groups\/([^/?#]+)/)?.[1] || '';
+
     console.log('Fetching group info from:', aboutUrl);
     await page.goto(aboutUrl, { waitUntil: 'networkidle2', timeout: 30000 });
 
-    // Debug: log actual URL and page title after navigation
     let actualUrl = page.url();
-    const pageTitle = await page.title();
     console.log(`🔍 [DEBUG] Landed on: ${actualUrl}`);
-    console.log(`🔍 [DEBUG] Page title: ${pageTitle}`);
+    console.log(`🔍 [DEBUG] Page title: ${await page.title()}`);
 
-    // If Facebook redirected to login page, go back to aboutUrl directly
-    // Facebook will still show group content with a login popup overlay
-    if (actualUrl.includes('/login') || actualUrl.includes('login.php')) {
-      console.log('🔄 [DEBUG] Redirected to login — navigating to about page directly...');
-      await page.goto(aboutUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-      actualUrl = page.url();
-      console.log(`🔍 [DEBUG] Re-navigated to: ${actualUrl}`);
+    // If redirected to login, try strategies to get the group page
+    const isOnLogin = () => {
+      const u = page.url();
+      return u.includes('/login') || u.includes('login.php');
+    };
+
+    if (isOnLogin()) {
+      // Strategy 1: Visit facebook.com to get initial cookies, then retry
+      console.log('🔄 [Strategy 1] Getting FB cookies first...');
+      try {
+        await page.goto('https://www.facebook.com', { waitUntil: 'domcontentloaded', timeout: 15000 });
+        await new Promise(r => setTimeout(r, 2000));
+        // Now try the group about page again
+        await page.goto(aboutUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+        await new Promise(r => setTimeout(r, 3000));
+        console.log(`🔍 [Strategy 1] Now on: ${page.url()}`);
+      } catch (e) {
+        console.log(`⚠️ [Strategy 1] Error: ${e.message}`);
+      }
     }
 
-    // Wait for initial render
+    if (isOnLogin()) {
+      // Strategy 2: Try m.facebook.com (mobile) — less aggressive redirects
+      console.log('🔄 [Strategy 2] Trying m.facebook.com...');
+      try {
+        const mobileUrl = `https://m.facebook.com/groups/${groupSlug}/about`;
+        await page.goto(mobileUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+        await new Promise(r => setTimeout(r, 3000));
+        console.log(`🔍 [Strategy 2] Now on: ${page.url()}`);
+      } catch (e) {
+        console.log(`⚠️ [Strategy 2] Error: ${e.message}`);
+      }
+    }
+
+    if (isOnLogin()) {
+      // Strategy 3: Try mbasic.facebook.com — minimal JS, often no redirect
+      console.log('🔄 [Strategy 3] Trying mbasic.facebook.com...');
+      try {
+        const mbasicUrl = `https://mbasic.facebook.com/groups/${groupSlug}?v=info`;
+        await page.goto(mbasicUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+        await new Promise(r => setTimeout(r, 2000));
+        console.log(`🔍 [Strategy 3] Now on: ${page.url()}`);
+      } catch (e) {
+        console.log(`⚠️ [Strategy 3] Error: ${e.message}`);
+      }
+    }
+
+    actualUrl = page.url();
+    console.log(`🔍 [FINAL] On page: ${actualUrl} | Title: ${await page.title()}`);
+
+    // Wait for render
     await new Promise(r => setTimeout(r, 2000));
 
     // Close Facebook login popup overlay ("See more on Facebook" dialog)
-    // This appears when not logged in — the data is visible behind it
     try {
       const closedPopup = await page.evaluate(() => {
-        // Strategy 1: aria-label="Close" button
+        // aria-label="Close" button
         const closeBtn = document.querySelector('[aria-label="Close"][role="button"]');
         if (closeBtn) { closeBtn.click(); return 'aria-label'; }
-        // Strategy 2: role="dialog" close button
+        // role="dialog" close button
         const dialog = document.querySelector('[role="dialog"]');
         if (dialog) {
           const btn = dialog.querySelector('[aria-label="Close"], [aria-label="ปิด"]');
           if (btn) { btn.click(); return 'dialog-close'; }
         }
-        // Strategy 3: Any overlay with close icon
+        // Any overlay close
         const overlays = document.querySelectorAll('[role="button"]');
         for (const el of overlays) {
           const label = el.getAttribute('aria-label') || '';
@@ -388,16 +429,14 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
         return null;
       });
       if (closedPopup) {
-        console.log(`✅ [DEBUG] Closed login popup via: ${closedPopup}`);
+        console.log(`✅ Closed login popup via: ${closedPopup}`);
         await new Promise(r => setTimeout(r, 1500));
-      } else {
-        console.log('ℹ️ [DEBUG] No login popup found — page may already be accessible');
       }
     } catch (e) {
-      console.log('⚠️ [DEBUG] Popup close attempt error:', e.message);
+      // silent
     }
 
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 500));
 
     // Scroll down to trigger lazy-loaded activity section
     await page.evaluate(() => {

@@ -269,6 +269,45 @@ export function getFingerprintInjectionScript() {
         });
       }
 
+      // ── WebRTC Leak Prevention (JS-level) ──
+      // Block RTCPeerConnection from exposing real IP behind proxy
+      const origRTC = window.RTCPeerConnection || window.webkitRTCPeerConnection || window.mozRTCPeerConnection;
+      if (origRTC) {
+        const ProxiedRTC = function(config, constraints) {
+          // Force all ICE candidates through the proxy (no STUN/TURN leak)
+          if (config && config.iceServers) {
+            config.iceServers = [];
+          }
+          const pc = new origRTC(config, constraints);
+          // Intercept onicecandidate to strip local/srflx candidates (real IP)
+          const origAddEventListener = pc.addEventListener.bind(pc);
+          pc.addEventListener = function(type, listener, options) {
+            if (type === 'icecandidate') {
+              const wrapped = function(event) {
+                if (event.candidate && event.candidate.candidate) {
+                  const c = event.candidate.candidate;
+                  // Block host/srflx candidates (these leak real IP)
+                  if (c.includes('typ host') || c.includes('typ srflx')) {
+                    return; // suppress
+                  }
+                }
+                listener(event);
+              };
+              return origAddEventListener(type, wrapped, options);
+            }
+            return origAddEventListener(type, listener, options);
+          };
+          return pc;
+        };
+        ProxiedRTC.prototype = origRTC.prototype;
+        window.RTCPeerConnection = ProxiedRTC;
+        if (window.webkitRTCPeerConnection) window.webkitRTCPeerConnection = ProxiedRTC;
+      }
+      // Block navigator.mediaDevices.enumerateDevices (fingerprint vector)
+      if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+        navigator.mediaDevices.enumerateDevices = () => Promise.resolve([]);
+      }
+
       // ── Prevent navigator.webdriver detection ──
       Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
       
@@ -648,4 +687,287 @@ export function createSessionProfile() {
     // Created timestamp for session identity
     createdAt: Date.now(),
   };
+}
+
+// ─────────────────────────────────────────────
+//  Module 6: Security Accuracy Score Engine
+//  Weighted: Network 35%, Fingerprint 25%, Behavioral 25%, Content 15%
+// ─────────────────────────────────────────────
+
+/**
+ * Calculate comprehensive security score from real posting data + config
+ * Returns 0-100 score with per-module breakdown
+ *
+ * @param {object} params
+ * @param {number} params.postsToday - Posts made today
+ * @param {number} params.postsThisHour - Posts in last 60 min
+ * @param {number} params.avgDelayMinutes - Average delay between posts (minutes)
+ * @param {number} params.minDelayMinutes - Minimum delay between posts (minutes)
+ * @param {number} params.intervalCV - Coefficient of variation of intervals (0 = robotic, >0.3 = human)
+ * @param {number} params.accountAgeDays - How old the FB session is
+ * @param {boolean} params.fingerprintActive - Is fingerprint injection enabled
+ * @param {boolean} params.webrtcBlocked - Is WebRTC leak prevention active
+ * @param {boolean} params.warmupDone - Was pre-post warmup executed this session
+ * @param {boolean} params.imagesMutated - Were images hash-broken before upload
+ * @param {boolean} params.captionsAI - Were captions AI-generated (unique per post)
+ * @param {number} params.diversityRatio - Caption/property diversity (0-1)
+ * @param {string} params.postingHour - Current hour (0-23)
+ * @param {boolean} params.isResidentialProxy - Using residential/mobile proxy
+ * @returns {{ score: number, level: string, modules: object[], warnings: string[] }}
+ */
+export function calculateSecurityScore(params = {}) {
+  const {
+    postsToday = 0,
+    postsThisHour = 0,
+    avgDelayMinutes = -1,
+    minDelayMinutes = -1,
+    intervalCV = -1,
+    accountAgeDays = 0,
+    fingerprintActive = true,
+    webrtcBlocked = true,
+    warmupDone = false,
+    imagesMutated = true,
+    captionsAI = true,
+    diversityRatio = 1,
+    postingHour = new Date().getHours(),
+    isResidentialProxy = false,
+  } = params;
+
+  const warnings = [];
+
+  // ═══ MODULE 1: Network & IP (35%) ═══
+  let networkScore = 100;
+  // Residential proxy bonus
+  if (!isResidentialProxy) {
+    networkScore -= 30; // Using datacenter IP is risky
+    warnings.push('ไม่ได้ใช้ Residential Proxy — IP อาจถูกตรวจจับง่าย');
+  }
+  // WebRTC leak check
+  if (!webrtcBlocked) {
+    networkScore -= 40;
+    warnings.push('WebRTC Leak Protection ปิดอยู่ — IP จริงอาจรั่วไหล');
+  }
+  networkScore = Math.max(0, Math.min(100, networkScore));
+
+  // ═══ MODULE 2: Fingerprint Masking (25%) ═══
+  let fingerprintScore = 100;
+  if (!fingerprintActive) {
+    fingerprintScore = 15; // Basically naked
+    warnings.push('Fingerprint Masking ปิดอยู่ — เบราว์เซอร์ถูก Track ได้ง่าย');
+  }
+  // Account age penalty (new accounts are more scrutinized)
+  if (accountAgeDays < 7) {
+    fingerprintScore -= 20;
+    warnings.push('บัญชี FB อายุน้อยกว่า 7 วัน — ความเสี่ยงสูง');
+  } else if (accountAgeDays < 30) {
+    fingerprintScore -= 10;
+  } else if (accountAgeDays >= 90) {
+    fingerprintScore += 5; // Bonus for old account
+  }
+  fingerprintScore = Math.max(0, Math.min(100, fingerprintScore));
+
+  // ═══ MODULE 3: Behavioral / Gaussian Jitter (25%) ═══
+  let behaviorScore = 100;
+  
+  // Delay analysis (most important behavioral signal)
+  if (avgDelayMinutes >= 0) {
+    if (avgDelayMinutes < 0.25) { // < 15 seconds average
+      behaviorScore -= 60;
+      warnings.push('Delay เฉลี่ยต่ำมาก (<15 วินาที) — พฤติกรรมบอทชัดเจน');
+    } else if (avgDelayMinutes < 0.5) { // < 30 seconds
+      behaviorScore -= 30;
+      warnings.push('Delay เฉลี่ยต่ำ (<30 วินาที) — ควรเพิ่มเป็น 15+ วินาที');
+    } else if (avgDelayMinutes >= 0.5) {
+      behaviorScore += 5; // Good delay
+    }
+  }
+
+  // Minimum delay (fastest burst)
+  if (minDelayMinutes >= 0 && minDelayMinutes < 0.15) { // < 9 seconds min
+    behaviorScore -= 15;
+    warnings.push('Delay ต่ำสุดน้อยกว่า 9 วินาที — อาจถูกตรวจจับว่าเร็วเกินไป');
+  }
+
+  // Interval variation (CV) — robotic patterns are dangerous
+  if (intervalCV >= 0) {
+    if (intervalCV < 0.1) {
+      behaviorScore -= 25;
+      warnings.push('Timing pattern สม่ำเสมอเกินไป (CV<0.1) — ดูเหมือนบอท');
+    } else if (intervalCV >= 0.3) {
+      behaviorScore += 5; // Good variation — looks human
+    }
+  }
+
+  // Warmup bonus
+  if (warmupDone) {
+    behaviorScore += 8;
+  } else if (postsToday > 0) {
+    behaviorScore -= 5;
+    warnings.push('ไม่ได้ทำ Pre-post Warmup — ขาดกิจกรรมเริ่มต้นก่อนโพสต์');
+  }
+
+  // Posts per hour check (>15/hr is dangerous)
+  if (postsThisHour > 15) {
+    behaviorScore -= 30;
+    warnings.push(`โพสต์ ${postsThisHour} ครั้ง/ชม. — สูงเกินไป ควร <15/ชม.`);
+  } else if (postsThisHour > 10) {
+    behaviorScore -= 15;
+    warnings.push(`โพสต์ ${postsThisHour} ครั้ง/ชม. — เริ่มเสี่ยง ควร <10/ชม.`);
+  }
+
+  // Posts per day check
+  if (postsToday > 50) {
+    behaviorScore -= 25;
+    warnings.push(`โพสต์วันนี้ ${postsToday} ครั้ง — สูงเกินเกณฑ์ปลอดภัย (30-50/วัน)`);
+  } else if (postsToday > 30) {
+    behaviorScore -= 10;
+  }
+
+  // Posting hour check (posting 22:00-06:00 looks unnatural)
+  if (postingHour >= 22 || postingHour < 6) {
+    behaviorScore -= 10;
+    warnings.push('โพสต์นอกช่วงเวลาธรรมชาติ (22:00-06:00) — ควรโพสต์ 8:00-22:00');
+  }
+
+  behaviorScore = Math.max(0, Math.min(100, behaviorScore));
+
+  // ═══ MODULE 4: Content Hash (15%) ═══
+  let contentScore = 100;
+  if (!imagesMutated) {
+    contentScore -= 40;
+    warnings.push('Image Hash Breaking ปิดอยู่ — รูปซ้ำถูกจับได้ง่าย');
+  }
+  if (!captionsAI) {
+    contentScore -= 35;
+    warnings.push('ไม่ได้ใช้ AI Caption — แคปชั่นซ้ำถูกตรวจจับ spam');
+  }
+  if (diversityRatio < 0.3 && postsToday > 5) {
+    contentScore -= 20;
+    warnings.push('ใช้สินทรัพย์ซ้ำมากเกินไป — ควรหมุนเวียนสินทรัพย์');
+  }
+  contentScore = Math.max(0, Math.min(100, contentScore));
+
+  // ═══ WEIGHTED TOTAL ═══
+  const weightedScore = Math.round(
+    networkScore * 0.35 +
+    fingerprintScore * 0.25 +
+    behaviorScore * 0.25 +
+    contentScore * 0.15
+  );
+  const totalScore = Math.max(0, Math.min(100, weightedScore));
+
+  // Risk level
+  let level;
+  if (totalScore >= 80) level = 'safe';        // ปลอดภัย (green)
+  else if (totalScore >= 60) level = 'moderate'; // ปานกลาง (yellow)
+  else if (totalScore >= 40) level = 'high';     // เสี่ยงสูง (orange)
+  else level = 'critical';                       // วิกฤต (red)
+
+  return {
+    score: totalScore,
+    level,
+    modules: [
+      { id: 'NET', name: 'Network & IP', weight: 35, score: networkScore, status: networkScore >= 70 ? 'Optimal' : networkScore >= 40 ? 'Warning' : 'Critical', detail: isResidentialProxy ? 'Mobile 4G Proxy + WebRTC Shield' : 'Datacenter IP — WebRTC ' + (webrtcBlocked ? 'Blocked' : 'EXPOSED') },
+      { id: 'FPR', name: 'Fingerprint Masking', weight: 25, score: fingerprintScore, status: fingerprintActive ? 'Active' : 'DISABLED', detail: fingerprintActive ? 'Canvas/WebGL/Audio/Font/Battery Noise' : 'Fingerprint masking is OFF' },
+      { id: 'BEH', name: 'Behavioral Jitter', weight: 25, score: behaviorScore, status: behaviorScore >= 70 ? 'Active' : behaviorScore >= 40 ? 'Warning' : 'Critical', detail: `Gaussian σ=2.5s | ${postsToday} posts today | ${postsThisHour}/hr` },
+      { id: 'IMG', name: 'Content Hash', weight: 15, score: contentScore, status: (imagesMutated && captionsAI) ? 'Optimal' : 'Warning', detail: `Image: ${imagesMutated ? 'Mutated' : 'RAW'} | Caption: ${captionsAI ? 'AI Unique' : 'Static'}` },
+    ],
+    warnings,
+  };
+}
+
+// ─────────────────────────────────────────────
+//  Module 7: Enhanced Checkpoint Handler
+// ─────────────────────────────────────────────
+
+/**
+ * Comprehensive Facebook checkpoint/warning signal detection
+ * Returns detection result with severity level and recommended action
+ */
+export async function detectCheckpointAdvanced(page) {
+  if (!page) return { detected: false };
+
+  try {
+    const result = await page.evaluate(() => {
+      const url = window.location.href;
+      const bodyText = (document.body?.innerText || '').substring(0, 5000); // Limit for perf
+      const title = document.title || '';
+
+      // ── CRITICAL: Checkpoint / Account locked ──
+      if (url.includes('/checkpoint') || url.includes('/login/identify') || url.includes('/recover') || url.includes('/help/contact/')) {
+        return { detected: true, severity: 'critical', type: 'checkpoint', reason: 'Checkpoint URL detected', action: 'emergency_stop' };
+      }
+
+      // ── CRITICAL: Captcha / Verification ──
+      if (bodyText.includes('ยืนยันตัวตน') || bodyText.includes('Verify your identity') ||
+        bodyText.includes('กรุณายืนยัน') || bodyText.includes('security check') ||
+        bodyText.includes('Enter the code') || bodyText.includes('ใส่รหัส') ||
+        bodyText.includes('Confirm your identity') || bodyText.includes('คุณคือ')) {
+        return { detected: true, severity: 'critical', type: 'captcha', reason: 'Captcha/verification prompt', action: 'emergency_stop' };
+      }
+
+      // ── HIGH: Account blocked / restricted ──
+      if (bodyText.includes('ถูกจำกัด') || bodyText.includes('restricted') ||
+        bodyText.includes('ถูกบล็อก') || bodyText.includes('temporarily blocked') ||
+        bodyText.includes('ไม่สามารถโพสต์ได้') || bodyText.includes("can't post") ||
+        bodyText.includes('account has been locked') || bodyText.includes('บัญชีถูกล็อก') ||
+        bodyText.includes('ไม่สามารถดำเนินการ') || bodyText.includes('action blocked')) {
+        return { detected: true, severity: 'high', type: 'blocked', reason: 'Account temporarily blocked/restricted', action: 'emergency_stop' };
+      }
+
+      // ── MEDIUM: Rate limit warning ──
+      if (bodyText.includes('โพสต์เร็วเกินไป') || bodyText.includes('posting too fast') ||
+        bodyText.includes('รอสักครู่') || bodyText.includes('slow down') ||
+        bodyText.includes("You're posting too fast") || bodyText.includes('Please try again') ||
+        bodyText.includes('ลองอีกครั้งในภายหลัง') || bodyText.includes('try again later')) {
+        return { detected: true, severity: 'medium', type: 'rate_limit', reason: 'Posting too fast — rate limited', action: 'cooldown' };
+      }
+
+      // ── MEDIUM: Suspicious activity warning ──
+      if (bodyText.includes('กิจกรรมที่น่าสงสัย') || bodyText.includes('suspicious activity') ||
+        bodyText.includes('unusual activity') || bodyText.includes('พฤติกรรมผิดปกติ') ||
+        bodyText.includes('เราสังเกตเห็น') || bodyText.includes("We noticed")) {
+        return { detected: true, severity: 'medium', type: 'suspicious', reason: 'Suspicious activity warning', action: 'cooldown' };
+      }
+
+      // ── LOW: Session expired ──
+      if (url.includes('/login') && !url.includes('facebook.com/groups') ||
+        bodyText.includes('เซสชันหมดอายุ') || bodyText.includes('session expired') ||
+        (document.querySelector('input[name="email"]') && document.querySelector('input[name="pass"]'))) {
+        return { detected: true, severity: 'low', type: 'session_expired', reason: 'Session expired / logged out', action: 'stop' };
+      }
+
+      // ── LOW: Content rejected (post didn't go through) ──
+      if (bodyText.includes("ไม่สามารถเผยแพร่") || bodyText.includes("couldn't publish") ||
+        bodyText.includes('goes against our') || bodyText.includes('ขัดกับมาตรฐาน') ||
+        bodyText.includes('Community Standards') || bodyText.includes('มาตรฐานชุมชน')) {
+        return { detected: true, severity: 'low', type: 'content_rejected', reason: 'Post rejected by community standards', action: 'skip' };
+      }
+
+      return { detected: false };
+    });
+
+    if (result.detected) {
+      console.log(`🚨 [Checkpoint] ${result.severity.toUpperCase()}: ${result.type} — ${result.reason} → action: ${result.action}`);
+    }
+    return result;
+  } catch {
+    return { detected: false };
+  }
+}
+
+/**
+ * Calculate recommended cooldown duration (ms) based on checkpoint severity
+ */
+export function getCheckpointCooldown(severity, consecutiveWarnings = 1) {
+  const baseCooldowns = {
+    critical: 30 * 60 * 1000,  // 30 min — serious issue
+    high: 15 * 60 * 1000,      // 15 min
+    medium: 5 * 60 * 1000,     // 5 min
+    low: 60 * 1000,             // 1 min
+  };
+  const base = baseCooldowns[severity] || 5 * 60 * 1000;
+  // Exponential backoff for repeated warnings (up to 4x)
+  const multiplier = Math.min(4, Math.pow(1.5, consecutiveWarnings - 1));
+  return Math.round(base * multiplier);
 }

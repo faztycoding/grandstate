@@ -2934,6 +2934,98 @@ app.get('/api/health-check', ...auth, (req, res) => {
   }
 });
 
+// ============================================
+// SECURITY SCORE — Weighted 4-module anti-detection scoring
+// Network 35%, Fingerprint 25%, Behavioral 25%, Content 15%
+// ============================================
+app.get('/api/security-score', ...auth, (req, res) => {
+  try {
+    const tracker = req.postingTracker;
+    tracker.checkDailyReset();
+    const history = tracker.history || {};
+    const postings = history.postings || [];
+    const todayDate = history.currentDay;
+
+    const now = Date.now();
+    const oneHourAgo = now - 60 * 60 * 1000;
+
+    // Gather today's posting timestamps
+    const todayPostings = postings.filter(p => p.day === todayDate);
+    const todayTimestamps = todayPostings.map(p => new Date(p.timestamp).getTime()).sort((a, b) => a - b);
+    const postsThisHour = todayTimestamps.filter(t => t > oneHourAgo).length;
+    const postsToday = todayPostings.length;
+
+    // Delays between posts (minutes)
+    const delays = [];
+    for (let i = 1; i < todayTimestamps.length; i++) {
+      delays.push((todayTimestamps[i] - todayTimestamps[i - 1]) / 60000);
+    }
+    const avgDelay = delays.length > 0 ? delays.reduce((s, v) => s + v, 0) / delays.length : -1;
+    const minDelay = delays.length > 0 ? Math.min(...delays) : -1;
+
+    // Interval coefficient of variation
+    let intervalCV = -1;
+    if (delays.length >= 2) {
+      const mean = delays.reduce((s, v) => s + v, 0) / delays.length;
+      if (mean > 0) {
+        const variance = delays.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / delays.length;
+        intervalCV = Math.sqrt(variance) / mean;
+      }
+    }
+
+    // Content diversity
+    const todayProperties = new Set(todayPostings.map(p => p.propertyId));
+    const diversityRatio = postsToday > 0 ? todayProperties.size / postsToday : 1;
+
+    // Account age
+    let accountAgeDays = 0;
+    if (postings.length > 0) {
+      const firstEver = new Date(postings[0].timestamp).getTime();
+      accountAgeDays = Math.floor((now - firstEver) / (24 * 60 * 60 * 1000));
+    }
+
+    // Import and call the security score engine
+    import('./services/antiDetection.js').then(({ calculateSecurityScore }) => {
+      const result = calculateSecurityScore({
+        postsToday,
+        postsThisHour,
+        avgDelayMinutes: avgDelay >= 0 ? Math.round(avgDelay * 100) / 100 : -1,
+        minDelayMinutes: minDelay >= 0 ? Math.round(minDelay * 100) / 100 : -1,
+        intervalCV: intervalCV >= 0 ? Math.round(intervalCV * 100) / 100 : -1,
+        accountAgeDays,
+        fingerprintActive: true,  // Always on (injected via evaluateOnNewDocument)
+        webrtcBlocked: true,      // Always on (browser args + JS injection)
+        warmupDone: req.session?.warmupDone || false,
+        imagesMutated: true,      // Always on (mutateImageBuffer in worker)
+        captionsAI: true,         // Always on (Claude/template captions)
+        diversityRatio: Math.round(diversityRatio * 100) / 100,
+        postingHour: new Date().getHours(),
+        isResidentialProxy: false, // VPS datacenter IP by default
+      });
+
+      res.json({
+        success: true,
+        ...result,
+        raw: {
+          postsToday,
+          postsThisHour,
+          avgDelayMinutes: avgDelay >= 0 ? Math.round(avgDelay * 10) / 10 : -1,
+          minDelayMinutes: minDelay >= 0 ? Math.round(minDelay * 10) / 10 : -1,
+          intervalCV: intervalCV >= 0 ? Math.round(intervalCV * 100) / 100 : -1,
+          accountAgeDays,
+          diversityRatio: Math.round(diversityRatio * 100) / 100,
+        },
+      });
+    }).catch(err => {
+      console.error('Security score calc error:', err);
+      res.status(500).json({ success: false, error: err.message });
+    });
+  } catch (error) {
+    console.error('Security score error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Reset all posting analytics data
 app.post('/api/analytics/reset', ...auth, (req, res) => {
   try {

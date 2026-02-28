@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
-import { Building2, Users, Zap, ShieldCheck, ChevronRight, Crosshair, Database, Radio, Cpu, Shield, BarChart3 } from 'lucide-react';
+import { Building2, Users, Zap, ChevronRight, Sparkles, Home, Shield, BarChart3, CheckCircle2 } from 'lucide-react';
 
 const ONBOARDING_KEY = 'grandstate_onboarded';
 const DISMISS_UNTIL_KEY = 'grandstate_tutorial_dismiss_until';
@@ -9,168 +8,70 @@ const PERMANENT_DISMISS_KEY = 'grandstate_tutorial_never';
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 /* ────────────────────────────────────────────
-   Typewriter hook — characters appear one by one
+   Step definitions — 3-step estate workflow
    ──────────────────────────────────────────── */
-function useTypewriter(text: string, speed = 30, active = true) {
-  const [displayed, setDisplayed] = useState('');
-  const [done, setDone] = useState(false);
-  useEffect(() => {
-    if (!active) { setDisplayed(''); setDone(false); return; }
-    setDisplayed('');
-    setDone(false);
-    let i = 0;
-    const iv = setInterval(() => {
-      i++;
-      setDisplayed(text.slice(0, i));
-      if (i >= text.length) { clearInterval(iv); setDone(true); }
-    }, speed);
-    return () => clearInterval(iv);
-  }, [text, speed, active]);
-  return { displayed, done };
-}
-
-/* ────────────────────────────────────────────
-   Step definitions
-   ──────────────────────────────────────────── */
-interface MachineStep {
-  phase: string;
-  sysLabel: string;
-  title: string;
-  desc: string;
-  icon: React.ElementType;
-  statusTag: string;
-  color: string; // cyan / amber / emerald / purple
-}
-
-const STEPS: MachineStep[] = [
+const STEPS = [
   {
-    phase: 'PHASE 01',
-    sysLabel: 'ASSET DATABASE',
-    title: 'ระบบจัดการสินทรัพย์',
-    desc: 'เพิ่มข้อมูลอสังหาฯ ราคา รูปภาพ สิ่งอำนวยความสะดวก — ข้อมูล Sync ข้ามอุปกรณ์ผ่าน Cloud',
-    icon: Database,
-    statusTag: 'READY',
-    color: 'cyan',
+    number: '01',
+    tag: 'TARGET',
+    title: 'เพิ่มสินทรัพย์',
+    desc: 'เพิ่มข้อมูลอสังหาฯ รูปภาพ ราคา และรายละเอียด ข้อมูลซิงค์ข้ามอุปกรณ์อัตโนมัติ',
+    icon: Building2,
+    gradient: 'from-orange-500 to-amber-500',
+    bgLight: 'bg-orange-50 dark:bg-orange-950/20',
+    textColor: 'text-orange-600 dark:text-orange-400',
+    borderColor: 'border-orange-200 dark:border-orange-800/50',
+    ringColor: 'ring-orange-500/20',
   },
   {
-    phase: 'PHASE 02',
-    sysLabel: 'GROUP NETWORK',
+    number: '02',
+    tag: 'ENCODE',
     title: 'เชื่อมต่อกลุ่ม Facebook',
-    desc: 'เพิ่มกลุ่มเป้าหมายได้สูงสุด 750 กลุ่ม — ระบบวิเคราะห์ช่วงเวลาที่เหมาะสมในการโพสต์',
+    desc: 'เพิ่มกลุ่มเป้าหมายได้สูงสุด 750 กลุ่ม เลือกเฉพาะกลุ่มที่ตรงกลุ่มเป้าหมายของคุณ',
     icon: Users,
-    statusTag: 'LINKED',
-    color: 'purple',
+    gradient: 'from-blue-500 to-cyan-500',
+    bgLight: 'bg-blue-50 dark:bg-blue-950/20',
+    textColor: 'text-blue-600 dark:text-blue-400',
+    borderColor: 'border-blue-200 dark:border-blue-800/50',
+    ringColor: 'ring-blue-500/20',
   },
   {
-    phase: 'PHASE 03',
-    sysLabel: 'DISTRIBUTION MODULE',
-    title: 'Automation Engine',
-    desc: 'AI สร้างแคปชัน + Anti-Detection หลีกเลี่ยงการบล็อก + ตั้งเวลาโพสต์อัตโนมัติ 24/7',
+    number: '03',
+    tag: 'LAUNCH',
+    title: 'สั่งรันโพสต์อัตโนมัติ',
+    desc: 'ระบบโพสต์อัตโนมัติพร้อม AI สร้างแคปชัน และ Anti-Detection ป้องกันบล็อก 24/7',
     icon: Zap,
-    statusTag: 'ARMED',
-    color: 'amber',
-  },
-  {
-    phase: 'PHASE 04',
-    sysLabel: 'SHIELD PROTOCOL',
-    title: 'ระบบป้องกัน & วิเคราะห์',
-    desc: 'Anti-Detection 6 ชั้น + สถิติวิเคราะห์ผลงานแบบ Realtime — ปลอดภัยทุกบัญชี',
-    icon: Shield,
-    statusTag: 'ACTIVE',
-    color: 'emerald',
+    gradient: 'from-emerald-500 to-teal-500',
+    bgLight: 'bg-emerald-50 dark:bg-emerald-950/20',
+    textColor: 'text-emerald-600 dark:text-emerald-400',
+    borderColor: 'border-emerald-200 dark:border-emerald-800/50',
+    ringColor: 'ring-emerald-500/20',
   },
 ];
 
-const colorMap: Record<string, { border: string; text: string; bg: string; glow: string }> = {
-  cyan:    { border: 'border-cyan-500/40',    text: 'text-cyan-400',    bg: 'bg-cyan-500/10',    glow: 'shadow-cyan-500/20' },
-  purple:  { border: 'border-purple-500/40',  text: 'text-purple-400',  bg: 'bg-purple-500/10',  glow: 'shadow-purple-500/20' },
-  amber:   { border: 'border-amber-500/40',   text: 'text-amber-400',   bg: 'bg-amber-500/10',   glow: 'shadow-amber-500/20' },
-  emerald: { border: 'border-emerald-500/40', text: 'text-emerald-400', bg: 'bg-emerald-500/10', glow: 'shadow-emerald-500/20' },
-};
-
-/* ────────────────────────────────────────────
-   Radar SVG
-   ──────────────────────────────────────────── */
-function RadarSVG() {
-  return (
-    <svg viewBox="0 0 120 120" className="w-20 h-20">
-      <circle cx="60" cy="60" r="55" fill="none" stroke="rgba(34,211,238,0.15)" strokeWidth="1" />
-      <circle cx="60" cy="60" r="38" fill="none" stroke="rgba(34,211,238,0.1)" strokeWidth="0.5" />
-      <circle cx="60" cy="60" r="20" fill="none" stroke="rgba(34,211,238,0.08)" strokeWidth="0.5" />
-      <line x1="60" y1="5" x2="60" y2="115" stroke="rgba(34,211,238,0.08)" strokeWidth="0.5" />
-      <line x1="5" y1="60" x2="115" y2="60" stroke="rgba(34,211,238,0.08)" strokeWidth="0.5" />
-      <g style={{ transformOrigin: '60px 60px', animation: 'radar-sweep 3s linear infinite' }}>
-        <line x1="60" y1="60" x2="60" y2="5" stroke="rgba(34,211,238,0.6)" strokeWidth="1.5" />
-        <path d="M60,60 L52,10 A55,55 0 0,1 60,5 Z" fill="rgba(34,211,238,0.08)" />
-      </g>
-      <circle cx="60" cy="60" r="3" fill="#22d3ee" opacity="0.8" />
-    </svg>
-  );
-}
+const FEATURES = [
+  { icon: Shield, label: 'Anti-Detection 6 ชั้น' },
+  { icon: BarChart3, label: 'Analytics & รายงาน' },
+  { icon: Sparkles, label: 'AI สร้างแคปชัน' },
+];
 
 /* ════════════════════════════════════════════
    MAIN COMPONENT
    ════════════════════════════════════════════ */
 export function WelcomeModal() {
   const [open, setOpen] = useState(false);
-  const [phase, setPhase] = useState<'boot' | 'steps' | 'complete'>('boot');
-  const [step, setStep] = useState(0);
-  const [bootLine, setBootLine] = useState(0);
-  const [showFlash, setShowFlash] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Never show if user permanently dismissed
     if (localStorage.getItem(PERMANENT_DISMISS_KEY)) return;
-
     const isNewUser = localStorage.getItem('grandstate_is_new_user');
     const alreadyOnboarded = localStorage.getItem(ONBOARDING_KEY);
-
-    // Case 1: Brand new user who just signed up
-    if (isNewUser && !alreadyOnboarded) {
-      setOpen(true);
-      return;
-    }
-
-    // Case 2: Returning user — show every 7 days
+    if (isNewUser && !alreadyOnboarded) { setOpen(true); return; }
     if (alreadyOnboarded) {
       const dismissUntil = localStorage.getItem(DISMISS_UNTIL_KEY);
-      if (!dismissUntil || Date.now() > Number(dismissUntil)) {
-        setOpen(true);
-      }
+      if (!dismissUntil || Date.now() > Number(dismissUntil)) setOpen(true);
     }
   }, []);
-
-  // Boot sequence lines
-  const bootLines = [
-    '[ SYSTEM: INITIALIZING... ]',
-    '[ GRAND$TATE CORE v1.0 ]',
-    '[ NEURAL LINK: ESTABLISHING... ]',
-    '[ CONNECTION: SECURED ]',
-    '[ STATUS: ALL SYSTEMS NOMINAL ]',
-    '[ NEURAL LINK ESTABLISHED ]',
-  ];
-
-  useEffect(() => {
-    if (!open || phase !== 'boot') return;
-    if (bootLine >= bootLines.length) {
-      const t = setTimeout(() => setPhase('steps'), 600);
-      return () => clearTimeout(t);
-    }
-    const t = setTimeout(() => setBootLine(prev => prev + 1), 400);
-    return () => clearTimeout(t);
-  }, [open, phase, bootLine]);
-
-  const currentStep = STEPS[step];
-  const colors = currentStep ? colorMap[currentStep.color] : colorMap.cyan;
-
-  const { displayed: typeTitle, done: titleDone } = useTypewriter(
-    currentStep?.title || '', 35, phase === 'steps'
-  );
-  const { displayed: typeDesc } = useTypewriter(
-    currentStep?.desc || '', 18, phase === 'steps' && titleDone
-  );
 
   const dismiss = useCallback(() => {
     localStorage.setItem(ONBOARDING_KEY, 'true');
@@ -182,25 +83,7 @@ export function WelcomeModal() {
     }
   }, [dontShowAgain]);
 
-  const handleFinish = useCallback(() => {
-    setPhase('complete');
-    setShowFlash(true);
-    setTimeout(() => {
-      setShowFlash(false);
-      dismiss();
-      setOpen(false);
-    }, 1200);
-  }, [dismiss]);
-
-  const handleNext = useCallback(() => {
-    if (step < STEPS.length - 1) {
-      setStep(prev => prev + 1);
-    } else {
-      handleFinish();
-    }
-  }, [step, handleFinish]);
-
-  const handleSkip = useCallback(() => {
+  const handleClose = useCallback(() => {
     dismiss();
     setOpen(false);
   }, [dismiss]);
@@ -214,302 +97,188 @@ export function WelcomeModal() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4"
         >
           {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/90 backdrop-blur-sm" onClick={handleSkip} />
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleClose} />
 
-          {/* Flash overlay on complete */}
-          {showFlash && (
-            <motion.div
-              initial={{ opacity: 1 }}
-              animate={{ opacity: 0 }}
-              transition={{ duration: 1.2, ease: 'easeOut' }}
-              className="absolute inset-0 bg-cyan-400 z-[10000] pointer-events-none"
-            />
-          )}
-
-          {/* Main container */}
+          {/* Modal */}
           <motion.div
-            ref={containerRef}
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="relative w-full max-w-lg machine-screen rounded-2xl border border-cyan-500/20 overflow-hidden"
-            style={{ animation: 'neon-pulse 3s ease-in-out infinite' }}
+            initial={{ scale: 0.92, opacity: 0, y: 30 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.92, opacity: 0, y: 30 }}
+            transition={{ type: 'spring', damping: 28, stiffness: 350 }}
+            className="relative w-full max-w-2xl bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden border border-gray-200/80 dark:border-gray-700"
           >
-            {/* Grid background */}
-            <div className="absolute inset-0 grid-flow-bg z-0" />
+            {/* Decorative corner accents — industrial estate feel */}
+            <div className="absolute top-0 left-0 w-8 h-8 border-t-[3px] border-l-[3px] border-orange-400/60 rounded-tl-2xl pointer-events-none z-20" />
+            <div className="absolute top-0 right-0 w-8 h-8 border-t-[3px] border-r-[3px] border-orange-400/60 rounded-tr-2xl pointer-events-none z-20" />
+            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-[3px] border-l-[3px] border-orange-400/60 rounded-bl-2xl pointer-events-none z-20" />
+            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-[3px] border-r-[3px] border-orange-400/60 rounded-br-2xl pointer-events-none z-20" />
 
-            {/* Content layer above CRT effects */}
-            <div className="relative z-10 p-6 md:p-8" style={{ fontFamily: "'JetBrains Mono', 'SF Mono', 'Fira Code', monospace" }}>
-
-              {/* ═══ BOOT PHASE ═══ */}
-              <AnimatePresence mode="wait">
-                {phase === 'boot' && (
-                  <motion.div
-                    key="boot"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    className="space-y-4"
-                  >
-                    {/* Radar */}
-                    <div className="flex justify-center mb-2">
-                      <RadarSVG />
-                    </div>
-
-                    {/* Boot log */}
-                    <div className="space-y-1.5 min-h-[160px]">
-                      {bootLines.slice(0, bootLine).map((line, i) => {
-                        const isLast = i === bootLine - 1;
-                        const isSuccess = line.includes('ESTABLISHED') || line.includes('SECURED') || line.includes('NOMINAL');
-                        return (
-                          <motion.p
-                            key={i}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className={cn(
-                              'text-xs tracking-wider',
-                              isSuccess ? 'text-emerald-400' : 'text-cyan-400/80',
-                              isLast && 'cursor-blink'
-                            )}
-                          >
-                            {line}
-                          </motion.p>
-                        );
-                      })}
-                    </div>
-
-                    {/* Progress bar */}
-                    <div className="h-1 bg-cyan-950 rounded-full overflow-hidden">
-                      <motion.div
-                        className="h-full bg-gradient-to-r from-cyan-500 to-cyan-300"
-                        initial={{ width: '0%' }}
-                        animate={{ width: `${(bootLine / bootLines.length) * 100}%` }}
-                        transition={{ duration: 0.3 }}
-                      />
-                    </div>
-
-                    <p className="text-[10px] text-cyan-600 text-center tracking-widest">
-                      GRAND$TATE CORE INITIALIZATION
-                    </p>
-                  </motion.div>
-                )}
-
-                {/* ═══ STEPS PHASE ═══ */}
-                {phase === 'steps' && (
-                  <motion.div
-                    key={`step-${step}`}
-                    initial={{ opacity: 0, x: 40 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -40 }}
-                    transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                    className="space-y-5"
-                  >
-                    {/* Header: Phase + System label */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Crosshair className={cn('w-4 h-4', colors.text)} />
-                        <span className="text-[10px] tracking-[0.2em] text-cyan-600 uppercase">
-                          {currentStep.phase}
-                        </span>
-                      </div>
-                      <motion.span
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className={cn(
-                          'text-[9px] tracking-widest px-2.5 py-0.5 rounded border font-bold',
-                          colors.border, colors.text, colors.bg
-                        )}
-                      >
-                        {currentStep.statusTag}
-                      </motion.span>
-                    </div>
-
-                    {/* Icon + System label */}
-                    <div className="flex items-center gap-4">
-                      <motion.div
-                        initial={{ scale: 0, rotate: -90 }}
-                        animate={{ scale: 1, rotate: 0 }}
-                        transition={{ type: 'spring', stiffness: 400, damping: 15, delay: 0.1 }}
-                        className={cn(
-                          'w-14 h-14 rounded-xl border flex items-center justify-center',
-                          colors.border, colors.bg
-                        )}
-                        style={{ animation: 'neon-pulse 2s ease-in-out infinite' }}
-                      >
-                        <currentStep.icon className={cn('w-7 h-7', colors.text)} />
-                      </motion.div>
-                      <div>
-                        <p className={cn('text-[10px] tracking-[0.15em] uppercase mb-0.5', colors.text)}>
-                          [ {currentStep.sysLabel} ]
-                        </p>
-                        <p className="text-white text-base font-bold tracking-wide">
-                          {typeTitle}
-                          {!titleDone && <span className="inline-block w-2 h-4 bg-cyan-400 ml-0.5 animate-pulse" />}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Description — terminal typewriter */}
-                    <div className={cn('rounded-lg border p-4 min-h-[80px]', colors.border, 'bg-black/40')}>
-                      {/* Terminal header bar */}
-                      <div className="flex items-center gap-1.5 mb-2.5">
-                        <div className="w-2 h-2 rounded-full bg-red-500/60" />
-                        <div className="w-2 h-2 rounded-full bg-amber-500/60" />
-                        <div className="w-2 h-2 rounded-full bg-emerald-500/60" />
-                        <span className="text-[8px] text-cyan-700 ml-2 tracking-wider">SYSTEM_LOG</span>
-                      </div>
-                      <p className="text-xs text-cyan-300/90 leading-relaxed tracking-wide">
-                        <span className="text-cyan-600">{'> '}</span>
-                        {typeDesc}
-                        {titleDone && <span className="inline-block w-1.5 h-3 bg-cyan-400 ml-0.5 animate-pulse" />}
-                      </p>
-                    </div>
-
-                    {/* HUD crosshair connectors */}
-                    <svg className="w-full h-4 overflow-visible" viewBox="0 0 400 16">
-                      <motion.line
-                        x1="0" y1="8" x2="400" y2="8"
-                        stroke="rgba(34,211,238,0.15)" strokeWidth="0.5"
-                        initial={{ pathLength: 0 }}
-                        animate={{ pathLength: 1 }}
-                        transition={{ duration: 0.8, delay: 0.3 }}
-                      />
-                      {STEPS.map((_, i) => {
-                        const x = 50 + i * 100;
-                        return (
-                          <motion.circle
-                            key={i}
-                            cx={x} cy="8" r={i === step ? 5 : 3}
-                            fill={i === step ? '#22d3ee' : i < step ? '#10b981' : 'transparent'}
-                            stroke={i <= step ? '#22d3ee' : 'rgba(34,211,238,0.3)'}
-                            strokeWidth="1"
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ delay: 0.4 + i * 0.1 }}
-                          />
-                        );
-                      })}
-                    </svg>
-
-                    {/* Step indicators */}
-                    <div className="flex items-center justify-between text-[9px] tracking-wider">
-                      {STEPS.map((s, i) => (
-                        <span
-                          key={i}
-                          className={cn(
-                            'transition-colors',
-                            i === step ? 'text-cyan-400' : i < step ? 'text-emerald-500' : 'text-cyan-800'
-                          )}
-                        >
-                          {i < step ? '[OK]' : i === step ? `[${s.statusTag}]` : '[---]'}
-                        </span>
-                      ))}
-                    </div>
-
-                    {/* Action buttons */}
-                    <div className="flex gap-3 pt-1">
-                      {step > 0 && (
-                        <motion.button
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.97 }}
-                          onClick={() => setStep(prev => prev - 1)}
-                          className="flex-1 py-3 text-xs tracking-widest text-cyan-500 border border-cyan-800/50 rounded-lg bg-cyan-950/20 hover:bg-cyan-950/40 transition-colors uppercase"
-                        >
-                          {'<'} PREV
-                        </motion.button>
-                      )}
-                      <motion.button
-                        whileHover={{
-                          scale: 1.03,
-                          boxShadow: '0 0 25px rgba(34,211,238,0.3)',
-                        }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={handleNext}
-                        className={cn(
-                          'relative flex-1 py-3 text-xs tracking-widest uppercase rounded-lg overflow-hidden font-bold transition-all',
-                          step === STEPS.length - 1
-                            ? 'text-black bg-gradient-to-r from-cyan-400 to-emerald-400 shadow-lg shadow-cyan-500/30'
-                            : 'text-cyan-300 border border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20'
-                        )}
-                      >
-                        {/* Scanning line on button */}
-                        <motion.div
-                          className="absolute inset-x-0 h-[2px] bg-white/20"
-                          animate={{ top: ['0%', '100%', '0%'] }}
-                          transition={{ duration: 2.5, repeat: Infinity, ease: 'linear' }}
-                        />
-                        <span className="relative z-10 flex items-center justify-center gap-2">
-                          {step === STEPS.length - 1 ? 'ENGAGE ENGINE' : 'NEXT MODULE'}
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        </span>
-                      </motion.button>
-                    </div>
-
-                    {/* Don't show again checkbox + Skip */}
-                    <div className="space-y-2">
-                      <label className="flex items-center justify-center gap-2 cursor-pointer group">
-                        <input
-                          type="checkbox"
-                          checked={dontShowAgain}
-                          onChange={(e) => setDontShowAgain(e.target.checked)}
-                          className="w-3 h-3 rounded border-cyan-700 bg-transparent accent-cyan-500"
-                        />
-                        <span className="text-[9px] text-cyan-700 group-hover:text-cyan-500 transition-colors tracking-wider uppercase">
-                          {dontShowAgain ? '[ PERMANENTLY DISMISSED ]' : '[ DO NOT SHOW AGAIN ]'}
-                        </span>
-                      </label>
-                      <button
-                        onClick={handleSkip}
-                        className="w-full text-[10px] text-cyan-800 hover:text-cyan-500 transition-colors tracking-widest uppercase"
-                      >
-                        {dontShowAgain ? '[ CLOSE ]' : '[ SKIP — SEE YOU IN 7 DAYS ]'}
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* ═══ COMPLETE PHASE ═══ */}
-                {phase === 'complete' && (
-                  <motion.div
-                    key="complete"
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="text-center py-8 space-y-4"
-                  >
-                    <motion.div
-                      animate={{ rotate: [0, 360] }}
-                      transition={{ duration: 1, ease: 'easeOut' }}
-                    >
-                      <Cpu className="w-12 h-12 text-cyan-400 mx-auto" />
-                    </motion.div>
-                    <p className="text-lg font-bold text-cyan-300 tracking-widest glitch-text" data-text="FULL ACCESS GRANTED">
-                      FULL ACCESS GRANTED
-                    </p>
-                    <p className="text-xs text-cyan-600 tracking-wider">
-                      [ ALL SYSTEMS OPERATIONAL ]
-                    </p>
-                    <div className="flex justify-center gap-4 text-[9px] text-emerald-500 tracking-wider">
-                      <span>[ASSETS: OK]</span>
-                      <span>[NETWORK: OK]</span>
-                      <span>[ENGINE: OK]</span>
-                      <span>[SHIELD: OK]</span>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+            {/* ─── Header ─── */}
+            <div className="relative bg-gradient-to-r from-orange-500 via-amber-500 to-orange-400 px-6 py-6 text-center overflow-hidden">
+              {/* Subtle grid overlay */}
+              <div
+                className="absolute inset-0 opacity-[0.07] pointer-events-none"
+                style={{
+                  backgroundImage: 'linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px)',
+                  backgroundSize: '24px 24px',
+                }}
+              />
+              <div className="relative">
+                <motion.div
+                  initial={{ scale: 0, rotate: -20 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: 'spring', delay: 0.15, stiffness: 300 }}
+                  className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-3 ring-4 ring-white/10"
+                >
+                  <Home className="w-7 h-7 text-white" />
+                </motion.div>
+                <motion.h1
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-xl sm:text-2xl font-bold text-white"
+                >
+                  ยินดีต้อนรับสู่ Grand$tate
+                </motion.h1>
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-white/80 text-xs sm:text-sm mt-1.5"
+                >
+                  ระบบโพสต์อสังหาฯ อัตโนมัติ — 3 ขั้นตอนง่ายๆ เริ่มต้นใช้งาน
+                </motion.p>
+                {/* Machine status bar */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                  className="flex items-center justify-center gap-3 sm:gap-5 mt-3 text-[9px] sm:text-[10px] text-white/50 font-mono tracking-wider"
+                >
+                  <span>[ SYSTEM: ONLINE ]</span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse" />
+                    READY
+                  </span>
+                  <span>[ v1.0 ]</span>
+                </motion.div>
+              </div>
             </div>
 
-            {/* Bottom status bar */}
-            <div className="relative z-10 px-6 pb-4 flex items-center justify-between text-[8px] text-cyan-700 tracking-wider">
+            {/* ─── Steps Grid ─── */}
+            <div className="px-5 sm:px-6 pt-6 pb-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                {STEPS.map((step, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 24 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.35 + i * 0.12 }}
+                    className={`relative p-4 rounded-xl border ${step.borderColor} ${step.bgLight} hover:shadow-lg hover:ring-2 ${step.ringColor} transition-all duration-300 group`}
+                  >
+                    {/* Step badge */}
+                    <div className={`absolute -top-2.5 left-3 px-2 py-0.5 rounded-md bg-gradient-to-r ${step.gradient} text-white text-[9px] font-bold font-mono tracking-widest shadow-sm`}>
+                      STEP {step.number}
+                    </div>
+
+                    {/* Icon */}
+                    <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${step.gradient} flex items-center justify-center mt-1.5 mb-2.5 shadow-sm group-hover:scale-105 transition-transform`}>
+                      <step.icon className="w-5 h-5 text-white" />
+                    </div>
+
+                    {/* Tech label */}
+                    <p className={`text-[9px] font-mono ${step.textColor} tracking-wider opacity-60 mb-0.5`}>
+                      [ {step.tag} ]
+                    </p>
+
+                    {/* Title */}
+                    <h3 className="font-bold text-gray-800 dark:text-gray-100 text-sm leading-snug mb-1.5">
+                      {step.title}
+                    </h3>
+
+                    {/* Description */}
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                      {step.desc}
+                    </p>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Step connector line (desktop) */}
+              <div className="hidden sm:flex items-center justify-center gap-1 mt-3 mb-1">
+                {STEPS.map((s, i) => (
+                  <div key={i} className="flex items-center">
+                    <div className={`w-2.5 h-2.5 rounded-full bg-gradient-to-br ${s.gradient} shadow-sm`} />
+                    {i < STEPS.length - 1 && (
+                      <div className="w-[calc(33vw-80px)] max-w-[100px] h-0.5 bg-gradient-to-r from-orange-300/60 via-blue-300/40 to-emerald-300/60 rounded-full" />
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Extra features row */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.75 }}
+                className="flex items-center justify-center gap-3 sm:gap-5 mt-3 mb-4"
+              >
+                {FEATURES.map((f, i) => (
+                  <div key={i} className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-gray-400 dark:text-gray-500">
+                    <f.icon className="w-3.5 h-3.5" />
+                    <span>{f.label}</span>
+                  </div>
+                ))}
+              </motion.div>
+            </div>
+
+            {/* ─── Footer Actions ─── */}
+            <div className="px-5 sm:px-6 pb-5 space-y-3">
+              {/* Main CTA */}
+              <motion.button
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                whileHover={{ scale: 1.015, boxShadow: '0 8px 30px rgba(249, 115, 22, 0.3)' }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleClose}
+                className="w-full py-3.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold rounded-xl shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 text-sm"
+              >
+                <CheckCircle2 className="w-4.5 h-4.5" />
+                เริ่มต้นใช้งาน
+                <ChevronRight className="w-4 h-4" />
+              </motion.button>
+
+              {/* Dismiss options */}
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={dontShowAgain}
+                    onChange={(e) => setDontShowAgain(e.target.checked)}
+                    className="w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 accent-orange-500"
+                  />
+                  <span className="text-[11px] text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors select-none">
+                    ไม่ต้องแสดงอีก
+                  </span>
+                </label>
+                {!dontShowAgain && (
+                  <span className="text-[10px] text-gray-300 dark:text-gray-600 font-mono">
+                    แสดงอีกครั้งใน 7 วัน
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Machine status footer */}
+            <div className="px-5 sm:px-6 pb-3 flex items-center justify-between text-[8px] text-gray-300 dark:text-gray-600 font-mono tracking-wider">
               <span>GRAND$TATE CORE v1.0</span>
               <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                STATUS: ONLINE
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                CONNECTED
               </span>
             </div>
           </motion.div>

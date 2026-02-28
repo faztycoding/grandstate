@@ -804,14 +804,22 @@ export default function AdminDashboard() {
     // No admin session → show inline login
     if (!adminUser) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
-                <Card className="w-full max-w-md border-gray-700 bg-gray-900/90">
+            <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
+                {/* Subtle grid pattern */}
+                <div className="fixed inset-0 opacity-[0.03] dark:opacity-[0.02] pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+                <Card className="relative w-full max-w-md border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm shadow-2xl">
+                    {/* Corner accents */}
+                    <div className="absolute top-0 left-0 w-6 h-6 border-t-[3px] border-l-[3px] border-orange-400/50 rounded-tl-xl pointer-events-none" />
+                    <div className="absolute top-0 right-0 w-6 h-6 border-t-[3px] border-r-[3px] border-orange-400/50 rounded-tr-xl pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 w-6 h-6 border-b-[3px] border-l-[3px] border-orange-400/50 rounded-bl-xl pointer-events-none" />
+                    <div className="absolute bottom-0 right-0 w-6 h-6 border-b-[3px] border-r-[3px] border-orange-400/50 rounded-br-xl pointer-events-none" />
                     <CardHeader className="text-center">
-                        <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center mb-2">
+                        <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center mb-2 shadow-lg shadow-orange-500/20">
                             <Shield className="w-7 h-7 text-white" />
                         </div>
-                        <CardTitle className="text-white">{t.admin.loginTitle}</CardTitle>
-                        <CardDescription className="text-gray-400">{t.admin.loginDesc}</CardDescription>
+                        <CardTitle>{t.admin.loginTitle}</CardTitle>
+                        <CardDescription>{t.admin.loginDesc}</CardDescription>
+                        <p className="text-[9px] font-mono text-muted-foreground/40 tracking-wider mt-1">[ GRAND$TATE ADMIN CONSOLE ]</p>
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleAdminLogin} className="space-y-4">
@@ -820,21 +828,19 @@ export default function AdminDashboard() {
                                 value={adminEmail}
                                 onChange={(e) => { setAdminEmail(e.target.value); setAdminLoginError(null); }}
                                 placeholder={t.admin.emailPlaceholder}
-                                className="bg-gray-800 border-gray-700 text-white"
                             />
                             <Input
                                 type="password"
                                 value={adminPassword}
                                 onChange={(e) => { setAdminPassword(e.target.value); setAdminLoginError(null); }}
                                 placeholder={t.admin.passwordPlaceholder}
-                                className="bg-gray-800 border-gray-700 text-white"
                             />
                             {adminLoginError && (
-                                <p className="text-sm text-red-400 flex items-center gap-1">
+                                <p className="text-sm text-red-500 flex items-center gap-1">
                                     <AlertCircle className="w-4 h-4" /> {adminLoginError}
                                 </p>
                             )}
-                            <Button type="submit" className="w-full bg-gradient-to-r from-red-500 to-orange-500" disabled={adminLoggingIn || !adminEmail || !adminPassword}>
+                            <Button type="submit" className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 shadow-lg shadow-orange-500/20" disabled={adminLoggingIn || !adminEmail || !adminPassword}>
                                 {adminLoggingIn ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t.admin.loggingIn}</> : t.admin.loginButton}
                             </Button>
                         </form>
@@ -1335,32 +1341,29 @@ export default function AdminDashboard() {
                             )}
                         </motion.div>
 
-                        {/* ── HERO: Nexus Engine — Quantum Automation Core ── */}
+                        {/* ── HERO: Grand$tate Engine — Automation Core ── */}
                         <TooltipProvider delayDuration={200}>
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="relative overflow-hidden rounded-3xl text-white cursor-pointer group shadow-2xl"
-                            style={{ background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.1)' }}
+                            className="relative overflow-hidden rounded-3xl text-white cursor-pointer group shadow-2xl border border-orange-200/30 dark:border-white/10"
+                            style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.9) 0%, rgba(245,158,11,0.85) 30%, rgba(59,130,246,0.8) 100%)', backdropFilter: 'blur(12px)' }}
                             onClick={() => setQueueDetail({ type: 'slots', data: liveStats.queue })}
                         >
-                            {/* Scanline sweep animation */}
-                            <div className="absolute inset-x-0 h-[2px] z-20 pointer-events-none" style={{ background: 'rgba(34, 211, 238, 0.1)', animation: 'engineScan 4s linear infinite' }} />
-
-                            {/* Circuit grid pattern */}
-                            <div className="absolute inset-0 opacity-[0.03]" style={{
-                                backgroundImage: 'linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px), radial-gradient(circle 2px, rgba(59,130,246,0.08) 1px, transparent 1px)',
-                                backgroundSize: '60px 60px, 60px 60px, 60px 60px'
+                            {/* Subtle grid overlay */}
+                            <div className="absolute inset-0 opacity-[0.06] pointer-events-none" style={{
+                                backgroundImage: 'linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px)',
+                                backgroundSize: '40px 40px'
                             }} />
 
                             {/* Ambient glow orbs */}
                             <div className={cn(
                                 "absolute -top-20 -left-20 w-64 h-64 rounded-full blur-[100px] transition-all duration-[3000ms]",
-                                liveStats.queue.runningCount > 0 ? "bg-blue-500/15" : "bg-blue-500/5"
+                                liveStats.queue.runningCount > 0 ? "bg-white/20" : "bg-white/5"
                             )} />
                             <div className={cn(
                                 "absolute -bottom-20 -right-20 w-64 h-64 rounded-full blur-[100px] transition-all duration-[3000ms]",
-                                liveStats.queue.runningCount > 0 ? "bg-emerald-500/15" : "bg-emerald-500/3"
+                                liveStats.queue.runningCount > 0 ? "bg-emerald-300/20" : "bg-emerald-300/5"
                             )} />
 
                             <div className="relative z-10 p-6 md:p-10">
@@ -1380,38 +1383,38 @@ export default function AdminDashboard() {
                                         </div>
                                         <div>
                                             <h3 className="text-xl md:text-2xl font-bold tracking-tighter uppercase">
-                                                Nexus Engine <span className="text-blue-500 text-xs font-normal">v4.0</span>
+                                                Grand$tate Engine <span className="text-white/60 text-xs font-normal">v1.0</span>
                                             </h3>
-                                            <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] mt-0.5">Quantum Automation Core</p>
+                                            <p className="text-[10px] text-white/50 uppercase tracking-[0.2em] mt-0.5">Real Estate Automation Core</p>
                                         </div>
                                     </div>
 
-                                    {/* Dark metrics panel */}
-                                    <div className="flex gap-6 md:gap-8 bg-black/40 px-5 py-4 rounded-2xl border border-white/5">
+                                    {/* Metrics panel */}
+                                    <div className="flex gap-6 md:gap-8 bg-black/20 backdrop-blur-sm px-5 py-4 rounded-2xl border border-white/15">
                                         <div className="text-center">
                                             <AnimatedCounter value={liveStats.queue.runningCount} className="text-3xl md:text-4xl font-bold text-white tabular-nums leading-none" />
-                                            <p className="text-[9px] text-slate-500 uppercase tracking-[0.15em] mt-1 font-medium">Active Threads</p>
+                                            <p className="text-[9px] text-white/50 uppercase tracking-[0.15em] mt-1 font-medium">Active Threads</p>
                                         </div>
-                                        <div className="w-[1px] bg-white/10" />
+                                        <div className="w-[1px] bg-white/20" />
                                         <div className="text-center">
-                                            <p className="text-3xl md:text-4xl font-bold text-blue-400 tabular-nums leading-none">
+                                            <p className="text-3xl md:text-4xl font-bold text-white tabular-nums leading-none">
                                                 {liveStats.queue.runningCount > 0 ? Math.min(Math.round((liveStats.queue.runningCount / liveStats.queue.maxConcurrent) * 100), 100) : 0}%
                                             </p>
-                                            <p className="text-[9px] text-slate-500 uppercase tracking-[0.15em] mt-1 font-medium">System Load</p>
+                                            <p className="text-[9px] text-white/50 uppercase tracking-[0.15em] mt-1 font-medium">System Load</p>
                                         </div>
                                         {liveStats.queue.queueLength > 0 && (
                                             <>
-                                                <div className="w-[1px] bg-white/10" />
+                                                <div className="w-[1px] bg-white/20" />
                                                 <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center">
-                                                    <p className="text-3xl md:text-4xl font-bold text-amber-400 tabular-nums leading-none animate-pulse">{liveStats.queue.queueLength}</p>
-                                                    <p className="text-[9px] text-amber-400/50 uppercase tracking-[0.15em] mt-1 font-medium">{t.admin.inQueue}</p>
+                                                    <p className="text-3xl md:text-4xl font-bold text-yellow-200 tabular-nums leading-none animate-pulse">{liveStats.queue.queueLength}</p>
+                                                    <p className="text-[9px] text-yellow-200/60 uppercase tracking-[0.15em] mt-1 font-medium">{t.admin.inQueue}</p>
                                                 </motion.div>
                                             </>
                                         )}
                                     </div>
                                 </div>
 
-                                {/* ── Slot Grid — Cyberpunk Worker Cards ── */}
+                                {/* ── Slot Grid — Worker Cards ── */}
                                 <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                                     {Array.from({ length: liveStats.queue.maxConcurrent }, (_, i) => {
                                         const isActive = i < liveStats.queue!.runningCount;
@@ -1428,25 +1431,14 @@ export default function AdminDashboard() {
                                                 className={cn(
                                                     "relative rounded-2xl border overflow-hidden transition-all duration-500 group/slot",
                                                     isActive
-                                                        ? "border-emerald-500/30"
-                                                        : "border-white/10 hover:border-white/20"
+                                                        ? "border-emerald-400/40 bg-white/10"
+                                                        : "border-white/10 bg-black/10 hover:border-white/20"
                                                 )}
-                                                style={{
-                                                    background: isActive
-                                                        ? 'linear-gradient(145deg, rgba(16,185,129,0.08), rgba(15,23,42,0.8))'
-                                                        : 'linear-gradient(145deg, rgba(30,41,59,0.4), rgba(15,23,42,0.8))',
-                                                    ...(isActive ? { animation: 'slotActiveGlow 3s ease-in-out infinite' } : {})
-                                                }}
                                             >
-                                                {/* Active scan overlay */}
-                                                {isActive && (
-                                                    <div className="absolute inset-x-0 h-[1px] pointer-events-none" style={{ background: 'rgba(16,185,129,0.15)', animation: 'engineScan 3s linear infinite' }} />
-                                                )}
-
                                                 <div className="relative z-10 p-3 min-h-[110px] flex flex-col justify-between">
                                                     {/* Slot header: ID + status dot */}
                                                     <div className="flex justify-between items-start mb-2">
-                                                        <span className="text-[10px] text-slate-500 font-mono">ID: {String(i + 1).padStart(3, '0')}</span>
+                                                        <span className="text-[10px] text-white/40 font-mono">ID: {String(i + 1).padStart(3, '0')}</span>
                                                         <div className={cn(
                                                             "w-2 h-2 rounded-full transition-colors",
                                                             isActive ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]" : "bg-slate-700"
@@ -1455,16 +1447,16 @@ export default function AdminDashboard() {
 
                                                     {/* Slot title + status */}
                                                     <div className="mb-2">
-                                                        <h4 className={cn("text-xs font-bold uppercase transition-colors leading-tight", isActive ? "text-white" : "text-slate-400 group-hover/slot:text-white")}>
+                                                        <h4 className={cn("text-xs font-bold uppercase transition-colors leading-tight", isActive ? "text-white" : "text-white/40 group-hover/slot:text-white/70")}>
                                                             {isActive ? (runJob?.automationType === 'marketplace' ? 'Marketplace' : 'Group Post') : 'Worker Slot'}
                                                         </h4>
-                                                        <p className={cn("text-[10px] uppercase font-medium", isActive ? "text-emerald-400" : "text-slate-600")}>
+                                                        <p className={cn("text-[10px] uppercase font-medium", isActive ? "text-emerald-300" : "text-white/30")}>
                                                             {isActive ? (runJob?.progress?.isPaused ? 'Paused' : 'Processing') : 'Standby'}
                                                         </p>
                                                     </div>
 
-                                                    {/* Progress bar with glow */}
-                                                    <div className="w-full bg-white/5 h-[2px] mb-2.5 overflow-hidden">
+                                                    {/* Progress bar */}
+                                                    <div className="w-full bg-white/10 h-[2px] mb-2.5 overflow-hidden">
                                                         {isActive ? (
                                                             <motion.div
                                                                 className="h-full"
@@ -1493,15 +1485,15 @@ export default function AdminDashboard() {
                                                                 <p className="text-[8px] text-amber-400/70 truncate leading-tight">🏠 {runJob.propertyTitle}</p>
                                                             )}
                                                             <div className="flex justify-between items-center pt-0.5">
-                                                                <span className="text-[9px] text-emerald-500/70 font-mono">
+                                                                <span className="text-[9px] text-emerald-300/70 font-mono">
                                                                     {runJob.progress ? `${runJob.progress.currentStep}/${runJob.progress.totalSteps}` : `${runJob.groupCount}g`}
                                                                 </span>
-                                                                <span className="text-[9px] text-blue-500/70 font-mono">{runMin}:{String(runSec).padStart(2, '0')}</span>
+                                                                <span className="text-[9px] text-white/60 font-mono">{runMin}:{String(runSec).padStart(2, '0')}</span>
                                                             </div>
                                                         </div>
                                                     ) : (
                                                         <div className="flex-1 flex items-center justify-center opacity-0 group-hover/slot:opacity-100 transition-opacity">
-                                                            <span className="text-[9px] text-slate-600">Available</span>
+                                                            <span className="text-[9px] text-white/30">Available</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -1530,29 +1522,29 @@ export default function AdminDashboard() {
                                     </div>
                                 )}
 
-                                {/* ── Terminal — System Console Log ── */}
-                                <div className="mt-5 bg-black/60 rounded-xl p-4 border border-white/5 max-h-28 overflow-y-auto">
+                                {/* ── System Status Log ── */}
+                                <div className="mt-5 bg-black/20 backdrop-blur-sm rounded-xl p-4 border border-white/10 max-h-28 overflow-y-auto">
                                     <div className="space-y-0.5 font-mono">
-                                        <p className="text-[10px]"><span className="text-blue-900">[SYS]</span> <span className="text-slate-500">Engine initialized — {liveStats.queue.maxConcurrent} slots configured</span></p>
-                                        <p className="text-[10px]"><span className="text-blue-900">[CFG]</span> <span className="text-slate-500">Timeout: {liveStats.queue.queueTimeoutMin}m per session</span></p>
-                                        <p className="text-[10px]"><span className="text-blue-900">[SEC]</span> <span className="text-slate-500">Anti-detection modules loaded — stealth active</span></p>
+                                        <p className="text-[10px]"><span className="text-white/30">[SYS]</span> <span className="text-white/50">Engine initialized — {liveStats.queue.maxConcurrent} slots configured</span></p>
+                                        <p className="text-[10px]"><span className="text-white/30">[CFG]</span> <span className="text-white/50">Timeout: {liveStats.queue.queueTimeoutMin}m per session</span></p>
+                                        <p className="text-[10px]"><span className="text-white/30">[SEC]</span> <span className="text-white/50">Anti-detection modules loaded — stealth active</span></p>
                                         {liveStats.queue.runningCount > 0 && (
-                                            <p className="text-[10px]"><span className="text-emerald-800">[RUN]</span> <span className="text-emerald-500/70">{liveStats.queue.runningCount} thread(s) active — processing requests...</span></p>
+                                            <p className="text-[10px]"><span className="text-emerald-300/60">[RUN]</span> <span className="text-emerald-200/70">{liveStats.queue.runningCount} thread(s) active — processing requests...</span></p>
                                         )}
                                         {liveStats.queue.queueLength > 0 && (
-                                            <p className="text-[10px]"><span className="text-amber-800">[QUE]</span> <span className="text-amber-400/70">{liveStats.queue.queueLength} request(s) in queue — awaiting slot...</span></p>
+                                            <p className="text-[10px]"><span className="text-yellow-200/60">[QUE]</span> <span className="text-yellow-100/70">{liveStats.queue.queueLength} request(s) in queue — awaiting slot...</span></p>
                                         )}
-                                        <p className="text-[10px]"><span className="text-blue-900">[NET]</span> <span className="text-slate-500">{sseConnected ? 'SSE connection stable — heartbeat OK' : 'SSE disconnected — attempting reconnect...'}</span></p>
-                                        <p className="text-[10px]"><span className="text-slate-800">[SYS]</span> <span className="text-slate-600">Waiting for user input...</span></p>
+                                        <p className="text-[10px]"><span className="text-white/30">[NET]</span> <span className="text-white/50">{sseConnected ? 'SSE connection stable — heartbeat OK' : 'SSE disconnected — attempting reconnect...'}</span></p>
+                                        <p className="text-[10px]"><span className="text-white/20">[SYS]</span> <span className="text-white/30">Waiting for user input...</span></p>
                                     </div>
                                 </div>
 
                                 {/* ── Bottom bar: slot label + live indicator ── */}
                                 <div className="flex items-center justify-between mt-4">
-                                    <p className="text-[8px] text-slate-700 uppercase tracking-[0.3em] font-medium font-mono">Slot 1 — {liveStats.queue.maxConcurrent}</p>
+                                    <p className="text-[8px] text-white/30 uppercase tracking-[0.3em] font-medium font-mono">Slot 1 — {liveStats.queue.maxConcurrent}</p>
                                     <div className="flex items-center gap-1.5">
-                                        <div className={cn("w-1.5 h-1.5 rounded-full", sseConnected ? "bg-emerald-500 animate-pulse" : "bg-red-500")} />
-                                        <span className="text-[8px] text-slate-600 uppercase tracking-wider font-medium">{sseConnected ? 'Live' : 'Offline'}</span>
+                                        <div className={cn("w-1.5 h-1.5 rounded-full", sseConnected ? "bg-emerald-300 animate-pulse" : "bg-red-400")} />
+                                        <span className="text-[8px] text-white/40 uppercase tracking-wider font-medium">{sseConnected ? 'Live' : 'Offline'}</span>
                                     </div>
                                 </div>
                             </div>

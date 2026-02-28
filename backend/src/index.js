@@ -94,7 +94,7 @@ const adminAuth = [authMiddleware, adminOnly, attachSession];
 
 // Health endpoint (no auth required)
 app.get('/api/ping', (req, res) => {
-  res.json({ success: true, message: 'GrandState API is running', sessions: sessionManager.getStats() });
+  res.json({ success: true, message: 'GrandState API is running', sessions: sessionManager.getStats(), queue: { maxConcurrent: automationQueue.maxConcurrent, running: automationQueue.running.size, queued: automationQueue.queue.length } });
 });
 
 // Resolve short Google Maps URL → full URL with coordinates (no auth required)

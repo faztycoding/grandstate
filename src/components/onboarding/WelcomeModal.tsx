@@ -79,6 +79,9 @@ export function WelcomeModal() {
     localStorage.setItem(ONBOARDING_KEY, 'true');
     localStorage.removeItem('grandstate_is_new_user');
     sessionStorage.setItem(SESSION_SHOWN_KEY, '1');
+    // Signal Header to show help icon hint animation
+    sessionStorage.setItem('grandstate_show_help_hint', '1');
+    window.dispatchEvent(new Event('help-hint-trigger'));
     if (dontShowAgain) {
       localStorage.setItem(PERMANENT_DISMISS_KEY, 'true');
     } else {

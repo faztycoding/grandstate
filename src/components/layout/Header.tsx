@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Search, User, HelpCircle, Settings, LogOut, ChevronDown, Shield, BarChart3, Crown, Rocket, Star, Menu, Lock } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -52,6 +52,87 @@ function MobileMenuButton() {
     <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setOpen(true)}>
       <Menu className="w-5 h-5" />
     </Button>
+  );
+}
+
+/* ── Help Icon with post-tutorial hint animation ── */
+function HelpIconWithHint() {
+  const [showHint, setShowHint] = useState(false);
+  const { language } = useLanguage();
+
+  const dismissHint = useCallback(() => {
+    setShowHint(false);
+    sessionStorage.removeItem('grandstate_show_help_hint');
+  }, []);
+
+  useEffect(() => {
+    // Check on mount
+    if (sessionStorage.getItem('grandstate_show_help_hint')) {
+      // Small delay so the modal has time to close first
+      const t = setTimeout(() => setShowHint(true), 600);
+      return () => clearTimeout(t);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Listen for event dispatched by WelcomeModal dismiss
+    const handler = () => {
+      setTimeout(() => setShowHint(true), 600);
+    };
+    window.addEventListener('help-hint-trigger', handler);
+    return () => window.removeEventListener('help-hint-trigger', handler);
+  }, []);
+
+  // Auto-dismiss after 12 seconds
+  useEffect(() => {
+    if (!showHint) return;
+    const t = setTimeout(() => dismissHint(), 12000);
+    return () => clearTimeout(t);
+  }, [showHint, dismissHint]);
+
+  return (
+    <Link to="/help" onClick={dismissHint}>
+      <Button variant="ghost" size="icon" className="relative">
+        <HelpCircle
+          className={cn(
+            'w-5 h-5 transition-all',
+            showHint && 'text-accent animate-[helpShake_0.6s_ease-in-out_infinite]'
+          )}
+        />
+        {/* Glow ring */}
+        {showHint && (
+          <span className="absolute inset-0 rounded-md animate-[helpGlow_1.5s_ease-in-out_infinite] pointer-events-none" />
+        )}
+        {/* Tooltip popup */}
+        {showHint && (
+          <span className="absolute -bottom-11 left-1/2 -translate-x-1/2 whitespace-nowrap z-50 pointer-events-none">
+            <span className="relative block px-2.5 py-1 rounded-md bg-accent text-accent-foreground text-[10px] font-bold font-mono tracking-wider shadow-lg shadow-accent/30 animate-[helpFadeIn_0.4s_ease-out]">
+              {language === 'th' ? 'SYSTEM BRIEFING — โปรดตรวจสอบ' : 'SYSTEM BRIEFING — Please review'}
+              {/* Arrow */}
+              <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-accent rotate-45" />
+            </span>
+          </span>
+        )}
+      </Button>
+      <style>{`
+        @keyframes helpShake {
+          0%, 100% { transform: rotate(0deg); }
+          15% { transform: rotate(12deg); }
+          30% { transform: rotate(-10deg); }
+          45% { transform: rotate(8deg); }
+          60% { transform: rotate(-6deg); }
+          75% { transform: rotate(3deg); }
+        }
+        @keyframes helpGlow {
+          0%, 100% { box-shadow: 0 0 4px 1px hsl(var(--accent) / 0.3); }
+          50% { box-shadow: 0 0 14px 4px hsl(var(--accent) / 0.5); }
+        }
+        @keyframes helpFadeIn {
+          from { opacity: 0; transform: translate(-50%, 4px); }
+          to { opacity: 1; transform: translate(-50%, 0); }
+        }
+      `}</style>
+    </Link>
   );
 }
 
@@ -129,12 +210,8 @@ export function Header({ title, subtitle }: HeaderProps) {
           {/* Notifications */}
           <NotificationBell />
 
-          {/* Help */}
-          <Link to="/help">
-            <Button variant="ghost" size="icon" className="relative">
-              <HelpCircle className="w-5 h-5" />
-            </Button>
-          </Link>
+          {/* Help — with post-tutorial hint animation */}
+          <HelpIconWithHint />
 
           {/* User menu */}
           <DropdownMenu>

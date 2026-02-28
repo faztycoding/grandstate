@@ -1,9 +1,11 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Sidebar, MobileSidebarProvider } from './Sidebar';
 import { Header } from './Header';
 import { FloatingParticles } from '@/components/ui/floating-particles';
 import { WelcomeModal } from '@/components/onboarding/WelcomeModal';
+import { ExpiredLicensePopup } from '@/components/profile/ExpiredLicensePopup';
+import { useLicenseAuth } from '@/hooks/useLicenseAuth';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -13,6 +15,23 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children, title, subtitle }: DashboardLayoutProps) {
   const location = useLocation();
+  const { license, user: authUser } = useLicenseAuth();
+  const [showExpiredPopup, setShowExpiredPopup] = useState(false);
+
+  // Global expired license check — triggers once per session
+  useEffect(() => {
+    if (!license?.expiresAt) return;
+    const now = new Date();
+    const expiry = new Date(license.expiresAt);
+    if (expiry <= now) {
+      const key = `global_expired_shown_${license.id}`;
+      if (!sessionStorage.getItem(key)) {
+        sessionStorage.setItem(key, 'true');
+        const timer = setTimeout(() => setShowExpiredPopup(true), 1500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [license]);
 
   return (
     <MobileSidebarProvider>
@@ -87,6 +106,11 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
 
         <FloatingParticles count={25} />
         <WelcomeModal />
+        <ExpiredLicensePopup
+          show={showExpiredPopup}
+          userId={authUser?.id}
+          onClose={() => setShowExpiredPopup(false)}
+        />
         <Sidebar />
         <div className="md:pl-[280px] transition-all duration-200 relative z-10">
           <Header title={title} subtitle={subtitle} />

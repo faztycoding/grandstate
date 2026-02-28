@@ -36,11 +36,10 @@ function getCachedLicense(): LicenseInfo | null {
         const cached = localStorage.getItem(LICENSE_CACHE_KEY);
         if (!cached) return null;
         const parsed = JSON.parse(cached);
-        if (parsed && parsed.licenseKey && parsed.package && parsed.isActive) {
+        if (parsed && parsed.licenseKey && parsed.package) {
             const expires = new Date(parsed.expiresAt);
-            if (expires > new Date()) {
-                return { ...parsed, expiresAt: expires };
-            }
+            // Return even if expired — UI needs it for expired popup
+            return { ...parsed, expiresAt: expires };
         }
     } catch { /* ignore */ }
     return null;

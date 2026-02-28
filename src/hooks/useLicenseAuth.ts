@@ -67,45 +67,50 @@ export function useLicenseAuth() {
         let mounted = true;
 
         const init = async () => {
-            // Check existing Supabase session
-            const { data: { session } } = await supabase.auth.getSession();
+            try {
+                // Check existing Supabase session
+                const { data: { session } } = await supabase.auth.getSession();
 
-            if (session?.user) {
-                if (mounted) {
-                    setUser(session.user);
-                    setIsLoading(false); // Unblock UI immediately — license checks continue in background
-                }
-
-                // 1) Try localStorage first (instant)
-                const storedKey = localStorage.getItem(STORAGE_KEY);
-                if (storedKey) {
-                    const result = await validateLicenseKey(storedKey);
-                    if (!result.valid && mounted) {
-                        localStorage.removeItem(STORAGE_KEY);
-                        localStorage.removeItem(LICENSE_CACHE_KEY);
-                        setLicense(null);
+                if (session?.user) {
+                    if (mounted) {
+                        setUser(session.user);
+                        setIsLoading(false); // Unblock UI immediately — license checks continue in background
                     }
-                }
 
-                // 2) If no local key, try fetching bound license from DB
-                if (!storedKey || !localStorage.getItem(STORAGE_KEY)) {
-                    const boundKey = await fetchBoundLicenseKey(session.user.id);
-                    if (boundKey && mounted) {
-                        const result = await validateLicenseKey(boundKey);
+                    // 1) Try localStorage first (instant)
+                    const storedKey = localStorage.getItem(STORAGE_KEY);
+                    if (storedKey) {
+                        const result = await validateLicenseKey(storedKey);
                         if (!result.valid && mounted) {
+                            localStorage.removeItem(STORAGE_KEY);
+                            localStorage.removeItem(LICENSE_CACHE_KEY);
                             setLicense(null);
                         }
-                    } else if (mounted) {
-                        setLicense(null);
+                    }
+
+                    // 2) If no local key, try fetching bound license from DB
+                    if (!storedKey || !localStorage.getItem(STORAGE_KEY)) {
+                        const boundKey = await fetchBoundLicenseKey(session.user.id);
+                        if (boundKey && mounted) {
+                            const result = await validateLicenseKey(boundKey);
+                            if (!result.valid && mounted) {
+                                setLicense(null);
+                            }
+                        } else if (mounted) {
+                            setLicense(null);
+                        }
+                    }
+                } else {
+                    // No session — clear everything
+                    if (mounted) {
+                        setUser(null);
+                        if (!cachedLicense) setLicense(null);
+                        setIsLoading(false);
                     }
                 }
-            } else {
-                // No session — clear everything
-                if (mounted) {
-                    setUser(null);
-                    if (!cachedLicense) setLicense(null);
-                    setIsLoading(false);
-                }
+            } catch (err) {
+                console.error('[Auth] Init failed:', err);
+                if (mounted) setIsLoading(false);
             }
         };
 

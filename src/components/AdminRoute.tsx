@@ -19,7 +19,11 @@ export function AdminRoute({ children }: AdminRouteProps) {
     );
   }
 
-  if (!user || !isAdminEmail(user.email)) {
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  if (!isAdminEmail(user.email)) {
     return <Navigate to="/automation" replace />;
   }
 

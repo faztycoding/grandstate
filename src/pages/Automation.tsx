@@ -63,6 +63,7 @@ import { AntiDetectionPanel } from '@/components/automation/AntiDetectionPanel';
 import { BulkAddGroupDialog } from '@/components/automation/BulkAddGroupDialog';
 import { useGlobalAutomation } from '@/components/layout/DashboardLayout';
 import { DailyUsageCard } from '@/components/automation/DailyUsageCard';
+import { WorkerSlotsGrid } from '@/components/automation/WorkerSlotsGrid';
 import { ScheduledPostsCard } from '@/components/automation/ScheduledPostsCard';
 import { apiFetch } from '@/lib/config';
 
@@ -1059,6 +1060,9 @@ export default function Automation() {
 
           {/* Health Check Card — prominent center placement */}
           <HealthCheckCard result={healthResult} />
+
+          {/* Worker Nodes — Real-time slot monitor */}
+          <WorkerSlotsGrid />
         </div>
 
         {/* ═══ RIGHT WING: Ignition Panel ═══ */}

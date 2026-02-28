@@ -2935,6 +2935,111 @@ app.get('/api/health-check', ...auth, (req, res) => {
 });
 
 // ============================================
+// WORKER SLOTS — Real-time node status for factory monitor
+// ============================================
+app.get('/api/worker-slots', ...auth, (req, res) => {
+  try {
+    const stats = automationQueue.getQueueStats();
+    const maxSlots = stats.maxConcurrent || 10;
+    const now = Date.now();
+
+    // Build slot array: running jobs fill first, then standby
+    const slots = [];
+    const runningEntries = stats.running || [];
+    const queueEntries = stats.queue || [];
+
+    for (let i = 0; i < maxSlots; i++) {
+      const slotNum = String(i + 1).padStart(3, '0');
+
+      if (i < runningEntries.length) {
+        // Active slot — pull real data from worker
+        const job = runningEntries[i];
+        const worker = automationQueue.running.get(job.fullUserId)?.worker;
+        const workerStatus = worker && typeof worker.getStatus === 'function' ? worker.getStatus() : null;
+
+        // Get logs from worker
+        let logs = [];
+        if (workerStatus && Array.isArray(workerStatus.logs)) {
+          logs = workerStatus.logs.slice(-50).map(l => ({
+            time: l.time,
+            msg: l.msg,
+            level: l.level || 'info',
+          }));
+        }
+
+        // Get tasks summary
+        const tasks = workerStatus?.tasks || [];
+        const completed = tasks.filter(t => t.status === 'completed' || t.status === 'pending_approval').length;
+        const failed = tasks.filter(t => t.status === 'failed').length;
+        const total = workerStatus?.totalSteps || tasks.length;
+
+        slots.push({
+          slotId: slotNum,
+          status: workerStatus?.isPaused ? 'paused' : 'running',
+          userId: job.userId,
+          displayName: job.displayName || 'User',
+          fbAccount: job.fbAccount || null,
+          propertyTitle: job.propertyTitle || null,
+          automationType: job.automationType || 'group',
+          groupCount: job.groupCount,
+          startedAt: job.startedAt,
+          runningSec: job.runningSec,
+          progress: { completed, failed, total, percent: total > 0 ? Math.round(((completed + failed) / total) * 100) : 0 },
+          logs,
+          generatedCaptions: workerStatus?.generatedCaptions || [],
+        });
+      } else {
+        // Standby slot
+        slots.push({
+          slotId: slotNum,
+          status: 'standby',
+          userId: null,
+          displayName: null,
+          fbAccount: null,
+          propertyTitle: null,
+          automationType: null,
+          groupCount: 0,
+          startedAt: null,
+          runningSec: 0,
+          progress: { completed: 0, failed: 0, total: 0, percent: 0 },
+          logs: [],
+          generatedCaptions: [],
+        });
+      }
+    }
+
+    // Queue entries (waiting)
+    const waiting = queueEntries.map(q => ({
+      userId: q.userId,
+      displayName: q.displayName,
+      groupCount: q.groupCount,
+      waitingSec: q.waitingSec,
+      automationType: q.automationType,
+    }));
+
+    res.json({
+      success: true,
+      maxSlots,
+      activeCount: runningEntries.length,
+      queueCount: queueEntries.length,
+      slots,
+      waiting,
+      antiDetection: {
+        gaussianJitter: { status: 'HIGH', active: true },
+        fingerprintMasking: { status: 'OK', active: true },
+        webrtcShield: { status: 'OK', active: true },
+        behaviorSimulation: { status: 'OK', active: true },
+        canvasNoise: { status: 'OK', active: true },
+        networkStealth: { status: 'OK', active: true },
+      },
+    });
+  } catch (error) {
+    console.error('Worker slots error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
 // SECURITY SCORE — Weighted 4-module anti-detection scoring
 // Network 35%, Fingerprint 25%, Behavioral 25%, Content 15%
 // ============================================

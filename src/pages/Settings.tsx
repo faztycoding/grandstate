@@ -562,10 +562,10 @@ export default function Settings() {
         {/* Facebook Connection — World-class UI */}
         <Card className={cn(
           "card-elevated card-hover-lift overflow-hidden transition-all",
-          isConnected && "ring-1 ring-green-500/30"
+          isConnected && "ring-1 ring-[#1877F2]/30"
         )}>
-          {/* Card gradient accent bar */}
-          <div className={cn("h-1 transition-all", isConnected ? "bg-gradient-to-r from-green-400 to-emerald-500" : "bg-gradient-to-r from-[#1877F2] to-[#0D47A1]")} />
+          {/* Card gradient accent bar — always Facebook blue */}
+          <div className="h-1 bg-gradient-to-r from-[#1877F2] to-[#0D47A1]" />
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -586,7 +586,7 @@ export default function Settings() {
                     <div key={i} className={cn(
                       "w-3 h-3 rounded-full border-2 transition-all",
                       i < fbConnectedCount
-                        ? "bg-green-500 border-green-500 shadow-sm shadow-green-500/30"
+                        ? "bg-[#1877F2] border-[#1877F2] shadow-sm shadow-[#1877F2]/30"
                         : "border-muted-foreground/30 bg-transparent"
                     )} />
                   ))}
@@ -603,8 +603,8 @@ export default function Settings() {
                 <p className="text-sm font-medium text-muted-foreground">{t.settings.checking}</p>
               </div>
             ) : fbConnectedCount > 0 ? (
-              <div className="p-4 rounded-xl bg-gradient-to-r from-amber-50/80 to-orange-50/50 dark:from-amber-950/20 dark:to-orange-950/10 border border-amber-200 dark:border-amber-800">
-                <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+              <div className="p-4 rounded-xl bg-gradient-to-r from-[#1877F2]/5 to-[#0D47A1]/5 dark:from-[#1877F2]/10 dark:to-[#0D47A1]/5 border border-[#1877F2]/20 dark:border-[#1877F2]/30">
+                <p className="text-[10px] font-semibold text-[#1877F2] dark:text-blue-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
                   <Send className="w-3 h-3" /> บัญชีที่ใช้โพสต์อัตโนมัติ
                 </p>
                 {(() => {
@@ -615,20 +615,20 @@ export default function Settings() {
                       <div className="flex items-center gap-3">
                         <div className="relative">
                           {activeSession.profilePic ? (
-                            <img src={activeSession.profilePic} alt={activeSession.name || ''} className="w-11 h-11 rounded-full object-cover ring-2 ring-amber-500/40" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                            <img src={activeSession.profilePic} alt={activeSession.name || ''} className="w-11 h-11 rounded-full object-cover ring-2 ring-[#1877F2]/40" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                           ) : (
-                            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center ring-2 ring-amber-500/40">
+                            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#1877F2] to-[#0D47A1] flex items-center justify-center ring-2 ring-[#1877F2]/40">
                               <span className="text-white font-bold">{activeSession.name?.charAt(0) || 'F'}</span>
                             </div>
                           )}
-                          <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-amber-500 border-2 border-white dark:border-gray-900 flex items-center justify-center">
+                          <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#1877F2] border-2 border-white dark:border-gray-900 flex items-center justify-center">
                             <Send className="w-2 h-2 text-white" />
                           </div>
                         </div>
                         <div>
                           <p className="font-semibold text-sm">{activeSession.name}</p>
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 text-[9px] h-4 px-1.5">
+                            <Badge className="bg-[#1877F2]/10 text-[#1877F2] dark:bg-[#1877F2]/20 dark:text-blue-400 text-[9px] h-4 px-1.5">
                               Slot {activeSlot + 1} — ใช้โพสต์
                             </Badge>
                           </div>
@@ -637,7 +637,7 @@ export default function Settings() {
                       <p className="text-[10px] text-muted-foreground">เปลี่ยนได้ด้านล่าง ↓</p>
                     </div>
                   ) : (
-                    <p className="text-sm text-amber-700 dark:text-amber-400">เลือก session ด้านล่างเพื่อกำหนดบัญชีโพสต์</p>
+                    <p className="text-sm text-[#1877F2] dark:text-blue-400">เลือก session ด้านล่างเพื่อกำหนดบัญชีโพสต์</p>
                   );
                 })()}
               </div>
@@ -695,9 +695,9 @@ export default function Settings() {
                       className={cn(
                         "relative flex items-center gap-3 p-3 rounded-xl border-2 transition-all group",
                         hasUser && isActive
-                          ? "border-green-500 bg-green-50/80 dark:bg-green-950/30 ring-1 ring-green-500/20 shadow-sm"
+                          ? "border-[#1877F2] bg-[#1877F2]/5 dark:bg-[#1877F2]/10 ring-1 ring-[#1877F2]/20 shadow-sm"
                           : hasUser
-                            ? "border-border bg-background hover:border-green-300 dark:hover:border-green-700 cursor-pointer"
+                            ? "border-border bg-background hover:border-[#1877F2]/40 dark:hover:border-[#1877F2]/30 cursor-pointer"
                             : "border-dashed border-muted-foreground/20 bg-background/50 hover:border-[#1877F2]/40 cursor-pointer"
                       )}
                       onClick={() => {
@@ -713,9 +713,9 @@ export default function Settings() {
                       <div className="flex-shrink-0">
                         {hasUser ? (
                           isActive ? (
-                            <CircleDot className="w-5 h-5 text-green-600" />
+                            <CircleDot className="w-5 h-5 text-[#1877F2]" />
                           ) : (
-                            <Circle className="w-5 h-5 text-muted-foreground/40 group-hover:text-green-400 transition-colors" />
+                            <Circle className="w-5 h-5 text-muted-foreground/40 group-hover:text-[#1877F2]/60 transition-colors" />
                           )
                         ) : (
                           <div className="w-5 h-5 rounded-full border-2 border-dashed border-muted-foreground/20" />
@@ -728,17 +728,11 @@ export default function Settings() {
                           <img
                             src={session.profilePic}
                             alt={session.name || ''}
-                            className={cn(
-                              "w-10 h-10 rounded-full object-cover ring-2",
-                              isActive ? "ring-green-500" : "ring-border"
-                            )}
-                            onError={(e) => { (e.target as HTMLImageElement).src = ''; (e.target as HTMLImageElement).style.display = 'none'; }}
+                            className="w-10 h-10 rounded-full object-cover ring-2 ring-[#1877F2]/40"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                           />
                         ) : hasUser ? (
-                          <div className={cn(
-                            "w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center ring-2",
-                            isActive ? "ring-green-500" : "ring-border"
-                          )}>
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1877F2] to-[#0D47A1] flex items-center justify-center ring-2 ring-[#1877F2]/40">
                             <span className="text-white text-sm font-bold">{session.name?.charAt(0) || 'F'}</span>
                           </div>
                         ) : (
@@ -750,7 +744,7 @@ export default function Settings() {
                         {hasUser && (
                           <div className={cn(
                             "absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-gray-900",
-                            isActive ? "bg-green-500" : "bg-gray-400"
+                            isActive ? "bg-[#1877F2]" : "bg-gray-400"
                           )} />
                         )}
                       </div>
@@ -764,13 +758,13 @@ export default function Settings() {
                               <Badge className={cn(
                                 "text-[9px] h-4 px-1.5",
                                 isActive
-                                  ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
+                                  ? "bg-[#1877F2]/10 text-[#1877F2] dark:bg-[#1877F2]/20 dark:text-blue-400"
                                   : "bg-muted text-muted-foreground"
                               )}>
                                 Slot {i + 1}
                               </Badge>
                               {isActive && (
-                                <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 text-[9px] h-4 px-1.5">
+                                <Badge className="bg-[#1877F2]/10 text-[#1877F2] dark:bg-[#1877F2]/20 dark:text-blue-400 text-[9px] h-4 px-1.5">
                                   <Send className="w-2.5 h-2.5 mr-0.5" /> ใช้โพสต์
                                 </Badge>
                               )}

@@ -97,6 +97,37 @@ app.get('/api/ping', (req, res) => {
   res.json({ success: true, message: 'GrandState API is running', sessions: sessionManager.getStats() });
 });
 
+// Resolve short Google Maps URL → full URL with coordinates (no auth required)
+app.post('/api/maps/resolve-url', async (req, res) => {
+  try {
+    const { url } = req.body;
+    if (!url || typeof url !== 'string') {
+      return res.status(400).json({ success: false, error: 'URL is required' });
+    }
+
+    // Only resolve short URLs that need expansion
+    const isShortUrl = url.includes('maps.app.goo.gl') || url.includes('goo.gl/maps');
+    if (!isShortUrl) {
+      return res.json({ success: true, resolvedUrl: url });
+    }
+
+    // Follow redirects to get the final URL
+    const response = await fetch(url, {
+      method: 'GET',
+      redirect: 'follow',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+    });
+
+    const finalUrl = response.url;
+    res.json({ success: true, resolvedUrl: finalUrl });
+  } catch (error) {
+    console.error('Error resolving maps URL:', error.message);
+    res.status(500).json({ success: false, error: 'Failed to resolve URL' });
+  }
+});
+
 // Presence heartbeat (auth required)
 // online=true  => touch presence
 // online=false => mark user as offline immediately

@@ -58,6 +58,27 @@ const extractCoordsFromLink = (link: string): { lat: number; lng: number } | nul
   return null;
 };
 
+const isShortMapsUrl = (url: string): boolean => {
+  return url.includes('maps.app.goo.gl') || url.includes('goo.gl/maps');
+};
+
+const resolveShortUrl = async (url: string): Promise<string> => {
+  try {
+    const res = await fetch('/api/maps/resolve-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+    const data = await res.json();
+    if (data.success && data.resolvedUrl) {
+      return data.resolvedUrl;
+    }
+  } catch (e) {
+    console.error('Failed to resolve short URL:', e);
+  }
+  return url;
+};
+
 function MapClickHandler({ onPick }: { onPick: (lat: number, lng: number) => void }) {
   useMapEvents({
     click: (event) => {
@@ -83,6 +104,7 @@ export function GoogleMapsPicker({ value, onChange, onLocationSelect, className 
   const [isLocating, setIsLocating] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [isResolvingUrl, setIsResolvingUrl] = useState(false);
 
   const parsedCoordsFromValue = useMemo(() => extractCoordsFromLink(value), [value]);
 
@@ -128,12 +150,26 @@ export function GoogleMapsPicker({ value, onChange, onLocationSelect, className 
     return { address, district, province, displayName };
   };
 
-  const handleLinkChange = async (link: string) => {
+  const handleLinkChange = async (link: string, forceResolve = false) => {
     onChange(link);
-    const coords = extractCoordsFromLink(link);
+
+    // For short URLs, resolve them first
+    let resolvedLink = link;
+    if (isShortMapsUrl(link) && (forceResolve || link.length > 10)) {
+      setIsResolvingUrl(true);
+      toast.loading('กำลังแปลงลิงค์...', { id: 'resolve-url' });
+      resolvedLink = await resolveShortUrl(link);
+      setIsResolvingUrl(false);
+
+      if (resolvedLink !== link) {
+        onChange(resolvedLink);
+      }
+    }
+
+    const coords = extractCoordsFromLink(resolvedLink);
     if (coords) {
       setSelectedLocation(coords);
-      toast.success('พบพิกัดจากลิงค์!');
+      toast.success('พบพิกัดจากลิงค์!', { id: 'resolve-url' });
       const addrData = await reverseGeocode(coords.lat, coords.lng);
       onLocationSelect?.({
         lat: coords.lat,
@@ -143,6 +179,8 @@ export function GoogleMapsPicker({ value, onChange, onLocationSelect, className 
         province: addrData.province || '',
         displayName: addrData.displayName || '',
       });
+    } else if (isShortMapsUrl(link) && resolvedLink === link) {
+      toast.error('ไม่สามารถดึงพิกัดจากลิงค์นี้ได้ กรุณาลองใหม่', { id: 'resolve-url' });
     }
   };
 
@@ -284,8 +322,22 @@ export function GoogleMapsPicker({ value, onChange, onLocationSelect, className 
         <Input
           value={value}
           onChange={(e) => handleLinkChange(e.target.value)}
-          placeholder="หรือวาง Google Maps ลิงค์ที่นี่..."
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              if (value.trim()) handleLinkChange(value.trim(), true);
+            }
+          }}
+          onPaste={(e) => {
+            const pasted = e.clipboardData.getData('text');
+            if (pasted && isShortMapsUrl(pasted)) {
+              e.preventDefault();
+              handleLinkChange(pasted.trim(), true);
+            }
+          }}
+          placeholder="วาง Google Maps ลิงค์ หรือ goo.gl ลิงค์แล้วกด Enter"
           className="h-10 border-gray-200 focus:border-amber-500 flex-1 text-xs"
+          disabled={isResolvingUrl}
         />
         <Button
           type="button"

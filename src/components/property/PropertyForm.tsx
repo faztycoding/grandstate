@@ -153,19 +153,52 @@ export function PropertyForm({ initialData, onSubmit, onCancel }: PropertyFormPr
     }
   };
 
+  // Resolve short Google Maps URLs (maps.app.goo.gl) via backend
+  const resolveShortMapsUrl = async (url: string): Promise<string> => {
+    try {
+      const res = await fetch('/api/maps/resolve-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (data.success && data.resolvedUrl) return data.resolvedUrl;
+    } catch (e) {
+      console.error('Failed to resolve short URL:', e);
+    }
+    return url;
+  };
+
+  const isShortMapsUrl = (url: string) =>
+    url.includes('maps.app.goo.gl') || url.includes('goo.gl/maps');
+
   // Handle Google Maps link paste/change
-  const handleMapsLinkChange = async (url: string) => {
+  const handleMapsLinkChange = async (url: string, forceResolve = false) => {
     setGoogleMapsLink(url);
     if (!url || url.length < 10) return;
 
+    // Resolve short URLs first
+    let resolvedUrl = url;
+    if (isShortMapsUrl(url) && (forceResolve || url.length > 10)) {
+      toast.loading('กำลังแปลงลิงค์...', { id: 'resolve-maps' });
+      resolvedUrl = await resolveShortMapsUrl(url);
+      if (resolvedUrl !== url) {
+        setGoogleMapsLink(resolvedUrl);
+      }
+    }
+
     // Try to extract coordinates
-    const coords = extractCoordsFromUrl(url);
+    const coords = extractCoordsFromUrl(resolvedUrl);
     if (coords) {
-      toast.loading(f.locationLoading);
+      toast.loading(f.locationLoading, { id: 'resolve-maps' });
       const success = await reverseGeocode(coords.lat, coords.lng);
       if (!success) {
-        toast.error(f.locationFailed);
+        toast.error(f.locationFailed, { id: 'resolve-maps' });
+      } else {
+        toast.dismiss('resolve-maps');
       }
+    } else if (isShortMapsUrl(url) && resolvedUrl === url) {
+      toast.error('ไม่สามารถดึงพิกัดจากลิงค์นี้ได้', { id: 'resolve-maps' });
     }
   };
 
@@ -584,11 +617,17 @@ export function PropertyForm({ initialData, onSubmit, onCancel }: PropertyFormPr
               <Input
                 value={googleMapsLink}
                 onChange={(e) => handleMapsLinkChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (googleMapsLink.trim()) handleMapsLinkChange(googleMapsLink.trim(), true);
+                  }
+                }}
                 onPaste={(e) => {
                   const pasted = e.clipboardData.getData('text');
                   if (pasted) {
                     e.preventDefault();
-                    handleMapsLinkChange(pasted);
+                    handleMapsLinkChange(pasted.trim(), true);
                   }
                 }}
                 placeholder={f.mapsLinkPlaceholder}

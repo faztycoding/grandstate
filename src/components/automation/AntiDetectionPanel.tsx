@@ -164,12 +164,11 @@ export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: A
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: contentHeight || 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
+            initial={{ height: 0 }}
+            animate={{ height: contentHeight || 'auto' }}
+            exit={{ height: 0 }}
             transition={{
-              height: { duration: 0.8, ease: [0.22, 0.61, 0.36, 1] },
-              opacity: { duration: 0.3 },
+              height: { duration: 1.2, ease: [0.16, 1, 0.3, 1] },
             }}
             className="overflow-hidden relative"
           >
@@ -188,16 +187,28 @@ export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: A
                 backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'%23a67c3a\' fill-opacity=\'0.03\'%3E%3Cpath d=\'M0 0h30v30H0zM30 30h30v30H30z\'/%3E%3C/g%3E%3C/svg%3E")',
               }}
             >
-              {/* Paper edge shadow */}
+              {/* Paper edge shadow top */}
               <div className="absolute inset-x-0 top-0 h-4 bg-gradient-to-b from-amber-900/[0.08] to-transparent dark:from-black/20 pointer-events-none z-10" />
+
+              {/* Unroll reveal edge — a moving shadow/curl that follows the scroll as it opens */}
+              <motion.div
+                className="absolute inset-x-0 h-8 pointer-events-none z-20"
+                initial={{ top: 0 }}
+                animate={contentVisible ? { top: '100%' } : { top: 0 }}
+                transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
+                style={{
+                  background: 'linear-gradient(to bottom, transparent 0%, rgba(139,105,20,0.12) 40%, rgba(92,61,46,0.18) 70%, transparent 100%)',
+                }}
+              />
 
               <div className="px-3 py-3 space-y-3">
 
                 {/* ── Risk Level ── */}
                 <motion.div
-                  initial={{ scaleY: 0, opacity: 0, originY: 0 }}
-                  animate={contentVisible ? { scaleY: 1, opacity: 1 } : {}}
-                  transition={{ delay: 0.1, duration: 0.4 }}
+                  initial={{ opacity: 0, y: 20, rotateX: -40 }}
+                  animate={contentVisible ? { opacity: 1, y: 0, rotateX: 0 } : {}}
+                  transition={{ delay: 0.15, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                  style={{ transformOrigin: 'top center', perspective: 600 }}
                   className="p-2.5 rounded-lg bg-white/50 dark:bg-white/5 border border-amber-500/20"
                 >
                   <div className="flex items-center justify-between mb-1.5">
@@ -218,7 +229,7 @@ export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: A
                       className={cn('h-full rounded-full bg-gradient-to-r', risk.gradient)}
                       initial={{ width: 0 }}
                       animate={contentVisible ? { width: `${risk.percent}%` } : {}}
-                      transition={{ delay: 0.3, duration: 0.8 }}
+                      transition={{ delay: 0.5, duration: 1, ease: 'easeOut' }}
                     />
                   </div>
                   <p className="text-[10px] text-muted-foreground mt-1">{selectedGroupsCount} กลุ่ม • delay {delayBetweenPosts}s</p>
@@ -227,9 +238,9 @@ export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: A
                 {/* ── Active Modules ── */}
                 <div>
                   <motion.p
-                    initial={{ x: -15, opacity: 0 }}
-                    animate={contentVisible ? { x: 0, opacity: 1 } : {}}
-                    transition={{ delay: 0.15 }}
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={contentVisible ? { opacity: 1, y: 0 } : {}}
+                    transition={{ delay: 0.3, duration: 0.5 }}
                     className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-widest px-1 mb-2 flex items-center gap-1.5"
                   >
                     <span className="relative flex items-center justify-center">
@@ -243,9 +254,10 @@ export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: A
                     {MODULES.map((mod, i) => (
                       <motion.div
                         key={i}
-                        initial={{ x: -25, opacity: 0, filter: 'blur(4px)' }}
-                        animate={contentVisible ? { x: 0, opacity: 1, filter: 'blur(0px)' } : {}}
-                        transition={{ delay: 0.2 + i * 0.08, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                        initial={{ opacity: 0, y: 20, rotateX: -30 }}
+                        animate={contentVisible ? { opacity: 1, y: 0, rotateX: 0 } : {}}
+                        transition={{ delay: 0.35 + i * 0.1, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                        style={{ transformOrigin: 'top center', perspective: 600 }}
                         className="flex items-center gap-2.5 p-2 rounded-lg bg-white/40 dark:bg-white/[0.03] border border-amber-600/10 hover:bg-white/70 dark:hover:bg-white/[0.06] hover:border-amber-500/30 transition-all duration-200"
                       >
                         <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 border', mod.bg, mod.border)}>
@@ -260,7 +272,7 @@ export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: A
                           <motion.div
                             initial={{ scale: 0, rotate: -90 }}
                             animate={contentVisible ? { scale: 1, rotate: 0 } : {}}
-                            transition={{ delay: 0.45 + i * 0.08, type: 'spring', stiffness: 400, damping: 15 }}
+                            transition={{ delay: 0.6 + i * 0.1, type: 'spring', stiffness: 400, damping: 15 }}
                           >
                             <CheckCircle2 className="w-4 h-4 text-amber-500" />
                           </motion.div>
@@ -274,16 +286,16 @@ export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: A
                 <motion.div
                   initial={{ scaleX: 0 }}
                   animate={contentVisible ? { scaleX: 1 } : {}}
-                  transition={{ delay: 0.7, duration: 0.5 }}
+                  transition={{ delay: 1, duration: 0.6, ease: 'easeOut' }}
                   className="h-px bg-gradient-to-r from-transparent via-amber-600/30 to-transparent"
                 />
 
                 {/* ── Tips ── */}
                 <div>
                   <motion.p
-                    initial={{ x: -15, opacity: 0 }}
-                    animate={contentVisible ? { x: 0, opacity: 1 } : {}}
-                    transition={{ delay: 0.65 }}
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={contentVisible ? { opacity: 1, y: 0 } : {}}
+                    transition={{ delay: 1.05, duration: 0.5 }}
                     className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1 mb-2"
                   >
                     เคล็ดลับเพิ่มเติม
@@ -295,9 +307,10 @@ export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: A
                       return (
                         <motion.div
                           key={i}
-                          initial={{ y: 10, opacity: 0 }}
-                          animate={contentVisible ? { y: 0, opacity: 1 } : {}}
-                          transition={{ delay: 0.7 + i * 0.06, duration: 0.35 }}
+                          initial={{ opacity: 0, y: 18, rotateX: -25 }}
+                          animate={contentVisible ? { opacity: 1, y: 0, rotateX: 0 } : {}}
+                          transition={{ delay: 1.1 + i * 0.1, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                          style={{ transformOrigin: 'top center', perspective: 600 }}
                           className="flex items-start gap-2.5 p-2 rounded-lg bg-white/40 dark:bg-white/[0.03] border border-border/20 hover:bg-white/70 dark:hover:bg-white/[0.06] transition-colors"
                         >
                           <div className={cn('w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5', tip.bg)}>
@@ -322,9 +335,10 @@ export function AntiDetectionPanel({ delayBetweenPosts, selectedGroupsCount }: A
 
                 {/* ── Pro Tip ── */}
                 <motion.div
-                  initial={{ y: 10, opacity: 0 }}
-                  animate={contentVisible ? { y: 0, opacity: 1 } : {}}
-                  transition={{ delay: 1, duration: 0.4 }}
+                  initial={{ opacity: 0, y: 15, rotateX: -20 }}
+                  animate={contentVisible ? { opacity: 1, y: 0, rotateX: 0 } : {}}
+                  transition={{ delay: 1.55, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                  style={{ transformOrigin: 'top center', perspective: 600 }}
                   className="p-2.5 rounded-lg bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/20"
                 >
                   <p className="text-[10px] text-amber-800 dark:text-amber-400 leading-relaxed">

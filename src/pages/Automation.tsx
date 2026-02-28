@@ -1543,44 +1543,82 @@ export default function Automation() {
             {getPackageLimits(userPackage).scheduledPosting && <ScheduledPostsCard />}
 
             {/* Captions Lab — AI-generated captions live viewer */}
-            <Card className="card-elevated relative overflow-hidden">
-              <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-purple-500" />
-                  <span>Captions Lab</span>
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="relative rounded-2xl overflow-hidden border border-purple-500/20 bg-gradient-to-br from-card via-card to-purple-500/[0.03] shadow-lg shadow-purple-500/[0.04]"
+            >
+              {/* Top accent line */}
+              <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-purple-500/60 to-transparent" />
+              {/* Corner glow */}
+              <div className="absolute -top-10 -right-10 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+
+              <div className="px-5 pt-4 pb-2 relative">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500/20 to-fuchsia-500/10 border border-purple-500/20 flex items-center justify-center">
+                      <Sparkles className="w-4 h-4 text-purple-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold flex items-center gap-2">
+                        Captions Lab
+                        {generatedCaptions.length > 0 && (
+                          <Badge className="text-[9px] font-mono bg-purple-500/10 text-purple-400 border-purple-500/20 h-4 px-1.5">{generatedCaptions.length}</Badge>
+                        )}
+                      </h3>
+                      <p className="text-[10px] text-muted-foreground">AI สร้างแคปชั่นให้แต่ละกลุ่ม (ดูสดระหว่างโพสต์)</p>
+                    </div>
+                  </div>
                   {generatedCaptions.length > 0 && (
-                    <Badge variant="secondary" className="text-[10px] font-mono">{generatedCaptions.length}</Badge>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+                      <span className="text-[9px] text-purple-400 font-mono font-bold uppercase tracking-wider">Live</span>
+                    </div>
                   )}
-                </CardTitle>
-                <CardDescription className="text-[11px]">
-                  แคปชั่นที่ AI สร้างให้แต่ละกลุ่ม (ดูสดระหว่างโพสต์)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+                </div>
+              </div>
+
+              <div className="px-5 pb-4">
                 {generatedCaptions.length > 0 ? (
                   <ScrollArea className="h-[200px]">
                     <div className="space-y-2">
                       {generatedCaptions.map((caption, i) => (
-                        <div key={i} className="p-2.5 rounded-lg bg-muted/50 border text-xs leading-relaxed group hover:border-accent/30 transition-colors">
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <span className="w-5 h-5 rounded-md bg-accent/10 flex items-center justify-center text-[9px] font-bold text-accent font-mono">{i + 1}</span>
-                            <span className="text-[9px] text-muted-foreground font-medium">AI Generated</span>
+                        <motion.div
+                          key={i}
+                          initial={{ opacity: 0, x: -8 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.05 * i }}
+                          className="p-3 rounded-xl bg-muted/40 border border-border/50 text-xs leading-relaxed group hover:border-purple-500/30 hover:bg-purple-500/[0.03] transition-all"
+                        >
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <span className="w-5 h-5 rounded-md bg-purple-500/10 border border-purple-500/15 flex items-center justify-center text-[9px] font-bold text-purple-400 font-mono">{i + 1}</span>
+                            <span className="text-[9px] text-purple-400/70 font-medium font-mono tracking-wide">AI GENERATED</span>
                           </div>
                           <p className="whitespace-pre-wrap text-[11px] leading-relaxed">{caption.substring(0, 300)}{caption.length > 300 ? '…' : ''}</p>
-                        </div>
+                        </motion.div>
                       ))}
                     </div>
                   </ScrollArea>
                 ) : (
-                  <div className="h-[200px] flex flex-col items-center justify-center text-muted-foreground/50">
-                    <Sparkles className="w-10 h-10 mb-3 opacity-20" />
-                    <p className="text-xs font-medium">ยังไม่มี Caption</p>
-                    <p className="text-[10px] mt-0.5">เริ่ม Automation เพื่อดู AI Caption สดๆ</p>
+                  <div className="h-[200px] flex flex-col items-center justify-center relative">
+                    <motion.div
+                      animate={{ rotate: [0, 360] }}
+                      transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+                      className="absolute w-24 h-24 rounded-full border border-dashed border-purple-500/10 pointer-events-none"
+                    />
+                    <motion.div
+                      animate={{ scale: [1, 1.15, 1], opacity: [0.15, 0.3, 0.15] }}
+                      transition={{ duration: 3, repeat: Infinity }}
+                    >
+                      <Sparkles className="w-10 h-10 text-purple-500/30" />
+                    </motion.div>
+                    <p className="text-xs font-medium text-muted-foreground/60 mt-3">ยังไม่มี Caption</p>
+                    <p className="text-[10px] text-muted-foreground/40 mt-0.5">เริ่ม Automation เพื่อดู AI Caption สดๆ</p>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </motion.div>
           </div>
         </div>
       </div>

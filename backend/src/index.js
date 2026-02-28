@@ -348,6 +348,12 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
     console.log('Fetching group info from:', aboutUrl);
     await page.goto(aboutUrl, { waitUntil: 'networkidle2', timeout: 30000 });
 
+    // Debug: log actual URL and page title after navigation
+    const actualUrl = page.url();
+    const pageTitle = await page.title();
+    console.log(`🔍 [DEBUG] Landed on: ${actualUrl}`);
+    console.log(`🔍 [DEBUG] Page title: ${pageTitle}`);
+
     // Wait for initial render
     await new Promise(r => setTimeout(r, 3000));
 

@@ -1482,6 +1482,11 @@ export default function AdminDashboard() {
                                                             isActive ? (runJob?.progress?.isPaused ? "text-yellow-400" : "text-emerald-400") : "text-slate-700")}>
                                                             {isActive ? (runJob?.progress?.isPaused ? 'Paused' : 'Processing') : 'Standby'}
                                                         </p>
+                                                        {/* User ID */}
+                                                        <p className={cn("text-[8px] font-mono truncate mt-0.5",
+                                                            isActive ? "text-cyan-400/70" : "text-slate-700/50")}>
+                                                            {isActive ? `USER: ${runJob?.displayName || runJob?.userId || '—'}` : 'No user'}
+                                                        </p>
                                                     </div>
 
                                                     {/* Progress bar */}

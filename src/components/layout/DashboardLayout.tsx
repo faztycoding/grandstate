@@ -1,4 +1,4 @@
-import { ReactNode, Suspense, useState, useEffect } from 'react';
+import { ReactNode, Suspense, useState, useEffect, createContext, useContext } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Sidebar, MobileSidebarProvider } from './Sidebar';
 import { Header } from './Header';
@@ -6,6 +6,16 @@ import { FloatingParticles } from '@/components/ui/floating-particles';
 import { WelcomeModal } from '@/components/onboarding/WelcomeModal';
 import { ExpiredLicensePopup } from '@/components/profile/ExpiredLicensePopup';
 import { useLicenseAuth } from '@/hooks/useLicenseAuth';
+import { useAutomationMonitor } from '@/hooks/useAutomationMonitor';
+import { TaskProgressPopup } from '@/components/automation/TaskProgressPopup';
+import { useFacebookConnection } from '@/hooks/useFacebookConnection';
+
+// Global automation context so Automation page can notify when automation starts
+type AutomationMonitorReturn = ReturnType<typeof useAutomationMonitor>;
+const AutomationMonitorContext = createContext<AutomationMonitorReturn | null>(null);
+export function useGlobalAutomation() {
+  return useContext(AutomationMonitorContext);
+}
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -17,6 +27,12 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
   const location = useLocation();
   const { license, user: authUser } = useLicenseAuth();
   const [showExpiredPopup, setShowExpiredPopup] = useState(false);
+  const automationMonitor = useAutomationMonitor();
+  const { user: fbUser, sessions: fbSessions, activeSlot } = useFacebookConnection();
+
+  // Derive FB user for popup
+  const fbSlotUser = fbSessions?.[activeSlot];
+  const popupFbUser = fbSlotUser?.name ? { name: fbSlotUser.name, profilePic: fbSlotUser.profilePic || undefined } : fbUser || null;
 
   // Global expired license check — triggers once per session
   useEffect(() => {
@@ -34,6 +50,7 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
   }, [license]);
 
   return (
+    <AutomationMonitorContext.Provider value={automationMonitor}>
     <MobileSidebarProvider>
       <div className="min-h-screen bg-background relative overflow-hidden">
         {/* ── Grand$tate Estate Background ── */}
@@ -127,7 +144,31 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
             </Suspense>
           </main>
         </div>
+        {/* Global Automation Progress Popup — persists across all pages */}
+        {automationMonitor.showPopup && (
+          <TaskProgressPopup
+            isRunning={automationMonitor.state.isRunning}
+            isPaused={automationMonitor.state.isPaused}
+            tasks={automationMonitor.state.tasks}
+            totalSteps={automationMonitor.state.totalSteps}
+            completedTasks={automationMonitor.completedTasks}
+            failedTasks={automationMonitor.failedTasks}
+            progressPercent={automationMonitor.progressPercent}
+            generatedCaptions={automationMonitor.state.generatedCaptions}
+            logs={automationMonitor.state.logs}
+            startTime={automationMonitor.state.startTime}
+            endTime={automationMonitor.state.endTime}
+            queuePosition={automationMonitor.state.queuePosition}
+            queueEstimate={automationMonitor.state.queueEstimate}
+            queueRunningJobs={automationMonitor.state.queueRunningJobs}
+            fbUser={popupFbUser}
+            onStop={automationMonitor.stopAutomation}
+            onPause={automationMonitor.pauseAutomation}
+            onDismiss={automationMonitor.dismissPopup}
+          />
+        )}
       </div>
     </MobileSidebarProvider>
+    </AutomationMonitorContext.Provider>
   );
 }

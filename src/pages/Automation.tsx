@@ -60,8 +60,8 @@ import { getUserPackage, getPackageLimits } from '@/hooks/usePackageLimits';
 import { useHealthCheck } from '@/hooks/useHealthCheck';
 import { HealthCheckCard } from '@/components/automation/HealthCheckCard';
 import { AntiDetectionPanel } from '@/components/automation/AntiDetectionPanel';
-import { TaskProgressPopup } from '@/components/automation/TaskProgressPopup';
 import { BulkAddGroupDialog } from '@/components/automation/BulkAddGroupDialog';
+import { useGlobalAutomation } from '@/components/layout/DashboardLayout';
 import { DailyUsageCard } from '@/components/automation/DailyUsageCard';
 import { ScheduledPostsCard } from '@/components/automation/ScheduledPostsCard';
 import { apiFetch } from '@/lib/config';
@@ -106,6 +106,7 @@ export default function Automation() {
   const { groups, activeGroups, addGroup, deleteGroup, toggleGroupActive } = useSupabaseGroups();
   const { isConnected, isChecking, user, sessions: fbSessions, connectedCount: fbConnectedCount, activeSlot } = useFacebookConnection();
   const { t, language } = useLanguage();
+  const globalAutomation = useGlobalAutomation();
 
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
@@ -389,6 +390,8 @@ export default function Automation() {
           })),
         }));
         setAutomationStartTime(Date.now());
+        // Notify global monitor about queue
+        globalAutomation?.notifyQueued(postingMode, result.position, result.estimatedWaitSec || 0);
         // Poll queue status until it's our turn
         startQueuePolling(postingMode);
         return;
@@ -409,6 +412,15 @@ export default function Automation() {
       setAutomationLogs(Array.isArray(result.logs) ? result.logs : []);
       setAutomationStartTime(typeof result.startTime === 'number' ? result.startTime : Date.now());
       setAutomationEndTime(typeof result.endTime === 'number' ? result.endTime : null);
+
+      // Notify global monitor → persistent popup across all pages
+      globalAutomation?.notifyStarted(postingMode, {
+        totalSteps: result.totalSteps ?? groupsData.length,
+        tasks: result.tasks ?? [],
+        logs: Array.isArray(result.logs) ? result.logs : [],
+        startTime: typeof result.startTime === 'number' ? result.startTime : Date.now(),
+        generatedCaptions: result.generatedCaptions || [],
+      });
 
       // Start polling for status updates
       pollAutomationStatus(postingMode);
@@ -1303,34 +1315,7 @@ export default function Automation() {
         }}
       />
 
-      {/* Floating Task Progress Popup */}
-      <TaskProgressPopup
-        isRunning={automation.isRunning}
-        isPaused={automation.isPaused}
-        tasks={automation.tasks}
-        totalSteps={automation.totalSteps}
-        completedTasks={completedTasks}
-        failedTasks={failedTasks}
-        progressPercent={progressPercent}
-        generatedCaptions={generatedCaptions}
-        logs={automationLogs}
-        startTime={automationStartTime}
-        endTime={automationEndTime}
-        queuePosition={queuePosition}
-        queueEstimate={queueEstimate}
-        queueRunningJobs={queueRunningJobs}
-        fbUser={fbSessions[selectedFbSlot]?.name ? { name: fbSessions[selectedFbSlot].name!, profilePic: fbSessions[selectedFbSlot].profilePic! } : user}
-        onStop={stopAutomation}
-        onPause={pauseAutomation}
-        onDismiss={() => {
-          setAutomation({ isRunning: false, isPaused: false, currentStep: 0, totalSteps: 0, tasks: [] });
-          setGeneratedCaptions([]);
-          setAutomationLogs([]);
-          setAutomationStartTime(null);
-          setAutomationEndTime(null);
-          setQueuePosition(null);
-        }}
-      />
+      {/* TaskProgressPopup now rendered globally in DashboardLayout */}
 
       {/* Confirmation Dialog */}
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>

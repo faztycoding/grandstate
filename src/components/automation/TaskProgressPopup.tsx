@@ -199,7 +199,7 @@ export function TaskProgressPopup({
         },
         pending: {
             icon: <Clock className="w-3.5 h-3.5 text-muted-foreground/50" />,
-            badge: 'รอคิว',
+            badge: 'รอดำเนินการ',
             badgeCls: 'bg-muted text-muted-foreground border-border',
         },
     };

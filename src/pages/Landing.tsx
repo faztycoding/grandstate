@@ -1285,7 +1285,7 @@ export default function Landing() {
             <p className="text-sm text-muted-foreground">
               {isEn ? '© 2026 GrandState — for professional real estate agents' : '© 2026 GrandState — สำหรับนายหน้าอสังหาริมทรัพย์มืออาชีพ'}
             </p>
-            <p className="text-xs text-muted-foreground/50">Version 2.0</p>
+            <p className="text-xs text-muted-foreground/50">Version 1.0</p>
           </div>
         </div>
       </footer>

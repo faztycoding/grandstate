@@ -102,7 +102,7 @@ export default function PrivacyPolicy() {
           <div className="flex items-center justify-center gap-3 mt-4">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-xs font-semibold">
               <FileText className="w-3 h-3" />
-              v2.0
+              v1.0
             </span>
             <span className="text-xs text-muted-foreground">
               {isEn ? 'Effective: January 1, 2025' : 'มีผลบังคับใช้: 1 มกราคม 2568'}

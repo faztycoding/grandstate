@@ -511,7 +511,7 @@ export default function Help() {
         {/* ═══ TERMINAL LOGS ═══ */}
         <MachinePanel>
           <div className="p-4 font-mono text-[11px] leading-[1.8] bg-[hsl(217,71%,6%)] dark:bg-black/60 rounded-lg border border-slate-800 space-y-0">
-            <TerminalLine prefix="SYS" color="text-emerald-500/80">Grand$tate Help Terminal v2.0.0 initialized...</TerminalLine>
+            <TerminalLine prefix="SYS" color="text-emerald-500/80">Grand$tate Help Terminal v1.0 initialized...</TerminalLine>
             <TerminalLine prefix="CFG" color="text-accent/70">Timeout: 30m per session</TerminalLine>
             <TerminalLine prefix="SEC" color="text-blue-400/70">Anti-detection modules loaded — stealth active</TerminalLine>
             <TerminalLine prefix="NET" color="text-emerald-500/70">SSE connection stable — heartbeat OK</TerminalLine>
@@ -549,7 +549,7 @@ export default function Help() {
           <p className="text-xs font-bold font-mono tracking-wider gradient-text">
             GRAND$TATE ENGINE
           </p>
-          <p className="text-[9px] text-muted-foreground/60 font-mono tracking-[0.2em]">OPERATIONAL COMMAND CENTER v2.0</p>
+          <p className="text-[9px] text-muted-foreground/60 font-mono tracking-[0.2em]">OPERATIONAL COMMAND CENTER v1.0</p>
           <p className="text-[8px] text-muted-foreground/40 font-mono">© 2026 GRAND$TATE CORE ENGINE</p>
         </div>
       </div>

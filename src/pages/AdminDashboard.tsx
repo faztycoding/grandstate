@@ -1285,23 +1285,29 @@ export default function AdminDashboard() {
                                                 const expired = isExpired(license.expires_at);
                                                 const expiringSoon = isExpiringSoon(license.expires_at);
                                                 const activation = licenseActivations.find((a: any) => a.license_key_id === license.id);
+                                                const pkgColor = license.package === 'elite'
+                                                    ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30'
+                                                    : license.package === 'agent'
+                                                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                                                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30';
+                                                const pkgDot = license.package === 'elite' ? 'bg-purple-500' : license.package === 'agent' ? 'bg-amber-500' : 'bg-emerald-500';
                                                 return (
-                                                    <TableRow key={license.id}>
-                                                        <TableCell className="font-mono text-sm">{license.license_key}</TableCell>
-                                                        <TableCell><Badge variant={license.package === 'elite' ? 'default' : 'secondary'}>{packageLabels[license.package]}</Badge></TableCell>
-                                                        <TableCell><div><div className="font-medium text-sm">{license.owner_name || '-'}</div><div className="text-xs text-muted-foreground">{license.owner_contact}</div></div></TableCell>
+                                                    <TableRow key={license.id} className={cn(expired && "opacity-60")}>
+                                                        <TableCell><code className="text-[11px] font-mono bg-muted/60 px-2 py-1 rounded-md border border-border/50 select-all">{license.license_key}</code></TableCell>
+                                                        <TableCell><Badge variant="outline" className={cn("font-semibold text-[10px] gap-1 border", pkgColor)}><div className={cn("w-1.5 h-1.5 rounded-full", pkgDot)} />{packageLabels[license.package]}</Badge></TableCell>
+                                                        <TableCell><div><div className="font-medium text-sm">{license.owner_name || '—'}</div>{license.owner_contact && <div className="text-[10px] text-muted-foreground truncate max-w-[100px]">{license.owner_contact}</div>}</div></TableCell>
                                                         <TableCell>{activation ? (
                                                             <div className="min-w-0">
                                                                 <p className="text-xs font-medium truncate max-w-[120px]">{activation.device_name || activation.device_id?.substring(0, 12) + '...'}</p>
                                                                 <p className="text-[10px] text-muted-foreground">{activation.activated_at ? formatDate(activation.activated_at) : ''}</p>
                                                             </div>
-                                                        ) : <span className="text-[10px] text-muted-foreground">—</span>}</TableCell>
-                                                        <TableCell><div className={cn("flex items-center gap-1.5 text-sm", expired ? "text-red-500 font-medium" : expiringSoon ? "text-amber-500 font-medium" : "")}>{formatDate(license.expires_at)}{expiringSoon && !expired && <AlertCircle className="w-3.5 h-3.5" />}</div></TableCell>
-                                                        <TableCell><Badge variant={license.is_active && !expired ? 'outline' : 'destructive'} className={cn(license.is_active && !expired && "border-green-500 text-green-500")}>{license.is_active && !expired ? 'Active' : 'Inactive'}</Badge></TableCell>
-                                                        <TableCell className="text-right"><div className="flex justify-end gap-1.5">
-                                                            <Button size="sm" variant="outline" className="h-7 w-7 p-0" onClick={() => navigator.clipboard.writeText(license.license_key)}><Copy className="w-3.5 h-3.5" /></Button>
-                                                            <Button size="sm" variant="outline" className="h-7 w-7 p-0" onClick={() => extendLicense(license.id, 30)}><Calendar className="w-3.5 h-3.5 text-green-600" /></Button>
-                                                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => setDeleteTarget({ id: license.id, key: license.license_key })}><Trash2 className="w-3.5 h-3.5" /></Button>
+                                                        ) : <span className="text-[10px] text-muted-foreground italic">—</span>}</TableCell>
+                                                        <TableCell><div className={cn("flex items-center gap-1.5 text-sm tabular-nums", expired ? "text-red-500 font-semibold" : expiringSoon ? "text-amber-500 font-semibold" : "")}>{expired && <span className="text-[9px] px-1 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-bold mr-1">EXP</span>}{formatDate(license.expires_at)}{expiringSoon && !expired && <AlertCircle className="w-3.5 h-3.5 text-amber-500" />}</div></TableCell>
+                                                        <TableCell><Badge variant={license.is_active && !expired ? 'outline' : 'destructive'} className={cn("text-[10px] font-bold", license.is_active && !expired ? "border-emerald-500 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5" : "")}>{license.is_active && !expired ? '● Active' : '● Inactive'}</Badge></TableCell>
+                                                        <TableCell className="text-right"><div className="flex justify-end gap-1">
+                                                            <Button size="sm" variant="outline" className="h-7 w-7 p-0 hover:bg-blue-50 dark:hover:bg-blue-950/20 hover:border-blue-300" title="Copy Key" onClick={() => { navigator.clipboard.writeText(license.license_key); toast.success('Copied!'); }}><Copy className="w-3 h-3" /></Button>
+                                                            <Button size="sm" variant="outline" className="h-7 w-7 p-0 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 hover:border-emerald-300" title="Extend 30 days" onClick={() => extendLicense(license.id, 30)}><Calendar className="w-3 h-3 text-emerald-600" /></Button>
+                                                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20" title="Delete" onClick={() => setDeleteTarget({ id: license.id, key: license.license_key })}><Trash2 className="w-3 h-3" /></Button>
                                                         </div></TableCell>
                                                     </TableRow>
                                                 );

@@ -861,7 +861,7 @@ export default function AdminDashboard() {
     ];
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
+        <div className="min-h-screen bg-gradient-to-b from-background to-muted/30" style={{ fontSize: '17px' }}>
             {/* CSS Keyframes for radar pinging */}
             <style>{`
                 @keyframes radar-ping {
@@ -2035,7 +2035,7 @@ export default function AdminDashboard() {
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex gap-1.5 flex-wrap">
                                 {([
-                                    { key: 'all', label: 'ทั้งหมด', count: tickets.length },
+                                    { key: 'all', label: 'ทั้งหมด', count: tickets.length, dot: '' as const },
                                     { key: 'open', label: 'เปิด', count: tickets.filter(t => t.status === 'open').length, dot: 'bg-red-500' },
                                     { key: 'in_progress', label: 'ดำเนินการ', count: tickets.filter(t => t.status === 'in_progress').length, dot: 'bg-amber-500' },
                                     { key: 'resolved', label: 'แก้ไขแล้ว', count: tickets.filter(t => t.status === 'resolved').length, dot: 'bg-emerald-500' },

@@ -90,7 +90,7 @@ export function WelcomeModal() {
                 <div className="mb-3">
                   <Badge className="bg-white/20 text-white border-white/30 mb-2">
                     <Sparkles className="w-3 h-3 mr-1" />
-                    GrandState v2.0
+                    Grand$tate v1.0
                   </Badge>
                 </div>
               )}

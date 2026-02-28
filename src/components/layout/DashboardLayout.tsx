@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { Sidebar, MobileSidebarProvider } from './Sidebar';
 import { Header } from './Header';
 import { FloatingParticles } from '@/components/ui/floating-particles';
+import { WelcomeModal } from '@/components/onboarding/WelcomeModal';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -77,6 +78,7 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
         />
 
         <FloatingParticles count={20} />
+        <WelcomeModal />
         <Sidebar />
         <div className="md:pl-[280px] transition-all duration-200 relative z-10">
           <Header title={title} subtitle={subtitle} />

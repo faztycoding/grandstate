@@ -1,0 +1,19 @@
+{
+  "name": "Grand$tate - Real Estate Automation",
+  "short_name": "Grand$tate",
+  "description": "ระบบโพสต์อสังหาริมทรัพย์อัตโนมัติ สำหรับนายหน้ามืออาชีพ",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c1929",
+  "theme_color": "#f59e0b",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"]
+}

@@ -20,6 +20,7 @@ import { getUserPackage } from '@/hooks/usePackageLimits';
 import { cn } from '@/lib/utils';
 import { ProfileDialog } from '@/components/profile/ProfileDialog';
 import { useMobileSidebar } from '@/components/layout/Sidebar';
+import { NotificationBell } from '@/components/layout/NotificationBell';
 
 const PKG_THEME = {
   free: {
@@ -124,6 +125,9 @@ export function Header({ title, subtitle }: HeaderProps) {
 
           {/* Language Switcher */}
           <LanguageSwitcher />
+
+          {/* Notifications */}
+          <NotificationBell />
 
           {/* Help */}
           <Link to="/help">

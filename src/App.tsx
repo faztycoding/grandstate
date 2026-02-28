@@ -7,6 +7,8 @@ import { lazy, Suspense } from "react";
 import { LanguageProvider } from "@/i18n/LanguageContext";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { AdminRoute } from "@/components/AdminRoute";
 import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
 
@@ -29,6 +31,7 @@ const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const queryClient = new QueryClient();
 
 const App = () => (
+  <ErrorBoundary>
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <LanguageProvider>
@@ -56,8 +59,8 @@ const App = () => (
               <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
 
-              {/* Admin route */}
-              <Route path="/adminfaz" element={<AdminDashboard />} />
+              {/* Admin route — protected by email check */}
+              <Route path="/adminfaz" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
 
               {/* Redirects for old routes */}
               <Route path="/dashboard" element={<Navigate to="/automation" replace />} />
@@ -73,6 +76,7 @@ const App = () => (
       </LanguageProvider>
     </ThemeProvider>
   </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

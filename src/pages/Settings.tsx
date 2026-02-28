@@ -969,7 +969,7 @@ export default function Settings() {
         {/* App Version */}
         <div className="flex items-center justify-center gap-2 py-4 text-xs text-muted-foreground">
           <Info className="w-3 h-3" />
-          <span>{s.appVersion}: GrandState v2.0.0</span>
+          <span>{s.appVersion}: Grand$tate v1.0</span>
         </div>
 
         {/* Save Button */}

@@ -87,6 +87,7 @@ export function PropertyPreviewModal({ property, open, onClose, onEdit, onPost }
                 <img
                   src={images[currentImageIndex]}
                   alt={`${property.title} - ${currentImageIndex + 1}`}
+                  loading="lazy"
                   className="w-full h-full object-cover"
                 />
 

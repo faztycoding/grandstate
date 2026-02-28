@@ -1607,6 +1607,15 @@ app.post('/api/group-automation/generate-caption', ...auth, async (req, res) => 
 
 // Helper: scrape FB user info from current page
 async function scrapeFbUserInfo(page) {
+  // ── Top-level login page check — skip ALL scraping if on login page ──
+  const isLoginPage = await page.evaluate(() => {
+    return !!document.querySelector('input[name="email"], input[name="pass"], #email, #login_form, form[action*="login"]');
+  }).catch(() => false);
+  if (isLoginPage) {
+    console.log('⚠️ scrapeFbUserInfo: Page is login page — returning empty');
+    return { name: '', profilePic: '' };
+  }
+
   // Try scraping from the current page first
   let result = await page.evaluate(() => {
     let name = '';
@@ -1745,6 +1754,12 @@ async function scrapeFbUserInfo(page) {
         let name = '';
         let profilePic = '';
         const debug = [];
+
+        // Skip if login page
+        if (document.querySelector('input[name="email"], input[name="pass"], #email')) {
+          debug.push('LOGIN PAGE - skipping');
+          return { name: '', profilePic: '', debug };
+        }
 
         // The user's name appears in the left sidebar shortcut
         // Facebook class: x1lliihq is used for profile name spans
@@ -1938,7 +1953,9 @@ app.post('/api/facebook/auto-login', ...auth, async (req, res) => {
       const activeSlot = sessionManager.getActiveSlot(req.userId);
       try {
         const userInfo = await scrapeFbUserInfo(page);
-        sessionManager.setFbSession(req.userId, activeSlot, { name: userInfo.name || 'Facebook User', profilePic: userInfo.profilePic || '' });
+        if (userInfo.name) {
+          sessionManager.setFbSession(req.userId, activeSlot, { name: userInfo.name, profilePic: userInfo.profilePic || '' });
+        }
       } catch (e) { }
       return res.json({ success: true, message: 'Login สำเร็จ! (session ยังอยู่)', slot: activeSlot });
     }
@@ -2034,7 +2051,9 @@ app.post('/api/facebook/auto-login', ...auth, async (req, res) => {
       const activeSlot = sessionManager.getActiveSlot(req.userId);
       try {
         const userInfo = await scrapeFbUserInfo(page);
-        sessionManager.setFbSession(req.userId, activeSlot, { name: userInfo.name || 'Facebook User', profilePic: userInfo.profilePic || '' });
+        if (userInfo.name) {
+          sessionManager.setFbSession(req.userId, activeSlot, { name: userInfo.name, profilePic: userInfo.profilePic || '' });
+        }
       } catch (e) { }
       return res.json({ success: true, message: 'Login สำเร็จ!', slot: activeSlot });
     }
@@ -2050,11 +2069,17 @@ app.post('/api/facebook/auto-login', ...auth, async (req, res) => {
     }
 
     // Final check — maybe redirected to a different FB page
-    if (postLoginUrl.includes('facebook.com') && !postLoginUrl.includes('login')) {
+    // Must verify no login form exists (facebook.com/ without /login in URL still shows login)
+    const finalHasLoginForm = await page.evaluate(() => {
+      return !!document.querySelector('input[name="email"], input[name="pass"], #email');
+    }).catch(() => false);
+    if (postLoginUrl.includes('facebook.com') && !finalHasLoginForm) {
       const activeSlot = sessionManager.getActiveSlot(req.userId);
       try {
         const userInfo = await scrapeFbUserInfo(page);
-        sessionManager.setFbSession(req.userId, activeSlot, { name: userInfo.name || 'Facebook User', profilePic: userInfo.profilePic || '' });
+        if (userInfo.name) {
+          sessionManager.setFbSession(req.userId, activeSlot, { name: userInfo.name, profilePic: userInfo.profilePic || '' });
+        }
       } catch (e) { }
       return res.json({ success: true, message: 'Login สำเร็จ!', slot: activeSlot });
     }
@@ -2078,9 +2103,8 @@ app.get('/api/facebook/status', ...auth, async (req, res) => {
     const activeSlot = sessionManager.getActiveSlot(req.userId);
 
     // Live-check the ACTIVE slot only if browser is open
-    // IMPORTANT: Use checkLoginQuick() to avoid navigating during login flow
+    // IMPORTANT: Only check login state, do NOT re-scrape on every poll
     let liveConnected = false;
-    let liveUser = null;
     if (req.groupWorker.browser && req.groupWorker.page) {
       try {
         const isLoggedIn = await Promise.race([
@@ -2089,11 +2113,6 @@ app.get('/api/facebook/status', ...auth, async (req, res) => {
         ]);
         if (isLoggedIn) {
           liveConnected = true;
-          try {
-            const userInfo = await scrapeFbUserInfo(req.groupWorker.page);
-            liveUser = { name: userInfo.name || 'Facebook User', profilePic: userInfo.profilePic || '', connectedAt: new Date().toISOString() };
-            sessionManager.setFbSession(req.userId, activeSlot, liveUser);
-          } catch (e) { /* scrape failed, non-fatal */ }
         }
       } catch (e) { /* check failed, non-fatal */ }
     }
@@ -2188,8 +2207,13 @@ app.post('/api/facebook/confirm-login', ...auth, async (req, res) => {
       const userInfo = await scrapeFbUserInfo(req.groupWorker.page);
       const userData = { name: userInfo.name || 'Facebook User', profilePic: userInfo.profilePic || '', connectedAt: new Date().toISOString() };
 
-      // Save to session metadata
-      sessionManager.setFbSession(req.userId, activeSlot, userData);
+      // Only save if we got a real name (not fallback)
+      if (userInfo.name) {
+        sessionManager.setFbSession(req.userId, activeSlot, userData);
+      } else {
+        // Save with generic name but mark as needs-refresh
+        sessionManager.setFbSession(req.userId, activeSlot, { ...userData, needsRefresh: true });
+      }
 
       res.json({ success: true, connected: true, user: userData, slot: activeSlot, message: 'เชื่อมต่อ Facebook สำเร็จ!' });
     } else {

@@ -998,94 +998,202 @@ export default function Automation() {
 
         {/* ═══ CENTER: The Engine Core ═══ */}
         <div className="col-span-12 lg:col-span-6 space-y-4">
-          <Card className="card-elevated relative overflow-hidden border-accent/20 bg-gradient-to-br from-accent/[0.02] via-transparent to-orange-500/[0.02]">
+          <Card className="card-elevated relative overflow-hidden border-0 rounded-[2rem]" style={{ background: 'linear-gradient(180deg, hsl(222 47% 7%) 0%, hsl(222 47% 5%) 100%)' }}>
             {/* Blueprint grid overlay */}
-            <div className="pointer-events-none absolute inset-0 opacity-[0.02] dark:opacity-[0.04]" style={{
-              backgroundImage: 'linear-gradient(hsl(var(--accent) / 0.4) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--accent) / 0.4) 1px, transparent 1px)',
-              backgroundSize: '30px 30px',
+            <div className="pointer-events-none absolute inset-0 opacity-[0.04]" style={{
+              backgroundImage: 'linear-gradient(rgba(148,163,184,.4) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.4) 1px, transparent 1px)',
+              backgroundSize: '32px 32px',
             }} />
-            <CardContent className="py-8 lg:py-10 flex flex-col items-center justify-center relative min-h-[420px]">
-              {/* Rotating Gears */}
-              <div className="relative w-48 h-48 lg:w-60 lg:h-60 flex items-center justify-center mb-6">
+            {/* Radial glow behind core */}
+            <div className={cn(
+              "pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full blur-[100px] transition-all duration-1000",
+              automation.isRunning ? "bg-accent/15" : "bg-slate-500/5"
+            )} />
+            {/* Floating energy particles */}
+            {[...Array(8)].map((_, i) => (
+              <motion.div key={`ep-${i}`}
+                className={cn("absolute w-1 h-1 rounded-full pointer-events-none", automation.isRunning ? "bg-accent/40" : "bg-slate-600/20")}
+                style={{ left: `${12 + i * 11}%`, top: `${15 + (i % 3) * 25}%` }}
+                animate={{ y: [0, -15, 0], opacity: automation.isRunning ? [0.3, 0.8, 0.3] : [0.1, 0.2, 0.1] }}
+                transition={{ duration: 2.5 + i * 0.3, repeat: Infinity, delay: i * 0.4 }}
+              />
+            ))}
+
+            <CardContent className="py-8 lg:py-10 flex flex-col items-center justify-center relative min-h-[460px]">
+
+              {/* ═══ REACTOR CORE ═══ */}
+              <div className="relative w-56 h-56 lg:w-64 lg:h-64 flex items-center justify-center mb-8">
+
+                {/* Outer orbit ring 1 — slow */}
                 <motion.div
-                  animate={automation.isRunning ? { rotate: 360 } : { rotate: 0 }}
+                  animate={{ rotate: automation.isRunning ? 360 : 0 }}
+                  transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+                  className="absolute inset-0"
+                >
+                  <div className={cn("w-full h-full rounded-full border border-dashed transition-colors duration-500",
+                    automation.isRunning ? "border-accent/20" : "border-slate-700/30"
+                  )} />
+                  {/* Orbit node */}
+                  <div className={cn("absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full transition-all duration-500",
+                    automation.isRunning ? "bg-accent shadow-[0_0_10px_hsl(var(--accent)/0.6)]" : "bg-slate-700"
+                  )} />
+                </motion.div>
+
+                {/* Outer orbit ring 2 — counter-rotate */}
+                <motion.div
+                  animate={{ rotate: automation.isRunning ? -360 : 0 }}
+                  transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
+                  className="absolute inset-4"
+                >
+                  <div className={cn("w-full h-full rounded-full border transition-colors duration-500",
+                    automation.isRunning ? "border-cyan-500/15" : "border-slate-800/20"
+                  )} />
+                  <div className={cn("absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-2 h-2 rounded-full transition-all duration-500",
+                    automation.isRunning ? "bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.5)]" : "bg-slate-700/50"
+                  )} />
+                </motion.div>
+
+                {/* Gear ring — rotating cog effect */}
+                <motion.div
+                  animate={{ rotate: automation.isRunning ? 360 : 0 }}
+                  transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+                  className="absolute inset-8"
+                >
+                  <Settings className={cn("w-full h-full transition-colors duration-500",
+                    automation.isRunning ? "text-accent/[0.07]" : "text-slate-700/[0.04]"
+                  )} strokeWidth={0.3} />
+                </motion.div>
+
+                {/* Inner gear — counter-rotate */}
+                <motion.div
+                  animate={{ rotate: automation.isRunning ? -360 : 0 }}
                   transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                  className="absolute text-muted-foreground/[0.04]"
+                  className="absolute inset-14"
                 >
-                  <Settings size={260} strokeWidth={0.3} />
+                  <Settings className={cn("w-full h-full transition-colors duration-500",
+                    automation.isRunning ? "text-purple-500/[0.08]" : "text-slate-700/[0.03]"
+                  )} strokeWidth={0.4} />
                 </motion.div>
-                <motion.div
-                  animate={automation.isRunning ? { rotate: -360 } : { rotate: 0 }}
-                  transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-                  className="absolute text-accent/[0.08]"
-                >
-                  <Settings size={180} strokeWidth={0.5} />
-                </motion.div>
-                {/* Central Core */}
-                <div className={cn(
-                  "relative z-10 w-32 h-32 lg:w-40 lg:h-40 rounded-full border-2 bg-card/80 backdrop-blur-sm flex flex-col items-center justify-center transition-all duration-500",
-                  automation.isRunning
-                    ? "border-accent/40 shadow-[0_0_60px_hsl(var(--accent)/0.12)]"
-                    : "border-border shadow-lg"
-                )}>
+
+                {/* Scanning line */}
+                {automation.isRunning && (
                   <motion.div
-                    animate={automation.isRunning ? { scale: [1, 1.12, 1] } : {}}
+                    animate={{ top: ['5%', '95%', '5%'] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                    className="absolute left-[15%] right-[15%] h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent z-10 pointer-events-none shadow-[0_0_8px_hsl(var(--accent)/0.4)]"
+                  />
+                )}
+
+                {/* ── CENTRAL CORE SPHERE ── */}
+                <div className={cn(
+                  "relative z-10 w-28 h-28 lg:w-32 lg:h-32 rounded-full flex flex-col items-center justify-center transition-all duration-700",
+                  automation.isRunning
+                    ? "bg-gradient-to-br from-slate-900 to-slate-800 border-2 border-accent/40 shadow-[0_0_50px_hsl(var(--accent)/0.15),inset_0_0_30px_hsl(var(--accent)/0.05)]"
+                    : "bg-gradient-to-br from-slate-900/80 to-slate-800/60 border-2 border-slate-700/50 shadow-lg"
+                )}>
+                  {/* Pulsing inner glow ring */}
+                  <motion.div
+                    animate={automation.isRunning ? { scale: [1, 1.15, 1], opacity: [0.3, 0.6, 0.3] } : { scale: 1, opacity: 0 }}
+                    transition={{ duration: 2.5, repeat: Infinity }}
+                    className="absolute inset-0 rounded-full border-2 border-accent/30 pointer-events-none"
+                  />
+                  {/* Core icon */}
+                  <motion.div
+                    animate={automation.isRunning ? { scale: [1, 1.1, 1] } : {}}
                     transition={{ duration: 2, repeat: Infinity }}
                   >
-                    <Zap className={cn("w-12 h-12 lg:w-14 lg:h-14", automation.isRunning ? "text-accent" : "text-muted-foreground/25")} />
+                    <Zap className={cn("w-10 h-10 lg:w-12 lg:h-12 transition-colors duration-500",
+                      automation.isRunning ? "text-accent drop-shadow-[0_0_12px_hsl(var(--accent)/0.5)]" : "text-slate-600"
+                    )} />
                   </motion.div>
                   <span className={cn(
-                    "text-[9px] font-mono uppercase tracking-[0.15em] font-bold mt-1",
-                    automation.isRunning ? "text-accent" : "text-muted-foreground/40"
+                    "text-[8px] font-mono uppercase tracking-[0.2em] font-black mt-1 transition-colors duration-500",
+                    automation.isRunning ? "text-accent" : "text-slate-600"
                   )}>
-                    {automation.isRunning ? 'Engine Active' : 'Standby'}
+                    {automation.isRunning ? 'ACTIVE' : 'STANDBY'}
                   </span>
-                  {automation.isRunning && (
-                    <motion.div
-                      animate={{ top: ['10%', '90%', '10%'] }}
-                      transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                      className="absolute inset-x-6 h-px bg-accent/30 shadow-[0_0_8px_hsl(var(--accent)/0.5)]"
-                    />
-                  )}
                 </div>
+
+                {/* Energy beams radiating from core (when running) */}
+                {automation.isRunning && [...Array(6)].map((_, i) => (
+                  <motion.div
+                    key={`beam-${i}`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: [0.1, 0.4, 0.1] }}
+                    transition={{ duration: 2, repeat: Infinity, delay: i * 0.3 }}
+                    className="absolute top-1/2 left-1/2 h-px origin-left pointer-events-none z-0"
+                    style={{
+                      width: '110px',
+                      transform: `translate(-50%, -50%) rotate(${i * 60}deg)`,
+                      background: 'linear-gradient(90deg, hsl(var(--accent) / 0.4) 0%, transparent 100%)',
+                    }}
+                  />
+                ))}
               </div>
 
-              {/* Progress Bar */}
-              <div className="w-full max-w-sm space-y-2">
+              {/* ═══ PROGRESS BAR ═══ */}
+              <div className="w-full max-w-sm space-y-2.5">
                 <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
+                  <span className={cn("text-[10px] font-mono uppercase tracking-wider transition-colors",
+                    automation.isRunning ? "text-accent/70" : "text-slate-500"
+                  )}>
                     {automation.isRunning ? 'Production Progress' : 'System Ready'}
                   </span>
                   {automation.totalSteps > 0 && (
-                    <Badge variant="secondary" className="text-[10px] font-mono">
+                    <Badge className="text-[10px] font-mono bg-accent/10 text-accent border-accent/20">
                       {resolvedTasks}/{automation.totalSteps}
                     </Badge>
                   )}
                 </div>
-                <Progress value={progressPercent} className="h-2" />
+                {/* Custom progress bar */}
+                <div className="h-2 bg-slate-800 rounded-full overflow-hidden relative">
+                  <motion.div
+                    className="h-full rounded-full bg-gradient-to-r from-accent to-amber-500"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progressPercent}%` }}
+                    transition={{ duration: 0.5 }}
+                  />
+                  {automation.isRunning && (
+                    <motion.div
+                      animate={{ x: ['-100%', '400%'] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                      className="absolute top-0 h-full w-1/4 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                    />
+                  )}
+                </div>
                 {automation.isRunning && (
-                  <div className="flex justify-between text-[10px] text-muted-foreground">
-                    <span className="text-green-600 dark:text-green-400">{completedTasks + pendingApprovalTasks} สำเร็จ</span>
-                    {failedTasks > 0 && <span className="text-destructive">{failedTasks} ล้มเหลว</span>}
-                    <span>{progressPercent}%</span>
+                  <div className="flex justify-between text-[10px]">
+                    <span className="text-emerald-400 font-mono">{completedTasks + pendingApprovalTasks} สำเร็จ</span>
+                    {failedTasks > 0 && <span className="text-red-400 font-mono">{failedTasks} ล้มเหลว</span>}
+                    <span className="text-accent font-mono font-bold">{progressPercent}%</span>
                   </div>
                 )}
               </div>
 
-              {/* Anti-Detection Module Status Indicators */}
-              <div className="w-full max-w-sm mt-5 grid grid-cols-3 gap-2">
+              {/* ═══ ANTI-DETECTION MODULE PANELS ═══ */}
+              <div className="w-full max-w-md mt-6 grid grid-cols-3 gap-2.5">
                 {[
-                  { Icon: Shield, label: 'Anti-Detect', desc: '6-Layer Active', color: 'text-green-500' },
-                  { Icon: Fingerprint, label: 'Fingerprint', desc: 'Canvas/WebGL', color: 'text-blue-500' },
-                  { Icon: Eye, label: 'Gaussian Jitter', desc: `σ=2.5s | ${delayBetweenPosts}s`, color: 'text-amber-500' },
+                  { Icon: Shield, label: 'Anti-Detect', desc: '6-Layer Active', color: 'text-emerald-400', glow: 'shadow-emerald-500/10', borderColor: 'border-emerald-500/20', bgColor: 'bg-emerald-500/5' },
+                  { Icon: Fingerprint, label: 'Fingerprint', desc: 'Canvas/WebGL', color: 'text-cyan-400', glow: 'shadow-cyan-500/10', borderColor: 'border-cyan-500/20', bgColor: 'bg-cyan-500/5' },
+                  { Icon: Eye, label: 'Gaussian Jitter', desc: `σ=2.5s | ${delayBetweenPosts}s`, color: 'text-amber-400', glow: 'shadow-amber-500/10', borderColor: 'border-amber-500/20', bgColor: 'bg-amber-500/5' },
                 ].map((mod, i) => (
-                  <div key={i} className="flex items-center gap-2 p-2.5 rounded-xl border bg-card/60 hover:border-accent/20 transition-colors">
-                    <mod.Icon className={cn("w-4 h-4 flex-shrink-0", mod.color)} />
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-semibold truncate">{mod.label}</p>
-                      <p className="text-[9px] text-muted-foreground truncate">{mod.desc}</p>
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 * i }}
+                    className={cn(
+                      "relative flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all duration-500",
+                      "bg-slate-900/60 backdrop-blur-sm hover:scale-[1.02]",
+                      mod.borderColor, mod.glow
+                    )}
+                  >
+                    <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", mod.bgColor)}>
+                      <mod.Icon className={cn("w-4 h-4", mod.color)} />
                     </div>
-                  </div>
+                    <p className="text-[10px] font-bold text-slate-300 text-center">{mod.label}</p>
+                    <p className="text-[8px] text-slate-500 font-mono text-center">{mod.desc}</p>
+                  </motion.div>
                 ))}
               </div>
             </CardContent>

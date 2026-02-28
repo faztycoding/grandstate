@@ -970,44 +970,54 @@ export default function AdminDashboard() {
 
                 {/* ═══════════════ TAB: OVERVIEW ═══════════════ */}
                 {activeTab === 'overview' && (<>
+                <div className="relative rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(180deg, hsl(222 47% 6%) 0%, hsl(222 47% 4%) 100%)' }}>
+                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(148,163,184,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.5) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+                    <motion.div animate={{ top: ['-5%', '105%'] }} transition={{ duration: 8, repeat: Infinity, ease: 'linear' }} className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-amber-500/20 to-transparent pointer-events-none z-20" />
+                    <div className="relative z-10 p-6">
+                    <div className="flex items-center gap-3 mb-6 border-b border-amber-500/20 pb-4">
+                        <h2 className="text-2xl font-black text-white tracking-tight uppercase">Command <span className="text-amber-500">Overview</span></h2>
+                        <Badge variant="outline" className="text-[9px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30 gap-1.5 px-2 py-0.5 font-bold"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> LIVE</Badge>
+                    </div>
                     {/* Quick Stats */}
                     <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="grid grid-cols-2 lg:grid-cols-6 gap-3">
-                        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center gap-3"><div className="p-2.5 rounded-xl bg-blue-100 dark:bg-blue-900/30"><Key className="w-5 h-5 text-blue-600" /></div><div><p className="text-xs text-muted-foreground">{t.admin.totalLicenses}</p><p className="text-xl font-bold">{stats.totalLicenses}</p></div></div></CardContent></Card>
-                        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center gap-3"><div className="p-2.5 rounded-xl bg-green-100 dark:bg-green-900/30"><Check className="w-5 h-5 text-green-600" /></div><div><p className="text-xs text-muted-foreground">{t.admin.activeLicenses}</p><p className="text-xl font-bold">{stats.activeLicenses}</p></div></div></CardContent></Card>
-                        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center gap-3"><div className="p-2.5 rounded-xl bg-amber-100 dark:bg-amber-900/30"><Clock className="w-5 h-5 text-amber-600" /></div><div><p className="text-xs text-muted-foreground">{t.admin.expiringSoon}</p><p className="text-xl font-bold">{stats.expiringLicenses}</p></div></div></CardContent></Card>
-                        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center gap-3"><div className="p-2.5 rounded-xl bg-purple-100 dark:bg-purple-900/30"><DollarSign className="w-5 h-5 text-purple-600" /></div><div><p className="text-xs text-muted-foreground">{t.admin.totalRevenue}</p><p className="text-xl font-bold">฿{stats.totalRevenue.toLocaleString()}</p></div></div></CardContent></Card>
-                        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center gap-3"><div className="p-2.5 rounded-xl bg-emerald-100 dark:bg-emerald-900/30"><Wifi className="w-5 h-5 text-emerald-600" /></div><div><p className="text-xs text-muted-foreground">{t.admin.online}</p><p className="text-xl font-bold">{liveStats?.onlineUsers ?? '—'}</p></div></div></CardContent></Card>
-                        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center gap-3"><div className="p-2.5 rounded-xl bg-orange-100 dark:bg-orange-900/30"><Zap className="w-5 h-5 text-orange-600" /></div><div><p className="text-xs text-muted-foreground">Automation</p><p className="text-xl font-bold">{liveStats?.automation.currentlyRunning ?? '—'}</p></div></div></CardContent></Card>
+                        {[
+                            { label: t.admin.totalLicenses, value: stats.totalLicenses, icon: <Key className="w-4 h-4" />, color: 'text-blue-400' },
+                            { label: t.admin.activeLicenses, value: stats.activeLicenses, icon: <Check className="w-4 h-4" />, color: 'text-emerald-400' },
+                            { label: t.admin.expiringSoon, value: stats.expiringLicenses, icon: <Clock className="w-4 h-4" />, color: 'text-amber-400' },
+                            { label: t.admin.totalRevenue, value: `฿${stats.totalRevenue.toLocaleString()}`, icon: <DollarSign className="w-4 h-4" />, color: 'text-purple-400' },
+                            { label: t.admin.online, value: liveStats?.onlineUsers ?? '—', icon: <Wifi className="w-4 h-4" />, color: 'text-green-400' },
+                            { label: 'Automation', value: liveStats?.automation.currentlyRunning ?? '—', icon: <Zap className="w-4 h-4" />, color: 'text-orange-400' },
+                        ].map((s, i) => (
+                            <div key={i} className="bg-slate-900/60 border border-slate-800 p-4 rounded-2xl hover:border-slate-700 transition-colors">
+                                <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">{s.icon} {s.label}</div>
+                                <p className={cn('text-xl font-black font-mono', s.color)}>{s.value}</p>
+                            </div>
+                        ))}
                     </motion.div>
 
                     {/* Charts */}
-                    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.4 }} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.4 }} className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
                         {/* Package Distribution */}
-                        <Card>
-                            <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><PieChart className="w-4 h-4" /> {t.admin.packageDistribution}</CardTitle></CardHeader>
-                            <CardContent>
-                                {(() => { const fc = licenses.filter(l => l.package === 'free').length; const ac = licenses.filter(l => l.package === 'agent').length; const ec = licenses.filter(l => l.package === 'elite').length; const total = licenses.length || 1; return (<div className="space-y-3">{[{ label: 'Rookie', count: fc, color: 'bg-emerald-500', icon: <Rocket className="w-3.5 h-3.5 text-emerald-500" /> }, { label: 'Top Agent', count: ac, color: 'bg-amber-500', icon: <Star className="w-3.5 h-3.5 text-amber-500" /> }, { label: 'Elite', count: ec, color: 'bg-purple-500', icon: <Crown className="w-3.5 h-3.5 text-purple-500" /> }].map(p => (<div key={p.label} className="space-y-1"><div className="flex justify-between text-sm"><span className="flex items-center gap-1.5">{p.icon} {p.label}</span><span>{p.count} ({Math.round(p.count / total * 100)}%)</span></div><div className="h-2.5 bg-muted rounded-full overflow-hidden"><div className={cn("h-full rounded-full", p.color)} style={{ width: `${p.count / total * 100}%` }} /></div></div>))}</div>); })()}
-                            </CardContent>
-                        </Card>
+                        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5">
+                            <h4 className="flex items-center gap-2 text-sm font-black text-white uppercase tracking-wide mb-4"><PieChart className="w-4 h-4 text-amber-500" /> {t.admin.packageDistribution}</h4>
+                                {(() => { const fc = licenses.filter(l => l.package === 'free').length; const ac = licenses.filter(l => l.package === 'agent').length; const ec = licenses.filter(l => l.package === 'elite').length; const total = licenses.length || 1; return (<div className="space-y-3">{[{ label: 'Rookie', count: fc, color: 'bg-emerald-500', icon: <Rocket className="w-3.5 h-3.5 text-emerald-500" /> }, { label: 'Top Agent', count: ac, color: 'bg-amber-500', icon: <Star className="w-3.5 h-3.5 text-amber-500" /> }, { label: 'Elite', count: ec, color: 'bg-purple-500', icon: <Crown className="w-3.5 h-3.5 text-purple-500" /> }].map(p => (<div key={p.label} className="space-y-1"><div className="flex justify-between text-sm text-slate-300"><span className="flex items-center gap-1.5">{p.icon} {p.label}</span><span className="font-mono text-slate-400">{p.count} ({Math.round(p.count / total * 100)}%)</span></div><div className="h-2.5 bg-slate-800 rounded-full overflow-hidden"><div className={cn("h-full rounded-full", p.color)} style={{ width: `${p.count / total * 100}%` }} /></div></div>))}</div>); })()}
+                        </div>
                         {/* Revenue */}
-                        <Card>
-                            <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><DollarSign className="w-4 h-4" /> {t.admin.revenueByPackage}</CardTitle></CardHeader>
-                            <CardContent>
-                                {(() => { const ar = licenses.filter(l => l.package === 'agent').length * 1390; const er = licenses.filter(l => l.package === 'elite').length * 2990; const mx = Math.max(ar, er, 1); return (<div className="space-y-3"><div className="space-y-1"><div className="flex justify-between text-sm"><span className="flex items-center gap-1.5"><Star className="w-3.5 h-3.5 text-amber-500" />Top Agent (฿1,390)</span><span className="font-semibold">฿{ar.toLocaleString()}</span></div><div className="h-5 bg-muted rounded-lg overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-lg" style={{ width: `${ar / mx * 100}%` }} /></div></div><div className="space-y-1"><div className="flex justify-between text-sm"><span className="flex items-center gap-1.5"><Crown className="w-3.5 h-3.5 text-purple-500" />Elite (฿2,990)</span><span className="font-semibold">฿{er.toLocaleString()}</span></div><div className="h-5 bg-muted rounded-lg overflow-hidden"><div className="h-full bg-gradient-to-r from-purple-400 to-purple-500 rounded-lg" style={{ width: `${er / mx * 100}%` }} /></div></div><div className="pt-3 border-t mt-3 flex justify-between items-center"><span className="text-muted-foreground">{t.admin.totalRevenueAll}</span><span className="text-xl font-bold text-green-600">฿{(ar + er).toLocaleString()}</span></div></div>); })()}
-                            </CardContent>
-                        </Card>
+                        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5">
+                            <h4 className="flex items-center gap-2 text-sm font-black text-white uppercase tracking-wide mb-4"><DollarSign className="w-4 h-4 text-amber-500" /> {t.admin.revenueByPackage}</h4>
+                                {(() => { const ar = licenses.filter(l => l.package === 'agent').length * 1390; const er = licenses.filter(l => l.package === 'elite').length * 2990; const mx = Math.max(ar, er, 1); return (<div className="space-y-3"><div className="space-y-1"><div className="flex justify-between text-sm text-slate-300"><span className="flex items-center gap-1.5"><Star className="w-3.5 h-3.5 text-amber-500" />Top Agent (฿1,390)</span><span className="font-semibold font-mono text-amber-400">฿{ar.toLocaleString()}</span></div><div className="h-5 bg-slate-800 rounded-lg overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-lg" style={{ width: `${ar / mx * 100}%` }} /></div></div><div className="space-y-1"><div className="flex justify-between text-sm text-slate-300"><span className="flex items-center gap-1.5"><Crown className="w-3.5 h-3.5 text-purple-500" />Elite (฿2,990)</span><span className="font-semibold font-mono text-purple-400">฿{er.toLocaleString()}</span></div><div className="h-5 bg-slate-800 rounded-lg overflow-hidden"><div className="h-full bg-gradient-to-r from-purple-400 to-purple-500 rounded-lg" style={{ width: `${er / mx * 100}%` }} /></div></div><div className="pt-3 border-t border-slate-800 mt-3 flex justify-between items-center"><span className="text-slate-500">{t.admin.totalRevenueAll}</span><span className="text-xl font-bold text-emerald-400 font-mono">฿{(ar + er).toLocaleString()}</span></div></div>); })()}
+                        </div>
                     </motion.div>
 
                     {/* Expiring Soon */}
-                    {(() => { const now = new Date(); const sd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); const exp = licenses.filter(l => { const e = new Date(l.expires_at); return l.is_active && e > now && e <= sd; }); if (!exp.length) return null; return (<Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20"><CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-base"><AlertCircle className="w-4 h-4" />⚠️ {t.admin.expiringLicenses} ({exp.length})</CardTitle></CardHeader><CardContent><div className="space-y-2">{exp.slice(0, 5).map(l => { const dl = Math.ceil((new Date(l.expires_at).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)); return (<div key={l.id} className="flex items-center justify-between p-2.5 bg-white dark:bg-gray-800 rounded-lg border"><div className="flex items-center gap-2"><code className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded">{l.license_key}</code><span className="text-xs text-muted-foreground">{l.owner_name || '{t.admin.noName}'}</span></div><div className="flex items-center gap-2"><Badge className={cn(dl <= 2 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700', 'text-[10px]')}>เหลือ {dl} วัน</Badge><Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => extendLicense(l.id, 30)}>+30 วัน</Button></div></div>); })}</div></CardContent></Card>); })()}
+                    {(() => { const now = new Date(); const sd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); const exp = licenses.filter(l => { const e = new Date(l.expires_at); return l.is_active && e > now && e <= sd; }); if (!exp.length) return null; return (<div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-5 mt-5"><h4 className="flex items-center gap-2 text-sm font-black text-amber-400 uppercase tracking-wide mb-3"><AlertCircle className="w-4 h-4" /> {t.admin.expiringLicenses} ({exp.length})</h4><div className="space-y-2">{exp.slice(0, 5).map(l => { const dl = Math.ceil((new Date(l.expires_at).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)); return (<div key={l.id} className="flex items-center justify-between p-2.5 bg-slate-950/60 rounded-xl border border-slate-800"><div className="flex items-center gap-2"><code className="text-xs font-mono text-amber-400/80 bg-slate-900 px-1.5 py-0.5 rounded">{l.license_key}</code><span className="text-xs text-slate-500">{l.owner_name || 'N/A'}</span></div><div className="flex items-center gap-2"><Badge className={cn(dl <= 2 ? 'bg-red-500/15 text-red-400 border-red-500/30' : 'bg-amber-500/15 text-amber-400 border-amber-500/30', 'text-[10px] border')}>เหลือ {dl} วัน</Badge><Button size="sm" variant="outline" className="h-7 text-xs border-slate-700 text-slate-300 hover:bg-amber-500 hover:text-black hover:border-amber-500" onClick={() => extendLicense(l.id, 30)}>+30 วัน</Button></div></div>); })}</div></div>); })()}
 
                     {/* Monthly Report */}
-                    <Card>
-                        <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="w-4 h-4" />{t.admin.monthlyReport}</CardTitle></CardHeader>
-                        <CardContent>
-                            {(() => { const months: { month: string; count: number; revenue: number }[] = []; const now = new Date(); for (let i = 5; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); const me = new Date(now.getFullYear(), now.getMonth() - i + 1, 0); const ml = licenses.filter(l => { const c = new Date(l.created_at); return c >= d && c <= me; }); const rv = ml.reduce((s, l) => l.package === 'agent' ? s + 1390 : l.package === 'elite' ? s + 2990 : s, 0); months.push({ month: d.toLocaleDateString('th-TH', { month: 'short', year: '2-digit' }), count: ml.length, revenue: rv }); } const mc = Math.max(...months.map(m => m.count), 1); const mr = Math.max(...months.map(m => m.revenue), 1); return (<div className="space-y-4"><div><h4 className="text-xs font-medium mb-2 flex items-center gap-1.5"><Key className="w-3.5 h-3.5" />จำนวน License</h4><div className="flex items-end gap-2 h-24">{months.map((m, i) => (<div key={i} className="flex-1 flex flex-col items-center gap-0.5"><span className="text-[10px] font-medium">{m.count}</span><div className="w-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-t transition-all" style={{ height: `${(m.count / mc) * 100}%`, minHeight: m.count > 0 ? '6px' : '2px' }} /><span className="text-[10px] text-muted-foreground">{m.month}</span></div>))}</div></div><div className="pt-3 border-t"><h4 className="text-xs font-medium mb-2 flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5" />รายได้ (บาท)</h4><div className="flex items-end gap-2 h-24">{months.map((m, i) => (<div key={i} className="flex-1 flex flex-col items-center gap-0.5"><span className="text-[10px] font-medium">{m.revenue > 0 ? `฿${(m.revenue / 1000).toFixed(1)}k` : '-'}</span><div className="w-full bg-gradient-to-t from-green-500 to-emerald-400 rounded-t transition-all" style={{ height: `${(m.revenue / mr) * 100}%`, minHeight: m.revenue > 0 ? '6px' : '2px' }} /><span className="text-[10px] text-muted-foreground">{m.month}</span></div>))}</div></div></div>); })()}
-                        </CardContent>
-                    </Card>
+                    <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 mt-5">
+                        <h4 className="flex items-center gap-2 text-sm font-black text-white uppercase tracking-wide mb-4"><TrendingUp className="w-4 h-4 text-amber-500" />{t.admin.monthlyReport}</h4>
+                            {(() => { const months: { month: string; count: number; revenue: number }[] = []; const now = new Date(); for (let i = 5; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); const me = new Date(now.getFullYear(), now.getMonth() - i + 1, 0); const ml = licenses.filter(l => { const c = new Date(l.created_at); return c >= d && c <= me; }); const rv = ml.reduce((s, l) => l.package === 'agent' ? s + 1390 : l.package === 'elite' ? s + 2990 : s, 0); months.push({ month: d.toLocaleDateString('th-TH', { month: 'short', year: '2-digit' }), count: ml.length, revenue: rv }); } const mc = Math.max(...months.map(m => m.count), 1); const mr = Math.max(...months.map(m => m.revenue), 1); return (<div className="space-y-4"><div><h4 className="text-xs font-bold text-slate-400 mb-2 flex items-center gap-1.5 uppercase tracking-wider"><Key className="w-3.5 h-3.5 text-blue-400" />จำนวน License</h4><div className="flex items-end gap-2 h-24">{months.map((m, i) => (<div key={i} className="flex-1 flex flex-col items-center gap-0.5"><span className="text-[10px] font-mono text-slate-400">{m.count}</span><div className="w-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-t transition-all" style={{ height: `${(m.count / mc) * 100}%`, minHeight: m.count > 0 ? '6px' : '2px' }} /><span className="text-[10px] text-slate-600">{m.month}</span></div>))}</div></div><div className="pt-3 border-t border-slate-800"><h4 className="text-xs font-bold text-slate-400 mb-2 flex items-center gap-1.5 uppercase tracking-wider"><DollarSign className="w-3.5 h-3.5 text-emerald-400" />รายได้ (บาท)</h4><div className="flex items-end gap-2 h-24">{months.map((m, i) => (<div key={i} className="flex-1 flex flex-col items-center gap-0.5"><span className="text-[10px] font-mono text-slate-400">{m.revenue > 0 ? `฿${(m.revenue / 1000).toFixed(1)}k` : '-'}</span><div className="w-full bg-gradient-to-t from-green-500 to-emerald-400 rounded-t transition-all" style={{ height: `${(m.revenue / mr) * 100}%`, minHeight: m.revenue > 0 ? '6px' : '2px' }} /><span className="text-[10px] text-slated-foreground">{m.month}</span></div>))}</div></div></div>); })()}
+                    </div>
+                    </div></div>
                 </>)}
 
                 {/* ═══════════════ TAB: USERS — MATRIX CONTROL ═══════════════ */}
@@ -1316,27 +1326,38 @@ export default function AdminDashboard() {
 
                 {/* ═══════════════ TAB: LICENSES ═══════════════ */}
                 {activeTab === 'licenses' && (<>
+                <div className="relative rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(180deg, hsl(222 47% 6%) 0%, hsl(222 47% 4%) 100%)' }}>
+                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(148,163,184,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.5) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+                    <motion.div animate={{ top: ['-5%', '105%'] }} transition={{ duration: 7, repeat: Infinity, ease: 'linear' }} className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-amber-500/20 to-transparent pointer-events-none z-20" />
+                    <div className="relative z-10 p-6">
+                    {/* Header */}
+                    <div className="flex items-center gap-3 mb-6 border-b border-amber-500/20 pb-4">
+                        <h2 className="text-2xl font-black text-white tracking-tight uppercase">License <span className="text-amber-500">Vault</span></h2>
+                        <Badge variant="outline" className="text-[9px] bg-blue-500/10 text-blue-400 border-blue-500/30 gap-1.5 px-2 py-0.5 font-bold"><Key className="w-2.5 h-2.5" /> {filteredLicenses.length} KEYS</Badge>
+                    </div>
                     {/* Filters */}
-                    <Card>
-                        <CardContent className="pt-6">
+                    <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 mb-5">
                             <div className="flex flex-col md:flex-row gap-3">
-                                <div className="flex-1 relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><Input placeholder={t.admin.searchLicense} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" /></div>
+                                <div className="flex-1 relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" /><Input placeholder={t.admin.searchLicense} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 bg-slate-900/80 border-slate-700 text-amber-400 font-mono placeholder:text-slate-600 focus:border-amber-500/50" /></div>
                                 <Select value={filterPackage} onValueChange={setFilterPackage}><SelectTrigger className="w-[160px]"><SelectValue placeholder={t.admin.package} /></SelectTrigger><SelectContent><SelectItem value="all">{t.admin.all}</SelectItem><SelectItem value="free">Rookie</SelectItem><SelectItem value="agent">Top Agent</SelectItem><SelectItem value="elite">Elite</SelectItem></SelectContent></Select>
                                 <Select value={filterStatus} onValueChange={setFilterStatus}><SelectTrigger className="w-[160px]"><SelectValue placeholder={t.admin.status} /></SelectTrigger><SelectContent><SelectItem value="all">{t.admin.all}</SelectItem><SelectItem value="active">{t.admin.active}</SelectItem><SelectItem value="inactive">{t.admin.expired}</SelectItem></SelectContent></Select>
-                                <Button variant="outline" onClick={fetchLicenses}><RefreshCw className={cn("w-4 h-4 mr-2", isLoading && "animate-spin")} />{t.admin.refresh}</Button>
+                                <Button variant="outline" onClick={fetchLicenses} className="border-slate-700 text-slate-300 hover:bg-amber-500 hover:text-black hover:border-amber-500"><RefreshCw className={cn("w-4 h-4 mr-2", isLoading && "animate-spin")} />{t.admin.refresh}</Button>
                             </div>
-                        </CardContent>
-                    </Card>
+                    </div>
 
                     {/* License Table */}
-                    <Card>
-                        <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2"><Key className="w-5 h-5 text-primary" />License Keys ({filteredLicenses.length})</CardTitle></CardHeader>
-                        <CardContent>
+                    <div className="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden">
+                        <div className="px-5 py-3 border-b border-slate-800 flex items-center gap-2">
+                            <Key className="w-4 h-4 text-amber-500" />
+                            <span className="text-sm font-black text-white uppercase tracking-wide">License Keys</span>
+                            <span className="text-[10px] font-mono text-slate-500 ml-auto">{filteredLicenses.length} records</span>
+                        </div>
+                        <div className="p-3">
                             <ScrollArea className="h-[500px]">
                                 <div className="overflow-x-auto">
                                     <Table className="min-w-[700px]">
-                                        <TableHeader><TableRow>
-                                            <TableHead>License Key</TableHead><TableHead>{t.admin.package}</TableHead><TableHead>{t.admin.owner}</TableHead><TableHead>{t.admin.user}</TableHead><TableHead>{t.admin.expiryDate}</TableHead><TableHead>{t.admin.status}</TableHead><TableHead className="text-right">{t.admin.colManage}</TableHead>
+                                        <TableHeader><TableRow className="border-slate-800 hover:bg-transparent">
+                                            <TableHead className="text-slate-500 font-mono text-[10px] uppercase tracking-wider">License Key</TableHead><TableHead className="text-slate-500 font-mono text-[10px] uppercase tracking-wider">{t.admin.package}</TableHead><TableHead className="text-slate-500 font-mono text-[10px] uppercase tracking-wider">{t.admin.owner}</TableHead><TableHead className="text-slate-500 font-mono text-[10px] uppercase tracking-wider">{t.admin.user}</TableHead><TableHead className="text-slate-500 font-mono text-[10px] uppercase tracking-wider">{t.admin.expiryDate}</TableHead><TableHead className="text-slate-500 font-mono text-[10px] uppercase tracking-wider">{t.admin.status}</TableHead><TableHead className="text-right text-slate-500 font-mono text-[10px] uppercase tracking-wider">{t.admin.colManage}</TableHead>
                                         </TableRow></TableHeader>
                                         <TableBody>
                                             {filteredLicenses.length === 0 ? (
@@ -1376,8 +1397,10 @@ export default function AdminDashboard() {
                                     </Table>
                                 </div>
                             </ScrollArea>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
+                    </div>{/* end z-10 */}
+                </div>{/* end factory wrapper */}
                 </>)}
 
                 {/* ═══════════════ TAB: SYSTEM & QUEUE — WORLD-CLASS ENGINE ROOM ═══════════════ */}
@@ -1671,23 +1694,54 @@ export default function AdminDashboard() {
                                 )}
 
                                 {/* ── Terminal Console ── */}
-                                <div className="mt-5 bg-slate-950/80 backdrop-blur-sm rounded-xl p-4 border border-slate-800 max-h-32 overflow-y-auto">
-                                    <div className="flex items-center gap-2 mb-2">
+                                <div className="mt-5 bg-slate-950/80 backdrop-blur-sm rounded-xl p-4 border border-slate-800 max-h-[280px] overflow-y-auto">
+                                    <div className="flex items-center gap-2 mb-3">
                                         <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                                         <span className="text-[9px] text-amber-500/50 uppercase tracking-[0.2em] font-black">Engine Console</span>
+                                        <span className="text-[8px] text-slate-700 font-mono ml-auto">{liveStats.queue.recentHistory?.length || 0} records</span>
                                     </div>
                                     <div className="space-y-0.5 font-mono">
-                                        <p className="text-[11px]"><span className="text-amber-500/50">[SYS]</span> <span className="text-emerald-400/60">Engine initialized — {liveStats.queue.maxConcurrent} slots configured</span></p>
-                                        <p className="text-[11px]"><span className="text-amber-500/50">[CFG]</span> <span className="text-slate-500">Timeout: {liveStats.queue.queueTimeoutMin}m per session</span></p>
-                                        <p className="text-[11px]"><span className="text-amber-500/50">[SEC]</span> <span className="text-blue-400/50">Anti-detection stealth modules loaded</span></p>
-                                        <p className="text-[11px]"><span className="text-amber-500/50">[NET]</span> <span className="text-emerald-400/50">{sseConnected ? 'SSE connection stable — heartbeat OK' : 'SSE disconnected — reconnecting...'}</span></p>
+                                        <p className="text-[11px]"><span className="text-slate-600">[{new Date().toLocaleDateString('th-TH', { day:'numeric', month:'short' })}]</span> <span className="text-amber-500/50">[SYS]</span> <span className="text-emerald-400/60">Engine initialized — {liveStats.queue.maxConcurrent} worker slots configured</span></p>
+                                        <p className="text-[11px]"><span className="text-slate-600">[{new Date().toLocaleDateString('th-TH', { day:'numeric', month:'short' })}]</span> <span className="text-amber-500/50">[CFG]</span> <span className="text-slate-500">Session timeout: {liveStats.queue.queueTimeoutMin} min — Max concurrent: {liveStats.queue.maxConcurrent}</span></p>
+                                        <p className="text-[11px]"><span className="text-slate-600">[{new Date().toLocaleDateString('th-TH', { day:'numeric', month:'short' })}]</span> <span className="text-amber-500/50">[SEC]</span> <span className="text-blue-400/50">Anti-detection stealth modules loaded</span></p>
+                                        <p className="text-[11px]"><span className="text-slate-600">[{new Date().toLocaleDateString('th-TH', { day:'numeric', month:'short' })}]</span> <span className="text-amber-500/50">[NET]</span> <span className="text-emerald-400/50">{sseConnected ? 'SSE connection stable — heartbeat OK' : 'SSE disconnected — reconnecting...'}</span></p>
                                         {liveStats.queue.runningCount > 0 && (
-                                            <p className="text-[11px]"><span className="text-emerald-400/60">[RUN]</span> <span className="text-emerald-300/70">{liveStats.queue.runningCount} thread(s) active — processing...</span></p>
+                                            <p className="text-[11px]"><span className="text-slate-600">[{new Date().toLocaleTimeString('th-TH', { hour12:false })}]</span> <span className="text-emerald-400/60">[RUN]</span> <span className="text-emerald-300/70">{liveStats.queue.runningCount} active thread(s) — automation in progress</span></p>
                                         )}
                                         {liveStats.queue.queueLength > 0 && (
-                                            <p className="text-[11px]"><span className="text-yellow-400/60">[QUE]</span> <span className="text-yellow-300/60">{liveStats.queue.queueLength} request(s) in queue — awaiting slot...</span></p>
+                                            <p className="text-[11px]"><span className="text-slate-600">[{new Date().toLocaleTimeString('th-TH', { hour12:false })}]</span> <span className="text-yellow-400/60">[QUE]</span> <span className="text-yellow-300/60">{liveStats.queue.queueLength} request(s) pending — awaiting available slot</span></p>
                                         )}
-                                        <p className="text-[11px] animate-pulse"><span className="text-amber-500/30">{'>'}</span> <span className="text-slate-600">Waiting for user input...</span></p>
+
+                                        {/* Per-user automation completion logs */}
+                                        {liveStats.queue.recentHistory && liveStats.queue.recentHistory.length > 0 && (
+                                            <>
+                                                <div className="border-t border-slate-800/60 my-1.5" />
+                                                {liveStats.queue.recentHistory.slice(0, 10).map((h: any, hi: number) => {
+                                                    const ts = h.taskStats;
+                                                    const uid = h.displayName || h.userId || 'Unknown';
+                                                    const gsId = `GS${(h.fullUserId || h.userId || '').substring(0, 4).toUpperCase()}`;
+                                                    const typeLabel = h.automationType === 'marketplace' ? 'Marketplace' : 'Group Posting';
+                                                    return (
+                                                        <p key={hi} className="text-[11px] leading-relaxed">
+                                                            <span className="text-slate-600">[{h.completedAtFull || h.completedAtFormatted}]</span>{' '}
+                                                            <span className={h.success ? "text-emerald-400/70" : "text-red-400/70"}>[{h.success ? 'DONE' : 'FAIL'}]</span>{' '}
+                                                            <span className="text-cyan-400/80">USER {gsId}</span>{' '}
+                                                            <span className="text-slate-400">({uid})</span>{' '}
+                                                            <span className="text-slate-500">— {typeLabel} operation completed</span>{' '}
+                                                            <span className="text-slate-500">| Total: </span><span className="text-white/70">{ts?.total ?? h.groupCount}</span>{' '}
+                                                            <span className="text-slate-500">groups | </span>
+                                                            <span className="text-emerald-400/80">Success: {ts?.completed ?? (h.success ? h.groupCount : 0)}</span>{' '}
+                                                            <span className="text-red-400/70">Failed: {ts?.failed ?? (h.success ? 0 : h.groupCount)}</span>{' '}
+                                                            {(ts?.pendingApproval ?? 0) > 0 && (
+                                                                <span className="text-amber-400/70">Pending Approval: {ts.pendingApproval}</span>
+                                                            )}
+                                                            <span className="text-slate-600"> [{h.durationFormatted}]</span>
+                                                        </p>
+                                                    );
+                                                })}
+                                            </>
+                                        )}
+                                        <p className="text-[11px] animate-pulse mt-1"><span className="text-amber-500/30">{'>'}</span> <span className="text-slate-600">Awaiting next operation...</span></p>
                                     </div>
                                 </div>
 
@@ -2506,33 +2560,38 @@ export default function AdminDashboard() {
 
                 {/* ═══════════════ TAB: SUPPORT TERMINAL ═══════════════ */}
                 {activeTab === 'tickets' && (<>
+                <div className="relative rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(180deg, hsl(222 47% 6%) 0%, hsl(222 47% 4%) 100%)' }}>
+                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(148,163,184,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.5) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+                    <motion.div animate={{ top: ['-5%', '105%'] }} transition={{ duration: 7, repeat: Infinity, ease: 'linear' }} className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-amber-500/20 to-transparent pointer-events-none z-20" />
+                    <div className="relative z-10 p-6">
+                    {/* Header */}
+                    <div className="flex items-center gap-3 mb-6 border-b border-amber-500/20 pb-4">
+                        <h2 className="text-2xl font-black text-white tracking-tight uppercase">Support <span className="text-amber-500">Terminal</span></h2>
+                        <Badge variant="outline" className="text-[9px] bg-red-500/10 text-red-400 border-red-500/30 gap-1.5 px-2 py-0.5 font-bold"><Mail className="w-2.5 h-2.5" /> {tickets.filter(t => t.status === 'open').length} OPEN</Badge>
+                    </div>
                     <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
 
-                        {/* Summary Cards — Neon stat modules */}
+                        {/* Summary Cards — Dark factory stat modules */}
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
                             {[
-                                { label: 'Total Tickets', count: tickets.length, icon: <Mail className="w-5 h-5" />, dotColor: 'bg-blue-500', textColor: 'text-blue-500', borderColor: 'border-blue-500/20 hover:border-blue-500/40' },
-                                { label: 'Open', count: tickets.filter(t => t.status === 'open').length, icon: <AlertTriangle className="w-5 h-5" />, dotColor: 'bg-red-500 animate-pulse', textColor: 'text-red-500', borderColor: 'border-red-500/20 hover:border-red-500/40' },
-                                { label: 'In Progress', count: tickets.filter(t => t.status === 'in_progress').length, icon: <Settings className="w-5 h-5" />, dotColor: 'bg-amber-500', textColor: 'text-amber-500', borderColor: 'border-amber-500/20 hover:border-amber-500/40', gear: true },
-                                { label: 'Resolved', count: tickets.filter(t => t.status === 'resolved' || t.status === 'closed').length, icon: <CheckCircle2 className="w-5 h-5" />, dotColor: 'bg-emerald-500', textColor: 'text-emerald-500', borderColor: 'border-emerald-500/20 hover:border-emerald-500/40' },
+                                { label: 'Total Tickets', count: tickets.length, icon: <Mail className="w-4 h-4" />, color: 'text-blue-400' },
+                                { label: 'Open', count: tickets.filter(t => t.status === 'open').length, icon: <AlertTriangle className="w-4 h-4" />, color: 'text-red-400' },
+                                { label: 'In Progress', count: tickets.filter(t => t.status === 'in_progress').length, icon: <Settings className="w-4 h-4" />, color: 'text-amber-400', gear: true },
+                                { label: 'Resolved', count: tickets.filter(t => t.status === 'resolved' || t.status === 'closed').length, icon: <CheckCircle2 className="w-4 h-4" />, color: 'text-emerald-400' },
                             ].map((s, si) => (
-                                <Card key={si} className={cn("transition-all group", s.borderColor)}>
-                                    <CardContent className="pt-5 pb-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className={cn("opacity-50 group-hover:opacity-100 transition-opacity", s.textColor)}>
+                                <div key={si} className="bg-slate-900/60 border border-slate-800 p-4 rounded-2xl hover:border-slate-700 transition-colors group">
+                                        <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                                            <span className={cn("opacity-50 group-hover:opacity-100 transition-opacity", s.color)}>
                                                 {s.gear ? (
                                                     <motion.div animate={s.count > 0 ? { rotate: 360 } : {}} transition={{ duration: 4, repeat: Infinity, ease: "linear" }}>
                                                         {s.icon}
                                                     </motion.div>
                                                 ) : s.icon}
-                                            </div>
-                                            <div>
-                                                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">{s.label}</p>
-                                                <p className={cn("text-2xl font-bold font-mono", s.textColor)}>{s.count}</p>
-                                            </div>
+                                            </span>
+                                            {s.label}
                                         </div>
-                                    </CardContent>
-                                </Card>
+                                        <p className={cn("text-xl font-black font-mono", s.color)}>{s.count}</p>
+                                </div>
                             ))}
                         </div>
 
@@ -2721,6 +2780,8 @@ export default function AdminDashboard() {
                             )}
                         </Card>
                     </motion.div>
+                    </div>{/* end z-10 */}
+                </div>{/* end factory wrapper */}
                 </>)}
 
             </div>{/* end max-w container */}

@@ -45,7 +45,7 @@ import {
   Send,
   MessageCircle,
 } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useFacebookConnection } from '@/hooks/useFacebookConnection';
@@ -57,6 +57,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAppTheme, THEME_PALETTES } from '@/hooks/useTheme';
 import { useLicenseAuth } from '@/hooks/useLicenseAuth';
 import { supabase } from '@/lib/supabase';
+import { apiFetch } from '@/lib/config';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const PKG_CONFIG = {
   free: { label: 'Rookie', gradient: 'from-emerald-500 to-teal-500', icon: Rocket, desc: 'เริ่มต้นใช้งาน' },
@@ -102,6 +104,62 @@ export default function Settings() {
 
   const [connectSlot, setConnectSlot] = useState(0);
   const [showSupportTicket, setShowSupportTicket] = useState(false);
+
+  // ─── My Tickets ───
+  interface MyTicket {
+    id: string;
+    subject: string;
+    description: string;
+    category: string;
+    status: string;
+    admin_reply: string | null;
+    admin_replied_at: string | null;
+    created_at: string;
+  }
+  const [myTickets, setMyTickets] = useState<MyTicket[]>([]);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [deletingTicketId, setDeletingTicketId] = useState<string | null>(null);
+
+  const fetchMyTickets = useCallback(async () => {
+    setTicketsLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data, error } = await supabase
+        .from('support_tickets')
+        .select('id, subject, description, category, status, admin_reply, admin_replied_at, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setMyTickets(data || []);
+    } catch (err) {
+      console.error('Fetch tickets error:', err);
+    } finally {
+      setTicketsLoading(false);
+    }
+  }, []);
+
+  const handleDeleteTicket = async (ticketId: string) => {
+    setDeletingTicketId(ticketId);
+    try {
+      const res = await apiFetch(`/api/support-tickets/${ticketId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(isEn ? 'Ticket deleted' : 'ลบเรื่องแจ้งปัญหาแล้ว');
+        setMyTickets(prev => prev.filter(t => t.id !== ticketId));
+      } else {
+        toast.error(data.error || 'Delete failed');
+      }
+    } catch {
+      toast.error(isEn ? 'Failed to delete' : 'ลบไม่สำเร็จ');
+    } finally {
+      setDeletingTicketId(null);
+    }
+  };
+
+  useEffect(() => {
+    fetchMyTickets();
+  }, [fetchMyTickets]);
 
   const handleDisconnect = async (slot?: number) => {
     const targetSlot = slot ?? activeSlot;
@@ -868,27 +926,115 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* Support Ticket */}
-        <Card className="card-elevated border-cyan-500/20 bg-gradient-to-br from-cyan-50/50 to-blue-50/30 dark:from-cyan-950/20 dark:to-blue-950/10">
-          <CardContent className="p-5">
+        {/* Support Ticket — Create + My Tickets */}
+        <Card className="card-elevated relative overflow-hidden border-cyan-500/20">
+          <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-cyan-500/40 to-transparent" />
+          <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-                  <MessageCircle className="w-5 h-5 text-white" />
+              <CardTitle className="flex items-center gap-2.5 text-sm">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                  <MessageCircle className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <p className="font-semibold text-sm">{isEn ? 'Report an Issue' : 'แจ้งปัญหา'}</p>
-                  <p className="text-[11px] text-muted-foreground">{isEn ? 'We\'ll resolve it ASAP once received' : 'เราจะรีบแก้ไขให้ไวที่สุดเมื่อได้รับเรื่อง'}</p>
+                  <span>{isEn ? 'Support Center' : 'ศูนย์ช่วยเหลือ'}</span>
+                  <p className="text-[10px] font-normal text-muted-foreground mt-0.5">{isEn ? 'Report issues & track responses' : 'แจ้งปัญหาและติดตามการตอบกลับ'}</p>
                 </div>
-              </div>
+              </CardTitle>
               <Button
                 onClick={() => setShowSupportTicket(true)}
-                className="h-9 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold shadow-lg shadow-cyan-500/15 hover:shadow-cyan-500/30 transition-all text-xs px-4"
+                className="h-8 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold shadow-lg shadow-cyan-500/15 hover:shadow-cyan-500/30 transition-all text-xs px-3"
               >
-                <Send className="w-3.5 h-3.5 mr-1.5" />
-                {isEn ? 'Report' : 'แจ้งปัญหา'}
+                <Send className="w-3 h-3 mr-1.5" />
+                {isEn ? 'New Report' : 'แจ้งปัญหาใหม่'}
               </Button>
             </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {/* My Tickets */}
+            {ticketsLoading ? (
+              <div className="flex items-center justify-center py-8 text-muted-foreground gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-xs">กำลังโหลด...</span>
+              </div>
+            ) : myTickets.length === 0 ? (
+              <div className="text-center py-6">
+                <MessageCircle className="w-8 h-8 mx-auto text-muted-foreground/20 mb-2" />
+                <p className="text-xs text-muted-foreground">{isEn ? 'No tickets yet' : 'ยังไม่มีเรื่องแจ้งปัญหา'}</p>
+              </div>
+            ) : (
+              <ScrollArea className="max-h-[300px]">
+                <div className="space-y-2">
+                  {myTickets.map((ticket) => {
+                    const statusColor = ticket.status === 'open' ? 'bg-blue-500'
+                      : ticket.status === 'in_progress' ? 'bg-amber-500'
+                      : ticket.status === 'resolved' ? 'bg-emerald-500'
+                      : 'bg-muted-foreground';
+                    const statusLabel = ticket.status === 'open' ? (isEn ? 'Open' : 'เปิด')
+                      : ticket.status === 'in_progress' ? (isEn ? 'In Progress' : 'ดำเนินการ')
+                      : ticket.status === 'resolved' ? (isEn ? 'Resolved' : 'แก้ไขแล้ว')
+                      : ticket.status === 'closed' ? (isEn ? 'Closed' : 'ปิด') : ticket.status;
+                    const createdDate = new Date(ticket.created_at).toLocaleString('th-TH', {
+                      day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+                    });
+                    return (
+                      <div key={ticket.id} className="p-3 rounded-xl border bg-card/60 hover:border-cyan-500/20 transition-colors">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant="outline" className="text-[9px] font-bold px-1.5 py-0 h-4">
+                                {ticket.category}
+                              </Badge>
+                              <div className="flex items-center gap-1">
+                                <div className={cn('w-1.5 h-1.5 rounded-full', statusColor)} />
+                                <span className="text-[9px] font-medium text-muted-foreground">{statusLabel}</span>
+                              </div>
+                            </div>
+                            <p className="text-xs font-semibold truncate">{ticket.subject}</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{ticket.description}</p>
+                            <p className="text-[9px] text-muted-foreground/50 mt-1 font-mono">{createdDate}</p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="w-7 h-7 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 flex-shrink-0"
+                            onClick={() => handleDeleteTicket(ticket.id)}
+                            disabled={deletingTicketId === ticket.id}
+                          >
+                            {deletingTicketId === ticket.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-3.5 h-3.5" />
+                            )}
+                          </Button>
+                        </div>
+
+                        {/* Admin Reply */}
+                        {ticket.admin_reply && (
+                          <div className="mt-2 p-2.5 rounded-lg bg-amber-500/5 border border-amber-500/20">
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <div className="w-4 h-4 rounded-md bg-amber-500/10 flex items-center justify-center">
+                                <MessageCircle className="w-2.5 h-2.5 text-amber-500" />
+                              </div>
+                              <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                                {isEn ? 'Admin Reply' : 'ผู้ดูแลตอบกลับ'}
+                              </span>
+                              {ticket.admin_replied_at && (
+                                <span className="text-[9px] text-muted-foreground/50 font-mono ml-auto">
+                                  {new Date(ticket.admin_replied_at).toLocaleString('th-TH', {
+                                    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+                                  })}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-foreground leading-relaxed">{ticket.admin_reply}</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            )}
           </CardContent>
         </Card>
 
@@ -907,7 +1053,7 @@ export default function Settings() {
       </div>
 
       {/* Support Ticket Dialog */}
-      <SupportTicketDialog open={showSupportTicket} onOpenChange={setShowSupportTicket} />
+      <SupportTicketDialog open={showSupportTicket} onOpenChange={(v) => { setShowSupportTicket(v); if (!v) fetchMyTickets(); }} />
 
       {/* Facebook Login Dialog — World-class UI */}
       <Dialog open={showLoginPopup} onOpenChange={(open) => { if (!open) handleCloseLoginPopup(); }}>

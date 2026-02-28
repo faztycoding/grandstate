@@ -185,13 +185,30 @@ class AutomationQueue {
       return;
     }
 
+    // Extract per-task stats from worker before removing
+    let taskStats = { completed: 0, failed: 0, pendingApproval: 0, total: job.groupCount };
+    if (job.worker && typeof job.worker.getStatus === 'function') {
+      try {
+        const st = job.worker.getStatus();
+        if (Array.isArray(st.tasks)) {
+          taskStats.completed = st.tasks.filter(t => t.status === 'completed').length;
+          taskStats.failed = st.tasks.filter(t => t.status === 'failed' || t.status === 'error').length;
+          taskStats.pendingApproval = st.tasks.filter(t => t.status === 'pending_approval').length;
+          taskStats.total = st.tasks.length;
+        }
+      } catch (_) { /* ignore */ }
+    }
+
     const record = {
       userId: userId.substring(0, 8) + '...',
+      fullUserId: userId,
+      displayName: job.displayName || userId.substring(0, 8),
       groupCount: job.groupCount,
       durationSec: Math.round((Date.now() - job.startedAt) / 1000),
       success,
       completedAt: Date.now(),
       automationType: job.automationType || 'group',
+      taskStats,
     };
     this.history.push(record);
 
@@ -514,6 +531,7 @@ class AutomationQueue {
       recentHistory: this.history.slice(-20).reverse().map(h => ({
         ...h,
         completedAtFormatted: new Date(h.completedAt).toLocaleTimeString('th-TH', { hour12: false }),
+        completedAtFull: new Date(h.completedAt).toLocaleString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }),
         durationFormatted: `${Math.floor(h.durationSec / 60)}:${String(h.durationSec % 60).padStart(2, '0')}`,
       })),
     };

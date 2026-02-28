@@ -1377,13 +1377,13 @@ export default function AdminDashboard() {
 
                             {/* Amber glow orbs */}
                             <div className={cn(
-                                "absolute -top-20 -left-20 w-64 h-64 rounded-full blur-[100px] transition-all duration-[3000ms] pointer-events-none",
+                                "absolute -top-20 -left-20 w-64 h-64 rounded-full blur-[100px] transition-all pointer-events-none",
                                 liveStats.queue.runningCount > 0 ? "bg-amber-500/15" : "bg-amber-500/5"
-                            )} />
+                            )} style={{ transitionDuration: '3000ms' }} />
                             <div className={cn(
-                                "absolute -bottom-20 -right-20 w-64 h-64 rounded-full blur-[100px] transition-all duration-[3000ms] pointer-events-none",
+                                "absolute -bottom-20 -right-20 w-64 h-64 rounded-full blur-[100px] transition-all pointer-events-none",
                                 liveStats.queue.runningCount > 0 ? "bg-emerald-500/15" : "bg-emerald-500/5"
-                            )} />
+                            )} style={{ transitionDuration: '3000ms' }} />
 
                             <div className="relative z-10 p-6 md:p-10">
                                 {/* ── Header: Engine Identity + Metrics Panel ── */}

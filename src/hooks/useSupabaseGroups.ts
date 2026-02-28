@@ -53,7 +53,6 @@ export function useSupabaseGroups() {
         const stored = localStorage.getItem('facebookGroups');
         if (stored) {
           const parsed = JSON.parse(stored);
-          console.log('[Groups] localStorage fallback:', parsed.length, 'groups');
           setGroups(parsed);
         }
         return;

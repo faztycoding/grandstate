@@ -38,6 +38,7 @@ import { useLicenseAuth } from '@/hooks/useLicenseAuth';
 import { useFacebookConnection } from '@/hooks/useFacebookConnection';
 import { PACKAGE_LIMITS } from '@/hooks/usePackageLimits';
 import { supabase } from '@/lib/supabase';
+import { apiFetch } from '@/lib/config';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { LevelUpEffect } from './LevelUpEffect';
@@ -115,18 +116,22 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
 
     useEffect(() => {
         if (open) {
-            // Load profile data
+            // Load profile data — check localStorage first, then Supabase metadata, then license
             const savedName = localStorage.getItem('profile_display_name') || localStorage.getItem('profile_name') || '';
             const savedAvatar = localStorage.getItem('profile_avatar') || '';
             setProfileName(savedName);
             setProfileAvatar(savedAvatar);
 
-            // Check if name is empty, default to license owner
-            if (!savedName && license?.ownerName) {
-                setTempName(license.ownerName);
-            } else {
-                setTempName(savedName);
+            // Determine best fallback name and sync to localStorage if needed
+            const supabaseName = authUser?.user_metadata?.full_name || '';
+            const fallbackName = savedName || supabaseName || license?.ownerName || '';
+            if (!savedName && fallbackName) {
+                // Sync the best name we have to localStorage so Header picks it up
+                localStorage.setItem('profile_display_name', fallbackName);
+                setProfileName(fallbackName);
+                window.dispatchEvent(new Event('profile-updated'));
             }
+            setTempName(fallbackName || savedName);
 
             // Reset activation state
             setLicenseKeyInput('');
@@ -152,13 +157,14 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
 
     const fetchUsageStats = async () => {
         try {
-            const response = await fetch(`/api/posting/today?userPackage=${currentPackage}`);
+            const response = await apiFetch(`/api/posting/today?userPackage=${currentPackage}`);
+            if (!response.ok) return;
             const data = await response.json();
             if (data.success) {
                 setPostedToday(data.postedToday || 0);
             }
-        } catch (e) {
-            console.error("Failed to fetch stats", e);
+        } catch {
+            // Silent — usage stats are non-critical
         }
     };
 
@@ -214,16 +220,24 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
 
     // --- Profile Editing Handlers ---
 
-    const handleNameSave = () => {
+    const handleNameSave = async () => {
         if (!tempName.trim()) {
             toast.error('กรุณาระบุชื่อ');
             return;
         }
-        setProfileName(tempName);
-        localStorage.setItem('profile_display_name', tempName);
+        const trimmed = tempName.trim();
+        setProfileName(trimmed);
+        localStorage.setItem('profile_display_name', trimmed);
         window.dispatchEvent(new Event('profile-updated'));
         setIsEditingName(false);
         toast.success('บันทึกชื่อเรียบร้อย');
+
+        // Persist to Supabase user_metadata so name survives across devices/browsers
+        try {
+            await supabase.auth.updateUser({ data: { full_name: trimmed } });
+        } catch {
+            // Silent — localStorage is the primary store, Supabase is backup
+        }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {

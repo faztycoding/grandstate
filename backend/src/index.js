@@ -937,6 +937,333 @@ app.post('/api/groups/fetch-info', ...auth, async (req, res) => {
 });
 
 // ====================================
+// Background Group Update Job System
+// ====================================
+// In-memory job store: userId → job state
+const groupUpdateJobs = new Map();
+
+// Start background update of all active groups
+app.post('/api/groups/update-all', ...auth, async (req, res) => {
+  try {
+    const { groups } = req.body; // Array of { id, url, name, memberCount, postsToday, postsLastMonth }
+    if (!groups || !Array.isArray(groups) || groups.length === 0) {
+      return res.status(400).json({ success: false, error: 'groups array is required' });
+    }
+
+    // Check if already running for this user
+    const existing = groupUpdateJobs.get(req.userId);
+    if (existing && existing.status === 'running') {
+      return res.json({ success: true, message: 'already_running', jobId: existing.jobId, current: existing.current, total: existing.total });
+    }
+
+    const jobId = `gu_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const job = {
+      jobId,
+      userId: req.userId,
+      status: 'running',
+      total: groups.length,
+      current: 0,
+      success: 0,
+      failed: 0,
+      currentGroupName: '',
+      startedAt: Date.now(),
+      finishedAt: null,
+      error: null,
+    };
+    groupUpdateJobs.set(req.userId, job);
+
+    // Respond immediately — job runs in background
+    res.json({ success: true, jobId, total: groups.length, message: 'started' });
+
+    // ── Background processing (fire-and-forget) ──
+    const supaUrl = process.env.SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+    const groupWorker = req.groupWorker;
+
+    // Blacklist for group names (FB UI elements)
+    const nameBlacklist = [
+      'การแจ้งเตือน', 'แชท', 'Chat', 'Notifications', 'Messenger',
+      'Facebook', 'หน้าหลัก', 'Home', 'Watch', 'Marketplace',
+      'สร้าง', 'Create', 'เมนู', 'Menu',
+      'Groups', 'กลุ่ม', 'Group', 'กลุ่มของคุณ', 'Your groups',
+      'เข้าร่วมกลุ่ม', 'Join group', 'ค้นพบ', 'Discover',
+    ];
+    const isValidName = (name) => {
+      if (!name || name.length < 3) return false;
+      return !nameBlacklist.some(b => name === b || name.startsWith(b + ' '));
+    };
+
+    (async () => {
+      try {
+        // Initialize browser if needed
+        if (!groupWorker.browser || !groupWorker.browser.isConnected()) {
+          if (!sessionManager.canStartBrowser()) {
+            job.status = 'error';
+            job.error = 'Server busy — too many active browsers';
+            job.finishedAt = Date.now();
+            return;
+          }
+          await groupWorker.initialize();
+          sessionManager.registerBrowserStart();
+        }
+
+        for (let i = 0; i < groups.length; i++) {
+          // Check if cancelled
+          if (job.status === 'cancelled') {
+            console.log(`🛑 [BG-Update] Cancelled by user at ${i}/${groups.length}`);
+            break;
+          }
+
+          const group = groups[i];
+          job.current = i + 1;
+          job.currentGroupName = group.name || `Group ${i + 1}`;
+
+          try {
+            // Call the same scraping logic: navigate to group /about page
+            const page = groupWorker.page;
+            let aboutUrl = group.url.replace(/\/$/, '');
+            if (!aboutUrl.includes('/about')) aboutUrl += '/about';
+            const groupSlug = group.url.match(/facebook\.com\/groups\/([^/?#]+)/)?.[1] || '';
+
+            await page.goto(aboutUrl, { waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {
+              // Fallback: try domcontentloaded
+              return page.goto(aboutUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+            });
+
+            // Handle login redirect
+            const isOnLogin = () => {
+              const u = page.url();
+              return u.includes('/login') || u.includes('login.php');
+            };
+
+            if (isOnLogin()) {
+              try {
+                await page.goto('https://www.facebook.com', { waitUntil: 'domcontentloaded', timeout: 15000 });
+                await new Promise(r => setTimeout(r, 2000));
+                await page.goto(aboutUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+                await new Promise(r => setTimeout(r, 3000));
+              } catch (e) { /* silent */ }
+            }
+
+            if (isOnLogin()) {
+              try {
+                const mbasicUrl = `https://mbasic.facebook.com/groups/${groupSlug}?v=info`;
+                await page.goto(mbasicUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+                await new Promise(r => setTimeout(r, 2000));
+              } catch (e) { /* silent */ }
+            }
+
+            // Close popup overlay
+            await new Promise(r => setTimeout(r, 2000));
+            try {
+              await page.evaluate(() => {
+                const closeBtn = document.querySelector('[aria-label="Close"][role="button"]') || document.querySelector('[aria-label="ปิด"][role="button"]');
+                if (closeBtn) closeBtn.click();
+              });
+              await new Promise(r => setTimeout(r, 1000));
+            } catch (e) { /* silent */ }
+
+            // Scroll to load content
+            await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight * 0.5));
+            await new Promise(r => setTimeout(r, 2000));
+            await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+            await new Promise(r => setTimeout(r, 2000));
+            await page.evaluate(() => window.scrollTo(0, 0));
+            await new Promise(r => setTimeout(r, 500));
+
+            // Extract group info (simplified — reuse same page.evaluate as fetch-info)
+            const info = await page.evaluate(() => {
+              let name = '';
+              let memberCount = 0;
+              const ogTitle = document.querySelector('meta[property="og:title"]');
+              if (ogTitle) name = ogTitle.getAttribute('content')?.trim() || '';
+              if (!name) {
+                const title = document.title || '';
+                if (title.includes('|')) name = title.split('|')[0].trim();
+                else if (title.includes('-')) name = title.split('-')[0].trim();
+              }
+              if (name) name = name.replace(/^\(\d+\)\s*/, '').trim();
+
+              const bodyText = document.body.innerText;
+              const thaiUnits = { 'พัน': 1000, 'หมื่น': 10000, 'แสน': 100000, 'ล้าน': 1000000 };
+
+              // Member count patterns
+              const memberPatterns = [
+                [/สมาชิก\s*([\d.,]+)\s*(พัน|หมื่น|แสน|ล้าน)/, true],
+                [/([\d.,]+)\s*(พัน|หมื่น|แสน|ล้าน)\s*(?:คน\s*)?สมาชิก/, true],
+                [/สมาชิก\s*([\d,]+)\s*คน/, false],
+                [/สมาชิก\s*([\d,]+)/, false],
+                [/([\d,]+)\s*สมาชิก/, false],
+                [/([\d.]+)\s*[Kk]\s*members/i, 'K'],
+                [/([\d.]+)\s*[Mm]\s*members/i, 'M'],
+                [/([\d,]+)\s*members/i, false],
+              ];
+              for (const [pat, unit] of memberPatterns) {
+                const m = bodyText.match(pat);
+                if (m && !memberCount) {
+                  if (unit === true) {
+                    memberCount = Math.round(parseFloat(m[1].replace(',', '.')) * (thaiUnits[m[2]] || 1));
+                  } else if (unit === 'K') {
+                    memberCount = Math.round(parseFloat(m[1]) * 1000);
+                  } else if (unit === 'M') {
+                    memberCount = Math.round(parseFloat(m[1]) * 1000000);
+                  } else {
+                    memberCount = parseInt(m[1].replace(/,/g, ''));
+                  }
+                }
+              }
+
+              // Posts today / month (simplified)
+              let postsToday, postsLastMonth;
+              const parseCompact = (raw) => {
+                if (!raw) return undefined;
+                const s = String(raw).replace(/\u00A0/g, ' ').trim().replace(/\s+/g, '');
+                const mm = s.match(/^([\d.,]+)([KkMm]|พัน|หมื่น|แสน|ล้าน)?$/);
+                if (!mm) return undefined;
+                let num = parseFloat(mm[1].replace(/,/g, ''));
+                const mult = { k: 1000, K: 1000, m: 1000000, M: 1000000, 'พัน': 1000, 'หมื่น': 10000, 'แสน': 100000, 'ล้าน': 1000000 };
+                return Math.round(num * (mult[mm[2]] || 1));
+              };
+              // Check spans for adjacent number + label pattern
+              const spans = document.querySelectorAll('span');
+              const todayLabels = ['โพสต์ใหม่ในวันนี้', 'โพสต์ใหม่วันนี้', 'โพสต์วันนี้', 'new posts today', 'new post today'];
+              const monthLabels = ['โพสต์ในเดือนที่ผ่านมา', 'โพสต์เมื่อเดือนที่แล้ว', 'โพสต์ต่อเดือน', 'โพสต์/เดือน', 'posts in the last month', 'posts last month', 'in the last month'];
+              spans.forEach(span => {
+                const t = (span.textContent?.trim() || '').toLowerCase();
+                const findPrev = (el) => {
+                  let p = el.previousElementSibling;
+                  if (!p && el.parentElement) p = el.parentElement.previousElementSibling;
+                  return p ? (p.textContent?.trim() || '') : '';
+                };
+                if (postsToday === undefined && todayLabels.some(l => t.includes(l.toLowerCase()))) {
+                  const v = parseCompact(findPrev(span));
+                  if (v !== undefined) postsToday = v;
+                }
+                if (postsLastMonth === undefined && monthLabels.some(l => t.includes(l.toLowerCase()))) {
+                  const v = parseCompact(findPrev(span));
+                  if (v !== undefined) postsLastMonth = v;
+                }
+              });
+              // Regex fallback on bodyText
+              if (postsToday === undefined) {
+                const m = bodyText.match(/([\d.,]+\s*(?:[KkMm]|พัน|หมื่น|แสน|ล้าน)?)\s*โพสต์(?:ใหม่)?(?:ใน)?วันนี้/);
+                if (m) postsToday = parseCompact(m[1]);
+              }
+              if (postsLastMonth === undefined) {
+                const m = bodyText.match(/([\d.,]+\s*(?:[KkMm]|พัน|หมื่น|แสน|ล้าน)?)\s*(?:โพสต์)?(?:ใน)?เดือนที่ผ่านมา/);
+                if (m) postsLastMonth = parseCompact(m[1]);
+              }
+              if (postsLastMonth === undefined) {
+                const m = bodyText.match(/([\d.,]+\s*(?:[KkMm])?)\s*in the last month/i);
+                if (m) postsLastMonth = parseCompact(m[1]);
+              }
+
+              return { name, memberCount, postsToday, postsLastMonth };
+            });
+
+            console.log(`📊 [BG-Update ${i + 1}/${groups.length}] ${info.name?.substring(0, 30)} | Members: ${info.memberCount} | Today: ${info.postsToday} | Month: ${info.postsLastMonth}`);
+
+            // Only update if we got useful data
+            if (info.name || info.memberCount) {
+              const scrapedName = info.name || '';
+              const newName = isValidName(scrapedName) ? scrapedName : group.name;
+              const updates = {
+                name: newName,
+                member_count: info.memberCount || group.memberCount || 0,
+                last_updated: new Date().toISOString(),
+              };
+              // Only update posts fields if we actually scraped them
+              if (typeof info.postsToday === 'number') updates.posts_today = info.postsToday;
+              if (typeof info.postsLastMonth === 'number') updates.posts_last_month = info.postsLastMonth;
+
+              // Update Supabase via PostgREST
+              const patchRes = await fetch(`${supaUrl}/rest/v1/facebook_groups?id=eq.${group.id}&user_id=eq.${req.userId}`, {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'apikey': serviceKey,
+                  'Authorization': `Bearer ${serviceKey}`,
+                  'Prefer': 'return=minimal',
+                },
+                body: JSON.stringify(updates),
+              });
+              if (!patchRes.ok) {
+                console.warn(`⚠️ [BG-Update] Supabase PATCH failed for group ${group.id}: ${patchRes.status}`);
+              }
+              job.success++;
+            } else {
+              job.failed++;
+            }
+          } catch (err) {
+            console.warn(`⚠️ [BG-Update] Error on group ${group.name}: ${err.message}`);
+            job.failed++;
+          }
+
+          // Delay between groups to avoid rate limiting
+          if (i < groups.length - 1) {
+            await new Promise(r => setTimeout(r, 2000));
+          }
+        }
+
+        job.status = 'done';
+        job.finishedAt = Date.now();
+        console.log(`✅ [BG-Update] Completed for user ${req.userId.slice(0, 8)}: ${job.success} success, ${job.failed} failed`);
+
+        // Auto-cleanup job after 10 minutes
+        setTimeout(() => {
+          const current = groupUpdateJobs.get(req.userId);
+          if (current && current.jobId === jobId) {
+            groupUpdateJobs.delete(req.userId);
+          }
+        }, 10 * 60 * 1000);
+
+      } catch (err) {
+        job.status = 'error';
+        job.error = err.message;
+        job.finishedAt = Date.now();
+        console.error(`❌ [BG-Update] Fatal error: ${err.message}`);
+      }
+    })();
+
+  } catch (error) {
+    console.error('Update-all start error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Poll background group update status
+app.get('/api/groups/update-all/status', ...auth, (req, res) => {
+  const job = groupUpdateJobs.get(req.userId);
+  if (!job) {
+    return res.json({ success: true, status: 'idle', message: 'No active update job' });
+  }
+  res.json({
+    success: true,
+    jobId: job.jobId,
+    status: job.status,
+    total: job.total,
+    current: job.current,
+    successCount: job.success,
+    failedCount: job.failed,
+    currentGroupName: job.currentGroupName,
+    startedAt: job.startedAt,
+    finishedAt: job.finishedAt,
+    error: job.error,
+  });
+});
+
+// Cancel background group update
+app.post('/api/groups/update-all/cancel', ...auth, (req, res) => {
+  const job = groupUpdateJobs.get(req.userId);
+  if (!job || job.status !== 'running') {
+    return res.json({ success: true, message: 'No running job to cancel' });
+  }
+  job.status = 'cancelled';
+  job.finishedAt = Date.now();
+  res.json({ success: true, message: 'Job cancelled' });
+});
+
+// ====================================
 // Group Posting Automation Endpoints
 // ====================================
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, User, HelpCircle, Settings, LogOut, ChevronDown, Shield, BarChart3, Crown, Rocket, Star, Menu } from 'lucide-react';
+import { Search, User, HelpCircle, Settings, LogOut, ChevronDown, Shield, BarChart3, Crown, Rocket, Star, Menu, Lock } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +16,7 @@ import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useFacebookConnection } from '@/hooks/useFacebookConnection';
 import { useLicenseAuth } from '@/hooks/useLicenseAuth';
-import { getUserPackage } from '@/hooks/usePackageLimits';
+import { getUserPackage, getPackageLimits } from '@/hooks/usePackageLimits';
 import { cn } from '@/lib/utils';
 import { ProfileDialog } from '@/components/profile/ProfileDialog';
 import { useMobileSidebar } from '@/components/layout/Sidebar';
@@ -203,16 +203,17 @@ export function Header({ title, subtitle }: HeaderProps) {
                 </DropdownMenuItem>
 
                 <DropdownMenuItem
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer"
+                  className={cn('flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer', !getPackageLimits(pkg).analytics && 'opacity-50')}
                   onClick={() => navigate('/analytics')}
                 >
                   <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                    <BarChart3 className="w-4 h-4 text-indigo-600" />
+                    {getPackageLimits(pkg).analytics ? <BarChart3 className="w-4 h-4 text-indigo-600" /> : <Lock className="w-4 h-4 text-amber-500" />}
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <p className="text-sm font-medium">{t.nav.analytics || 'Analytics'}</p>
-                    <p className="text-xs text-muted-foreground">{language === 'th' ? 'ดูสถิติการโพสต์' : 'View posting stats'}</p>
+                    <p className="text-xs text-muted-foreground">{!getPackageLimits(pkg).analytics ? (language === 'th' ? 'อัปเกรดเพื่อใช้งาน' : 'Upgrade to unlock') : (language === 'th' ? 'ดูสถิติการโพสต์' : 'View posting stats')}</p>
                   </div>
+                  {!getPackageLimits(pkg).analytics && <Lock className="w-3.5 h-3.5 text-amber-500" />}
                 </DropdownMenuItem>
 
                 <DropdownMenuItem

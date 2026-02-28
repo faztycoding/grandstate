@@ -26,9 +26,14 @@ import {
   Trash2,
   Lightbulb,
   AlertTriangle,
+  Lock,
+  Crown,
+  Rocket,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { useNavigate } from 'react-router-dom';
+import { getUserPackage, getPackageLimits } from '@/hooks/usePackageLimits';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { motion } from 'framer-motion';
 
@@ -77,15 +82,53 @@ const COLORS = ['#f59e0b', '#10b981', '#ef4444', '#6366f1', '#ec4899', '#14b8a6'
 export default function Analytics() {
   const { language } = useLanguage();
   const isEn = language === 'en';
+  const navigate = useNavigate();
+  const currentPkg = getUserPackage();
+  const pkgLimits = getPackageLimits(currentPkg);
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState('7');
   const [refreshKey, setRefreshKey] = useState(0);
 
+  // ── Permission gate: Analytics is Agent/Elite only ──
+  if (!pkgLimits.analytics) {
+    return (
+      <DashboardLayout
+        title={isEn ? 'Analytics & Reports' : 'Analytics & รายงาน'}
+        subtitle={isEn ? 'Track your posting performance' : 'ติดตามผลการโพสต์ของคุณ'}
+      >
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-50 dark:from-amber-900/30 dark:to-amber-800/20 flex items-center justify-center mb-6 shadow-lg">
+            <Lock className="w-8 h-8 text-amber-500" />
+          </div>
+          <h2 className="text-xl font-bold mb-2">{isEn ? 'Analytics Locked' : 'ฟีเจอร์วิเคราะห์ถูกล็อก'}</h2>
+          <p className="text-muted-foreground text-sm max-w-md mb-6">
+            {isEn
+              ? 'Analytics & Reports are available for Top Agent and Elite packages. Upgrade to unlock detailed posting statistics, charts, and performance insights.'
+              : 'ฟีเจอร์ Analytics & รายงานใช้ได้สำหรับแพ็กเกจ Top Agent และ Elite อัปเกรดเพื่อดูสถิติการโพสต์ กราฟ และข้อมูลเชิงลึก'}
+          </p>
+          <div className="flex gap-3">
+            <Button onClick={() => navigate('/pricing')} className="gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg">
+              <Crown className="w-4 h-4" />
+              {isEn ? 'View Packages' : 'ดูแพ็กเกจ'}
+            </Button>
+          </div>
+          <div className="mt-8 p-4 rounded-xl bg-muted/50 border text-xs text-muted-foreground max-w-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <Rocket className="w-4 h-4 text-emerald-500" />
+              <span className="font-semibold">{isEn ? 'Current: Rookie (Free)' : 'ปัจจุบัน: Rookie (ฟรี)'}</span>
+            </div>
+            <p>{isEn ? 'Rookie includes 10 posts/day, 10 groups, 10 properties.' : 'Rookie รวม 10 โพสต์/วัน, 10 กลุ่ม, 10 สินทรัพย์'}</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const pkg = localStorage.getItem('userPackage') || 'elite';
+      const pkg = getUserPackage();
       const res = await apiFetch(`/api/analytics?days=${days}&userPackage=${pkg}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
@@ -94,8 +137,9 @@ export default function Analytics() {
       }
     } catch (err) {
       console.error('Analytics fetch error:', err);
+      const fallbackLimit = pkgLimits.postsPerDay;
       setData({
-        today: { postsCount: 0, limit: 750, remaining: 750 },
+        today: { postsCount: 0, limit: fallbackLimit, remaining: fallbackLimit },
         dailyData: [],
         groupPerformance: [],
         summary: { totalPostsAllTime: 0, totalSuccessAllTime: 0, totalGroupsPosted: 0, avgSuccessRate: 0 },

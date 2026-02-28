@@ -226,72 +226,46 @@ export function useSupabaseGroups() {
     return updateGroup(id, { isActive: !group.isActive });
   }, [groups, updateGroup]);
 
-  // Update all active groups - fetch info from Facebook
-  const updateAllActiveGroups = useCallback(async (
-    onProgress?: (current: number, total: number, groupName: string) => void
-  ) => {
+  // Start background update of all active groups on the server
+  const startBackgroundUpdate = useCallback(async () => {
     const activeGroupsList = groups.filter(g => g.isActive);
-    let success = 0;
-    let failed = 0;
+    if (activeGroupsList.length === 0) return { success: false, error: 'No active groups' };
 
-    // Blacklist: names that are Facebook UI elements, NOT group names
-    const nameBlacklist = [
-      'การแจ้งเตือน', 'แชท', 'Chat', 'Notifications', 'Messenger',
-      'Facebook', 'หน้าหลัก', 'Home', 'Watch', 'Marketplace',
-      'สร้าง', 'Create', 'เมนู', 'Menu',
-      'Groups', 'กลุ่ม', 'Group', 'กลุ่มของคุณ', 'Your groups',
-      'เข้าร่วมกลุ่ม', 'Join group', 'ค้นพบ', 'Discover',
-    ];
-    const isValidName = (name: string) => {
-      if (!name || name.length < 3) return false;
-      return !nameBlacklist.some(b => name === b || name.startsWith(b + ' '));
-    };
+    const payload = activeGroupsList.map(g => ({
+      id: g.id,
+      url: g.url,
+      name: g.name,
+      memberCount: g.memberCount,
+      postsToday: g.postsToday,
+      postsLastMonth: g.postsLastMonth,
+    }));
 
-    for (let i = 0; i < activeGroupsList.length; i++) {
-      const group = activeGroupsList[i];
-      onProgress?.(i + 1, activeGroupsList.length, group.name);
+    const res = await apiFetch('/api/groups/update-all', {
+      method: 'POST',
+      body: JSON.stringify({ groups: payload }),
+    });
+    return res.json();
+  }, [groups]);
 
-      try {
-        const response = await apiFetch('/api/groups/fetch-info', {
-          method: 'POST',
-          body: JSON.stringify({ url: group.url }),
-        });
-
-        const data = await response.json();
-        if (data.success && data.groupInfo) {
-          // Only update name if scraped name is valid (not a FB UI element)
-          const scrapedName = data.groupInfo.name || '';
-          const newName = isValidName(scrapedName) ? scrapedName : group.name;
-          const nextPostsToday = typeof data.groupInfo.postsToday === 'number'
-            ? data.groupInfo.postsToday
-            : group.postsToday;
-          const nextPostsLastMonth = typeof data.groupInfo.postsLastMonth === 'number'
-            ? data.groupInfo.postsLastMonth
-            : group.postsLastMonth;
-
-          await updateGroup(group.id, {
-            name: newName,
-            memberCount: data.groupInfo.memberCount || group.memberCount,
-            postsToday: nextPostsToday,
-            postsLastMonth: nextPostsLastMonth,
-            lastUpdated: new Date(),
-          });
-          success++;
-        } else {
-          failed++;
-        }
-      } catch (error) {
-        failed++;
-      }
-
-      // Delay between requests
-      if (i < activeGroupsList.length - 1) {
-        await new Promise(r => setTimeout(r, 2000));
-      }
+  // Poll background update status
+  const pollUpdateStatus = useCallback(async () => {
+    try {
+      const res = await apiFetch('/api/groups/update-all/status');
+      return res.json();
+    } catch {
+      return { success: false, status: 'error' };
     }
+  }, []);
 
-    return { success, failed };
-  }, [groups, updateGroup]);
+  // Cancel background update
+  const cancelBackgroundUpdate = useCallback(async () => {
+    try {
+      const res = await apiFetch('/api/groups/update-all/cancel', { method: 'POST' });
+      return res.json();
+    } catch {
+      return { success: false };
+    }
+  }, []);
 
   // Get active/inactive groups
   const activeGroups = groups.filter(g => g.isActive);
@@ -330,7 +304,9 @@ export function useSupabaseGroups() {
     deleteGroup,
     deleteAllGroups,
     toggleGroupActive,
-    updateAllActiveGroups,
+    startBackgroundUpdate,
+    pollUpdateStatus,
+    cancelBackgroundUpdate,
     refetch: fetchGroups,
   };
 }

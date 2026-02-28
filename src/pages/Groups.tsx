@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { GroupCard } from '@/components/groups/GroupCard';
 import { Button } from '@/components/ui/button';
@@ -57,7 +57,7 @@ import { apiFetch } from '@/lib/config';
 
 export default function Groups() {
   const { t } = useLanguage();
-  const { groups, activeGroups, inactiveGroups, loading: groupsLoading, error: groupsError, addGroup, updateGroup, deleteGroup, deleteAllGroups, toggleGroupActive, updateAllActiveGroups } = useSupabaseGroups();
+  const { groups, activeGroups, inactiveGroups, loading: groupsLoading, error: groupsError, addGroup, updateGroup, deleteGroup, deleteAllGroups, toggleGroupActive, startBackgroundUpdate, pollUpdateStatus, cancelBackgroundUpdate, refetch } = useSupabaseGroups();
   
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -248,37 +248,97 @@ export default function Groups() {
     setIsDeleteOpen(true);
   };
 
-  // Handle update all active groups
+  // Polling ref for background update
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }, []);
+
+  const startPolling = useCallback(() => {
+    stopPolling();
+    pollRef.current = setInterval(async () => {
+      try {
+        const status = await pollUpdateStatus();
+        if (!status || !status.success) return;
+
+        if (status.status === 'running') {
+          setIsUpdatingAll(true);
+          setUpdateProgress({ current: status.current || 0, total: status.total || 0, groupName: status.currentGroupName || '' });
+        } else if (status.status === 'done' || status.status === 'cancelled' || status.status === 'error') {
+          setIsUpdatingAll(false);
+          setUpdateProgress({ current: 0, total: 0, groupName: '' });
+          stopPolling();
+
+          // Refresh group list from Supabase to get updated data
+          refetch();
+
+          if (status.status === 'done') {
+            if (status.successCount > 0) {
+              toast.success(`อัพเดทสำเร็จ ${status.successCount} กลุ่ม`, {
+                description: status.failedCount > 0 ? `ล้มเหลว ${status.failedCount} กลุ่ม` : 'ข้อมูลกลุ่มเป็นปัจจุบันแล้ว',
+              });
+            } else {
+              toast.error('ไม่สามารถอัพเดทข้อมูลได้', { description: 'ตรวจสอบการเชื่อมต่อ Facebook' });
+            }
+          } else if (status.status === 'cancelled') {
+            toast.info('ยกเลิกการอัพเดทแล้ว');
+          } else if (status.status === 'error') {
+            toast.error('เกิดข้อผิดพลาด: ' + (status.error || 'Unknown'));
+          }
+        } else if (status.status === 'idle') {
+          // No job — stop polling
+          setIsUpdatingAll(false);
+          stopPolling();
+        }
+      } catch {
+        // Network error — keep polling
+      }
+    }, 2000);
+  }, [pollUpdateStatus, stopPolling, refetch]);
+
+  // On mount: check if there's already a running job (user navigated away and came back)
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const status = await pollUpdateStatus();
+        if (!mounted) return;
+        if (status?.status === 'running') {
+          setIsUpdatingAll(true);
+          setUpdateProgress({ current: status.current || 0, total: status.total || 0, groupName: status.currentGroupName || '' });
+          startPolling();
+        }
+      } catch { /* silent */ }
+    })();
+    return () => { mounted = false; stopPolling(); };
+  }, []);
+
+  // Handle update all active groups — fires backend job + starts polling
   const handleUpdateAllGroups = async () => {
     if (activeGroups.length === 0) {
       toast.error('ไม่มีกลุ่มที่เปิดใช้งาน');
       return;
     }
-    
+
     setIsUpdatingAll(true);
     setUpdateProgress({ current: 0, total: activeGroups.length, groupName: '' });
-    
-    toast.info(`กำลังอัพเดทข้อมูล ${activeGroups.length} กลุ่ม...`, {
-      description: 'กรุณารอสักครู่',
+
+    toast.info(`กำลังอัพเดทข้อมูล ${activeGroups.length} กลุ่มในเบื้องหลัง...`, {
+      description: 'คุณสามารถไปดูหน้าอื่นได้ ระบบจะทำงานต่อให้อัตโนมัติ',
     });
 
     try {
-      const result = await updateAllActiveGroups((current, total, groupName) => {
-        setUpdateProgress({ current, total, groupName });
-      });
-      
-      if (result.success > 0) {
-        toast.success(`อัพเดทสำเร็จ ${result.success} กลุ่ม`, {
-          description: result.failed > 0 ? `ล้มเหลว ${result.failed} กลุ่ม` : undefined,
-        });
-      } else {
-        toast.error('ไม่สามารถอัพเดทข้อมูลได้', {
-          description: 'ตรวจสอบการเชื่อมต่อ Facebook',
-        });
+      const result = await startBackgroundUpdate();
+      if (result?.message === 'already_running') {
+        toast.info('กำลังอัพเดทอยู่แล้ว', { description: `${result.current}/${result.total} กลุ่ม` });
       }
+      startPolling();
     } catch (error) {
-      toast.error('เกิดข้อผิดพลาดในการอัพเดท');
-    } finally {
+      toast.error('เกิดข้อผิดพลาดในการเริ่มอัพเดท');
       setIsUpdatingAll(false);
       setUpdateProgress({ current: 0, total: 0, groupName: '' });
     }

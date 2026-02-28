@@ -118,7 +118,7 @@ export default function Automation() {
   const [delayBetweenPosts, setDelayBetweenPosts] = useState(10);
   const [selectedBrowser, setSelectedBrowser] = useState<'chrome' | 'firefox' | 'edge'>('chrome');
   const [userPackage, setUserPackage] = useState<'free' | 'agent' | 'elite'>(() => {
-    return (localStorage.getItem('userPackage') as 'free' | 'agent' | 'elite') || 'elite';
+    return (localStorage.getItem('userPackage') as 'free' | 'agent' | 'elite') || 'free';
   });
   const [postingMode, setPostingMode] = useState<'group' | 'marketplace'>('marketplace'); // Default to marketplace
   const [selectedFbSlot, setSelectedFbSlot] = useState<number>(activeSlot);
@@ -1288,8 +1288,8 @@ export default function Automation() {
             </motion.div>
           )}
 
-          {/* Scheduled Posts — shows only when there are schedules */}
-          <ScheduledPostsCard />
+          {/* Scheduled Posts — Agent/Elite only */}
+          {getPackageLimits(userPackage).scheduledPosting && <ScheduledPostsCard />}
 
           {/* Daily Usage Card */}
           <DailyUsageCard userPackage={userPackage} />

@@ -17,6 +17,7 @@ import {
   User,
   Menu,
   X,
+  Lock,
 } from 'lucide-react';
 import { GrandStateLogo } from '@/components/GrandStateLogo';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,7 @@ import { useLicenseAuth } from '@/hooks/useLicenseAuth';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { apiFetch, isAdminEmail } from '@/lib/config';
+import { getUserPackage, getPackageLimits } from '@/hooks/usePackageLimits';
 
 // Context for mobile sidebar toggle
 interface MobileSidebarContextType {
@@ -43,13 +45,13 @@ export function MobileSidebarProvider({ children }: { children: React.ReactNode 
 }
 
 const navigationItems = [
-  { key: 'properties' as const, href: '/properties', icon: Building2 },
-  { key: 'addProperty' as const, href: '/gallery', icon: PlusCircle },
-  { key: 'groups' as const, href: '/groups', icon: Users },
-  { key: 'automation' as const, href: '/automation', icon: Zap },
-  { key: 'analytics' as const, href: '/analytics', icon: BarChart3 },
-  { key: 'pricing' as const, href: '/pricing', icon: Crown },
-  { key: 'settings' as const, href: '/settings', icon: Settings },
+  { key: 'properties' as const, href: '/properties', icon: Building2, requiresFeature: null as string | null },
+  { key: 'addProperty' as const, href: '/gallery', icon: PlusCircle, requiresFeature: null as string | null },
+  { key: 'groups' as const, href: '/groups', icon: Users, requiresFeature: null as string | null },
+  { key: 'automation' as const, href: '/automation', icon: Zap, requiresFeature: null as string | null },
+  { key: 'analytics' as const, href: '/analytics', icon: BarChart3, requiresFeature: 'analytics' as string | null },
+  { key: 'pricing' as const, href: '/pricing', icon: Crown, requiresFeature: null as string | null },
+  { key: 'settings' as const, href: '/settings', icon: Settings, requiresFeature: null as string | null },
 ];
 
 interface ActiveUsersState {
@@ -243,6 +245,8 @@ function SidebarContent({
         {navigationItems.map((item) => {
           const isActive = location.pathname === item.href;
           const label = t.nav[item.key] || item.key;
+          const currentLimits = getPackageLimits(getUserPackage());
+          const isLocked = item.requiresFeature ? !(currentLimits as any)[item.requiresFeature] : false;
           return (
             <Link
               key={item.key}
@@ -250,25 +254,30 @@ function SidebarContent({
               onClick={onNavigate}
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative overflow-hidden',
-                isActive
-                  ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-glow'
-                  : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                isLocked
+                  ? 'text-sidebar-foreground/40 hover:bg-sidebar-accent/50'
+                  : isActive
+                    ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-glow'
+                    : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
               )}
             >
-              {isActive && <span className="sidebar-active-bar" />}
-              <item.icon className={cn('w-5 h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110', isActive && 'animate-pulse-glow')} />
+              {isActive && !isLocked && <span className="sidebar-active-bar" />}
+              <item.icon className={cn('w-5 h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110', isActive && !isLocked && 'animate-pulse-glow', isLocked && 'opacity-40')} />
               {!collapsed && (
                 <motion.span
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="font-medium"
+                  className={cn('font-medium flex-1', isLocked && 'opacity-40')}
                 >
                   {label}
                 </motion.span>
               )}
+              {!collapsed && isLocked && (
+                <Lock className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+              )}
               {collapsed && (
                 <div className="absolute left-full ml-2 px-2 py-1 bg-foreground text-background text-sm rounded-md opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
-                  {label}
+                  {label}{isLocked ? ' 🔒' : ''}
                 </div>
               )}
             </Link>

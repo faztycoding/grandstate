@@ -738,9 +738,9 @@ export default function Automation() {
       title={t.automation.title}
       subtitle={t.automation.subtitle}
     >
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Property & Groups Selection */}
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid grid-cols-12 gap-4 lg:gap-5">
+        {/* ═══ LEFT WING: Raw Material Intake ═══ */}
+        <div className="col-span-12 lg:col-span-3 space-y-4">
           {/* Step 1: Property Selection */}
           <Card className="card-elevated card-hover-lift relative overflow-hidden">
             <div className="absolute top-0 left-0 w-24 h-24 bg-gradient-to-br from-blue-500/5 to-transparent rounded-full blur-2xl pointer-events-none" />
@@ -962,8 +962,107 @@ export default function Automation() {
           </Card>
         </div>
 
-        {/* Right Column - Actions */}
-        <div className="space-y-6">
+        {/* ═══ CENTER: The Engine Core ═══ */}
+        <div className="col-span-12 lg:col-span-6 space-y-4">
+          <Card className="card-elevated relative overflow-hidden border-accent/20 bg-gradient-to-br from-accent/[0.02] via-transparent to-orange-500/[0.02]">
+            {/* Blueprint grid overlay */}
+            <div className="pointer-events-none absolute inset-0 opacity-[0.02] dark:opacity-[0.04]" style={{
+              backgroundImage: 'linear-gradient(hsl(var(--accent) / 0.4) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--accent) / 0.4) 1px, transparent 1px)',
+              backgroundSize: '30px 30px',
+            }} />
+            <CardContent className="py-8 lg:py-10 flex flex-col items-center justify-center relative min-h-[420px]">
+              {/* Rotating Gears */}
+              <div className="relative w-48 h-48 lg:w-60 lg:h-60 flex items-center justify-center mb-6">
+                <motion.div
+                  animate={automation.isRunning ? { rotate: 360 } : { rotate: 0 }}
+                  transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                  className="absolute text-muted-foreground/[0.04]"
+                >
+                  <Settings size={260} strokeWidth={0.3} />
+                </motion.div>
+                <motion.div
+                  animate={automation.isRunning ? { rotate: -360 } : { rotate: 0 }}
+                  transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+                  className="absolute text-accent/[0.08]"
+                >
+                  <Settings size={180} strokeWidth={0.5} />
+                </motion.div>
+                {/* Central Core */}
+                <div className={cn(
+                  "relative z-10 w-32 h-32 lg:w-40 lg:h-40 rounded-full border-2 bg-card/80 backdrop-blur-sm flex flex-col items-center justify-center transition-all duration-500",
+                  automation.isRunning
+                    ? "border-accent/40 shadow-[0_0_60px_hsl(var(--accent)/0.12)]"
+                    : "border-border shadow-lg"
+                )}>
+                  <motion.div
+                    animate={automation.isRunning ? { scale: [1, 1.12, 1] } : {}}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    <Zap className={cn("w-12 h-12 lg:w-14 lg:h-14", automation.isRunning ? "text-accent" : "text-muted-foreground/25")} />
+                  </motion.div>
+                  <span className={cn(
+                    "text-[9px] font-mono uppercase tracking-[0.15em] font-bold mt-1",
+                    automation.isRunning ? "text-accent" : "text-muted-foreground/40"
+                  )}>
+                    {automation.isRunning ? 'Engine Active' : 'Standby'}
+                  </span>
+                  {automation.isRunning && (
+                    <motion.div
+                      animate={{ top: ['10%', '90%', '10%'] }}
+                      transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                      className="absolute inset-x-6 h-px bg-accent/30 shadow-[0_0_8px_hsl(var(--accent)/0.5)]"
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="w-full max-w-sm space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
+                    {automation.isRunning ? 'Production Progress' : 'System Ready'}
+                  </span>
+                  {automation.totalSteps > 0 && (
+                    <Badge variant="secondary" className="text-[10px] font-mono">
+                      {resolvedTasks}/{automation.totalSteps}
+                    </Badge>
+                  )}
+                </div>
+                <Progress value={progressPercent} className="h-2" />
+                {automation.isRunning && (
+                  <div className="flex justify-between text-[10px] text-muted-foreground">
+                    <span className="text-green-600 dark:text-green-400">{completedTasks + pendingApprovalTasks} สำเร็จ</span>
+                    {failedTasks > 0 && <span className="text-destructive">{failedTasks} ล้มเหลว</span>}
+                    <span>{progressPercent}%</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Anti-Detection Module Status Indicators */}
+              <div className="w-full max-w-sm mt-5 grid grid-cols-3 gap-2">
+                {[
+                  { Icon: Shield, label: 'Anti-Detect', desc: '6-Layer Active', color: 'text-green-500' },
+                  { Icon: Fingerprint, label: 'Fingerprint', desc: 'Canvas/WebGL', color: 'text-blue-500' },
+                  { Icon: Eye, label: 'Gaussian Jitter', desc: `σ=2.5s | ${delayBetweenPosts}s`, color: 'text-amber-500' },
+                ].map((mod, i) => (
+                  <div key={i} className="flex items-center gap-2 p-2.5 rounded-xl border bg-card/60 hover:border-accent/20 transition-colors">
+                    <mod.Icon className={cn("w-4 h-4 flex-shrink-0", mod.color)} />
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold truncate">{mod.label}</p>
+                      <p className="text-[9px] text-muted-foreground truncate">{mod.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Health Check Card — prominent center placement */}
+          <HealthCheckCard result={healthResult} />
+        </div>
+
+        {/* ═══ RIGHT WING: Ignition Panel ═══ */}
+        <div className="col-span-12 lg:col-span-3 space-y-4">
           {/* Step 3: Start Automation */}
           <Card className="card-elevated card-hover-lift relative overflow-hidden border-accent/40 bg-gradient-to-br from-accent/5 via-orange-500/5 to-rose-500/5">
             {/* Decorative glow */}
@@ -1288,14 +1387,57 @@ export default function Automation() {
             </motion.div>
           )}
 
-          {/* Scheduled Posts — Agent/Elite only */}
-          {getPackageLimits(userPackage).scheduledPosting && <ScheduledPostsCard />}
+        </div>
 
-          {/* Daily Usage Card */}
-          <DailyUsageCard userPackage={userPackage} />
+        {/* ═══ BOTTOM: Production Dashboard ═══ */}
+        <div className="col-span-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {/* Daily Usage */}
+            <DailyUsageCard userPackage={userPackage} />
 
-          {/* Health Check Card */}
-          <HealthCheckCard result={healthResult} />
+            {/* Scheduled Posts — Agent/Elite only */}
+            {getPackageLimits(userPackage).scheduledPosting && <ScheduledPostsCard />}
+
+            {/* Captions Lab — AI-generated captions live viewer */}
+            <Card className="card-elevated relative overflow-hidden">
+              <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-purple-500" />
+                  <span>Captions Lab</span>
+                  {generatedCaptions.length > 0 && (
+                    <Badge variant="secondary" className="text-[10px] font-mono">{generatedCaptions.length}</Badge>
+                  )}
+                </CardTitle>
+                <CardDescription className="text-[11px]">
+                  แคปชั่นที่ AI สร้างให้แต่ละกลุ่ม (ดูสดระหว่างโพสต์)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {generatedCaptions.length > 0 ? (
+                  <ScrollArea className="h-[200px]">
+                    <div className="space-y-2">
+                      {generatedCaptions.map((caption, i) => (
+                        <div key={i} className="p-2.5 rounded-lg bg-muted/50 border text-xs leading-relaxed group hover:border-accent/30 transition-colors">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className="w-5 h-5 rounded-md bg-accent/10 flex items-center justify-center text-[9px] font-bold text-accent font-mono">{i + 1}</span>
+                            <span className="text-[9px] text-muted-foreground font-medium">AI Generated</span>
+                          </div>
+                          <p className="whitespace-pre-wrap text-[11px] leading-relaxed">{caption.substring(0, 300)}{caption.length > 300 ? '…' : ''}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                ) : (
+                  <div className="h-[200px] flex flex-col items-center justify-center text-muted-foreground/50">
+                    <Sparkles className="w-10 h-10 mb-3 opacity-20" />
+                    <p className="text-xs font-medium">ยังไม่มี Caption</p>
+                    <p className="text-[10px] mt-0.5">เริ่ม Automation เพื่อดู AI Caption สดๆ</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
 

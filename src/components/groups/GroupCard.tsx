@@ -73,10 +73,10 @@ export function GroupCard({
         group.isActive ? "bg-green-500" : "bg-gray-300"
       )} />
 
-      <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 pl-4 sm:pl-5">
+      <div className="flex items-center gap-2.5 sm:gap-4 p-3 sm:p-4 pl-4 sm:pl-5">
         {/* Icon */}
         <div className={cn(
-          "flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center",
+          "flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center",
           group.isActive 
             ? "bg-gradient-to-br from-blue-500 to-blue-600" 
             : "bg-gray-200"
@@ -98,7 +98,7 @@ export function GroupCard({
           </h3>
           
           {/* Meta info row */}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+          <div className="flex flex-wrap items-center gap-x-2 sm:gap-x-3 gap-y-1 text-xs sm:text-sm">
             {/* Member count */}
             <span className="text-muted-foreground flex items-center gap-1">
               <Users className="w-3.5 h-3.5" />

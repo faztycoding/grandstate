@@ -499,21 +499,21 @@ export default function Settings() {
           {/* Card gradient accent bar — always Facebook blue */}
           <div className="h-1 bg-gradient-to-r from-[#1877F2] to-[#0D47A1]" />
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <CardTitle className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-[#1877F2] flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-[#1877F2] flex items-center justify-center flex-shrink-0">
                     <Facebook className="w-4.5 h-4.5 text-white" />
                   </div>
-                  {t.settings.facebookConnection}
+                  <span className="truncate">{t.settings.facebookConnection}</span>
                 </CardTitle>
                 <CardDescription className="mt-1">
                   {t.settings.facebookDesc}
                 </CardDescription>
               </div>
               {/* Session Slots Indicator */}
-              <div className="text-right">
-                <div className="flex items-center gap-1 justify-end">
+              <div className="flex sm:flex-col items-center sm:items-end gap-2 sm:gap-0">
+                <div className="flex items-center gap-1">
                   {Array.from({ length: pkgLimits.fbAccounts }, (_, i) => (
                     <div key={i} className={cn(
                       "w-3 h-3 rounded-full border-2 transition-all",
@@ -523,7 +523,7 @@ export default function Settings() {
                     )} />
                   ))}
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-1">{fbConnectedCount}/{pkgLimits.fbAccounts} sessions ({pkgTheme.label})</p>
+                <p className="text-[10px] text-muted-foreground sm:mt-1">{fbConnectedCount}/{pkgLimits.fbAccounts} sessions ({pkgTheme.label})</p>
               </div>
             </div>
           </CardHeader>
@@ -543,8 +543,8 @@ export default function Settings() {
                   const activeSession = fbSessions[activeSlot];
                   const hasActive = activeSession && activeSession.name;
                   return hasActive ? (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-3 min-w-0">
                         <div className="relative">
                           {activeSession.profilePic ? (
                             <img src={activeSession.profilePic} alt={activeSession.name || ''} className="w-11 h-11 rounded-full object-cover ring-2 ring-[#1877F2]/40" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
@@ -558,7 +558,7 @@ export default function Settings() {
                           </div>
                         </div>
                         <div>
-                          <p className="font-semibold text-sm">{activeSession.name}</p>
+                          <p className="font-semibold text-sm truncate">{activeSession.name}</p>
                           <div className="flex items-center gap-1.5 mt-0.5">
                             <Badge className="bg-[#1877F2]/10 text-[#1877F2] dark:bg-[#1877F2]/20 dark:text-blue-400 text-[9px] h-4 px-1.5">
                               Slot {activeSlot + 1} — ใช้โพสต์
@@ -566,7 +566,7 @@ export default function Settings() {
                           </div>
                         </div>
                       </div>
-                      <p className="text-[10px] text-muted-foreground">เปลี่ยนได้ด้านล่าง ↓</p>
+                      <p className="text-[10px] text-muted-foreground flex-shrink-0 hidden sm:block">เปลี่ยนได้ด้านล่าง ↓</p>
                     </div>
                   ) : (
                     <p className="text-sm text-[#1877F2] dark:text-blue-400">เลือก session ด้านล่างเพื่อกำหนดบัญชีโพสต์</p>
@@ -625,7 +625,7 @@ export default function Settings() {
                     <div
                       key={i}
                       className={cn(
-                        "relative flex items-center gap-3 p-3 rounded-xl border-2 transition-all group",
+                        "relative flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-xl border-2 transition-all group",
                         hasUser && isActive
                           ? "border-[#1877F2] bg-[#1877F2]/5 dark:bg-[#1877F2]/10 ring-1 ring-[#1877F2]/20 shadow-sm"
                           : hasUser
@@ -686,7 +686,7 @@ export default function Settings() {
                         {hasUser ? (
                           <>
                             <p className="text-sm font-semibold truncate">{session.name}</p>
-                            <div className="flex items-center gap-1.5 mt-0.5">
+                            <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 mt-0.5">
                               <Badge className={cn(
                                 "text-[9px] h-4 px-1.5",
                                 isActive
@@ -944,7 +944,7 @@ export default function Settings() {
                 {/* Step 1 */}
                 <div className="flex flex-col items-center flex-1">
                   <div className={cn(
-                    "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300",
+                    "w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300",
                     loginStep === 'opening'
                       ? "border-[#1877F2] bg-blue-50 dark:bg-blue-950/50"
                       : "border-green-500 bg-green-50 dark:bg-green-950/50"
@@ -963,7 +963,7 @@ export default function Settings() {
                 {/* Step 2 */}
                 <div className="flex flex-col items-center flex-1">
                   <div className={cn(
-                    "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300",
+                    "w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300",
                     loginStep === 'opening' ? "border-muted bg-muted/30" :
                     (loginStep === 'waiting' || loginStep === 'checking') ? "border-[#1877F2] bg-blue-50 dark:bg-blue-950/50" :
                     "border-green-500 bg-green-50 dark:bg-green-950/50"
@@ -986,7 +986,7 @@ export default function Settings() {
                 {/* Step 3 */}
                 <div className="flex flex-col items-center flex-1">
                   <div className={cn(
-                    "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300",
+                    "w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300",
                     loginStep === 'success' ? "border-green-500 bg-green-50 dark:bg-green-950/50" : "border-muted bg-muted/30"
                   )}>
                     {loginStep === 'success' ? (

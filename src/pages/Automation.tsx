@@ -1129,17 +1129,19 @@ export default function Automation() {
               </div>
 
               {/* Delay Setting */}
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-muted/60 to-muted/30 border border-border/50">
-                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                  <Timer className="w-4 h-4 text-blue-500" />
+              <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-muted/60 to-muted/30 border border-border/50">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                    <Timer className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">{t.automation.delay}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      ระหว่าง batch (+ สุ่ม 2-5 วินาที)
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">{t.automation.delay}</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    ระหว่าง batch (+ สุ่ม 2-5 วินาที)
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <Input
                     type="number"
                     min={5}
@@ -1162,7 +1164,7 @@ export default function Automation() {
               <div className="space-y-2 pt-1">
                 {automation.isRunning ? (
                   <Button
-                    className="w-full h-12 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white shadow-lg shadow-red-500/20 transition-all duration-300"
+                    className="w-full h-11 sm:h-12 text-sm sm:text-base bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white shadow-lg shadow-red-500/20 transition-all duration-300"
                     size="lg"
                     onClick={stopAutomation}
                   >
@@ -1172,12 +1174,12 @@ export default function Automation() {
                 ) : (
                   <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                     <Button
-                      className="w-full h-12 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-600 hover:via-orange-600 hover:to-rose-600 text-white shadow-lg shadow-orange-500/25 disabled:opacity-50 disabled:shadow-none btn-shine relative overflow-hidden"
+                      className="w-full h-11 sm:h-12 text-sm sm:text-base bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-600 hover:via-orange-600 hover:to-rose-600 text-white shadow-lg shadow-orange-500/25 disabled:opacity-50 disabled:shadow-none btn-shine relative overflow-hidden"
                       size="lg"
                       onClick={() => setShowConfirmDialog(true)}
                       disabled={!isConnected || !selectedProperty || selectedGroups.length === 0}
                     >
-                      <Play className="w-5 h-5 mr-2" />
+                      <Play className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
                       {t.automation.startAutomation} ({selectedGroups.length} {t.automation.groups})
                     </Button>
                   </motion.div>

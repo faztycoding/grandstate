@@ -203,7 +203,7 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-xl max-h-[90vh] p-0 gap-0 overflow-hidden border-none shadow-2xl">
+            <DialogContent className="max-w-xl max-h-[90vh] w-[calc(100vw-2rem)] sm:w-full p-0 gap-0 overflow-hidden border-none shadow-2xl">
                 {/* Hidden File Input */}
                 <input
                     type="file"
@@ -214,7 +214,7 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
                 />
 
                 {/* Header Banner */}
-                <div className={cn('bg-gradient-to-r p-4 sm:p-6 relative', pkg.gradient)}>
+                <div className={cn('bg-gradient-to-r px-4 py-4 sm:p-6 relative', pkg.gradient)}>
                     <div className="flex items-center gap-4">
                         {/* Avatar with Camera Overlay */}
                         <div className={cn(
@@ -285,8 +285,8 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
                     </div>
                 </div>
 
-                <ScrollArea className="h-full max-h-[calc(90vh-120px)] bg-zinc-50/50 dark:bg-zinc-900/50">
-                    <div className="p-6 space-y-6">
+                <ScrollArea className="h-full max-h-[calc(90vh-140px)] bg-zinc-50/50 dark:bg-zinc-900/50">
+                    <div className="p-4 sm:p-6 space-y-5 sm:space-y-6">
 
                         {/* Usage Stats Section */}
                         <div className="space-y-3">
@@ -376,9 +376,9 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
                 </ScrollArea>
 
                 {/* Footer Action */}
-                <div className="p-4 border-t bg-background">
+                <div className="p-3 sm:p-4 border-t bg-background">
                     <Button
-                        className="w-full font-bold text-md h-12 shadow-sm active:scale-[0.98] transition-transform"
+                        className="w-full font-bold text-sm sm:text-md h-10 sm:h-12 shadow-sm active:scale-[0.98] transition-transform"
                         onClick={() => onOpenChange(false)}
                     >
                         <Check className="w-5 h-5 mr-2" />

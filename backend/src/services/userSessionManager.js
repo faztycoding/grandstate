@@ -2,6 +2,13 @@ import { GroupPostingWorker } from './groupPostingWorker.js';
 import { MarketplaceWorker } from './marketplaceWorker.js';
 import { PostingTracker } from './postingTracker.js';
 import { PostScheduler } from './scheduler.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PROFILES_DIR = path.resolve(__dirname, '../../profiles');
 
 const MAX_CONCURRENT_BROWSERS = 10;
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes inactivity
@@ -187,8 +194,8 @@ class UserSessionManager {
       createdAt: Date.now(),
       // Multi-session FB: array of connected FB accounts (indexed by slot)
       // Each entry: { slot, name, profilePic, connectedAt } or null if empty
-      fbSessions: [],
-      activeSlot: 0, // which slot the groupWorker is currently using
+      fbSessions: this._loadFbSessions(userId),
+      activeSlot: this._loadActiveSlot(userId),
     };
   }
 
@@ -201,11 +208,13 @@ class UserSessionManager {
   setFbSession(userId, slot, data) {
     const session = this.getSession(userId);
     session.fbSessions[slot] = data ? { slot, ...data, connectedAt: data.connectedAt || new Date().toISOString() } : null;
+    this._saveFbSessions(userId, session.fbSessions, session.activeSlot);
   }
 
   clearFbSession(userId, slot) {
     const session = this.getSession(userId);
     session.fbSessions[slot] = null;
+    this._saveFbSessions(userId, session.fbSessions, session.activeSlot);
   }
 
   getActiveSlot(userId) {
@@ -216,6 +225,53 @@ class UserSessionManager {
   setActiveSlot(userId, slot) {
     const session = this.getSession(userId);
     session.activeSlot = slot;
+    this._saveFbSessions(userId, session.fbSessions, session.activeSlot);
+  }
+
+  // ── FB Session persistence ──
+  _getFbSessionsPath(userId) {
+    return path.join(PROFILES_DIR, userId, 'fb-sessions.json');
+  }
+
+  _saveFbSessions(userId, fbSessions, activeSlot) {
+    try {
+      const filePath = this._getFbSessionsPath(userId);
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      const data = { fbSessions: fbSessions || [], activeSlot: activeSlot || 0, updatedAt: new Date().toISOString() };
+      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+    } catch (e) {
+      console.warn(`⚠️ Failed to save FB sessions for ${userId.substring(0, 8)}:`, e.message);
+    }
+  }
+
+  _loadFbSessions(userId) {
+    try {
+      const filePath = this._getFbSessionsPath(userId);
+      if (fs.existsSync(filePath)) {
+        const raw = fs.readFileSync(filePath, 'utf8');
+        const data = JSON.parse(raw);
+        if (Array.isArray(data.fbSessions) && data.fbSessions.some(s => s && s.name)) {
+          console.log(`📂 Restored ${data.fbSessions.filter(s => s && s.name).length} FB session(s) for ${userId.substring(0, 8)}`);
+          return data.fbSessions;
+        }
+      }
+    } catch (e) {
+      console.warn(`⚠️ Failed to load FB sessions for ${userId.substring(0, 8)}:`, e.message);
+    }
+    return [];
+  }
+
+  _loadActiveSlot(userId) {
+    try {
+      const filePath = this._getFbSessionsPath(userId);
+      if (fs.existsSync(filePath)) {
+        const raw = fs.readFileSync(filePath, 'utf8');
+        const data = JSON.parse(raw);
+        return data.activeSlot || 0;
+      }
+    } catch (e) { }
+    return 0;
   }
 
   canStartBrowser() {

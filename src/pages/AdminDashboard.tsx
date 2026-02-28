@@ -1454,20 +1454,69 @@ export default function AdminDashboard() {
                             <div className="relative z-10 p-6 md:p-10">
                                 {/* ── Header: Engine Identity + Metrics Panel ── */}
                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10">
-                                    <div className="flex items-center gap-4">
-                                        <div className="relative">
-                                            <div className="p-3 bg-amber-500/15 rounded-xl border border-amber-500/30 shadow-lg shadow-amber-500/10">
-                                                <motion.div animate={liveStats.queue.runningCount > 0 ? { rotate: 360 } : {}} transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}>
-                                                    <Settings className={cn("w-6 h-6 text-amber-500", liveStats.queue.runningCount > 0 && "drop-shadow-[0_0_6px_rgba(245,158,11,0.5)]")} />
+                                    <div className="flex items-center gap-5">
+                                        {/* 3D Rotating Gear */}
+                                        <div className="relative w-16 h-16 flex-shrink-0">
+                                            {/* Outer glow ring */}
+                                            <div className={cn(
+                                                "absolute inset-0 rounded-2xl transition-all",
+                                                liveStats.queue.runningCount > 0
+                                                    ? "shadow-[0_0_30px_rgba(245,158,11,0.3),0_0_60px_rgba(245,158,11,0.1)] bg-amber-500/10"
+                                                    : "shadow-[0_0_15px_rgba(245,158,11,0.1)] bg-amber-500/5"
+                                            )} style={{ transitionDuration: '2000ms' }} />
+                                            {/* Main gear container with 3D perspective */}
+                                            <div className="absolute inset-0 rounded-2xl border border-amber-500/30 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 overflow-hidden" style={{ perspective: '200px' }}>
+                                                {/* Inner highlight for 3D depth */}
+                                                <div className="absolute inset-[1px] rounded-2xl bg-gradient-to-br from-amber-500/10 via-transparent to-amber-500/5" />
+                                                {/* Back gear layer (slower, opacity) */}
+                                                <motion.div
+                                                    animate={{ rotate: -360 }}
+                                                    transition={{ duration: liveStats.queue.runningCount > 0 ? 8 : 30, repeat: Infinity, ease: 'linear' }}
+                                                    className="absolute inset-0 flex items-center justify-center"
+                                                    style={{ transform: 'translateZ(-10px)' }}
+                                                >
+                                                    <Settings className="w-14 h-14 text-amber-500/10" strokeWidth={1.5} />
                                                 </motion.div>
+                                                {/* Front gear layer (main, spinning) */}
+                                                <motion.div
+                                                    animate={{ rotate: 360 }}
+                                                    transition={{ duration: liveStats.queue.runningCount > 0 ? 3 : 15, repeat: Infinity, ease: 'linear' }}
+                                                    className="absolute inset-0 flex items-center justify-center"
+                                                >
+                                                    <Settings className={cn(
+                                                        "w-9 h-9 transition-all",
+                                                        liveStats.queue.runningCount > 0
+                                                            ? "text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]"
+                                                            : "text-amber-500/60"
+                                                    )} strokeWidth={2} style={{ transitionDuration: '2000ms' }} />
+                                                </motion.div>
+                                                {/* Metallic sheen sweep */}
+                                                <motion.div
+                                                    animate={{ x: ['-100%', '200%'] }}
+                                                    transition={{ duration: 3, repeat: Infinity, repeatDelay: 4, ease: 'easeInOut' }}
+                                                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none"
+                                                    style={{ width: '50%' }}
+                                                />
                                             </div>
+                                            {/* Active indicator */}
                                             {liveStats.queue.runningCount > 0 && (
-                                                <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50 animate-pulse" />
+                                                <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.7)] animate-pulse border-2 border-slate-900" />
                                             )}
                                         </div>
                                         <div>
-                                            <h3 className="text-xl md:text-2xl font-black tracking-tighter uppercase">
-                                                Grand$tate Engine <span className="text-amber-500/60 text-xs font-normal">v1.0</span>
+                                            <h3 className="text-xl md:text-2xl font-black tracking-tighter uppercase flex items-baseline gap-0">
+                                                <span className="text-white">GRAND</span>
+                                                <span className="relative inline-block">
+                                                    <span className="bg-gradient-to-b from-yellow-300 via-amber-400 to-yellow-600 bg-clip-text text-transparent" style={{ filter: 'drop-shadow(0 0 8px rgba(245,158,11,0.5)) drop-shadow(0 0 2px rgba(255,215,0,0.8))' }}>$</span>
+                                                    <motion.span
+                                                        animate={{ opacity: [0.3, 0.8, 0.3] }}
+                                                        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                                                        className="absolute inset-0 bg-gradient-to-b from-yellow-200 via-amber-300 to-yellow-500 bg-clip-text text-transparent blur-[1px]"
+                                                        aria-hidden="true"
+                                                    >$</motion.span>
+                                                </span>
+                                                <span className="text-white">TATE ENGINE</span>
+                                                <span className="text-amber-500/50 text-[10px] font-mono font-normal ml-2 tracking-wider">v1.0</span>
                                             </h3>
                                             <p className="text-[10px] text-amber-500/40 uppercase tracking-[0.25em] mt-0.5 font-mono">Real Estate Automation Core</p>
                                         </div>

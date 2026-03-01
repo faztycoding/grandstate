@@ -115,7 +115,7 @@ function ChainDivider() {
       <motion.div
         animate={{ x: [0, -160] }}
         transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-        className="relative flex gap-0 text-slate-400/30 dark:text-slate-700/60 whitespace-nowrap select-none"
+        className="relative flex gap-0 text-foreground/30 dark:text-foreground/60 whitespace-nowrap select-none"
       >
         {Array.from({ length: 30 }).map((_, i) => (
           <span key={i} className="text-lg tracking-tight">🔗</span>
@@ -143,7 +143,7 @@ function AutomationMonitor({ side, children }: { side: 'left' | 'right'; childre
 function TerminalLine({ prefix, children, color = 'text-emerald-500' }: { prefix: string; children: React.ReactNode; color?: string }) {
   return (
     <div className="flex gap-2">
-      <span className="text-muted-foreground/50 flex-shrink-0">[{prefix}]</span>
+      <span className="text-foreground/50 flex-shrink-0">[{prefix}]</span>
       <span className={color}>{children}</span>
     </div>
   );
@@ -175,14 +175,14 @@ export default function Help() {
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-          className="pointer-events-none fixed -top-32 -right-32 z-0 text-muted-foreground/[0.03]"
+          className="pointer-events-none fixed -top-32 -right-32 z-0 text-foreground/[0.03]"
         >
           <Settings size={350} strokeWidth={0.5} />
         </motion.div>
         <motion.div
           animate={{ rotate: -360 }}
           transition={{ duration: 35, repeat: Infinity, ease: "linear" }}
-          className="pointer-events-none fixed -bottom-40 -left-40 z-0 text-muted-foreground/[0.03]"
+          className="pointer-events-none fixed -bottom-40 -left-40 z-0 text-foreground/[0.03]"
         >
           <Settings size={400} strokeWidth={0.5} />
         </motion.div>
@@ -194,7 +194,7 @@ export default function Help() {
               <Monitor size={13} className="animate-pulse" />
               <span className="font-bold tracking-wider">AUTOMATION ENGINE</span>
             </div>
-            <div className="text-[10px] text-muted-foreground">ID: GS-MAIN-01 | STATUS: STANDBY</div>
+            <div className="text-[10px] text-foreground">ID: GS-MAIN-01 | STATUS: STANDBY</div>
           </AutomationMonitor>
 
           <AutomationMonitor side="right">
@@ -202,7 +202,7 @@ export default function Help() {
               <span className="font-bold tracking-wider">SYSTEM LOAD</span>
               <Activity size={13} className="animate-bounce" />
             </div>
-            <div className="text-[10px] text-muted-foreground">OPTIMAL | LATENCY: 0.04ms</div>
+            <div className="text-[10px] text-foreground">OPTIMAL | LATENCY: 0.04ms</div>
           </AutomationMonitor>
         </div>
 
@@ -238,9 +238,9 @@ export default function Help() {
                       <step.icon className="w-4 h-4 text-accent" />
                       <span className="text-sm font-bold">{step.title}</span>
                     </div>
-                    <p className="text-[10px] text-muted-foreground font-mono mb-1.5">{step.desc}</p>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{step.detail}</p>
-                    <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/20 group-hover:text-accent absolute top-4 right-4 transition-colors" />
+                    <p className="text-[10px] text-foreground font-mono mb-1.5">{step.desc}</p>
+                    <p className="text-xs text-foreground leading-relaxed">{step.detail}</p>
+                    <ArrowRight className="w-3.5 h-3.5 text-foreground/20 group-hover:text-accent absolute top-4 right-4 transition-colors" />
                   </motion.div>
                 </Link>
               ))}
@@ -289,14 +289,14 @@ export default function Help() {
                     <p className="text-sm font-bold">{isEn ? 'Automated Asset Distribution' : 'กระจายสินทรัพย์อัตโนมัติ'}</p>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">
+                <p className="text-xs text-foreground leading-relaxed">
                   {isEn
                     ? 'Creates a listing on Facebook Marketplace with human-like behavior and shares to selected groups. Anti-detection system ensures maximum safety.'
                     : 'สร้าง Listing บน Facebook Marketplace จำลองพฤติกรรมมนุษย์ และแชร์ไปยังกลุ่มที่เลือก ระบบ Anti-detection ช่วยให้ปลอดภัยสูงสุด'}
                 </p>
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   {['#ANTI-DETECTION', '#SMART_RESIZE', '#AUTO_FILL'].map(t => (
-                    <span key={t} className="px-2 py-0.5 bg-blue-500/8 border border-blue-500/20 text-[10px] text-blue-600 dark:text-blue-400 font-mono rounded">{t}</span>
+                    <span key={t} className="px-2 py-0.5 bg-blue-500/8 border border-blue-500/20 text-[10px] text-foreground dark:text-blue-400 font-mono rounded">{t}</span>
                   ))}
                 </div>
               </div>
@@ -317,14 +317,14 @@ export default function Help() {
                     <p className="text-sm font-bold">{isEn ? 'Cluster Deployment System' : 'ระบบกระจายแบบคลัสเตอร์'}</p>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">
+                <p className="text-xs text-foreground leading-relaxed">
                   {isEn
                     ? 'Distributes property data to target groups simultaneously with content rotation to prevent spam detection.'
                     : 'กระจายข้อมูลทรัพย์สินลงสู่กลุ่มเป้าหมายพร้อมกัน พร้อมระบบหมุนเวียน Content ป้องกันการตรวจจับ Spam'}
                 </p>
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   {['#MASS_BROADCAST', '#CAPTION_AI', '#BUY_SELL'].map(t => (
-                    <span key={t} className="px-2 py-0.5 bg-[hsl(var(--accent)/0.08)] border border-[hsl(var(--accent)/0.2)] text-[10px] text-accent font-mono rounded">{t}</span>
+                    <span key={t} className="px-2 py-0.5 bg-[hsl(var(--accent)/0.08)] border border-[hsl(var(--accent)/0.2)] text-[10px] text-foreground font-mono rounded">{t}</span>
                   ))}
                 </div>
               </div>
@@ -365,7 +365,7 @@ export default function Help() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold">{f.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{f.desc}</p>
+                    <p className="text-xs text-foreground mt-0.5 leading-relaxed">{f.desc}</p>
                   </div>
                 </motion.div>
               ))}
@@ -397,7 +397,7 @@ export default function Help() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-medium">{tip.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{tip.desc}</p>
+                    <p className="text-xs text-foreground mt-0.5">{tip.desc}</p>
                   </div>
                 </div>
               ))}
@@ -441,7 +441,7 @@ export default function Help() {
                       {faq.q}
                     </span>
                   </AccordionTrigger>
-                  <AccordionContent className="text-sm text-muted-foreground leading-relaxed pl-8">
+                  <AccordionContent className="text-sm text-foreground leading-relaxed pl-8">
                     {faq.a}
                   </AccordionContent>
                 </AccordionItem>
@@ -456,7 +456,7 @@ export default function Help() {
             <SectionHeader
               icon={Scale}
               title={isEn ? 'Legal & Compliance' : 'ข้อกำหนดและความเป็นส่วนตัว'}
-              color="text-slate-400"
+              color="text-muted-foreground"
             />
             <Accordion type="single" collapsible className="w-full">
               <AccordionItem value="disclaimer" className="border-slate-200/50 dark:border-slate-700/50">
@@ -466,7 +466,7 @@ export default function Help() {
                     {isEn ? 'Disclaimer' : 'ข้อจำกัดความรับผิดชอบ'}
                   </span>
                 </AccordionTrigger>
-                <AccordionContent className="text-xs text-muted-foreground leading-relaxed">
+                <AccordionContent className="text-xs text-foreground leading-relaxed">
                   {isEn
                     ? 'GrandState is a posting assistance tool. The developer is not responsible if your Facebook account is restricted, suspended, or banned. The app provides Health Check monitoring and recommendations, but the user assumes all responsibility for posting behavior and account safety.'
                     : 'GrandState เป็นเครื่องมือช่วยโพสต์ ผู้พัฒนาไม่รับผิดชอบหากบัญชี Facebook ถูกจำกัด ระงับ หรือแบน แอปมีระบบ Health Check คอยตรวจสอบและแนะนำ แต่ผู้ใช้รับผิดชอบพฤติกรรมการโพสต์และความปลอดภัยของบัญชีตนเอง'}
@@ -480,11 +480,11 @@ export default function Help() {
                   </span>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <ul className="text-xs text-muted-foreground space-y-1.5 leading-relaxed">
-                    <li className="flex items-start gap-2"><span className="text-cyan-500/60 font-mono text-[10px] mt-0.5">01</span> {isEn ? 'Provided "as is" without warranty.' : 'ให้บริการ "ตามสภาพ" โดยไม่มีการรับประกัน'}</li>
-                    <li className="flex items-start gap-2"><span className="text-cyan-500/60 font-mono text-[10px] mt-0.5">02</span> {isEn ? 'Users must comply with Facebook\'s Terms of Service.' : 'ผู้ใช้ต้องปฏิบัติตามข้อกำหนดของ Facebook'}</li>
-                    <li className="flex items-start gap-2"><span className="text-cyan-500/60 font-mono text-[10px] mt-0.5">03</span> {isEn ? 'Users are responsible for content and posting frequency.' : 'ผู้ใช้รับผิดชอบเนื้อหาและความถี่ในการโพสต์'}</li>
-                    <li className="flex items-start gap-2"><span className="text-cyan-500/60 font-mono text-[10px] mt-0.5">04</span> {isEn ? 'Do not use for spam, scam, or illegal activity.' : 'ห้ามใช้เพื่อสแปม หลอกลวง หรือกิจกรรมผิดกฎหมาย'}</li>
+                  <ul className="text-xs text-foreground space-y-1.5 leading-relaxed">
+                    <li className="flex items-start gap-2"><span className="text-foreground/60 font-mono text-[10px] mt-0.5">01</span> {isEn ? 'Provided "as is" without warranty.' : 'ให้บริการ "ตามสภาพ" โดยไม่มีการรับประกัน'}</li>
+                    <li className="flex items-start gap-2"><span className="text-foreground/60 font-mono text-[10px] mt-0.5">02</span> {isEn ? 'Users must comply with Facebook\'s Terms of Service.' : 'ผู้ใช้ต้องปฏิบัติตามข้อกำหนดของ Facebook'}</li>
+                    <li className="flex items-start gap-2"><span className="text-foreground/60 font-mono text-[10px] mt-0.5">03</span> {isEn ? 'Users are responsible for content and posting frequency.' : 'ผู้ใช้รับผิดชอบเนื้อหาและความถี่ในการโพสต์'}</li>
+                    <li className="flex items-start gap-2"><span className="text-foreground/60 font-mono text-[10px] mt-0.5">04</span> {isEn ? 'Do not use for spam, scam, or illegal activity.' : 'ห้ามใช้เพื่อสแปม หลอกลวง หรือกิจกรรมผิดกฎหมาย'}</li>
                   </ul>
                 </AccordionContent>
               </AccordionItem>
@@ -531,7 +531,7 @@ export default function Help() {
             { label: isEn ? 'Automation' : 'Automation', link: '/automation', icon: Zap, color: 'text-accent' },
             { label: isEn ? 'Properties' : 'สินทรัพย์', link: '/properties', icon: Building2, color: 'text-blue-500' },
             { label: isEn ? 'Analytics' : 'วิเคราะห์', link: '/analytics', icon: BarChart3, color: 'text-violet-500' },
-            { label: isEn ? 'Settings' : 'ตั้งค่า', link: '/settings', icon: Cog, color: 'text-slate-500' },
+            { label: isEn ? 'Settings' : 'ตั้งค่า', link: '/settings', icon: Cog, color: 'text-muted-foreground' },
           ].map((item) => (
             <Link key={item.link} to={item.link}>
               <Button variant="outline" className="w-full justify-start gap-2 h-11 border-slate-200 dark:border-slate-700 hover:border-[hsl(var(--accent)/0.4)] hover:bg-[hsl(var(--accent)/0.04)] transition-all font-mono text-xs">

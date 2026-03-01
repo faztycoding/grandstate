@@ -1080,7 +1080,7 @@ export default function Automation() {
                   className="absolute inset-8"
                 >
                   <Settings className={cn("w-full h-full transition-colors duration-500",
-                    automation.isRunning ? "text-accent/[0.07]" : "text-slate-700/[0.04]"
+                    automation.isRunning ? "text-accent/[0.07]" : "text-foreground/[0.04]"
                   )} strokeWidth={0.3} />
                 </motion.div>
 
@@ -1091,7 +1091,7 @@ export default function Automation() {
                   className="absolute inset-14"
                 >
                   <Settings className={cn("w-full h-full transition-colors duration-500",
-                    automation.isRunning ? "text-purple-500/[0.08]" : "text-slate-700/[0.03]"
+                    automation.isRunning ? "text-purple-500/[0.08]" : "text-foreground/[0.03]"
                   )} strokeWidth={0.4} />
                 </motion.div>
 
@@ -1123,12 +1123,12 @@ export default function Automation() {
                     transition={{ duration: 2, repeat: Infinity }}
                   >
                     <Zap className={cn("w-10 h-10 lg:w-12 lg:h-12 transition-colors duration-500",
-                      automation.isRunning ? "text-accent drop-shadow-[0_0_12px_hsl(var(--accent)/0.5)]" : "text-slate-400"
+                      automation.isRunning ? "text-accent drop-shadow-[0_0_12px_hsl(var(--accent)/0.5)]" : "text-muted-foreground"
                     )} />
                   </motion.div>
                   <span className={cn(
                     "text-[8px] font-mono uppercase tracking-[0.2em] font-black mt-1 transition-colors duration-500",
-                    automation.isRunning ? "text-accent" : "text-slate-400"
+                    automation.isRunning ? "text-accent" : "text-muted-foreground"
                   )}>
                     {automation.isRunning ? 'ACTIVE' : 'STANDBY'}
                   </span>
@@ -1155,7 +1155,7 @@ export default function Automation() {
               <div className="w-full max-w-sm space-y-2.5">
                 <div className="flex justify-between items-center">
                   <span className={cn("text-[10px] font-mono uppercase tracking-wider transition-colors",
-                    automation.isRunning ? "text-accent/70" : "text-slate-400"
+                    automation.isRunning ? "text-accent/70" : "text-muted-foreground"
                   )}>
                     {automation.isRunning ? 'Production Progress' : 'System Ready'}
                   </span>
@@ -1211,8 +1211,8 @@ export default function Automation() {
                     <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", mod.bgColor)}>
                       <mod.Icon className={cn("w-4 h-4", mod.color)} />
                     </div>
-                    <p className="text-[10px] font-bold text-slate-300 text-center">{mod.label}</p>
-                    <p className="text-[8px] text-slate-400 font-mono text-center">{mod.desc}</p>
+                    <p className="text-[10px] font-bold text-muted-foreground text-center">{mod.label}</p>
+                    <p className="text-[8px] text-muted-foreground font-mono text-center">{mod.desc}</p>
                   </motion.div>
                 ))}
               </div>

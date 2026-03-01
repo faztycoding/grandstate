@@ -210,6 +210,61 @@ app.get('/api/user/profile', ...auth, async (req, res) => {
   }
 });
 
+// User real stats — actual posts today, groups count, properties count
+app.get('/api/user/real-stats', ...auth, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const supaUrl = process.env.SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+    const headers = { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}`, 'Content-Type': 'application/json' };
+
+    // 1. Posts today from PostingTracker (in-memory via sessionManager)
+    let postsToday = 0;
+    let automationRuns = 0;
+    try {
+      const session = sessionManager.sessions.get(userId);
+      if (session?.postingTracker) {
+        const todayStats = session.postingTracker.getTodayStats('elite');
+        postsToday = todayStats.postsCount || 0;
+        automationRuns = todayStats.automationRuns || 0;
+      } else {
+        // Fallback: read from disk
+        const { PostingTracker } = await import('./services/postingTracker.js');
+        const pt = new PostingTracker(userId);
+        const ts = pt.getTodayStats('elite');
+        postsToday = ts.postsCount || 0;
+        automationRuns = ts.automationRuns || 0;
+      }
+    } catch (e) { /* non-critical */ }
+
+    // 2. Groups count from Supabase
+    let groupsCount = 0;
+    try {
+      const r = await fetch(`${supaUrl}/rest/v1/facebook_groups?user_id=eq.${userId}&select=id`, {
+        headers: { ...headers, 'Prefer': 'count=exact', 'Range': '0-0' },
+      });
+      const ct = r.headers.get('content-range');
+      if (ct) groupsCount = parseInt(ct.split('/')[1] || '0', 10) || 0;
+      else { const d = await r.json(); groupsCount = Array.isArray(d) ? d.length : 0; }
+    } catch (e) { /* non-critical */ }
+
+    // 3. Properties count from Supabase
+    let propertiesCount = 0;
+    try {
+      const r = await fetch(`${supaUrl}/rest/v1/properties?user_id=eq.${userId}&select=id`, {
+        headers: { ...headers, 'Prefer': 'count=exact', 'Range': '0-0' },
+      });
+      const ct = r.headers.get('content-range');
+      if (ct) propertiesCount = parseInt(ct.split('/')[1] || '0', 10) || 0;
+      else { const d = await r.json(); propertiesCount = Array.isArray(d) ? d.length : 0; }
+    } catch (e) { /* non-critical */ }
+
+    res.json({ success: true, postsToday, automationRuns, groupsCount, propertiesCount, syncedAt: new Date().toISOString() });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Active users count for sidebar display
 app.get('/api/session/active-users', ...auth, (req, res) => {
   try {

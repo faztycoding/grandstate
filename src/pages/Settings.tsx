@@ -458,12 +458,38 @@ export default function Settings() {
     toast.success(t.common.success);
   };
 
+  // Real usage stats
+  const [realStats, setRealStats] = useState<{ postsToday: number; groupsCount: number; propertiesCount: number; syncedAt: string | null; loading: boolean }>({
+    postsToday: 0, groupsCount: 0, propertiesCount: 0, syncedAt: null, loading: false,
+  });
+
+  const fetchRealStats = useCallback(async () => {
+    setRealStats(prev => ({ ...prev, loading: true }));
+    try {
+      const res = await apiFetch('/api/user/real-stats');
+      const data = await res.json();
+      if (data.success) {
+        setRealStats({
+          postsToday: data.postsToday ?? 0,
+          groupsCount: data.groupsCount ?? 0,
+          propertiesCount: data.propertiesCount ?? 0,
+          syncedAt: data.syncedAt,
+          loading: false,
+        });
+      } else { setRealStats(prev => ({ ...prev, loading: false })); }
+    } catch { setRealStats(prev => ({ ...prev, loading: false })); }
+  }, []);
+
+  useEffect(() => { fetchRealStats(); }, [fetchRealStats]);
+
   // Derived data for industrial gauges
   const pkgAccent = pkg === 'elite' ? 'purple' : pkg === 'agent' ? 'amber' : 'emerald';
   const accentMap = { purple: { text: 'text-purple-400', bg: 'bg-purple-500', border: 'border-purple-500', shadow: 'shadow-purple-500/30', glow: 'shadow-[0_0_30px_rgba(168,85,247,0.3)]' }, amber: { text: 'text-amber-400', bg: 'bg-amber-500', border: 'border-amber-500', shadow: 'shadow-amber-500/30', glow: 'shadow-[0_0_30px_rgba(245,158,11,0.3)]' }, emerald: { text: 'text-emerald-400', bg: 'bg-emerald-500', border: 'border-emerald-500', shadow: 'shadow-emerald-500/30', glow: 'shadow-[0_0_30px_rgba(52,211,153,0.3)]' } };
   const accent = accentMap[pkgAccent];
   const licenseDaysLeft = authLicense?.expiresAt ? Math.max(0, Math.ceil((new Date(authLicense.expiresAt).getTime() - Date.now()) / 86400000)) : null;
-  const syncTime = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const syncTime = realStats.syncedAt
+    ? new Date(realStats.syncedAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false })
+    : '—';
 
   return (
     <DashboardLayout title={t.settings.title} subtitle={t.settings.subtitle}>
@@ -527,17 +553,43 @@ export default function Settings() {
 
             <div className="grid grid-cols-2 gap-3">
               {[
-                { label: s.postsPerDay || 'Posts/Day', value: pkgLimits.postsPerDay, icon: Zap, valueClass: 'text-cyan-300' },
-                { label: s.groupsLabel || 'Groups', value: pkgLimits.maxGroups, icon: Activity, valueClass: 'text-amber-300' },
-                { label: s.propertiesLabel || 'Properties', value: pkgLimits.maxProperties === Infinity ? '∞' : pkgLimits.maxProperties, icon: Database, valueClass: accent.text },
-                { label: isEn ? 'Sync Time' : 'เวลาซิงค์', value: syncTime, icon: Clock, valueClass: 'text-slate-100' },
+                {
+                  label: isEn ? 'Posts Today' : 'โพสต์วันนี้',
+                  value: realStats.loading ? '…' : String(realStats.postsToday),
+                  sub: `/ ${pkgLimits.postsPerDay} ${isEn ? 'limit' : 'จำกัด'}`,
+                  icon: Zap, valueClass: 'text-cyan-300',
+                },
+                {
+                  label: isEn ? 'Groups' : 'กลุ่ม',
+                  value: realStats.loading ? '…' : String(realStats.groupsCount),
+                  sub: `/ ${pkgLimits.maxGroups} ${isEn ? 'limit' : 'จำกัด'}`,
+                  icon: Activity, valueClass: 'text-amber-300',
+                },
+                {
+                  label: isEn ? 'Properties' : 'สินทรัพย์',
+                  value: realStats.loading ? '…' : String(realStats.propertiesCount),
+                  sub: pkgLimits.maxProperties === Infinity ? `∞ ${isEn ? 'limit' : 'จำกัด'}` : `/ ${pkgLimits.maxProperties} ${isEn ? 'limit' : 'จำกัด'}`,
+                  icon: Database, valueClass: accent.text,
+                },
+                {
+                  label: isEn ? 'Sync Time' : 'เวลาซิงค์',
+                  value: syncTime,
+                  sub: null,
+                  icon: Clock, valueClass: 'text-slate-100',
+                },
               ].map((item, i) => (
-                <div key={i} className="rounded-xl border border-slate-700/70 bg-slate-950/70 p-3.5">
+                <div key={i} className="rounded-xl border border-slate-700/70 bg-slate-950/70 p-3.5 relative">
                   <div className="flex items-center gap-2 text-slate-400 mb-2">
                     <item.icon className="w-4 h-4" />
                     <span className="text-xs uppercase tracking-wider">{item.label}</span>
+                    {i === 3 && (
+                      <button onClick={fetchRealStats} disabled={realStats.loading} className="ml-auto text-slate-600 hover:text-slate-300 transition-colors disabled:opacity-40">
+                        <RefreshCw className={cn('w-3 h-3', realStats.loading && 'animate-spin')} />
+                      </button>
+                    )}
                   </div>
-                  <p className={cn("text-xl font-black font-mono leading-none", item.valueClass)}>{item.value}</p>
+                  <p className={cn('text-xl font-black font-mono leading-none', item.valueClass)}>{item.value}</p>
+                  {item.sub && <p className="text-[10px] text-slate-600 mt-1 font-mono">{item.sub}</p>}
                 </div>
               ))}
             </div>

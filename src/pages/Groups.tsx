@@ -282,7 +282,7 @@ export default function Groups() {
                 description: status.failedCount > 0 ? `ล้มเหลว ${status.failedCount} กลุ่ม` : 'ข้อมูลกลุ่มเป็นปัจจุบันแล้ว',
               });
             } else {
-              toast.error('ไม่สามารถอัพเดทข้อมูลได้', { description: 'ตรวจสอบการเชื่อมต่อ Facebook' });
+              toast.info('ข้อมูลกลุ่มเป็นปัจจุบันแล้ว', { description: 'ไม่พบข้อมูลใหม่จาก Facebook' });
             }
           } else if (status.status === 'cancelled') {
             toast.info('ยกเลิกการอัพเดทแล้ว');

@@ -1102,7 +1102,13 @@ app.post('/api/groups/update-all', ...auth, async (req, res) => {
                 await new Promise(r => setTimeout(r, 3000));
               } catch (e) { /* silent */ }
             }
-
+            if (isOnLogin()) {
+              try {
+                const mobileUrl = `https://m.facebook.com/groups/${groupSlug}/about`;
+                await page.goto(mobileUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+                await new Promise(r => setTimeout(r, 3000));
+              } catch (e) { /* silent */ }
+            }
             if (isOnLogin()) {
               try {
                 const mbasicUrl = `https://mbasic.facebook.com/groups/${groupSlug}?v=info`;
@@ -1221,36 +1227,32 @@ app.post('/api/groups/update-all', ...auth, async (req, res) => {
 
             console.log(`📊 [BG-Update ${i + 1}/${groups.length}] ${info.name?.substring(0, 30)} | Members: ${info.memberCount} | Today: ${info.postsToday} | Month: ${info.postsLastMonth}`);
 
-            // Only update if we got useful data
-            if (info.name || info.memberCount) {
-              const scrapedName = info.name || '';
-              const newName = isValidName(scrapedName) ? scrapedName : group.name;
-              const updates = {
-                name: newName,
-                member_count: info.memberCount || group.memberCount || 0,
-                last_updated: new Date().toISOString(),
-              };
-              // Only update posts fields if we actually scraped them
-              if (typeof info.postsToday === 'number') updates.posts_today = info.postsToday;
-              if (typeof info.postsLastMonth === 'number') updates.posts_last_month = info.postsLastMonth;
+            // Build update payload — always patch last_updated so user sees the check ran
+            const scrapedName = info.name || '';
+            const newName = isValidName(scrapedName) ? scrapedName : group.name;
+            const updates = {
+              name: newName || group.name,
+              member_count: info.memberCount || group.memberCount || 0,
+              last_updated: new Date().toISOString(),
+            };
+            if (typeof info.postsToday === 'number') updates.posts_today = info.postsToday;
+            if (typeof info.postsLastMonth === 'number') updates.posts_last_month = info.postsLastMonth;
 
-              // Update Supabase via PostgREST
-              const patchRes = await fetch(`${supaUrl}/rest/v1/facebook_groups?id=eq.${group.id}&user_id=eq.${req.userId}`, {
-                method: 'PATCH',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'apikey': serviceKey,
-                  'Authorization': `Bearer ${serviceKey}`,
-                  'Prefer': 'return=minimal',
-                },
-                body: JSON.stringify(updates),
-              });
-              if (!patchRes.ok) {
-                console.warn(`⚠️ [BG-Update] Supabase PATCH failed for group ${group.id}: ${patchRes.status}`);
-              }
-              job.success++;
-            } else {
+            const patchRes = await fetch(`${supaUrl}/rest/v1/facebook_groups?id=eq.${group.id}&user_id=eq.${req.userId}`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'apikey': serviceKey,
+                'Authorization': `Bearer ${serviceKey}`,
+                'Prefer': 'return=minimal',
+              },
+              body: JSON.stringify(updates),
+            });
+            if (!patchRes.ok) {
+              console.warn(`⚠️ [BG-Update] Supabase PATCH failed for group ${group.id}: ${patchRes.status}`);
               job.failed++;
+            } else {
+              job.success++;
             }
           } catch (err) {
             console.warn(`⚠️ [BG-Update] Error on group ${group.name}: ${err.message}`);

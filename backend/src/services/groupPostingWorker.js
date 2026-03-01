@@ -2962,6 +2962,42 @@ export class GroupPostingWorker {
     }
   }
 
+  // Clean property data for caption generation — strips Google Maps URLs, handles empty values
+  _cleanPropertyForCaption(property) {
+    // Strip Google Maps URL from location (stored as "address | https://maps...")
+    let cleanLocation = property.location || '';
+    let mapsLink = '';
+    if (cleanLocation.includes(' | http')) {
+      const parts = cleanLocation.split(' | ');
+      cleanLocation = parts[0].trim();
+      mapsLink = parts.slice(1).join(' | ').trim();
+    } else if (cleanLocation.includes('google.com/maps')) {
+      // Location IS a maps link — try to use district instead
+      mapsLink = cleanLocation;
+      cleanLocation = '';
+    }
+
+    // Strip Maps link from description too
+    let cleanDescription = property.description || '';
+    cleanDescription = cleanDescription.replace(/\n?📍\s*https?:\/\/[^\s]+/g, '').trim();
+
+    // Build display location
+    const displayLocation = [cleanLocation, property.district, property.province].filter(Boolean).join(', ');
+    const shortLocation = cleanLocation || property.district || property.province || 'ไม่ระบุ';
+
+    return {
+      ...property,
+      _cleanLocation: cleanLocation,
+      _displayLocation: displayLocation,
+      _shortLocation: shortLocation,
+      _mapsLink: mapsLink,
+      _cleanDescription: cleanDescription,
+      _hasSize: property.size && Number(property.size) > 0,
+      _hasContact: !!(property.contactPhone && property.contactPhone.trim()),
+      _hasLine: !!(property.contactLine && property.contactLine.trim()),
+    };
+  }
+
   // Generate caption using Claude API
   async generateCaption(property, style = 'friendly') {
     if (!this.anthropic) {
@@ -2969,21 +3005,24 @@ export class GroupPostingWorker {
       return this.generateTemplateCaption(property, style);
     }
 
+    const p = this._cleanPropertyForCaption(property);
+
     try {
-      const prompt = `คุณเป็นนายหน้าอสังหาริมทรัพย์มืออาชีพ ช่วยเขียนแคปชั่นโพสต์ Facebook สำหรับประกาศ${property.listingType === 'rent' ? 'ให้เช่า' : 'ขาย'}อสังหาริมทรัพย์:
+      const prompt = `คุณเป็นนายหน้าอสังหาริมทรัพย์มืออาชีพ ช่วยเขียนแคปชั่นโพสต์ Facebook สำหรับประกาศ${p.listingType === 'rent' ? 'ให้เช่า' : 'ขาย'}อสังหาริมทรัพย์:
 
 ข้อมูลสินทรัพย์:
-- ชื่อ: ${property.title}
-- ประเภท: ${property.type}
-- ราคา: ${new Intl.NumberFormat('th-TH').format(property.price)} บาท${property.listingType === 'rent' ? '/เดือน' : ''}
-- ที่ตั้ง: ${property.location}, ${property.district}, ${property.province}
-- พื้นที่: ${property.size} ตร.ม.
-- ห้องนอน: ${property.bedrooms}
-- ห้องน้ำ: ${property.bathrooms}
-- สิ่งอำนวยความสะดวก: ${property.amenities?.join(', ') || 'ไม่ระบุ'}
-- รายละเอียด: ${property.description || 'ไม่ระบุ'}
-- ติดต่อ: ${property.contactPhone}
-${property.contactLine ? `- LINE: ${property.contactLine}` : ''}
+- ชื่อ: ${p.title}
+- ประเภท: ${p.type}
+- ราคา: ${new Intl.NumberFormat('th-TH').format(p.price)} บาท${p.listingType === 'rent' ? '/เดือน' : ''}
+- ที่ตั้ง: ${p._displayLocation}
+${p._hasSize ? `- พื้นที่: ${p.size} ตร.ม.` : ''}
+- ห้องนอน: ${p.bedrooms}
+- ห้องน้ำ: ${p.bathrooms}
+- สิ่งอำนวยความสะดวก: ${p.amenities?.join(', ') || 'ไม่ระบุ'}
+- รายละเอียด: ${p._cleanDescription || 'ไม่ระบุ'}
+${p._hasContact ? `- ติดต่อ: ${p.contactPhone}` : ''}
+${p._hasLine ? `- LINE: ${p.contactLine}` : ''}
+${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
 
 สไตล์: ${style === 'friendly' ? 'เป็นกันเอง ใช้ emoji' : style === 'professional' ? 'มืออาชีพ เป็นทางการ' : 'สบายๆ ไม่เป็นทางการ'}
 
@@ -2992,7 +3031,10 @@ ${property.contactLine ? `- LINE: ${property.contactLine}` : ''}
 - ใส่ emoji ให้ดูน่าสนใจ (ถ้าสไตล์เหมาะสม)
 - ความยาวไม่เกิน 250 คำ
 - ใส่ hashtag ที่เกี่ยวข้อง 3-5 อัน
-- ห้ามคัดลอกคำซ้ำจาก prompt โดยตรง ให้เรียบเรียงใหม่`;
+- ห้ามคัดลอกคำซ้ำจาก prompt โดยตรง ให้เรียบเรียงใหม่
+- ถ้ามี Google Maps link ให้ใส่เป็น "📍 พิกัด: <link>" แยกบรรทัด
+- ห้ามแสดงข้อมูลที่ไม่มี (เช่น ถ้าไม่มีเบอร์โทร อย่าใส่ "ติดต่อ: ") 
+- ถ้าไม่มีพื้นที่ตร.ม. อย่าแสดง 0 ตร.ม.`;
 
       const response = await this.anthropic.messages.create({
         model: 'claude-3-haiku-20240307',
@@ -3009,54 +3051,72 @@ ${property.contactLine ? `- LINE: ${property.contactLine}` : ''}
 
   // Fallback template-based caption
   generateTemplateCaption(property, style) {
-    const priceFormatted = new Intl.NumberFormat('th-TH').format(property.price);
-    const isRent = property.listingType === 'rent';
+    const p = this._cleanPropertyForCaption(property);
+    const priceFormatted = new Intl.NumberFormat('th-TH').format(p.price);
+    const isRent = p.listingType === 'rent';
+
+    // Build optional lines (only show if data exists)
+    const sizeLine = p._hasSize ? `📐 ${p.size} ตร.ม.` : '';
+    const contactLine = p._hasContact ? `📞 ติดต่อ: ${p.contactPhone}` : '';
+    const lineLine = p._hasLine ? `💬 LINE: ${p.contactLine}` : '';
+    const mapsLine = p._mapsLink ? `📍 พิกัด: ${p._mapsLink}` : '';
+    const amenitiesBlock = p.amenities?.length > 0 ? p.amenities.slice(0, 4).map(a => `✅ ${a}`).join('\n') : '';
 
     const templates = {
-      friendly: `🏠 มาแล้วค่ะ! ${property.title}
+      friendly: [
+        `🏠 มาแล้วค่ะ! ${p.title}`,
+        '',
+        `💰 ${isRent ? 'เช่า' : 'ขาย'}เพียง ${priceFormatted} บาท${isRent ? '/เดือน' : ''}`,
+        `📍 ${p._shortLocation}${p.district && p._cleanLocation !== p.district ? ', ' + p.district : ''}`,
+        `🛏️ ${p.bedrooms} ห้องนอน | 🚿 ${p.bathrooms} ห้องน้ำ`,
+        sizeLine,
+        mapsLine,
+        '',
+        amenitiesBlock,
+        '',
+        contactLine,
+        lineLine,
+        '',
+        `#อสังหาริมทรัพย์ #${p.district || p.province || 'อสังหา'} #${isRent ? 'ให้เช่า' : 'ขาย'}`,
+      ].filter(line => line !== false && line !== undefined && line !== null && line.trim?.() !== undefined).join('\n').replace(/\n{3,}/g, '\n\n').trim(),
 
-💰 ${isRent ? 'เช่า' : 'ขาย'}เพียง ${priceFormatted} บาท${isRent ? '/เดือน' : ''}
-📍 ${property.location}, ${property.district}
-🛏️ ${property.bedrooms} ห้องนอน | 🚿 ${property.bathrooms} ห้องน้ำ
-📐 ${property.size} ตร.ม.
+      professional: [
+        `📢 ${isRent ? 'ให้เช่า' : 'ขาย'}: ${p.title}`,
+        '',
+        `📍 ทำเลที่ตั้ง: ${p._displayLocation || 'ไม่ระบุ'}`,
+        `💵 ราคา: ${priceFormatted} บาท${isRent ? '/เดือน' : ''}`,
+        '',
+        '🏢 รายละเอียด:',
+        `• ประเภท: ${p.type}`,
+        p._hasSize ? `• พื้นที่: ${p.size} ตร.ม.` : null,
+        `• ห้องนอน: ${p.bedrooms}`,
+        `• ห้องน้ำ: ${p.bathrooms}`,
+        '',
+        p.amenities?.length > 0 ? '🎯 สิ่งอำนวยความสะดวก:' : null,
+        ...(p.amenities?.map(a => `• ${a}`) || []),
+        '',
+        mapsLine,
+        '',
+        p._hasContact || p._hasLine ? '📲 ติดต่อสอบถาม:' : null,
+        p._hasContact ? `☎️ ${p.contactPhone}` : null,
+        p._hasLine ? `LINE: ${p.contactLine}` : null,
+      ].filter(v => v != null).join('\n').replace(/\n{3,}/g, '\n\n').trim(),
 
-${property.amenities?.slice(0, 4).map(a => `✅ ${a}`).join('\n') || ''}
-
-📞 ติดต่อ: ${property.contactPhone}
-${property.contactLine ? `💬 LINE: ${property.contactLine}` : ''}
-
-#อสังหาริมทรัพย์ #${property.district} #${isRent ? 'ให้เช่า' : 'ขาย'}`,
-
-      professional: `📢 ${isRent ? 'ให้เช่า' : 'ขาย'}: ${property.title}
-
-📍 ทำเลที่ตั้ง: ${property.location}, ${property.district}, ${property.province}
-💵 ราคา: ${priceFormatted} บาท${isRent ? '/เดือน' : ''}
-
-🏢 รายละเอียด:
-• ประเภท: ${property.type}
-• พื้นที่: ${property.size} ตร.ม.
-• ห้องนอน: ${property.bedrooms}
-• ห้องน้ำ: ${property.bathrooms}
-
-🎯 สิ่งอำนวยความสะดวก:
-${property.amenities?.map(a => `• ${a}`).join('\n') || '• -'}
-
-📲 ติดต่อสอบถาม:
-☎️ ${property.contactPhone}
-${property.contactLine ? `LINE: ${property.contactLine}` : ''}`,
-
-      casual: `ใครหาที่อยู่อยู่บ้าง 👀
-
-${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
-แค่ ${priceFormatted} ${isRent ? 'บาท/เดือน' : 'บาท'}!
-
-📍 ${property.location}
-🛏️ ${property.bedrooms} นอน ${property.bathrooms} น้ำ
-📐 ${property.size} ตร.ม.
-
-มี ${property.amenities?.slice(0, 3).join(', ') || 'สิ่งอำนวยความสะดวก'} ครบ!
-
-สนใจทัก ${property.contactPhone} ได้เลยนะ 💬`
+      casual: [
+        'ใครหาที่อยู่อยู่บ้าง 👀',
+        '',
+        `${p.title} ${isRent ? 'ให้เช่า' : 'ขาย'}`,
+        `แค่ ${priceFormatted} ${isRent ? 'บาท/เดือน' : 'บาท'}!`,
+        '',
+        `📍 ${p._shortLocation}`,
+        `🛏️ ${p.bedrooms} นอน ${p.bathrooms} น้ำ`,
+        p._hasSize ? `📐 ${p.size} ตร.ม.` : null,
+        '',
+        p.amenities?.length > 0 ? `มี ${p.amenities.slice(0, 3).join(', ')} ครบ!` : null,
+        '',
+        p._hasContact ? `สนใจทัก ${p.contactPhone} ได้เลยนะ 💬` : 'สนใจสอบถามได้เลยนะ 💬',
+        mapsLine,
+      ].filter(v => v != null).join('\n').replace(/\n{3,}/g, '\n\n').trim(),
     };
 
     return templates[style] || templates.friendly;

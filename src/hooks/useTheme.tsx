@@ -410,7 +410,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return localStorage.getItem('theme_palette') || 'navy-gold';
   });
   const [isDark, setIsDark] = useState(() => {
-    return localStorage.getItem('theme_dark') === 'true';
+    return true; // Force dark mode by default
   });
 
   const setPaletteId = (id: string) => {
@@ -443,8 +443,8 @@ export function useAppTheme() {
 
 export function resetToDefaultTheme() {
   localStorage.setItem('theme_palette', 'navy-gold');
-  localStorage.setItem('theme_dark', 'false');
+  localStorage.setItem('theme_dark', 'true');
   const root = document.documentElement;
-  root.classList.remove('dark');
-  applyPalette('navy-gold', false);
+  root.classList.add('dark');
+  applyPalette('navy-gold', true);
 }

@@ -65,7 +65,8 @@ import { useGlobalAutomation } from '@/components/layout/DashboardLayout';
 import { DailyUsageCard } from '@/components/automation/DailyUsageCard';
 import { WorkerSlotsGrid } from '@/components/automation/WorkerSlotsGrid';
 import { ScheduledPostsCard } from '@/components/automation/ScheduledPostsCard';
-import { apiFetch } from '@/lib/config';
+import { apiFetch, isAdminEmail } from '@/lib/config';
+import { supabase } from '@/lib/supabase';
 
 interface TaskStatus {
   id: string;
@@ -110,6 +111,7 @@ export default function Automation() {
   const globalAutomation = useGlobalAutomation();
 
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [isAdminViewer, setIsAdminViewer] = useState(false);
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
   const [generatedCaptions, setGeneratedCaptions] = useState<string[]>([]);
   const [isAddGroupOpen, setIsAddGroupOpen] = useState(false);
@@ -147,6 +149,25 @@ export default function Automation() {
   const [queueEstimate, setQueueEstimate] = useState<number>(0);
   const [queueRunningJobs, setQueueRunningJobs] = useState<Array<{ displayName: string; groupCount: number; runningSec: number; automationType: string }> | null>(null);
   const queuePollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (mounted) {
+        setIsAdminViewer(isAdminEmail(user?.email));
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAdminViewer(isAdminEmail(session?.user?.email));
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // Notification hook — for risk-level alerts
   const { addNotification } = useNotifications();
@@ -1528,10 +1549,12 @@ export default function Automation() {
 
         </div>
 
-        {/* ═══ BOTTOM: Worker Nodes (full width) ═══ */}
-        <div className="col-span-12">
-          <WorkerSlotsGrid />
-        </div>
+        {/* ═══ BOTTOM: Worker Nodes (Admin only) ═══ */}
+        {isAdminViewer && (
+          <div className="col-span-12">
+            <WorkerSlotsGrid />
+          </div>
+        )}
 
         {/* ═══ BOTTOM: Production Dashboard ═══ */}
         <div className="col-span-12">

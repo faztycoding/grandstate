@@ -169,6 +169,8 @@ export default function AdminDashboard() {
     const [deleteTarget, setDeleteTarget] = useState<{ id: string; key: string } | null>(null);
     const [extendTarget, setExtendTarget] = useState<{ id: string; key: string; currentExpiry: string } | null>(null);
     const [extendDays, setExtendDays] = useState(30);
+    const [extendMode, setExtendMode] = useState<'days' | 'date'>('days');
+    const [extendSpecificDate, setExtendSpecificDate] = useState('');
     const [newLicense, setNewLicense] = useState({
         package: 'agent',
         durationDays: 30,
@@ -252,7 +254,7 @@ export default function AdminDashboard() {
         try {
             const res = await apiFetch('/api/admin/change-package', { method: 'POST', body: JSON.stringify({ targetUserId: fullUserId, newPackage: newPkg, displayName }) });
             const data = await res.json();
-            if (data.success) { toast.success(`เปลี่ยนเป็น ${newPkg.toUpperCase()} สำเร็จ`); fetchUserLicenses(); fetchAllUsers(); } else { toast.error(data.error); }
+            if (data.success) { toast.success(`เปลี่ยนเป็น ${newPkg.toUpperCase()} สำเร็จ`); await Promise.all([fetchUserLicenses(), fetchAllUsers()]); } else { toast.error(data.error); }
         } catch { toast.error('Failed'); } finally { setChangingPkgUser(null); }
     };
 
@@ -690,15 +692,20 @@ export default function AdminDashboard() {
         toast.success(t.admin.toastCopied);
     };
 
-    const extendLicense = async (id: string, days: number) => {
+    const extendLicense = async (id: string, days: number, specificDate?: Date) => {
         try {
             const license = licenses.find(l => l.id === id);
             if (!license) return;
 
-            const currentExpiry = new Date(license.expires_at);
-            // If expired, start from now. If active, add to current expiry
-            const baseDate = currentExpiry > new Date() ? currentExpiry : new Date();
-            const newExpiry = new Date(baseDate.getTime() + days * 24 * 60 * 60 * 1000);
+            let newExpiry: Date;
+            if (specificDate) {
+                newExpiry = specificDate;
+            } else {
+                const currentExpiry = new Date(license.expires_at);
+                // If expired, start from now. If active, add to current expiry
+                const baseDate = currentExpiry > new Date() ? currentExpiry : new Date();
+                newExpiry = new Date(baseDate.getTime() + days * 24 * 60 * 60 * 1000);
+            }
 
             const { error } = await supabase
                 .from('license_keys')
@@ -707,7 +714,10 @@ export default function AdminDashboard() {
 
             if (error) throw error;
 
-            toast.success(`ต่ออายุ ${days} วันสำเร็จ`);
+            const msg = specificDate
+                ? `ตั้งวันหมดอายุเป็น ${specificDate.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })} สำเร็จ`
+                : `ต่ออายุ ${days} วันสำเร็จ`;
+            toast.success(msg);
             fetchLicenses();
         } catch (error) {
             toast.error(t.admin.toastExtendFail);
@@ -873,7 +883,7 @@ export default function AdminDashboard() {
     ];
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-background to-muted/30" style={{ fontSize: '17px' }}>
+        <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 ui-density-relaxed ui-contrast-boost">
             {/* CSS Keyframes for radar pinging */}
             <style>{`
                 @keyframes radar-ping {
@@ -914,7 +924,7 @@ export default function AdminDashboard() {
 
             {/* Top Header */}
             <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b">
-                <div className="max-w-7xl mx-auto px-4 md:px-6">
+                <div className="app-page-frame px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-14">
                         <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-lg flex items-center justify-center">
@@ -975,7 +985,7 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+            <div className="app-page-frame px-4 py-5 sm:px-6 lg:px-8 space-y-6">
 
                 {/* ═══════════════ TAB: OVERVIEW ═══════════════ */}
                 {activeTab === 'overview' && (<>
@@ -1126,7 +1136,7 @@ export default function AdminDashboard() {
                                         const isRunning = u.isRunningGroup || u.isRunningMarketplace;
                                         const taskPct = u.currentTasks.total > 0 ? Math.round(((u.currentTasks.completed + u.currentTasks.failed) / u.currentTasks.total) * 100) : 0;
                                         const lic = u.fullUserId ? userLicenses[u.fullUserId] : null;
-                                        const userPkg = lic?.package || 'free';
+                                        const userPkg = (lic?.is_active ? lic?.package : undefined) || 'free';
                                         const isExpanded = expandedUser === u.fullUserId;
                                         const tierConfig = {
                                             elite: { color: 'text-purple-400', bg: 'bg-purple-500/15', border: 'border-purple-500/30', icon: <Crown className="w-3 h-3" />, label: 'ELITE' },
@@ -1483,7 +1493,7 @@ export default function AdminDashboard() {
                                                         <Copy className="w-3 h-3" />
                                                     </Button>
                                                     <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10"
-                                                        title="Extend" onClick={() => { setExtendTarget({ id: license.id, key: license.license_key, currentExpiry: license.expires_at }); setExtendDays(30); }}>
+                                                        title="Extend" onClick={() => { setExtendTarget({ id: license.id, key: license.license_key, currentExpiry: license.expires_at }); setExtendDays(30); setExtendMode('days'); setExtendSpecificDate(''); }}>
                                                         <Calendar className="w-3 h-3" />
                                                     </Button>
                                                     <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-slate-400 hover:text-red-400 hover:bg-red-500/10"
@@ -3050,34 +3060,69 @@ export default function AdminDashboard() {
                                 </p>
                             </div>
 
-                            {/* Duration presets */}
-                            <div className="flex flex-wrap gap-1.5">
-                                {[7, 14, 30, 60, 90, 180, 365].map(d => (
-                                    <button key={d}
-                                        onClick={() => setExtendDays(d)}
-                                        className={cn("px-3 py-1.5 rounded-lg border text-xs font-bold transition-all",
-                                            extendDays === d ? "bg-emerald-500/10 text-emerald-400 border-emerald-500" : "border-border hover:border-emerald-500/50")}>
-                                        +{d} {t.admin.daysUnit}
-                                    </button>
-                                ))}
+                            {/* Mode toggle */}
+                            <div className="flex rounded-lg border border-border overflow-hidden">
+                                <button
+                                    onClick={() => setExtendMode('days')}
+                                    className={cn("flex-1 py-2 text-xs font-bold transition-all border-r border-border",
+                                        extendMode === 'days' ? 'bg-emerald-500/10 text-emerald-400 border-r-emerald-500/20' : 'text-muted-foreground hover:text-foreground')}>
+                                    + เพิ่มวัน
+                                </button>
+                                <button
+                                    onClick={() => setExtendMode('date')}
+                                    className={cn("flex-1 py-2 text-xs font-bold transition-all",
+                                        extendMode === 'date' ? 'bg-emerald-500/10 text-emerald-400' : 'text-muted-foreground hover:text-foreground')}>
+                                    📅 กำหนดวันที่
+                                </button>
                             </div>
 
-                            {/* Custom input */}
-                            <div className="flex items-center gap-2">
-                                <Input
-                                    type="number"
-                                    min={1}
-                                    max={3650}
-                                    value={extendDays}
-                                    onChange={e => setExtendDays(parseInt(e.target.value) || 30)}
-                                    className="h-9 text-sm w-32"
-                                />
-                                <span className="text-xs text-muted-foreground">{t.admin.daysUnit}</span>
-                            </div>
+                            {extendMode === 'days' ? (
+                                <>
+                                    {/* Duration presets */}
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {[7, 14, 30, 60, 90, 180, 365].map(d => (
+                                            <button key={d}
+                                                onClick={() => setExtendDays(d)}
+                                                className={cn("px-3 py-1.5 rounded-lg border text-xs font-bold transition-all",
+                                                    extendDays === d ? "bg-emerald-500/10 text-emerald-400 border-emerald-500" : "border-border hover:border-emerald-500/50")}>
+                                                +{d} {t.admin.daysUnit}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    {/* Custom input */}
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                            type="number"
+                                            min={1}
+                                            max={3650}
+                                            value={extendDays}
+                                            onChange={e => setExtendDays(parseInt(e.target.value) || 30)}
+                                            className="h-9 text-sm w-32"
+                                        />
+                                        <span className="text-xs text-muted-foreground">{t.admin.daysUnit}</span>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="space-y-2">
+                                    <p className="text-xs text-muted-foreground">เลือกวันหมดอายุใหม่</p>
+                                    <Input
+                                        type="date"
+                                        value={extendSpecificDate}
+                                        min={new Date().toISOString().split('T')[0]}
+                                        onChange={e => setExtendSpecificDate(e.target.value)}
+                                        className="h-9 text-sm"
+                                    />
+                                </div>
+                            )}
 
                             <p className="text-[11px] text-muted-foreground border-t pt-2">
                                 {t.admin.newExpiry}: <span className="font-bold text-emerald-500">
                                     {(() => {
+                                        if (extendMode === 'date') {
+                                            return extendSpecificDate
+                                                ? new Date(extendSpecificDate + 'T23:59:59').toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })
+                                                : '—';
+                                        }
                                         const base = new Date(extendTarget.currentExpiry) > new Date() ? new Date(extendTarget.currentExpiry) : new Date();
                                         return new Date(base.getTime() + extendDays * 86400000).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
                                     })()}
@@ -3087,9 +3132,22 @@ export default function AdminDashboard() {
                     )}
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setExtendTarget(null)}>{t.admin.cancel}</Button>
-                        <Button onClick={() => { if (extendTarget) { extendLicense(extendTarget.id, extendDays); setExtendTarget(null); } }}
-                            className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold gap-1.5">
-                            <Calendar className="w-3.5 h-3.5" /> {t.admin.extendButton} +{extendDays} {t.admin.daysUnit}
+                        <Button
+                            disabled={extendMode === 'date' && !extendSpecificDate}
+                            onClick={() => {
+                                if (!extendTarget) return;
+                                if (extendMode === 'date' && extendSpecificDate) {
+                                    extendLicense(extendTarget.id, 0, new Date(extendSpecificDate + 'T23:59:59'));
+                                } else {
+                                    extendLicense(extendTarget.id, extendDays);
+                                }
+                                setExtendTarget(null);
+                            }}
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold gap-1.5 disabled:opacity-50">
+                            <Calendar className="w-3.5 h-3.5" />
+                            {extendMode === 'date'
+                                ? (extendSpecificDate ? `กำหนดวันที่ ${new Date(extendSpecificDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}` : 'เลือกวันที่ก่อน')
+                                : `${t.admin.extendButton} +${extendDays} ${t.admin.daysUnit}`}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

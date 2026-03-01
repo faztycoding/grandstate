@@ -90,6 +90,61 @@ export default function Analytics() {
   const [days, setDays] = useState('7');
   const [refreshKey, setRefreshKey] = useState(0);
 
+  const fetchData = useCallback(async () => {
+    if (!pkgLimits.analytics) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const pkg = getUserPackage();
+      const res = await apiFetch(`/api/analytics?days=${days}&userPackage=${pkg}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      if (json.success) {
+        setData(json);
+      }
+    } catch (err) {
+      console.error('Analytics fetch error:', err);
+      const fallbackLimit = pkgLimits.postsPerDay;
+      setData({
+        today: { postsCount: 0, limit: fallbackLimit, remaining: fallbackLimit },
+        dailyData: [],
+        groupPerformance: [],
+        summary: { totalPostsAllTime: 0, totalSuccessAllTime: 0, totalGroupsPosted: 0, avgSuccessRate: 0 },
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [days, pkgLimits.analytics, pkgLimits.postsPerDay]);
+
+  useEffect(() => { fetchData(); }, [fetchData, refreshKey]);
+
+  const handleReset = async () => {
+    if (!confirm(isEn ? 'Reset all analytics data? This cannot be undone.' : 'ล้างข้อมูลวิเคราะห์ทั้งหมด? ไม่สามารถย้อนกลับได้')) return;
+    try {
+      const res = await apiFetch('/api/analytics/reset', { method: 'POST' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      if (json.success) {
+        localStorage.removeItem('healthcheck_post_history');
+        localStorage.removeItem('_stats_reset_v1');
+        toast.success(isEn ? 'Analytics data reset successfully' : 'ล้างข้อมูลเรียบร้อยแล้ว');
+        setRefreshKey(k => k + 1);
+      } else {
+        toast.error(json.error || 'Reset failed');
+      }
+    } catch (err: any) {
+      console.error('Reset error:', err);
+      toast.error(isEn ? `Reset failed: ${err.message}` : `ล้างข้อมูลล้มเหลว: ${err.message}`);
+    }
+  };
+
+  const handleRefresh = () => {
+    setRefreshKey(k => k + 1);
+  };
+
   // ── Permission gate: Analytics is Agent/Elite only ──
   if (!pkgLimits.analytics) {
     return (
@@ -124,56 +179,6 @@ export default function Analytics() {
       </DashboardLayout>
     );
   }
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const pkg = getUserPackage();
-      const res = await apiFetch(`/api/analytics?days=${days}&userPackage=${pkg}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      if (json.success) {
-        setData(json);
-      }
-    } catch (err) {
-      console.error('Analytics fetch error:', err);
-      const fallbackLimit = pkgLimits.postsPerDay;
-      setData({
-        today: { postsCount: 0, limit: fallbackLimit, remaining: fallbackLimit },
-        dailyData: [],
-        groupPerformance: [],
-        summary: { totalPostsAllTime: 0, totalSuccessAllTime: 0, totalGroupsPosted: 0, avgSuccessRate: 0 },
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [days, refreshKey]);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
-
-  const handleReset = async () => {
-    if (!confirm(isEn ? 'Reset all analytics data? This cannot be undone.' : 'ล้างข้อมูลวิเคราะห์ทั้งหมด? ไม่สามารถย้อนกลับได้')) return;
-    try {
-      const res = await apiFetch('/api/analytics/reset', { method: 'POST' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      if (json.success) {
-        localStorage.removeItem('healthcheck_post_history');
-        localStorage.removeItem('_stats_reset_v1');
-        toast.success(isEn ? 'Analytics data reset successfully' : 'ล้างข้อมูลเรียบร้อยแล้ว');
-        setRefreshKey(k => k + 1);
-      } else {
-        toast.error(json.error || 'Reset failed');
-      }
-    } catch (err: any) {
-      console.error('Reset error:', err);
-      toast.error(isEn ? `Reset failed: ${err.message}` : `ล้างข้อมูลล้มเหลว: ${err.message}`);
-    }
-  };
-
-  const handleRefresh = () => {
-    setRefreshKey(k => k + 1);
-  };
 
   const totalPosts = data?.dailyData.reduce((s, d) => s + d.posts, 0) || 0;
   const totalSuccess = data?.dailyData.reduce((s, d) => s + d.success, 0) || 0;

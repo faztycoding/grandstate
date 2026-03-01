@@ -38,7 +38,7 @@ export default function PropertyGallery() {
 
   return (
     <DashboardLayout title={g.galleryTitle}>
-      <div className="p-6 bg-background min-h-screen">
+      <div className="space-y-4">
         <PropertyGalleryForm 
           onSubmit={handleSubmit}
           onSave={handleSave}

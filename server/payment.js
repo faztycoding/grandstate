@@ -7,37 +7,75 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const PORT = process.env.PORT || 3002;
 
-// Omise configuration - USE ENVIRONMENT VARIABLES IN PRODUCTION!
-const OMISE_SECRET_KEY = process.env.OMISE_SECRET_KEY || 'skey_test_66n8r6yri9xvfql0dp9';
-const OMISE_PUBLIC_KEY = process.env.OMISE_PUBLIC_KEY || 'pkey_test_66n8r6y5wsyot8nw3wt';
-
-const omise = Omise({
-    publicKey: OMISE_PUBLIC_KEY,
-    secretKey: OMISE_SECRET_KEY,
-});
+const OMISE_SECRET_KEY = process.env.OMISE_SECRET_KEY || '';
+const OMISE_PUBLIC_KEY = process.env.OMISE_PUBLIC_KEY || '';
 
 // Email configuration
 const nodemailer = require('nodemailer');
-const EMAIL_USER = process.env.EMAIL_USER || 'your-email@gmail.com';
-const EMAIL_PASS = process.env.EMAIL_PASS || 'your-app-password'; // Generate from Google Account > App Passwords
+const EMAIL_USER = process.env.EMAIL_USER || '';
+const EMAIL_PASS = process.env.EMAIL_PASS || '';
+const transporter = EMAIL_USER && EMAIL_PASS
+    ? nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: EMAIL_USER,
+            pass: EMAIL_PASS,
+        },
+    })
+    : null;
 
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: EMAIL_USER,
-        pass: EMAIL_PASS,
-    },
-});
+if (!transporter) {
+    console.warn('⚠️ Email delivery is disabled (EMAIL_USER / EMAIL_PASS not set)');
+}
 
-// Supabase configuration - USE ENVIRONMENT VARIABLES IN PRODUCTION!
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://fotoqgmdyiribobdhslu.supabase.co';
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvdG9xZ21keWlyaWJvYmRoc2x1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAyNzc4MDMsImV4cCI6MjA4NTg1MzgwM30.8vInOlTHlFjPuaouLhYicRFs1KTOFS3Fk0Keuy3mb8M';
+// Supabase configuration
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+const missingPaymentEnv = [
+    !OMISE_SECRET_KEY && 'OMISE_SECRET_KEY',
+    !OMISE_PUBLIC_KEY && 'OMISE_PUBLIC_KEY',
+    !SUPABASE_URL && 'SUPABASE_URL',
+    !SUPABASE_SERVICE_KEY && 'SUPABASE_SERVICE_KEY',
+].filter(Boolean);
+
+const paymentConfigReady = missingPaymentEnv.length === 0;
+
+if (!paymentConfigReady) {
+    console.error(`❌ Payment service is not fully configured. Missing: ${missingPaymentEnv.join(', ')}`);
+}
+
+const omise = paymentConfigReady
+    ? Omise({
+        publicKey: OMISE_PUBLIC_KEY,
+        secretKey: OMISE_SECRET_KEY,
+    })
+    : null;
+
+const supabase = paymentConfigReady
+    ? createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    : null;
+
+function requirePaymentConfig(req, res, next) {
+    if (!paymentConfigReady) {
+        return res.status(503).json({
+            success: false,
+            error: 'Payment service is not configured',
+            missing: missingPaymentEnv,
+        });
+    }
+    next();
+}
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+const jsonParser = express.json();
+app.use((req, res, next) => {
+    if (req.path === '/api/payment/webhook') {
+        return next();
+    }
+    return jsonParser(req, res, next);
+});
 
 // Store pending charges for status checking
 const pendingCharges = new Map();
@@ -119,6 +157,11 @@ async function sendLicenseEmail(to, license) {
         return;
     }
 
+    if (!transporter) {
+        console.log('⚠️ Email transporter not configured, skipping email notification');
+        return;
+    }
+
     const htmlContent = `
     <div style="font-family: 'Sarabun', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
         <div style="text-align: center; margin-bottom: 20px;">
@@ -166,7 +209,7 @@ async function sendLicenseEmail(to, license) {
 // ===========================================
 // ENDPOINT: Create Charge
 // ===========================================
-app.post('/api/payment/charge', async (req, res) => {
+app.post('/api/payment/charge', requirePaymentConfig, async (req, res) => {
     try {
         const { source, token, amount, currency, package: packageId, description, email } = req.body;
 
@@ -245,7 +288,7 @@ app.post('/api/payment/charge', async (req, res) => {
 // ===========================================
 // ENDPOINT: Check Payment Status
 // ===========================================
-app.get('/api/payment/status/:chargeId', async (req, res) => {
+app.get('/api/payment/status/:chargeId', requirePaymentConfig, async (req, res) => {
     try {
         const { chargeId } = req.params;
         const charge = await omise.charges.retrieve(chargeId);
@@ -285,10 +328,13 @@ app.get('/api/payment/status/:chargeId', async (req, res) => {
 // ===========================================
 // ENDPOINT: Webhook (with signature verification)
 // ===========================================
-app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), requirePaymentConfig, async (req, res) => {
     try {
         // Verify webhook signature if available
         const signature = req.headers['omise-signature'];
+        const payloadBuffer = Buffer.isBuffer(req.body)
+            ? req.body
+            : Buffer.from(typeof req.body === 'string' ? req.body : JSON.stringify(req.body));
 
         // In production, verify the signature!
         // For now, we log a warning if no signature
@@ -298,7 +344,7 @@ app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), asyn
             // Verify signature using HMAC
             const expectedSignature = crypto
                 .createHmac('sha256', OMISE_SECRET_KEY)
-                .update(typeof req.body === 'string' ? req.body : JSON.stringify(req.body))
+                .update(payloadBuffer)
                 .digest('hex');
 
             if (signature !== expectedSignature) {
@@ -308,7 +354,9 @@ app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), asyn
             console.log('✅ Webhook signature verified');
         }
 
-        const event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+        const event = Buffer.isBuffer(req.body)
+            ? JSON.parse(req.body.toString('utf8'))
+            : (typeof req.body === 'string' ? JSON.parse(req.body) : req.body);
 
         if (event.key === 'charge.complete') {
             const charge = event.data;
@@ -348,6 +396,8 @@ app.get('/api/health', (req, res) => {
     res.json({
         status: 'ok',
         service: 'payment-api',
+        paymentConfigured: paymentConfigReady,
+        missingConfig: missingPaymentEnv,
         timestamp: new Date().toISOString(),
     });
 });
@@ -355,7 +405,7 @@ app.get('/api/health', (req, res) => {
 // ===========================================
 // ENDPOINT: Verify License (for testing)
 // ===========================================
-app.get('/api/license/:key', async (req, res) => {
+app.get('/api/license/:key', requirePaymentConfig, async (req, res) => {
     try {
         const { key } = req.params;
         const { data, error } = await supabase

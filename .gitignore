@@ -38,3 +38,5 @@ backend/screenshots/
 *.njsproj
 *.sln
 *.sw?
+
+.vercel

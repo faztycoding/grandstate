@@ -9,6 +9,15 @@
 
 @layer base {
   :root {
+    /* Typography */
+    --font-sans-th: 'IBM Plex Sans Thai';
+    --font-sans-en: 'IBM Plex Sans';
+    --font-display-th: 'IBM Plex Sans Thai';
+    --font-display-en: 'IBM Plex Sans';
+    --font-mono: 'IBM Plex Mono';
+    --font-ui: var(--font-sans-th);
+    --font-display: var(--font-display-th);
+
     /* Core backgrounds */
     --background: 210 20% 98%;
     --foreground: 222 47% 11%;
@@ -105,7 +114,7 @@
     --secondary-foreground: 210 40% 98%;
 
     --muted: 217 50% 18%;
-    --muted-foreground: 215 20% 65%;
+    --muted-foreground: 210 40% 98%;
 
     --accent: 38 92% 50%;
     --accent-foreground: 0 0% 100%;
@@ -145,10 +154,69 @@
     @apply border-border;
   }
 
+  html {
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html[lang='th'] {
+    --font-ui: var(--font-sans-th);
+    --font-display: var(--font-display-th);
+  }
+
+  html[lang='en'] {
+    --font-ui: var(--font-sans-en);
+    --font-display: var(--font-display-en);
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'IBM Plex Sans', 'IBM Plex Sans Thai', system-ui, -apple-system, sans-serif;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: var(--font-ui), var(--font-sans-en), system-ui, -apple-system, sans-serif;
+    font-feature-settings: "liga" 1, "calt" 1, "kern" 1;
+    line-height: 1.55;
+  }
+
+  html[lang='th'] body {
+    line-height: 1.65;
+    letter-spacing: 0.003em;
+  }
+
+  html[lang='en'] body {
+    letter-spacing: 0.002em;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display), var(--font-ui), system-ui, -apple-system, sans-serif;
+  }
+
+  html[lang='en'] h1,
+  html[lang='en'] h2,
+  html[lang='en'] h3,
+  html[lang='en'] h4,
+  html[lang='en'] h5,
+  html[lang='en'] h6 {
+    letter-spacing: -0.015em;
+  }
+
+  .font-mono,
+  code,
+  pre,
+  kbd,
+  samp {
+    font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   }
 
   /* Custom scrollbar */
@@ -786,4 +854,70 @@
 
 .property-card:hover .property-card-image::after {
   @apply opacity-100;
+}
+
+/* App-wide readability + layout standardization */
+@layer utilities {
+  .app-page-frame {
+    width: 100%;
+    max-width: 1560px;
+    margin-inline: auto;
+  }
+
+  .ui-section-gap > * + * {
+    margin-top: 1.25rem;
+  }
+
+  @media (min-width: 1024px) {
+    .ui-section-gap > * + * {
+      margin-top: 1.5rem;
+    }
+  }
+
+  .ui-density-relaxed .text-xs {
+    font-size: 0.8125rem;
+    line-height: 1.2rem;
+  }
+
+  .ui-density-relaxed .text-\[7px\] {
+    font-size: 0.5625rem;
+    line-height: 0.875rem;
+  }
+
+  .ui-density-relaxed .text-\[8px\] {
+    font-size: 0.625rem;
+    line-height: 0.925rem;
+  }
+
+  .ui-density-relaxed .text-\[9px\] {
+    font-size: 0.6875rem;
+    line-height: 1rem;
+  }
+
+  .ui-density-relaxed .text-\[10px\] {
+    font-size: 0.75rem;
+    line-height: 1.05rem;
+  }
+
+  .ui-density-relaxed .text-\[11px\] {
+    font-size: 0.8125rem;
+    line-height: 1.15rem;
+  }
+
+  .ui-contrast-boost .text-slate-700 {
+    color: rgb(100 116 139 / 0.95);
+  }
+
+  .ui-contrast-boost .text-slate-600 {
+    color: rgb(148 163 184 / 0.9);
+  }
+
+  .ui-contrast-boost .text-slate-500 {
+    color: rgb(148 163 184 / 1);
+  }
+
+  .ui-contrast-boost .placeholder\:text-slate-600::placeholder,
+  .ui-contrast-boost .placeholder\:text-slate-500::placeholder {
+    color: rgb(148 163 184 / 0.8);
+  }
 }

@@ -68,14 +68,14 @@ export default function PrivacyPolicy() {
   const isEn = language === 'en';
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
+    <div className="min-h-screen bg-background relative overflow-hidden ui-density-relaxed ui-contrast-boost">
       {/* Decorative background */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-0 right-1/4 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-1/4 w-80 h-80 bg-teal-500/5 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative z-10 max-w-4xl mx-auto px-4 md:px-8 py-8 md:py-16">
+      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16">
         {/* Back Button */}
         <motion.div {...fadeUp(0)}>
           <Button

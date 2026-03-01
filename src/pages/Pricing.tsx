@@ -178,7 +178,7 @@ export default function Pricing() {
       subtitle={isEn ? 'Choose the plan that fits your needs' : 'เลือกแพ็คเกจที่เหมาะกับคุณ'}
     >
       {/* ═══ DARK ENGINE WRAPPER ═══ */}
-      <div className="relative -mx-4 -mt-2 px-4 pt-6 pb-12 rounded-2xl overflow-hidden"
+      <div className="relative -mx-4 -mt-2 px-4 pt-6 pb-12 rounded-2xl overflow-hidden ui-density-relaxed ui-contrast-boost"
         style={{ background: 'linear-gradient(180deg, hsl(222 47% 6%) 0%, hsl(222 47% 4%) 100%)' }}>
 
         {/* Blueprint Grid BG */}
@@ -213,7 +213,7 @@ export default function Pricing() {
               {isEn ? 'Pricing' : 'โปร่งใส'}
             </span>
           </h2>
-          <p className="text-slate-400 max-w-2xl mx-auto text-sm">
+          <p className="text-slate-300 max-w-2xl mx-auto text-base">
             {isEn
               ? 'Start free and upgrade when you need more power. All plans include our core features.'
               : 'เริ่มต้นใช้งานฟรี อัพเกรดเมื่อต้องการพลังเพิ่ม ทุกแพ็คเกจมีฟีเจอร์หลักครบครัน'}
@@ -290,7 +290,7 @@ export default function Pricing() {
 
                     {/* Name + Description */}
                     <h3 className="text-xl font-black text-white mb-1">{isEn ? plan.nameEn : plan.name}</h3>
-                    <p className="text-xs text-slate-400 mb-5">{isEn ? plan.descriptionEn : plan.description}</p>
+                    <p className="text-sm text-slate-300 mb-5 leading-relaxed">{isEn ? plan.descriptionEn : plan.description}</p>
 
                     {/* Price */}
                     <div className="flex items-baseline gap-1.5 mb-2">
@@ -350,7 +350,7 @@ export default function Pricing() {
                             {feature.text}
                           </span>
                           {!feature.included && (
-                            <span className="ml-auto text-[9px] font-bold text-amber-500/0 group-hover/lock:text-amber-500/80 transition-all duration-300 uppercase tracking-wider whitespace-nowrap">
+                            <span className="ml-auto text-[11px] font-bold text-amber-500/0 group-hover/lock:text-amber-500/80 transition-all duration-300 uppercase tracking-wider whitespace-nowrap">
                               {isEn ? 'Upgrade' : 'อัพเกรด'}
                             </span>
                           )}
@@ -362,7 +362,7 @@ export default function Pricing() {
                     <motion.div whileTap={{ scale: 0.97 }}>
                       <Button
                         className={cn(
-                          'w-full h-12 font-black text-xs uppercase tracking-widest gap-2 rounded-xl transition-all duration-300',
+                          'w-full h-12 font-black text-sm uppercase tracking-wide gap-2 rounded-xl transition-all duration-300',
                           isCurrentPlan
                             ? 'bg-slate-800 text-slate-400 border border-slate-700 cursor-not-allowed'
                             : cn('bg-gradient-to-r text-white shadow-lg hover:shadow-xl hover:scale-[1.02]',
@@ -433,7 +433,7 @@ export default function Pricing() {
               LINE @grandstate
             </a>
           </p>
-          <p className="text-[10px] text-slate-400 font-mono mt-3 tracking-widest">GRAND$TATE ENGINE v1.0</p>
+          <p className="text-xs text-slate-400 font-mono mt-3 tracking-widest">GRAND$TATE ENGINE v1.0</p>
         </div>
       </div>
     </DashboardLayout>

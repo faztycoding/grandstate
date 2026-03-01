@@ -196,7 +196,7 @@ export default function Auth() {
     const pkg = packageInfo[license.package];
     const Icon = pkg.icon;
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-[#070b14]">
+      <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-[#070b14] ui-density-relaxed">
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_50%,rgba(247,181,0,0.08)_0%,transparent_60%)]" />
           <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
@@ -248,7 +248,7 @@ export default function Auth() {
 
   // ── Main Layout ──
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-[#070b14]">
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-[#070b14] ui-density-relaxed">
       {/* ── Cinematic City Video Background ── */}
       <div className="absolute inset-0 z-0">
         <video

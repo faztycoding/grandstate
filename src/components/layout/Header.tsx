@@ -192,19 +192,28 @@ export function Header({ title, subtitle }: HeaderProps) {
   const displayAvatar = profileAvatar || fbUser?.profilePic || '';
   const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
-  const pkg = getUserPackage();
+  const [pkg, setPkg] = useState(getUserPackage);
+  useEffect(() => {
+    const handler = () => setPkg(getUserPackage());
+    window.addEventListener('license-updated', handler);
+    window.addEventListener('profile-updated', handler);
+    return () => {
+      window.removeEventListener('license-updated', handler);
+      window.removeEventListener('profile-updated', handler);
+    };
+  }, []);
   const theme = PKG_THEME[pkg] || PKG_THEME.free;
   const PkgIcon = theme.icon;
 
   return (
     <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg border-b border-border">
-      <div className="flex items-center justify-between h-16 px-4 md:px-6">
+      <div className="app-page-frame flex items-center justify-between h-[4.25rem] px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3">
           <MobileMenuButton />
           <div>
-            <h1 className="text-lg md:text-xl font-bold text-foreground">{title}</h1>
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight text-foreground">{title}</h1>
             {subtitle && (
-              <p className="text-sm text-muted-foreground hidden md:block">{subtitle}</p>
+              <p className="text-sm text-muted-foreground hidden lg:block">{subtitle}</p>
             )}
           </div>
         </div>
@@ -215,7 +224,7 @@ export function Header({ title, subtitle }: HeaderProps) {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder={t.common.searchProperties}
-              className="w-64 pl-10 bg-muted/50 border-0 focus-visible:ring-1"
+              className="w-64 pl-10 bg-muted/50 border-0 text-sm focus-visible:ring-1"
             />
           </div>
 
@@ -240,7 +249,7 @@ export function Header({ title, subtitle }: HeaderProps) {
                 </Avatar>
                 <div className="hidden md:flex flex-col items-start">
                   <span className="font-medium text-sm max-w-[120px] truncate leading-tight">{displayName}</span>
-                  <span className="text-[10px] text-muted-foreground leading-tight flex items-center gap-0.5">
+                  <span className="text-xs text-muted-foreground leading-tight flex items-center gap-0.5">
                     <PkgIcon className="w-2.5 h-2.5" />
                     {theme.label}
                   </span>

@@ -3028,7 +3028,7 @@ app.delete('/api/support-tickets/:id', ...auth, async (req, res) => {
 // ============================================
 // WORKER SLOTS — Real-time node status for factory monitor
 // ============================================
-app.get('/api/worker-slots', ...auth, (req, res) => {
+app.get('/api/worker-slots', ...adminAuth, (req, res) => {
   try {
     const stats = automationQueue.getQueueStats();
     const maxSlots = stats.maxConcurrent || 10;

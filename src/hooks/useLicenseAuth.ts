@@ -84,6 +84,7 @@ export function useLicenseAuth() {
                         if (!result.valid && mounted) {
                             localStorage.removeItem(STORAGE_KEY);
                             localStorage.removeItem(LICENSE_CACHE_KEY);
+                            localStorage.removeItem('userPackage');
                             setLicense(null);
                         }
                     }
@@ -98,6 +99,7 @@ export function useLicenseAuth() {
                             }
                         } else if (mounted) {
                             setLicense(null);
+                            localStorage.removeItem('userPackage');
                         }
                     }
                 } else {
@@ -298,6 +300,13 @@ export function useLicenseAuth() {
         const storedKey = localStorage.getItem(STORAGE_KEY);
         if (storedKey) await validateLicenseKey(storedKey);
     }, []);
+
+    // ── Sync userPackage to localStorage + notify Header on license change ──
+    useEffect(() => {
+        const pkg = license?.package || 'free';
+        localStorage.setItem('userPackage', pkg);
+        window.dispatchEvent(new CustomEvent('license-updated', { detail: { package: pkg } }));
+    }, [license]);
 
     // ── License Expiry Warning ──
     useEffect(() => {

@@ -33,6 +33,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { PACKAGE_LIMITS } from '@/hooks/usePackageLimits';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
 
 interface SubscriptionHistoryItem {
     id: string;
@@ -141,21 +142,21 @@ export default function UserProfile() {
 
     if (!license) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
+            <DashboardLayout title="โปรไฟล์ผู้ใช้" subtitle="ข้อมูลบัญชีและแพ็กเกจ">
+                <div className="rounded-2xl border border-border bg-card p-8 text-center">
                     <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <p className="text-muted-foreground">กรุณาเข้าสู่ระบบ</p>
                     <Button onClick={() => navigate('/auth')} className="mt-4">
                         เข้าสู่ระบบ
                     </Button>
                 </div>
-            </div>
+            </DashboardLayout>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-6">
-            <div className="max-w-4xl mx-auto space-y-6">
+        <DashboardLayout title="โปรไฟล์ผู้ใช้" subtitle="ติดตามแพ็กเกจ ใบอนุญาต และการใช้งาน">
+            <div className="max-w-5xl mx-auto space-y-6">
                 {/* Profile Header */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -409,6 +410,6 @@ export default function UserProfile() {
                     </Card>
                 </motion.div>
             </div>
-        </div>
+        </DashboardLayout>
     );
 }

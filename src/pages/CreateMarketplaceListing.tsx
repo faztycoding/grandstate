@@ -70,14 +70,15 @@ export default function CreateMarketplaceListing() {
       title="สร้างรายการใหม่"
       subtitle="สร้างรายการอสังหาริมทรัพย์แบบ Facebook Marketplace"
     >
+      <div className="space-y-5">
       {/* Progress Steps */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
+      <div>
+        <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center sm:justify-between mb-3">
           {steps.map((step, index) => (
             <div
               key={step.id}
               className={cn(
-                'flex items-center gap-2',
+                'flex items-center gap-2 sm:flex-1',
                 currentStepIndex >= index ? 'text-accent' : 'text-muted-foreground'
               )}
             >
@@ -109,10 +110,10 @@ export default function CreateMarketplaceListing() {
       {/* Navigation */}
       {currentStep !== 'form' && (
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
           onClick={handleBack}
-          className="mb-4"
+          className="mb-1"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           ย้อนกลับ
@@ -163,31 +164,31 @@ export default function CreateMarketplaceListing() {
             className="max-w-md mx-auto space-y-6"
           >
             {/* Summary Card */}
-            <div className="bg-white rounded-lg p-4 border shadow-sm">
-              <h3 className="font-medium text-gray-900 mb-3">สรุปข้อมูล</h3>
+            <div className="bg-card rounded-xl p-4 border border-border shadow-sm">
+              <h3 className="font-semibold text-foreground mb-3">สรุปข้อมูล</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">ประเภท:</span>
-                  <span>{formData.listingType === 'sale' ? 'ขาย' : 'เช่า'}</span>
+                  <span className="text-muted-foreground">ประเภท:</span>
+                  <span className="font-medium">{formData.listingType === 'sale' ? 'ขาย' : 'เช่า'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">ราคา:</span>
-                  <span>฿{parseInt(formData.price || '0').toLocaleString()}</span>
+                  <span className="text-muted-foreground">ราคา:</span>
+                  <span className="font-semibold">฿{parseInt(formData.price || '0').toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">ห้องนอน:</span>
+                  <span className="text-muted-foreground">ห้องนอน:</span>
                   <span>{formData.bedrooms || '-'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">ห้องน้ำ:</span>
+                  <span className="text-muted-foreground">ห้องน้ำ:</span>
                   <span>{formData.bathrooms || '-'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">รูปภาพ:</span>
+                  <span className="text-muted-foreground">รูปภาพ:</span>
                   <span>{formData.images.length} รูป</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">กลุ่มที่เลือก:</span>
+                  <span className="text-muted-foreground">กลุ่มที่เลือก:</span>
                   <span>{selectedGroups.length} กลุ่ม</span>
                 </div>
               </div>
@@ -223,6 +224,7 @@ export default function CreateMarketplaceListing() {
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
     </DashboardLayout>
   );
 }

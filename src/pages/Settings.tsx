@@ -292,6 +292,19 @@ export default function Settings() {
   const [profileAvatar, setProfileAvatar] = useState(() => localStorage.getItem('profile_avatar') || '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
+  const handleDisplayNameChange = (value: string) => {
+    setDisplayName(value);
+    localStorage.setItem('profile_display_name', value);
+    localStorage.setItem('profile_name', value);
+    window.dispatchEvent(new Event('profile-updated'));
+  };
+
+  const handleLineIdChange = (value: string) => {
+    setLineId(value);
+    localStorage.setItem('profile_line_id', value);
+    window.dispatchEvent(new Event('profile-updated'));
+  };
+
   // Load profile from Supabase metadata on mount
   useEffect(() => {
     const loadProfile = async () => {
@@ -299,7 +312,11 @@ export default function Settings() {
       if (user?.user_metadata) {
         const meta = user.user_metadata;
         const name = meta.display_name || meta.full_name || '';
-        if (name) { setDisplayName(name); localStorage.setItem('profile_display_name', name); }
+        if (name) {
+          setDisplayName(name);
+          localStorage.setItem('profile_display_name', name);
+          localStorage.setItem('profile_name', name);
+        }
         if (meta.line_id) { setLineId(meta.line_id); localStorage.setItem('profile_line_id', meta.line_id); }
       }
     };
@@ -363,16 +380,21 @@ export default function Settings() {
 
   const handleSave = async () => {
     setIsSavingProfile(true);
+    const normalizedName = displayName.trim();
+    const normalizedLineId = lineId.trim();
     try {
       // Save to Supabase auth metadata
       const { error } = await supabase.auth.updateUser({
-        data: { display_name: displayName, full_name: displayName, line_id: lineId }
+        data: { display_name: normalizedName, full_name: normalizedName, line_id: normalizedLineId }
       });
       if (error) throw error;
 
       // Save to localStorage for fast access
-      localStorage.setItem('profile_display_name', displayName);
-      localStorage.setItem('profile_line_id', lineId);
+      setDisplayName(normalizedName);
+      setLineId(normalizedLineId);
+      localStorage.setItem('profile_display_name', normalizedName);
+      localStorage.setItem('profile_name', normalizedName);
+      localStorage.setItem('profile_line_id', normalizedLineId);
       localStorage.removeItem('claudeApiKey');
       localStorage.setItem('defaultBrowser', defaultBrowser);
       window.dispatchEvent(new Event('profile-updated'));
@@ -419,143 +441,78 @@ export default function Settings() {
   return (
     <DashboardLayout title={t.settings.title} subtitle={t.settings.subtitle}>
       {/* ═══ GRANDSTATE INDUSTRIAL IDENTITY CONSOLE ═══ */}
-      <div className="relative rounded-[2rem] overflow-hidden border-[6px] border-slate-800/80" style={{ background: 'linear-gradient(180deg, hsl(222 47% 6%) 0%, hsl(222 47% 3.5%) 100%)' }}>
+      <div className="relative rounded-3xl overflow-hidden border border-slate-700/70 shadow-2xl" style={{ background: 'linear-gradient(180deg, hsl(222 47% 6%) 0%, hsl(222 47% 4%) 100%)' }}>
         {/* Blueprint Grid */}
-        <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(148,163,184,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.5) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+        <div className="absolute inset-0 opacity-[0.025] pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(148,163,184,.45) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.45) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
         {/* Scanning Line */}
-        <motion.div animate={{ top: ['-5%', '105%'] }} transition={{ duration: 8, repeat: Infinity, ease: 'linear' }} className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent pointer-events-none z-20" />
-        {/* Corner Bolts */}
-        {[[6,6],[6,'auto'],[,'auto',6],['auto','auto']].map((_, i) => (
-          <div key={`bolt-${i}`} className={cn("absolute w-4 h-4 rounded-full bg-slate-700/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.8)] border border-slate-600/30 z-30",
-            i === 0 && "top-3 left-3", i === 1 && "top-3 right-3", i === 2 && "bottom-3 left-3", i === 3 && "bottom-3 right-3"
-          )} />
-        ))}
-        {/* Floating particles */}
-        {[...Array(6)].map((_, i) => (
-          <motion.div key={`sp-${i}`} className={cn("absolute w-1 h-1 rounded-full pointer-events-none", i % 2 === 0 ? 'bg-cyan-500/20' : `bg-${pkgAccent}-500/20`)}
-            style={{ left: `${8 + i * 16}%`, top: `${15 + (i % 3) * 30}%` }}
-            animate={{ y: [0, -15, 0], opacity: [0.1, 0.4, 0.1] }}
-            transition={{ duration: 3 + i * 0.7, repeat: Infinity, delay: i * 0.5 }}
-          />
-        ))}
+        <motion.div animate={{ top: ['-5%', '105%'] }} transition={{ duration: 12, repeat: Infinity, ease: 'linear' }} className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-500/15 to-transparent pointer-events-none z-20" />
 
         <div className="relative z-10 p-5 lg:p-8 space-y-6">
 
-        {/* ═══ 1. UPPER CONTROL DECK: IDENTITY CORE ═══ */}
-        <motion.div initial={{ opacity: 0, y: -15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-5 items-start">
-
-            {/* LEFT: Quota Gauges */}
-            <div className="space-y-3 order-2 lg:order-1">
-              {[
-                { label: s.postsPerDay || 'Posts/Day', val: pkgLimits.postsPerDay, icon: Zap, color: 'cyan' },
-                { label: s.groupsLabel || 'Groups', val: pkgLimits.maxGroups, icon: Activity, color: 'amber' },
-                { label: s.propertiesLabel || 'Properties', val: pkgLimits.maxProperties === Infinity ? '∞' : pkgLimits.maxProperties, icon: Database, color: pkgAccent },
-              ].map((g, i) => (
-                <motion.div key={i} initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.1 + i * 0.08 }}
-                  className="bg-slate-950/80 border-2 border-slate-800 p-4 rounded-2xl flex flex-col items-center">
-                  <div className="flex items-center gap-2 w-full mb-2">
-                    <g.icon size={14} className={`text-${g.color}-500`} />
-                    <span className="text-[9px] font-black uppercase text-slate-400 tracking-[0.15em] flex-1">{g.label}</span>
-                    <span className="text-lg font-black text-white font-mono">{g.val}</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                    <motion.div initial={{ width: 0 }} animate={{ width: '100%' }} transition={{ delay: 0.3 + i * 0.15, duration: 0.8 }}
-                      className={`h-full rounded-full bg-${g.color}-500 shadow-[0_0_8px] shadow-${g.color}-500/50`} />
-                  </div>
-                </motion.div>
-              ))}
-              {/* Sync Status Indicator */}
-              <div className="bg-slate-950/80 border-2 border-slate-800 p-3 rounded-2xl flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_green]" />
-                <span className="text-[9px] font-bold text-green-500 uppercase tracking-[0.15em]">Online — Synced</span>
-                <span className="text-[9px] text-slate-400 ml-auto font-mono">{authUser?.email?.split('@')[0] || '—'}</span>
-              </div>
-            </div>
-
-            {/* CENTER: Profile Port */}
-            <div className="relative flex flex-col items-center order-1 lg:order-2 pb-2">
-              {/* Package Crown */}
-              <motion.div animate={{ y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }} className="mb-2">
-                <PkgIcon size={36} className={cn(accent.text, 'filter drop-shadow-lg')} fill="currentColor" />
-                <span className={cn("text-[9px] block text-center font-black uppercase tracking-widest mt-0.5", accent.text)}>{pkgTheme.label}</span>
-              </motion.div>
-
-              {/* Avatar Port */}
-              <div className="relative group">
-                <div className={cn("w-36 h-36 lg:w-44 lg:h-44 bg-slate-950 border-[6px] border-slate-800 rounded-full flex items-center justify-center shadow-[inset_0_0_40px_rgba(0,0,0,1)]", accent.glow)}>
-                  <div className={cn("absolute inset-0 rounded-full border", `border-${pkgAccent}-500/30`, "animate-pulse")} />
-                  <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 25, ease: "linear" }} className="absolute inset-3 text-cyan-500/[0.07] pointer-events-none">
-                    <SettingsIcon size={140} strokeWidth={0.5} />
-                  </motion.div>
-                  {/* Scanning line inside port */}
-                  <motion.div animate={{ top: ['0%', '100%', '0%'] }} transition={{ duration: 4, repeat: Infinity }} className="absolute inset-x-3 h-[1px] bg-cyan-500/40 shadow-[0_0_8px_cyan] rounded-full pointer-events-none" />
-
+        {/* ═══ 1. FACTORY PROFILE DECK ═══ */}
+        <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}
+          className="rounded-2xl border border-slate-700/60 bg-gradient-to-br from-slate-950/90 via-slate-900/70 to-slate-950/90 p-5 sm:p-6">
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-5 items-stretch">
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
+              <div className="relative group self-start">
+                <div className="w-28 h-28 rounded-2xl border-2 border-slate-700 bg-slate-950/80 flex items-center justify-center shadow-[inset_0_0_30px_rgba(0,0,0,0.8)]">
                   {profileAvatar ? (
-                    <img src={profileAvatar} alt={displayName} className="w-24 h-24 lg:w-28 lg:h-28 rounded-full object-cover relative z-10 ring-2 ring-slate-700" />
+                    <img src={profileAvatar} alt={displayName} className="w-24 h-24 rounded-xl object-cover" />
                   ) : (
-                    <span className={cn("text-5xl lg:text-6xl font-black relative z-10", accent.text)}>
+                    <span className={cn("text-5xl font-black", accent.text)}>
                       {displayName ? displayName.charAt(0).toUpperCase() : 'U'}
                     </span>
                   )}
                 </div>
                 <button onClick={() => profileFileRef.current?.click()}
-                  className={cn("absolute -bottom-1 -right-1 p-2.5 rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-lg text-black z-20", accent.bg)}>
+                  className={cn("absolute -bottom-2 -right-2 p-2 rounded-lg text-black shadow-lg opacity-0 group-hover:opacity-100 transition-opacity", accent.bg)}>
                   <Camera size={14} />
                 </button>
                 <input ref={profileFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleProfileImageUpload(e.target.files)} />
               </div>
 
-              {/* Name + Upgrade */}
-              <div className="mt-3 text-center">
-                <h1 className="text-xl font-black text-white uppercase tracking-tight">{displayName || 'User'}</h1>
+              <div className="flex-1 space-y-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.16em] text-slate-400">{isEn ? 'Factory Profile' : 'โปรไฟล์ผู้ใช้งาน'}</p>
+                  <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">{displayName || 'User'}</h2>
+                  <p className="text-sm text-slate-300 mt-1">{authUser?.email || '—'}</p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge className={cn("border border-transparent", accent.bg, accent.text)}>{pkgTheme.label}</Badge>
+                  <Badge variant="outline" className="text-slate-300 border-slate-600">
+                    {isEn ? `FB Sessions ${fbConnectedCount}/${pkgLimits.fbAccounts}` : `FB Sessions ${fbConnectedCount}/${pkgLimits.fbAccounts}`}
+                  </Badge>
+                  {licenseDaysLeft !== null && (
+                    <Badge variant="outline" className={cn("border", licenseDaysLeft <= 7 ? 'border-red-500/40 text-red-400' : licenseDaysLeft <= 30 ? 'border-amber-500/40 text-amber-400' : 'border-emerald-500/40 text-emerald-400')}>
+                      {isEn ? `${licenseDaysLeft} days left` : `เหลือ ${licenseDaysLeft} วัน`}
+                    </Badge>
+                  )}
+                </div>
+
                 {pkg !== 'elite' && (
-                  <Button size="sm" variant="outline" onClick={() => navigate('/pricing')} className="mt-2 border-slate-700 text-slate-400 text-[9px] h-7 hover:bg-white/5 gap-1">
-                    {s.upgrade} <ArrowRight className="w-3 h-3" />
+                  <Button size="sm" variant="outline" onClick={() => navigate('/pricing')} className="border-slate-600 text-slate-200 hover:bg-slate-800/70">
+                    {s.upgrade} <ArrowRight className="w-3.5 h-3.5 ml-1" />
                   </Button>
                 )}
               </div>
             </div>
 
-            {/* RIGHT: Sync + License Info */}
-            <div className="space-y-3 order-3">
-              {/* Sync Clock */}
-              <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.15 }}
-                className="bg-slate-950/80 border-2 border-slate-800 p-4 rounded-2xl flex flex-col items-center">
-                <Clock size={18} className="text-cyan-500 mb-1" />
-                <span className="text-2xl font-black text-white font-mono leading-none">{syncTime}</span>
-                <span className="text-[8px] font-bold text-slate-400 mt-1.5 uppercase tracking-[0.2em]">Sync Time</span>
-              </motion.div>
-
-              {/* License Days Remaining */}
-              <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.25 }}
-                className="bg-slate-950/80 border-2 border-slate-800 p-4 rounded-2xl flex flex-col items-center">
-                <CalendarDays size={16} className={accent.text} />
-                <span className={cn("text-xl font-black font-mono leading-none mt-1", licenseDaysLeft !== null && licenseDaysLeft <= 7 ? 'text-red-400' : licenseDaysLeft !== null && licenseDaysLeft <= 30 ? 'text-amber-400' : 'text-white')}>
-                  {licenseDaysLeft !== null ? licenseDaysLeft : '∞'}
-                </span>
-                <span className="text-[8px] font-bold text-slate-400 mt-1 uppercase tracking-[0.2em]">{isEn ? 'Days Left' : 'วันคงเหลือ'}</span>
-              </motion.div>
-
-              {/* License Key */}
-              {authLicense?.licenseKey && (
-                <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.35 }}
-                  className="bg-slate-950/80 border-2 border-slate-800 p-3 rounded-2xl">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Key size={12} className="text-amber-500" />
-                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.15em]">License Key</span>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: s.postsPerDay || 'Posts/Day', value: pkgLimits.postsPerDay, icon: Zap, valueClass: 'text-cyan-300' },
+                { label: s.groupsLabel || 'Groups', value: pkgLimits.maxGroups, icon: Activity, valueClass: 'text-amber-300' },
+                { label: s.propertiesLabel || 'Properties', value: pkgLimits.maxProperties === Infinity ? '∞' : pkgLimits.maxProperties, icon: Database, valueClass: accent.text },
+                { label: isEn ? 'Sync Time' : 'เวลาซิงค์', value: syncTime, icon: Clock, valueClass: 'text-slate-100' },
+              ].map((item, i) => (
+                <div key={i} className="rounded-xl border border-slate-700/70 bg-slate-950/70 p-3.5">
+                  <div className="flex items-center gap-2 text-slate-400 mb-2">
+                    <item.icon className="w-4 h-4" />
+                    <span className="text-xs uppercase tracking-wider">{item.label}</span>
                   </div>
-                  <code className="text-[9px] font-mono text-cyan-400 select-all block truncate">{authLicense.licenseKey}</code>
-                </motion.div>
-              )}
-
-              {/* Email */}
-              {authUser?.email && (
-                <div className="p-3 flex items-center gap-2">
-                  <Lock size={10} className="text-slate-400" />
-                  <span className="text-[9px] text-slate-400 font-mono truncate">{authUser.email}</span>
+                  <p className={cn("text-xl font-black font-mono leading-none", item.valueClass)}>{item.value}</p>
                 </div>
-              )}
+              ))}
             </div>
           </div>
         </motion.div>
@@ -573,23 +530,23 @@ export default function Settings() {
                   <ShieldCheck size={16} className="text-amber-500" />
                 </div>
                 <div>
-                  <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">Security Calibration</h3>
-                  <p className="text-[9px] text-slate-400 font-mono">{isEn ? 'Change your access credentials' : 'เปลี่ยนรหัสผ่านเข้าสู่ระบบ'}</p>
+                  <h3 className="text-sm font-bold text-white">Security Calibration</h3>
+                  <p className="text-xs text-slate-300">{isEn ? 'Change your access credentials' : 'เปลี่ยนรหัสผ่านเข้าสู่ระบบ'}</p>
                 </div>
               </div>
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase ml-1 tracking-wider">{isEn ? 'New Password' : 'รหัสผ่านใหม่'}</label>
+                  <label className="text-xs font-semibold text-slate-300 ml-1">{isEn ? 'New Password' : 'รหัสผ่านใหม่'}</label>
                   <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••"
                     className="bg-black border-2 border-slate-800 rounded-xl h-11 px-4 text-sm text-amber-400 focus:border-amber-500/50 placeholder:text-slate-500" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase ml-1 tracking-wider">{isEn ? 'Confirm Password' : 'ยืนยันรหัสผ่าน'}</label>
+                  <label className="text-xs font-semibold text-slate-300 ml-1">{isEn ? 'Confirm Password' : 'ยืนยันรหัสผ่าน'}</label>
                   <Input type="password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} placeholder="••••••••"
                     className="bg-black border-2 border-slate-800 rounded-xl h-11 px-4 text-sm text-amber-400 focus:border-amber-500/50 placeholder:text-slate-500" />
                 </div>
                 <button onClick={handleChangePassword} disabled={isChangingPassword || !newPassword || !confirmNewPassword}
-                  className="w-full py-3.5 bg-slate-950 border-2 border-amber-500 text-amber-500 font-black text-[10px] rounded-xl flex items-center justify-center gap-2 hover:bg-amber-500 hover:text-black transition-all shadow-lg shadow-amber-500/10 uppercase tracking-[0.15em] disabled:opacity-30 disabled:cursor-not-allowed">
+                  className="w-full py-3.5 bg-slate-950 border-2 border-amber-500 text-amber-500 font-semibold text-sm rounded-xl flex items-center justify-center gap-2 hover:bg-amber-500 hover:text-black transition-all shadow-lg shadow-amber-500/10 disabled:opacity-30 disabled:cursor-not-allowed">
                   {isChangingPassword ? <><Loader2 className="w-4 h-4 animate-spin" />{isEn ? 'Changing...' : 'กำลังเปลี่ยน...'}</> : <><ShieldCheck size={16} />{isEn ? 'Change Password' : 'เปลี่ยนรหัสผ่าน'}</>}
                 </button>
               </div>
@@ -605,23 +562,23 @@ export default function Settings() {
                 <User size={16} className="text-cyan-500" />
               </div>
               <div>
-                <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">Identity Matrix</h3>
-                <p className="text-[9px] text-slate-400 font-mono">{isEn ? 'Display name & contact — cloud synced' : 'ชื่อแสดงผลและช่องทางติดต่อ — ซิงค์กับระบบ'}</p>
+                <h3 className="text-sm font-bold text-white">Identity Matrix</h3>
+                <p className="text-xs text-slate-300">{isEn ? 'Display name & contact — cloud synced' : 'ชื่อแสดงผลและช่องทางติดต่อ — ซิงค์กับระบบ'}</p>
               </div>
             </div>
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-[9px] font-bold text-slate-400 uppercase ml-1 tracking-wider">{isEn ? 'Display Name' : 'ชื่อที่แสดง'}</label>
-                <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder={isEn ? 'Your name' : 'ชื่อของคุณ'}
+                <label className="text-xs font-semibold text-slate-300 ml-1">{isEn ? 'Display Name' : 'ชื่อที่แสดง'}</label>
+                <Input value={displayName} onChange={(e) => handleDisplayNameChange(e.target.value)} placeholder={isEn ? 'Your name' : 'ชื่อของคุณ'}
                   className="bg-black border-2 border-slate-800 rounded-xl h-11 px-4 text-sm text-cyan-400 focus:border-cyan-500/50 placeholder:text-slate-500" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[9px] font-bold text-slate-400 uppercase ml-1 tracking-wider">Line ID</label>
-                <Input value={lineId} onChange={(e) => setLineId(e.target.value)} placeholder="@yourlineid"
+                <label className="text-xs font-semibold text-slate-300 ml-1">Line ID</label>
+                <Input value={lineId} onChange={(e) => handleLineIdChange(e.target.value)} placeholder="@yourlineid"
                   className="bg-black border-2 border-slate-800 rounded-xl h-11 px-4 text-sm text-cyan-400 focus:border-cyan-500/50 placeholder:text-slate-500" />
               </div>
               <button onClick={handleSave} disabled={isSavingProfile}
-                className="w-full py-3.5 bg-cyan-600 text-black font-black text-[10px] rounded-xl flex items-center justify-center gap-2 hover:bg-cyan-500 transition-all shadow-lg shadow-cyan-500/10 uppercase tracking-[0.15em] disabled:opacity-30">
+                className="w-full py-3.5 bg-cyan-600 text-black font-semibold text-sm rounded-xl flex items-center justify-center gap-2 hover:bg-cyan-500 transition-all shadow-lg shadow-cyan-500/10 disabled:opacity-30">
                 {isSavingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save size={16} />}
                 {isEn ? 'Save Account Details' : 'บันทึกข้อมูลบัญชี'}
               </button>
@@ -640,8 +597,8 @@ export default function Settings() {
                   <Facebook className="w-4 h-4 text-[#1877F2]" />
                 </div>
                 <div>
-                  <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">{t.settings.facebookConnection}</h3>
-                  <p className="text-[9px] text-slate-400 font-mono">{t.settings.facebookDesc}</p>
+                  <h3 className="text-sm font-bold text-white">{t.settings.facebookConnection}</h3>
+                  <p className="text-xs text-slate-300">{t.settings.facebookDesc}</p>
                 </div>
               </div>
               <div className="flex sm:flex-col items-center sm:items-end gap-2 sm:gap-0">
@@ -652,7 +609,7 @@ export default function Settings() {
                     )} />
                   ))}
                 </div>
-                <p className="text-[9px] text-slate-400 sm:mt-1 font-mono">{fbConnectedCount}/{pkgLimits.fbAccounts} sessions ({pkgTheme.label})</p>
+                <p className="text-xs text-slate-300 sm:mt-1">{fbConnectedCount}/{pkgLimits.fbAccounts} sessions ({pkgTheme.label})</p>
               </div>
             </div>
           <div className="space-y-4">
@@ -920,8 +877,8 @@ export default function Settings() {
               <Palette size={16} className="text-purple-400" />
             </div>
             <div>
-              <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">{s.themeSettings || 'Theme Engine'}</h3>
-              <p className="text-[9px] text-slate-400 font-mono">{s.themeSettingsDesc || 'เลือกโทนสีที่เหมาะกับสไตล์ของคุณ'}</p>
+              <h3 className="text-sm font-bold text-white">{s.themeSettings || 'Theme Engine'}</h3>
+              <p className="text-xs text-slate-300">{s.themeSettingsDesc || 'เลือกโทนสีที่เหมาะกับสไตล์ของคุณ'}</p>
             </div>
           </div>
           <div className="space-y-5">
@@ -1009,18 +966,18 @@ export default function Settings() {
               <HardDrive size={16} className="text-emerald-400" />
             </div>
             <div>
-              <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">{isEn ? 'Data Management' : 'จัดการข้อมูล'}</h3>
-              <p className="text-[9px] text-slate-400 font-mono">{isEn ? 'Export, reset & system info' : 'ส่งออก, รีเซ็ต และข้อมูลระบบ'}</p>
+              <h3 className="text-sm font-bold text-white">{isEn ? 'Data Management' : 'จัดการข้อมูล'}</h3>
+              <p className="text-xs text-slate-300">{isEn ? 'Export, reset & system info' : 'ส่งออก, รีเซ็ต และข้อมูลระบบ'}</p>
             </div>
           </div>
           <div className="space-y-3">
             <button onClick={handleExportData}
-              className="w-full py-3 bg-slate-950 border-2 border-emerald-500/30 text-emerald-400 font-black text-[10px] rounded-xl flex items-center justify-center gap-2 hover:bg-emerald-500/10 transition-all uppercase tracking-[0.12em]">
+              className="w-full py-3 bg-slate-950 border-2 border-emerald-500/30 text-emerald-400 font-semibold text-sm rounded-xl flex items-center justify-center gap-2 hover:bg-emerald-500/10 transition-all">
               <Download size={14} /> {isEn ? 'Export All Data' : 'ส่งออกข้อมูลทั้งหมด'}
             </button>
             <button onClick={handleClearHistory}
-              className="w-full py-3 bg-slate-950 border-2 border-amber-500/20 text-amber-400/70 font-black text-[10px] rounded-xl flex items-center justify-center gap-2 hover:bg-amber-500/10 transition-all uppercase tracking-[0.12em]">
-              <RotateCcw size={14} /> {s.resetData || (isEn ? 'Clear Post History' : 'ล้างประวัติการโพสต์')}
+              className="w-full py-3 bg-slate-950 border-2 border-amber-500/20 text-amber-300 font-semibold text-sm rounded-xl flex items-center justify-center gap-2 hover:bg-amber-500/10 transition-all">
+              <RotateCcw size={14} /> {isEn ? 'Clear Post History' : 'ล้างประวัติการโพสต์'}
             </button>
             <div className="p-3 bg-slate-950/50 border border-slate-800 rounded-xl space-y-1.5">
               <div className="flex items-center justify-between text-[9px]">
@@ -1060,12 +1017,12 @@ export default function Settings() {
                   <MessageCircle size={16} className="text-cyan-400" />
                 </div>
                 <div>
-                  <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">{isEn ? 'Support Terminal' : 'ศูนย์ช่วยเหลือ'}</h3>
-                  <p className="text-[9px] text-slate-400 font-mono">{isEn ? 'Report issues & track responses' : 'แจ้งปัญหาและติดตามการตอบกลับ'}</p>
+                  <h3 className="text-sm font-bold text-white">{isEn ? 'Support Terminal' : 'ศูนย์ช่วยเหลือ'}</h3>
+                  <p className="text-xs text-slate-300">{isEn ? 'Report issues & track responses' : 'แจ้งปัญหาและติดตามการตอบกลับ'}</p>
                 </div>
               </div>
               <button onClick={() => setShowSupportTicket(true)}
-                className="px-3 py-2 bg-slate-950 border-2 border-cyan-500/30 text-cyan-400 font-black text-[9px] rounded-xl flex items-center gap-1.5 hover:bg-cyan-500/10 transition-all uppercase tracking-wider">
+                className="px-3 py-2 bg-slate-950 border-2 border-cyan-500/30 text-cyan-300 font-semibold text-sm rounded-xl flex items-center gap-1.5 hover:bg-cyan-500/10 transition-all">
                 <Send size={12} /> {isEn ? 'New Report' : 'แจ้งปัญหาใหม่'}
               </button>
             </div>
@@ -1126,42 +1083,23 @@ export default function Settings() {
           </div>
         </motion.div>
 
-        {/* ═══ 6. MECHANICAL LEVER (Decoration) + MASTER SAVE ═══ */}
-        <div className="flex items-center justify-between">
-          {/* Lever decoration */}
-          <div className="flex items-center gap-3 opacity-30">
-            <GripHorizontal className="text-slate-700" size={20} />
-            <div className="w-24 h-1.5 bg-slate-800 rounded-full relative overflow-hidden">
-              <motion.div animate={{ x: ['-100%', '200%'] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute inset-y-0 w-8 bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent" />
-            </div>
-            <span className="text-[7px] font-black text-slate-700 uppercase tracking-[0.2em]">Mechanical Override</span>
+        {/* ═══ 6. FACTORY CONTROL BAR ═══ */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
+          <div className="flex items-center gap-2 text-slate-300">
+            <Gauge className="w-4 h-4 text-cyan-300" />
+            <p className="text-sm">
+              {isEn ? 'Factory profile controls are ready to sync.' : 'พร้อมซิงก์ค่าตั้งค่าบัญชีและโปรไฟล์'}
+            </p>
           </div>
 
-          {/* Master Save */}
           <button onClick={handleSave} disabled={isSavingProfile}
-            className={cn("px-8 py-3.5 font-black text-[10px] rounded-2xl flex items-center justify-center gap-2.5 transition-all uppercase tracking-[0.2em] disabled:opacity-30 border-2",
-              `bg-slate-950 ${accent.border.replace('border-', 'border-')} ${accent.text} hover:${accent.bg} hover:text-black shadow-lg ${accent.shadow}`
+            className={cn("px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-semibold text-sm transition-all disabled:opacity-30 border-2",
+              `bg-slate-950 ${accent.border} ${accent.text} hover:${accent.bg} hover:text-black shadow-lg ${accent.shadow}`
             )}>
             {isSavingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save size={16} />}
             {t.common.saveChanges}
           </button>
         </div>
-
-        {/* ═══ 7. TERMINAL LOG FOOTER ═══ */}
-        <footer className="bg-black/60 border-2 border-slate-800 rounded-2xl p-5 font-mono text-[10px]">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse" />
-            <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">Console Stream // {authUser?.email || 'user@grandstate.io'}</span>
-          </div>
-          <div className="space-y-0.5 text-cyan-500/70 italic">
-            <p>{'>'} Identity sync initialized for node_{(displayName || 'unknown').toLowerCase().replace(/\s/g, '_')}...</p>
-            <p>{'>'} Protocol {pkgTheme.label} validated // Hardware Masking: ON</p>
-            <p>{'>'} Cloud sync: ACTIVE — mirrored to Global Nodes</p>
-            <p>{'>'} {s.appVersion}: Grand$tate v1.0 — Engine Core Online</p>
-            <p className="animate-pulse text-amber-500/30">{'>'} Awaiting configuration input...</p>
-          </div>
-        </footer>
 
         </div>{/* end z-10 inner */}
       </div>{/* end factory wrapper */}

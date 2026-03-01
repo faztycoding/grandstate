@@ -131,15 +131,17 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
         <Sidebar />
         <div className="md:pl-[280px] transition-all duration-200 relative z-10">
           <Header title={title} subtitle={subtitle} />
-          <main className="p-4 md:p-6">
+          <main className="px-4 pt-5 pb-8 sm:px-6 lg:px-8">
             <Suspense fallback={
               <div className="flex items-center justify-center py-32 flex-col gap-3">
                 <div className="w-8 h-8 border-3 border-accent border-t-transparent rounded-full animate-spin" />
-                <p className="text-xs text-muted-foreground animate-pulse">Loading...</p>
+                <p className="text-sm text-muted-foreground animate-pulse">Loading...</p>
               </div>
             }>
-              <div key={location.pathname} className="page-enter">
-                {children}
+              <div className="app-page-frame">
+                <div key={location.pathname} className="page-enter ui-section-gap ui-density-relaxed ui-contrast-boost">
+                  {children}
+                </div>
               </div>
             </Suspense>
           </main>

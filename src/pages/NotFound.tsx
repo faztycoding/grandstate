@@ -12,7 +12,7 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background relative overflow-hidden p-6">
+    <div className="flex min-h-screen items-center justify-center bg-background relative overflow-hidden p-6 ui-density-relaxed">
       {/* Background grid */}
       <div className="pointer-events-none fixed inset-0 z-0 opacity-[0.03]" style={{
         backgroundImage: 'linear-gradient(rgba(38,60,100,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(38,60,100,0.3) 1px, transparent 1px)',
@@ -94,7 +94,7 @@ const NotFound = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.7 }}
-          className="text-[10px] text-muted-foreground/40 pt-4"
+          className="text-xs text-muted-foreground/50 pt-4"
         >
           Grand<span style={{ color: '#fbbf24' }}>$</span>tate v1.0
         </motion.p>

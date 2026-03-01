@@ -2204,6 +2204,15 @@ app.post('/api/facebook/connect', ...auth, async (req, res) => {
 
 // Auto-login to Facebook (for VPS headless mode)
 app.post('/api/facebook/auto-login', ...auth, async (req, res) => {
+  // Global 90s timeout guard — prevents infinite hang if any Puppeteer step hangs
+  const _loginTimeout = setTimeout(() => {
+    if (!res.headersSent) {
+      console.warn(`⏱️ [auto-login] Timed out after 90s — forcing error response`);
+      res.json({ success: false, error: 'Login หมดเวลา (90s) — กรุณาลองใหม่อีกครั้ง' });
+    }
+  }, 90000);
+  res.on('finish', () => clearTimeout(_loginTimeout));
+
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -2218,7 +2227,7 @@ app.post('/api/facebook/auto-login', ...auth, async (req, res) => {
 
     // ── Step 1: Navigate to facebook.com ──
     console.log(`🔑 [${shortId}] Auto-login: navigating to facebook.com...`);
-    await page.goto('https://www.facebook.com/', { waitUntil: 'networkidle2', timeout: 30000 });
+    await page.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded', timeout: 30000 });
     await new Promise(r => setTimeout(r, 3000));
 
     const initialTitle = await page.title().catch(() => '');
@@ -2403,10 +2412,10 @@ app.post('/api/facebook/auto-login', ...auth, async (req, res) => {
 
     // ── Step 7: Wait for navigation after login ──
     console.log(`🔑 [${shortId}] Waiting for login response...`);
-    // Use Promise.race: wait for navigation OR timeout
+    // Use Promise.race: wait for navigation OR timeout (domcontentloaded — networkidle2 hangs on Facebook)
     await Promise.race([
-      page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 20000 }).catch(() => {}),
-      new Promise(r => setTimeout(r, 15000)),
+      page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {}),
+      new Promise(r => setTimeout(r, 12000)),
     ]);
 
     const postLoginUrl = page.url();

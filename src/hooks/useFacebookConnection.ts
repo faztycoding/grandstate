@@ -155,11 +155,16 @@ export function useFacebookConnection() {
 
   // Auto-login (VPS headless mode) — uses active slot
   const autoLogin = useCallback(async (email: string, password: string) => {
+    // 95-second timeout — backend has 90s guard, this is the frontend safety net
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 95000);
     try {
       const response = await apiFetch('/api/facebook/auto-login', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
 
@@ -171,7 +176,9 @@ export function useFacebookConnection() {
         return { success: false as const, message: data.error };
       }
     } catch (error: any) {
-      return { success: false as const, message: error.message };
+      clearTimeout(timeoutId);
+      const msg = error.name === 'AbortError' ? 'Login หมดเวลา — กรุณาลองใหม่อีกครั้ง' : error.message;
+      return { success: false as const, message: msg };
     }
   }, [checkStatus]);
 

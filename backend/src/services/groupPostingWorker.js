@@ -2707,6 +2707,11 @@ export class GroupPostingWorker {
       '--no-first-run',
       '--disable-extensions',
       '--disable-notifications',
+      '--disable-translate',
+      '--disable-popup-blocking',
+      '--disable-default-apps',
+      '--disable-component-update',
+      '--lang=th',
       ...stealthArgs,
     ];
     const localArgs = [
@@ -2719,6 +2724,10 @@ export class GroupPostingWorker {
       '--disable-software-rasterizer',
       '--disable-extensions',
       '--disable-notifications',
+      '--disable-translate',
+      '--disable-popup-blocking',
+      '--disable-default-apps',
+      '--disable-component-update',
       '--no-first-run',
       ...stealthArgs,
     ];

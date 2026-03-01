@@ -2370,7 +2370,7 @@ export default function AdminDashboard() {
                             {/* Glow orb */}
                             <div className="absolute -top-20 -right-20 w-48 h-48 rounded-full bg-amber-500/5 blur-[80px] pointer-events-none" />
 
-                            <div className="relative z-10 p-6">
+                            <div className="relative p-6">
                                 {/* Header */}
                                 <DialogHeader className="pb-5 border-b border-slate-800">
                                     <DialogTitle className="flex items-center gap-3 text-white">
@@ -2849,7 +2849,8 @@ export default function AdminDashboard() {
                                                     const isActive = i < queueDetail.data.runningCount;
                                                     const runningJob = isActive ? queueDetail.data.running[i] : null;
                                                     return (
-                                                        <div key={i} className={cn("p-3 rounded-xl border-2 text-center transition-all relative overflow-hidden",
+                                                        <div key={i} onClick={() => setQueueDetail({ type: 'slot-inspect', data: { slotIndex: i, job: runningJob, queueData: queueDetail.data } })}
+                                                            className={cn("p-3 rounded-xl border-2 text-center transition-all relative overflow-hidden cursor-pointer hover:border-amber-500/60 hover:scale-[1.04]",
                                                             isActive ? "bg-slate-900/80 border-amber-500/40 shadow-lg shadow-amber-500/10" : "bg-slate-950/60 border-slate-800")}>
                                                             {isActive && <motion.div animate={{ top: ['-10%', '110%'] }} transition={{ duration: 2, repeat: Infinity, ease: 'linear', delay: i * 0.2 }}
                                                                 className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent pointer-events-none" />}

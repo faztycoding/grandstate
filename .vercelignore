@@ -1,5 +1,11 @@
 node_modules
 backend
+server
 profiles
+supabase
 .git
 *.log
+*.sql
+GRANDSTATE_OVERVIEW.md
+AUDIT_REPORT.md
+DEPLOY_CHECKLIST.md

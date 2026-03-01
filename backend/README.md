@@ -1,132 +1,85 @@
-# HomePost Automation Backend
+# Grand$tate Backend
 
-ระบบ Automation สำหรับโพสต์อสังหาริมทรัพย์บน Facebook Marketplace
+Main API server — Automation engine, queue system, session management.
 
-## การติดตั้ง
+**Port**: `3001` · **Production**: `api.grandstate.io`
+
+## Setup
 
 ```bash
 cd backend
 npm install
-```
-
-## การใช้งาน
-
-### เริ่ม Server
-```bash
+cp .env.example .env   # Fill in Supabase + admin config
 npm run dev
 ```
 
-Server จะรันที่ `http://localhost:3001`
+## Environment Variables (`backend/.env`)
 
-## ฟีเจอร์หลัก
-
-### 1. Facebook Marketplace Automation
-- เปิด Browser และ Navigate ไป Facebook Marketplace
-- เลือกประเภท "บ้านสำหรับขายหรือเช่า"
-- กรอกฟอร์มอัตโนมัติ (รูปภาพ, รายละเอียด, ราคา, ที่ตั้ง)
-- กดถัดไปอัตโนมัติ
-- เลือกกลุ่มสำหรับโพสต์
-
-### 2. ระบบป้องกันโพสต์ซ้ำ (Duplicate Prevention)
-- **บันทึกประวัติการโพสต์**: เก็บข้อมูลว่า property ไหนโพสต์ไปกลุ่มไหนเมื่อไหร่
-- **Cooldown Period**: กำหนดได้ว่าต้องรอกี่ชั่วโมงถึงจะโพสต์ซ้ำกลุ่มเดิมได้
-- **Smart Selection**: เลือกกลุ่มอัตโนมัติโดยให้ความสำคัญกลุ่มที่ยังไม่เคยโพสต์
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SUPABASE_URL` | ✅ | Supabase project URL |
+| `SUPABASE_SERVICE_KEY` | ✅ | Supabase service role key |
+| `ADMIN_EMAILS` | ✅ | Admin emails (comma-separated) |
+| `FRONTEND_URL` | ✅ | Frontend URL for CORS |
+| `PORT` | | Server port (default: 3001) |
 
 ## API Endpoints
 
-### Automation Control
+### Auth & Health
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/automation/start` | เปิด Browser |
-| POST | `/api/automation/stop` | ปิด Browser |
-| POST | `/api/automation/navigate-marketplace` | ไปหน้า Marketplace |
-| POST | `/api/automation/create-property-listing` | เลือกประเภท "บ้านสำหรับขายหรือเช่า" |
-| POST | `/api/automation/fill-form` | กรอกฟอร์ม |
-| POST | `/api/automation/click-next` | กดถัดไป |
-| POST | `/api/automation/select-groups` | เลือกกลุ่ม |
-| POST | `/api/automation/post` | โพสต์ |
-| POST | `/api/automation/full-flow` | ทำทุกอย่างอัตโนมัติ |
+| GET | `/api/ping` | Health check |
+| POST | `/api/auth/verify-token` | Verify JWT token |
 
-### Posting History
+### Automation
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/posting-history` | ดูประวัติทั้งหมด |
-| GET | `/api/posting-history/:propertyId` | ดูประวัติของ property |
-| GET | `/api/available-groups/:propertyId` | ดูกลุ่มที่สามารถโพสต์ได้ |
+| POST | `/api/automation/start` | Start automation job |
+| POST | `/api/automation/stop` | Stop automation |
+| GET | `/api/automation/status` | Current status |
+| GET | `/api/automation/stream` | SSE real-time progress |
 
-## Logic ป้องกันโพสต์ซ้ำ
+### Data
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/posting-history` | Posting history |
+| GET | `/api/user/real-stats` | User usage statistics |
+| GET | `/api/analytics` | Analytics overview |
 
-```javascript
-// 1. เก็บประวัติการโพสต์
-postingTracker.recordPosting(propertyId, groupId);
+### Admin
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/admin/users` | List all users |
+| POST | `/api/admin/change-package` | Change user package |
+| GET | `/api/admin/engine-status` | Engine worker status |
+| POST | `/api/admin/clear-history` | Clear job history |
 
-// 2. ตรวจสอบว่าโพสต์ได้หรือยัง
-const canPost = postingTracker.canPostToGroup(propertyId, groupId, cooldownHours);
+### Session / Presence
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/session/presence` | Heartbeat (user online) |
+| GET | `/api/session/active-users` | Active users count |
 
-// 3. กรองกลุ่มที่โพสต์ได้
-const availableGroups = postingTracker.filterAvailableGroups(propertyId, allGroupIds, cooldownHours);
+## Services
 
-// 4. Smart Selection - เลือกกลุ่มอัตโนมัติ
-const selectedGroups = postingTracker.smartSelectGroups(propertyId, allGroupIds, maxGroups, {
-  cooldownHours: 24,        // รอ 24 ชม. ถึงจะโพสต์ซ้ำได้
-  preferUnposted: true,     // ให้ความสำคัญกลุ่มที่ยังไม่เคยโพสต์
-  rotateDaily: true,        // หมุนเวียนกลุ่มในแต่ละวัน
-});
+```
+backend/src/services/
+├── postingTracker.js       # Daily limit + duplicate prevention + history
+├── userSessionManager.js   # Active user presence tracking
+└── marketplaceWorker.js    # Facebook Marketplace automation
 ```
 
-## โครงสร้างไฟล์
+### PostingTracker
+- Daily cycle reset at **05:00 AM**
+- Package limits: Free 10/day, Agent 300/day, Elite 750/day
+- Duplicate prevention per property+group combination
+- History persisted to `data/{userId}/posting-history.json`
 
-```
-backend/
-├── src/
-│   ├── index.js                    # Express server
-│   └── services/
-│       ├── facebookAutomation.js   # Puppeteer automation
-│       └── postingTracker.js       # ระบบติดตามการโพสต์
-├── data/
-│   └── posting-history.json        # ไฟล์เก็บประวัติ
-├── chrome-data/                    # Browser session (เก็บ login)
-└── package.json
-```
+## Production (VPS)
 
-## หมายเหตุ
+```bash
+# Start with PM2
+pm2 start src/index.js --name backend
 
-1. **Login Facebook**: ครั้งแรกที่ใช้งาน ต้อง Login Facebook ใน Browser ที่เปิดขึ้นมา (Session จะถูกเก็บไว้ใน `chrome-data/`)
-
-2. **รูปภาพ**: ระบบรองรับการอัพโหลดรูปภาพแบบ:
-   - Base64 data URL
-   - File path
-
-3. **Facebook Rate Limit**: ระวังเรื่องการโพสต์บ่อยเกินไป Facebook อาจ block account
-
-## ตัวอย่างการใช้งาน Full Flow
-
-```javascript
-// เรียก API full-flow
-fetch('http://localhost:3001/api/automation/full-flow', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    property: {
-      id: 'prop-1',
-      title: 'คอนโดสวย ใจกลางเมือง',
-      price: 2500000,
-      location: 'สุขุมวิท',
-      district: 'วัฒนา',
-      province: 'กรุงเทพ',
-      size: 45,
-      bedrooms: 2,
-      bathrooms: 1,
-      type: 'condo',
-      listingType: 'sale',
-      contactPhone: '0812345678',
-    },
-    images: ['path/to/image1.jpg', 'path/to/image2.jpg'],
-    groupSelection: {
-      groupIds: ['group-1', 'group-2', 'group-3'],
-      preventDuplicates: true,
-      cooldownHours: 24,
-    },
-  }),
-});
+# Nginx config points api.grandstate.io → localhost:3001
 ```

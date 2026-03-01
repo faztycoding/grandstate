@@ -1,73 +1,98 @@
-# Welcome to your Lovable project
+# Grand$tate v1.1.0
 
-## Project info
+**Real Estate Posting Automation Platform**
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+ระบบโพสต์ประกาศอสังหาริมทรัพย์ลง Facebook Groups อัตโนมัติ สำหรับนายหน้ามืออาชีพ
 
-## How can I edit this code?
+🌐 **Production**: [grandstate.io](https://grandstate.io) · 🔧 **API**: [api.grandstate.io](https://api.grandstate.io)
 
-There are several ways of editing your application.
+---
 
-**Use Lovable**
+## Quick Start
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+```bash
+# 1. Clone & install
+git clone https://github.com/faztycoding/grandstate.git
+cd grandstate
+npm install
 
-Changes made via Lovable will be committed automatically to this repo.
+# 2. Set environment variables
+cp .env.example .env
+# Edit .env with your Supabase + Omise keys
 
-**Use your preferred IDE**
+# 3. Start frontend dev server
+npm run dev
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# 4. Start backend (separate terminal)
+cd backend
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Project Structure
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```
+├── src/                  # Frontend (React + TypeScript)
+│   ├── pages/            #   Page components
+│   ├── components/       #   UI components
+│   ├── hooks/            #   Custom React hooks
+│   ├── i18n/             #   Internationalization (TH/EN)
+│   └── lib/              #   Utilities, Supabase client
+├── backend/              # Main API server (Express + Puppeteer)
+│   └── src/
+│       ├── index.js      #   API routes (40+ endpoints)
+│       └── services/     #   PostingTracker, SessionManager
+├── server/               # Payment server (Omise)
+│   └── payment.js        #   Charge + Webhook (port 3002)
+├── supabase/             # Database SQL setup files
+├── public/               # Static assets + Service Worker
+└── GRANDSTATE_OVERVIEW.md  # Full technical documentation
+```
 
-**Use GitHub Codespaces**
+## Tech Stack
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+| Layer | Technologies |
+|-------|-------------|
+| **Frontend** | React 18, TypeScript, Vite, TailwindCSS, shadcn/ui, Framer Motion |
+| **Backend** | Node.js, Express, Puppeteer, PM2 |
+| **Database** | Supabase (PostgreSQL + Auth + RLS) |
+| **Payment** | Omise (PromptPay, Credit Card) |
+| **Hosting** | Vercel (frontend CDN), VPS (backend) |
 
-## What technologies are used for this project?
+## Scripts
 
-This project is built with:
+```bash
+npm run dev        # Start Vite dev server
+npm run build      # Production build
+npm run preview    # Preview production build
+npm run lint       # ESLint check
+npm run test       # Run Vitest tests
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Environment Variables
 
-## How can I deploy this project?
+Copy `.env.example` → `.env` and fill in:
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+| Variable | Description |
+|----------|-------------|
+| `VITE_SUPABASE_URL` | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | Supabase anon/public key |
+| `VITE_API_BASE` | Backend API URL |
+| `VITE_ADMIN_EMAILS` | Admin email(s), comma-separated |
+| `VITE_OMISE_PUBLIC_KEY` | Omise public key (frontend) |
 
-## Can I connect a custom domain to my Lovable project?
+See `backend/.env` and `server/.env.example` for backend-specific vars.
 
-Yes, you can!
+## Database Setup
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Run `supabase/FULL_SETUP.sql` in Supabase SQL Editor — it's idempotent (safe to re-run).
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## Deployment
+
+- **Frontend** → Auto-deploys to Vercel on `git push origin main`
+- **Backend** → SSH to VPS, `git pull && pm2 restart backend`
+- **Payment** → SSH to VPS, `pm2 restart payment`
+
+## Documentation
+
+See [`GRANDSTATE_OVERVIEW.md`](./GRANDSTATE_OVERVIEW.md) for full technical documentation including architecture diagrams, API reference, and glossary.

@@ -1866,6 +1866,48 @@ app.get('/api/admin/user-licenses', ...adminAuth, async (req, res) => {
   }
 });
 
+// Admin: clear job history (all / success / failed)
+app.post('/api/admin/clear-history', ...adminAuth, (req, res) => {
+  try {
+    const { type = 'all' } = req.body; // 'all' | 'success' | 'failed'
+    if (!['all', 'success', 'failed'].includes(type)) {
+      return res.status(400).json({ success: false, error: 'type must be all | success | failed' });
+    }
+    const removed = automationQueue.clearHistory(type);
+    console.log(`🗑️ Admin cleared ${removed} history records (type=${type})`);
+    res.json({ success: true, removed, message: `ลบประวัติ ${removed} รายการ (${type})` });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Admin: export job history as JSON (for CSV download on frontend)
+app.get('/api/admin/export-history', ...adminAuth, (req, res) => {
+  try {
+    const stats = automationQueue.getQueueStats();
+    const allHistory = stats.recentHistory || [];
+    res.json({ success: true, history: allHistory, exportedAt: new Date().toISOString() });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Admin: manually trigger ghost/stale session cleanup
+app.post('/api/admin/clear-stale-sessions', ...adminAuth, (req, res) => {
+  try {
+    const before = automationQueue.running.size;
+    automationQueue._cleanupStaleEntries();
+    const after = automationQueue.running.size;
+    const cleared = before - after;
+    const queueBefore = automationQueue.queue.length;
+    // queue entries already cleaned inside _cleanupStaleEntries
+    const queueCleared = queueBefore - automationQueue.queue.length;
+    res.json({ success: true, message: `ล้าง ghost sessions ${cleared} รายการ, queue ${queueCleared} รายการ`, cleared, queueCleared });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Pause automation
 app.post('/api/group-automation/pause', ...auth, (req, res) => {
   try {

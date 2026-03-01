@@ -56,6 +56,9 @@ import {
     Globe,
     Pause,
     Play,
+    RotateCcw,
+    FileDown,
+    Eraser,
 } from 'lucide-react';
 import { GrandStateLogo } from '@/components/GrandStateLogo';
 import { Button } from '@/components/ui/button';
@@ -187,9 +190,60 @@ export default function AdminDashboard() {
     // History filter: 'all' | 'success' | 'failed'
     const [historyFilter, setHistoryFilter] = useState<'all' | 'success' | 'failed'>('all');
 
+    // Clear history state
+    const [clearingHistory, setClearingHistory] = useState(false);
+    const [exportingHistory, setExportingHistory] = useState(false);
+    const [clearingStale, setClearingStale] = useState(false);
+
     // SSE connection status
     const [sseConnected, setSseConnected] = useState(false);
     const [sseLastUpdate, setSseLastUpdate] = useState<number>(0);
+
+    // Clear job history
+    const handleClearHistory = async (type: 'all' | 'success' | 'failed') => {
+        const labels = { all: 'ทั้งหมด', success: 'ที่สำเร็จ', failed: 'ที่ล้มเหลว' };
+        if (!confirm(`ลบประวัติ Job ${labels[type]}?\n\nข้อมูลจะถูกลบออกจาก Memory + Disk\nกู้คืนไม่ได้`)) return;
+        setClearingHistory(true);
+        try {
+            const res = await apiFetch('/api/admin/clear-history', { method: 'POST', body: JSON.stringify({ type }) });
+            const data = await res.json();
+            if (data.success) { toast.success(`ลบประวัติสำเร็จ: ${data.removed} รายการ`); }
+            else { toast.error(data.error || 'ลบไม่สำเร็จ'); }
+        } catch { toast.error('Network error'); } finally { setClearingHistory(false); }
+    };
+
+    // Export job history as CSV
+    const handleExportCSV = async () => {
+        setExportingHistory(true);
+        try {
+            const res = await apiFetch('/api/admin/export-history');
+            const data = await res.json();
+            if (!data.success || !data.history?.length) { toast.info('ไม่มีข้อมูลประวัติให้ Export'); return; }
+            const rows = ['Time,User,Type,Groups,Duration(s),Status'];
+            for (const h of data.history) {
+                rows.push(`${h.completedAtFormatted || ''},${h.displayName || h.userId || ''},${h.automationType || 'group'},${h.groupCount || 0},${h.durationSec || 0},${h.success ? 'SUCCESS' : 'FAILED'}`);
+            }
+            const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `automation-history-${new Date().toISOString().slice(0,10)}.csv`;
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a); URL.revokeObjectURL(url);
+            toast.success(`Export สำเร็จ: ${data.history.length} รายการ`);
+        } catch { toast.error('Export ล้มเหลว'); } finally { setExportingHistory(false); }
+    };
+
+    // Clear stale/ghost sessions manually
+    const handleClearStaleSessions = async () => {
+        if (!confirm('ล้าง Ghost Sessions ที่ค้างอยู่?\n\nจะ force-remove sessions ที่ browser ดับแล้วแต่ยังค้างอยู่ใน queue')) return;
+        setClearingStale(true);
+        try {
+            const res = await apiFetch('/api/admin/clear-stale-sessions', { method: 'POST' });
+            const data = await res.json();
+            if (data.success) { toast.success(data.message); }
+            else { toast.error(data.error); }
+        } catch { toast.error('Network error'); } finally { setClearingStale(false); }
+    };
 
     // Admin force-stop
     const [forceStoppingUser, setForceStoppingUser] = useState<string | null>(null);
@@ -2109,6 +2163,14 @@ export default function AdminDashboard() {
                                             <span className="text-sm font-bold tabular-nums text-red-600">{liveStats.automation.totalTasksFailed}</span>
                                         </div>
                                     </div>
+                                    {/* Clear Stale Sessions */}
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleClearStaleSessions(); }}
+                                        disabled={clearingStale}
+                                        className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-[11px] font-medium border border-orange-200 dark:border-orange-800/50 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/20 disabled:opacity-50 transition-all">
+                                        {clearingStale ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                                        ล้าง Ghost Sessions / Stale Queue
+                                    </button>
                                 </div>
                             </motion.div>
 
@@ -2117,7 +2179,7 @@ export default function AdminDashboard() {
                                 <div className="px-4 py-3 border-b flex items-center gap-2 bg-gradient-to-r from-purple-50/80 to-transparent dark:from-purple-950/20">
                                     <Activity className="w-4 h-4 text-purple-500" />
                                     <span className="font-semibold text-sm">Job History</span>
-                                    {/* Filter buttons */}
+                                    {/* Filter + Actions */}
                                     <div className="ml-auto flex items-center gap-1">
                                         {([
                                             { key: 'all' as const, label: 'All', icon: <Filter className="w-3 h-3" /> },
@@ -2140,6 +2202,37 @@ export default function AdminDashboard() {
                                                 : liveStats.queue.recentHistory.filter((h: any) => historyFilter === 'success' ? h.success : !h.success).length
                                             }
                                         </Badge>
+                                        {/* Divider */}
+                                        <div className="w-px h-4 bg-border mx-1" />
+                                        {/* Export CSV */}
+                                        <button onClick={(e) => { e.stopPropagation(); handleExportCSV(); }} disabled={exportingHistory || liveStats.queue.recentHistory.length === 0}
+                                            title="Export CSV"
+                                            className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 disabled:opacity-40 transition-all">
+                                            {exportingHistory ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileDown className="w-3 h-3" />}
+                                            CSV
+                                        </button>
+                                        {/* Clear dropdown */}
+                                        <div className="relative group/clear">
+                                            <button onClick={(e) => e.stopPropagation()} disabled={clearingHistory || liveStats.queue.recentHistory.length === 0}
+                                                className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 disabled:opacity-40 transition-all">
+                                                {clearingHistory ? <Loader2 className="w-3 h-3 animate-spin" /> : <Eraser className="w-3 h-3" />}
+                                                ล้าง
+                                                <ChevronDown className="w-2.5 h-2.5" />
+                                            </button>
+                                            {/* Dropdown */}
+                                            <div className="absolute right-0 top-full mt-1 w-40 bg-popover border rounded-lg shadow-lg z-50 overflow-hidden opacity-0 pointer-events-none group-hover/clear:opacity-100 group-hover/clear:pointer-events-auto transition-all">
+                                                {[
+                                                    { type: 'all' as const, label: 'ล้างทั้งหมด', color: 'text-red-600' },
+                                                    { type: 'failed' as const, label: 'ล้างที่ล้มเหลว', color: 'text-orange-500' },
+                                                    { type: 'success' as const, label: 'ล้างที่สำเร็จ', color: 'text-emerald-600' },
+                                                ].map(opt => (
+                                                    <button key={opt.type} onClick={(e) => { e.stopPropagation(); handleClearHistory(opt.type); }}
+                                                        className={cn('w-full text-left px-3 py-2 text-[11px] font-medium hover:bg-muted transition-colors', opt.color)}>
+                                                        {opt.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="p-3">

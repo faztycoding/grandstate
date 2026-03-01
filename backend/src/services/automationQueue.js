@@ -389,6 +389,27 @@ class AutomationQueue {
     }
   }
 
+  // ─── History Management ────────────────────────────────────────
+
+  /**
+   * Clear job history — type: 'all' | 'success' | 'failed'
+   * Returns the number of records removed
+   */
+  clearHistory(type = 'all') {
+    const before = this.history.length;
+    if (type === 'all') {
+      this.history = [];
+    } else if (type === 'success') {
+      this.history = this.history.filter(h => !h.success);
+    } else if (type === 'failed') {
+      this.history = this.history.filter(h => h.success);
+    }
+    const removed = before - this.history.length;
+    this._saveHistory();
+    console.log(`🗑️ [Queue] Cleared ${removed} history records (type=${type})`);
+    return removed;
+  }
+
   // ─── Status APIs ──────────────────────────────────────────────
 
   /**

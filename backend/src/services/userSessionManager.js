@@ -2,6 +2,7 @@ import { GroupPostingWorker } from './groupPostingWorker.js';
 import { MarketplaceWorker } from './marketplaceWorker.js';
 import { PostingTracker } from './postingTracker.js';
 import { PostScheduler } from './scheduler.js';
+import { automationQueue } from './automationQueue.js';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
@@ -170,13 +171,24 @@ class UserSessionManager {
           const creds = this.loadFbCredentials(userId, fbSlot);
           if (creds && creds.email && creds.password) {
             try {
+              const t0 = Date.now();
               const reloginOk = await this._autoReloginFb(groupWorker, creds.email, creds.password, shortId);
+              const durationSec = Math.round((Date.now() - t0) / 1000);
               if (reloginOk) {
                 console.log(`⏰ [${shortId}] Auto re-login successful!`);
+                // Log re-login event to admin history
+                try {
+                  const fbSession = (this.getFbSessions(userId) || [])[fbSlot];
+                  automationQueue.pushSystemEvent({ userId, displayName: fbSession?.name || shortId, eventType: 'relogin', success: true, detail: `slot ${fbSlot + 1}`, durationSec });
+                } catch (e) { /* non-critical */ }
                 return { ok: true };
               }
             } catch (reloginErr) {
               console.log(`⏰ [${shortId}] Auto re-login failed: ${reloginErr.message}`);
+              // Log failed re-login event
+              try {
+                automationQueue.pushSystemEvent({ userId, displayName: shortId, eventType: 'relogin', success: false, detail: reloginErr.message.substring(0, 60) });
+              } catch (e) { /* non-critical */ }
             }
           } else {
             console.log(`⏰ [${shortId}] No stored credentials for slot ${fbSlot}`);

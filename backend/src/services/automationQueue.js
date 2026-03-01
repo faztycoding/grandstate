@@ -392,9 +392,29 @@ class AutomationQueue {
   // ─── History Management ────────────────────────────────────────
 
   /**
-   * Clear job history — type: 'all' | 'success' | 'failed'
-   * Returns the number of records removed
+   * Push a non-queue system event into history (re-login, scheduler, system errors, etc.)
+   * These appear in the Engine Console alongside automation jobs
    */
+  pushSystemEvent({ userId, displayName, eventType, success, detail = '', durationSec = 0 }) {
+    const record = {
+      userId: (userId || '').substring(0, 8) + '...',
+      fullUserId: userId || '',
+      displayName: displayName || (userId || '').substring(0, 8),
+      groupCount: 0,
+      durationSec,
+      success,
+      completedAt: Date.now(),
+      automationType: eventType || 'system', // 'relogin' | 'scheduler' | 'system'
+      taskStats: { total: 0, completed: success ? 1 : 0, failed: success ? 0 : 1, pendingApproval: 0 },
+      detail,
+      isSystemEvent: true,
+    };
+    this.history.push(record);
+    if (this.history.length > MAX_HISTORY) this.history = this.history.slice(-MAX_HISTORY);
+    this._saveHistory();
+    console.log(`📋 [Queue] SystemEvent: ${eventType} — ${displayName || userId?.substring(0, 8)} — ${success ? 'OK' : 'FAIL'} ${detail ? `(${detail})` : ''}`);
+  }
+
   clearHistory(type = 'all') {
     const before = this.history.length;
     if (type === 'all') {

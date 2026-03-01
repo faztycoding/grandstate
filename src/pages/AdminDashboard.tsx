@@ -195,6 +195,14 @@ export default function AdminDashboard() {
     const [exportingHistory, setExportingHistory] = useState(false);
     const [clearingStale, setClearingStale] = useState(false);
 
+    // Engine Console: expanded day groups
+    const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
+    const toggleDay = (dateKey: string) => setExpandedDays(prev => {
+        const next = new Set(prev);
+        if (next.has(dateKey)) next.delete(dateKey); else next.add(dateKey);
+        return next;
+    });
+
     // SSE connection status
     const [sseConnected, setSseConnected] = useState(false);
     const [sseLastUpdate, setSseLastUpdate] = useState<number>(0);
@@ -1902,57 +1910,114 @@ export default function AdminDashboard() {
                                     </div>
                                 )}
 
-                                {/* ── Terminal Console ── */}
-                                <div className="mt-5 bg-slate-950/80 backdrop-blur-sm rounded-xl p-4 border border-slate-800 max-h-[280px] overflow-y-auto">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                        <span className="text-[9px] text-amber-500/50 uppercase tracking-[0.2em] font-black">Engine Console</span>
-                                        <span className="text-[8px] text-foreground font-mono ml-auto">{liveStats.queue.recentHistory?.length || 0} records</span>
-                                    </div>
-                                    <div className="space-y-0.5 font-mono">
-                                        <p className="text-[11px]"><span className="text-foreground">[{new Date().toLocaleDateString('th-TH', { day:'numeric', month:'short' })}]</span> <span className="text-amber-500/50">[SYS]</span> <span className="text-emerald-400/60">Engine initialized — {liveStats.queue.maxConcurrent} worker slots configured</span></p>
-                                        <p className="text-[11px]"><span className="text-foreground">[{new Date().toLocaleDateString('th-TH', { day:'numeric', month:'short' })}]</span> <span className="text-amber-500/50">[CFG]</span> <span className="text-foreground">Session timeout: {liveStats.queue.queueTimeoutMin} min — Max concurrent: {liveStats.queue.maxConcurrent}</span></p>
-                                        <p className="text-[11px]"><span className="text-foreground">[{new Date().toLocaleDateString('th-TH', { day:'numeric', month:'short' })}]</span> <span className="text-amber-500/50">[SEC]</span> <span className="text-blue-400/50">Anti-detection stealth modules loaded</span></p>
-                                        <p className="text-[11px]"><span className="text-foreground">[{new Date().toLocaleDateString('th-TH', { day:'numeric', month:'short' })}]</span> <span className="text-amber-500/50">[NET]</span> <span className="text-emerald-400/50">{sseConnected ? 'SSE connection stable — heartbeat OK' : 'SSE disconnected — reconnecting...'}</span></p>
-                                        {liveStats.queue.runningCount > 0 && (
-                                            <p className="text-[11px]"><span className="text-foreground">[{new Date().toLocaleTimeString('th-TH', { hour12:false })}]</span> <span className="text-emerald-400/60">[RUN]</span> <span className="text-emerald-300/70">{liveStats.queue.runningCount} active thread(s) — automation in progress</span></p>
-                                        )}
-                                        {liveStats.queue.queueLength > 0 && (
-                                            <p className="text-[11px]"><span className="text-foreground">[{new Date().toLocaleTimeString('th-TH', { hour12:false })}]</span> <span className="text-yellow-400/60">[QUE]</span> <span className="text-yellow-300/60">{liveStats.queue.queueLength} request(s) pending — awaiting available slot</span></p>
-                                        )}
+                                {/* ── Terminal Console — Daily Grouped ── */}
+                                {(() => {
+                                    // Group recentHistory by date (YYYY-MM-DD key, display label from th-TH)
+                                    const allHistory: any[] = liveStats.queue.recentHistory || [];
+                                    const dayMap = new Map<string, { label: string; entries: any[] }>();
+                                    for (const h of [...allHistory].reverse()) {
+                                        const dt = new Date(h.completedAt || 0);
+                                        const key = dt.toISOString().slice(0, 10); // YYYY-MM-DD
+                                        const label = dt.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+                                        if (!dayMap.has(key)) dayMap.set(key, { label, entries: [] });
+                                        dayMap.get(key)!.entries.push(h);
+                                    }
+                                    const days = Array.from(dayMap.entries()); // sorted newest first
 
-                                        {/* Per-user automation completion logs */}
-                                        {liveStats.queue.recentHistory && liveStats.queue.recentHistory.length > 0 && (
-                                            <>
-                                                <div className="border-t border-slate-800/60 my-1.5" />
-                                                {liveStats.queue.recentHistory.slice(0, 10).map((h: any, hi: number) => {
-                                                    const ts = h.taskStats;
-                                                    const uid = h.displayName || h.userId || 'Unknown';
-                                                    const gsId = `GS${(h.fullUserId || h.userId || '').substring(0, 4).toUpperCase()}`;
-                                                    const typeLabel = h.automationType === 'marketplace' ? 'Marketplace' : 'Group Posting';
+                                    return (
+                                        <div className="mt-5 bg-slate-950/80 backdrop-blur-sm rounded-xl border border-slate-800 overflow-hidden">
+                                            {/* Console header */}
+                                            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-800">
+                                                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                                <span className="text-[9px] text-amber-500/60 uppercase tracking-[0.2em] font-black">Engine Console</span>
+                                                <span className="text-[8px] text-slate-500 font-mono ml-auto">{allHistory.length} records</span>
+                                                <span className={cn("text-[8px] font-mono ml-2", sseConnected ? "text-emerald-500/60" : "text-red-400/60")}>
+                                                    ● {sseConnected ? 'LIVE' : 'OFFLINE'}
+                                                </span>
+                                            </div>
+
+                                            {/* System boot lines */}
+                                            <div className="px-4 pt-2 pb-1 font-mono space-y-0.5 border-b border-slate-800/40">
+                                                <p className="text-[10px]"><span className="text-slate-600">[SYS]</span> <span className="text-emerald-400/50">Engine initialized — {liveStats.queue.maxConcurrent} worker slots</span></p>
+                                                <p className="text-[10px]"><span className="text-slate-600">[CFG]</span> <span className="text-slate-500">Queue timeout: {liveStats.queue.queueTimeoutMin}m · MaxConcurrent: {liveStats.queue.maxConcurrent}</span></p>
+                                                {liveStats.queue.runningCount > 0 && (
+                                                    <p className="text-[10px]"><span className="text-emerald-500/60">[RUN]</span> <span className="text-emerald-400/70">{liveStats.queue.runningCount} thread(s) active</span></p>
+                                                )}
+                                            </div>
+
+                                            {/* Daily grouped logs — max-height scrollable */}
+                                            <div className="max-h-[260px] overflow-y-auto font-mono">
+                                                {days.length === 0 ? (
+                                                    <p className="px-4 py-3 text-[10px] text-slate-600 animate-pulse">{'>'} Awaiting first operation...</p>
+                                                ) : days.map(([key, { label, entries }]) => {
+                                                    const isOpen = expandedDays.has(key);
+                                                    const successCt = entries.filter(e => e.success).length;
+                                                    const failCt = entries.filter(e => !e.success).length;
+                                                    const reloginCt = entries.filter(e => e.automationType === 'relogin').length;
+                                                    const jobCt = entries.filter(e => e.automationType !== 'relogin').length;
                                                     return (
-                                                        <p key={hi} className="text-[11px] leading-relaxed">
-                                                            <span className="text-foreground">[{h.completedAtFull || h.completedAtFormatted}]</span>{' '}
-                                                            <span className={h.success ? "text-emerald-400/70" : "text-red-400/70"}>[{h.success ? 'DONE' : 'FAIL'}]</span>{' '}
-                                                            <span className="text-cyan-400/80">USER {gsId}</span>{' '}
-                                                            <span className="text-foreground">({uid})</span>{' '}
-                                                            <span className="text-foreground">— {typeLabel} operation completed</span>{' '}
-                                                            <span className="text-foreground">| Total: </span><span className="text-white/70">{ts?.total ?? h.groupCount}</span>{' '}
-                                                            <span className="text-foreground">groups | </span>
-                                                            <span className="text-emerald-400/80">Success: {ts?.completed ?? (h.success ? h.groupCount : 0)}</span>{' '}
-                                                            <span className="text-red-400/70">Failed: {ts?.failed ?? (h.success ? 0 : h.groupCount)}</span>{' '}
-                                                            {(ts?.pendingApproval ?? 0) > 0 && (
-                                                                <span className="text-amber-400/70">Pending Approval: {ts.pendingApproval}</span>
+                                                        <div key={key} className="border-b border-slate-800/40 last:border-0">
+                                                            {/* Day header — clickable */}
+                                                            <button
+                                                                className="w-full flex items-center gap-2 px-4 py-2 hover:bg-slate-800/40 transition-colors text-left"
+                                                                onClick={() => toggleDay(key)}>
+                                                                <span className={cn("text-[9px] transition-transform", isOpen ? "rotate-90" : "rotate-0")}>▶</span>
+                                                                <span className="text-[10px] font-bold text-amber-400/80">[{label}]</span>
+                                                                <span className="text-[9px] text-slate-500 ml-1">{entries.length} events</span>
+                                                                <div className="ml-auto flex items-center gap-2 text-[9px]">
+                                                                    {jobCt > 0 && <span className="text-slate-400">Jobs: {jobCt}</span>}
+                                                                    {reloginCt > 0 && <span className="text-cyan-400/70">Re-login: {reloginCt}</span>}
+                                                                    <span className="text-emerald-400/80">✓{successCt}</span>
+                                                                    <span className="text-red-400/70">✗{failCt}</span>
+                                                                </div>
+                                                            </button>
+
+                                                            {/* Day entries — expanded */}
+                                                            {isOpen && (
+                                                                <div className="px-4 pb-2 space-y-0.5 bg-slate-950/50">
+                                                                    {entries.map((h: any, hi: number) => {
+                                                                        const ts = h.taskStats;
+                                                                        const uid = h.displayName || h.userId || 'Unknown';
+                                                                        const time = new Date(h.completedAt).toLocaleTimeString('th-TH', { hour12: false });
+                                                                        const isRelogin = h.automationType === 'relogin';
+                                                                        const isMkt = h.automationType === 'marketplace';
+                                                                        const typeTag = isRelogin ? '[RE-LOGIN]' : isMkt ? '[MKT]' : '[GRP]';
+                                                                        const tagColor = isRelogin
+                                                                            ? (h.success ? 'text-cyan-400/80' : 'text-orange-400/80')
+                                                                            : (h.success ? 'text-emerald-400/70' : 'text-red-400/70');
+                                                                        return (
+                                                                            <p key={hi} className="text-[10px] leading-relaxed pl-3 border-l border-slate-700/50">
+                                                                                <span className="text-slate-600">{time}</span>{' '}
+                                                                                <span className={tagColor}>{typeTag}</span>{' '}
+                                                                                <span className="text-slate-300">{uid}</span>
+                                                                                {isRelogin ? (
+                                                                                    <span className={h.success ? 'text-cyan-400/70' : 'text-orange-400/70'}>
+                                                                                        {' — '}{h.success ? 'Re-login OK' : 'Re-login FAIL'}
+                                                                                        {h.detail ? ` (${h.detail})` : ''}
+                                                                                        {h.durationSec > 0 ? ` [${h.durationSec}s]` : ''}
+                                                                                    </span>
+                                                                                ) : (
+                                                                                    <>
+                                                                                        <span className="text-slate-500">{' — '}</span>
+                                                                                        <span className="text-slate-400">
+                                                                                            {ts?.total ?? h.groupCount}g
+                                                                                            {ts && ` · ✓${ts.completed} ✗${ts.failed}${ts.pendingApproval > 0 ? ` ⏳${ts.pendingApproval}` : ''}`}
+                                                                                        </span>
+                                                                                        <span className="text-slate-600"> [{h.durationFormatted || `${h.durationSec}s`}]</span>
+                                                                                    </>
+                                                                                )}
+                                                                            </p>
+                                                                        );
+                                                                    })}
+                                                                </div>
                                                             )}
-                                                            <span className="text-foreground"> [{h.durationFormatted}]</span>
-                                                        </p>
+                                                        </div>
                                                     );
                                                 })}
-                                            </>
-                                        )}
-                                        <p className="text-[11px] animate-pulse mt-1"><span className="text-amber-500/30">{'>'}</span> <span className="text-foreground">Awaiting next operation...</span></p>
-                                    </div>
-                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* ── Bottom bar ── */}
                                 <div className="flex items-center justify-between mt-4">

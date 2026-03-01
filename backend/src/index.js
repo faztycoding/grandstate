@@ -1989,8 +1989,8 @@ async function scrapeFbUserInfo(page) {
   const BLACKLIST = ['facebook', 'log in', 'log into', 'sign up', 'เข้าสู่ระบบ', 'สมัครสมาชิก', 'messenger', 'watch', 'marketplace'];
   const isValidName = (n) => {
     if (!n || n.length < 2 || n.length > 60) return false;
-    const lower = n.toLowerCase();
-    return !BLACKLIST.some(b => lower === b || lower.startsWith(b + ' ') || lower.includes(b));
+    const lower = n.toLowerCase().trim();
+    return !BLACKLIST.some(b => lower === b);
   };
 
   let name = '';
@@ -2255,10 +2255,12 @@ app.post('/api/facebook/auto-login', ...auth, async (req, res) => {
       console.log(`🔑 [${shortId}] Already logged in! Scraping user info...`);
       const activeSlot = sessionManager.getActiveSlot(req.userId);
       const userInfo = await scrapeFbUserInfo(page);
-      if (userInfo.name) {
-        sessionManager.setFbSession(req.userId, activeSlot, { name: userInfo.name, profilePic: userInfo.profilePic || '' });
-      }
-      return res.json({ success: true, message: 'Login สำเร็จ! (session ยังอยู่)', slot: activeSlot });
+      const fbName = userInfo.name || 'Facebook User';
+      const fbPic = userInfo.profilePic || '';
+      sessionManager.setFbSession(req.userId, activeSlot, { name: fbName, profilePic: fbPic });
+      sessionManager.saveFbCredentials(req.userId, activeSlot, email, password);
+      console.log(`✅ [${shortId}] Already logged in — saved session: "${fbName}" (slot ${activeSlot})`);
+      return res.json({ success: true, message: `Login สำเร็จ! ${fbName}`, slot: activeSlot, user: { name: fbName, profilePic: fbPic } });
     }
 
     // ── Step 3: Handle cookie consent dialogs ──

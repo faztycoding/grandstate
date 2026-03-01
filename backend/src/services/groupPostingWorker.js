@@ -2977,8 +2977,36 @@ export class GroupPostingWorker {
       cleanLocation = '';
     }
 
-    // Strip Maps link from description too
-    let cleanDescription = property.description || '';
+    // Pull contacts from contacts array if contactPhone is empty
+    let contactPhone = property.contactPhone || '';
+    let contactLine = property.contactLine || '';
+    let contactsBlock = '';
+    if (Array.isArray(property.contacts) && property.contacts.length > 0) {
+      const validContacts = property.contacts.filter(c => c && (c.phone || c.name));
+      if (validContacts.length > 0) {
+        if (!contactPhone) contactPhone = validContacts[0].phone || '';
+        if (!contactLine) contactLine = validContacts[0].lineId || '';
+        // Build multi-contact block for template
+        contactsBlock = validContacts.map(c => {
+          const parts = [];
+          if (c.name) parts.push(c.name);
+          if (c.phone) parts.push(`📞 ${c.phone}`);
+          return parts.join(' | ');
+        }).join('\n');
+      }
+    }
+
+    // Check if description is already rich formatted (user wrote a complete caption)
+    const rawDesc = property.description || '';
+    const isRichDescription = rawDesc.length > 100 && (
+      rawDesc.includes('📞') || rawDesc.includes('ติดต่อ') ||
+      rawDesc.includes('💰') || rawDesc.includes('📍') ||
+      rawDesc.includes('🔹') || rawDesc.includes('✨') ||
+      (rawDesc.match(/\n/g) || []).length >= 3
+    );
+
+    // Strip Maps link from description for template use (but keep for rich mode)
+    let cleanDescription = rawDesc;
     cleanDescription = cleanDescription.replace(/\n?📍\s*https?:\/\/[^\s]+/g, '').trim();
 
     // Build display location
@@ -2987,14 +3015,19 @@ export class GroupPostingWorker {
 
     return {
       ...property,
+      contactPhone,
+      contactLine,
       _cleanLocation: cleanLocation,
       _displayLocation: displayLocation,
       _shortLocation: shortLocation,
       _mapsLink: mapsLink,
+      _rawDescription: rawDesc,
       _cleanDescription: cleanDescription,
+      _isRichDescription: isRichDescription,
+      _contactsBlock: contactsBlock,
       _hasSize: property.size && Number(property.size) > 0,
-      _hasContact: !!(property.contactPhone && property.contactPhone.trim()),
-      _hasLine: !!(property.contactLine && property.contactLine.trim()),
+      _hasContact: !!(contactPhone && contactPhone.trim()),
+      _hasLine: !!(contactLine && contactLine.trim()),
     };
   }
 
@@ -3052,12 +3085,23 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
   // Fallback template-based caption
   generateTemplateCaption(property, style) {
     const p = this._cleanPropertyForCaption(property);
+
+    // ── If user already wrote a rich description, USE IT as the caption ──
+    // The description from PropertyGalleryForm already includes contacts, maps, conditions, etc.
+    if (p._isRichDescription) {
+      const hashtags = `#อสังหาริมทรัพย์ #${p.district || p.province || 'อสังหา'} #${p.listingType === 'rent' ? 'ให้เช่า' : 'ขาย'}`;
+      // Check if description already has hashtags
+      const hasHashtags = p._rawDescription.includes('#');
+      return hasHashtags ? p._rawDescription : `${p._rawDescription}\n\n${hashtags}`;
+    }
+
     const priceFormatted = new Intl.NumberFormat('th-TH').format(p.price);
     const isRent = p.listingType === 'rent';
 
     // Build optional lines (only show if data exists)
     const sizeLine = p._hasSize ? `📐 ${p.size} ตร.ม.` : '';
-    const contactLine = p._hasContact ? `📞 ติดต่อ: ${p.contactPhone}` : '';
+    // Use multi-contact block if available, otherwise single contact
+    const contactLine = p._contactsBlock ? `📱 ติดต่อ:\n${p._contactsBlock}` : (p._hasContact ? `📞 ติดต่อ: ${p.contactPhone}` : '');
     const lineLine = p._hasLine ? `💬 LINE: ${p.contactLine}` : '';
     const mapsLine = p._mapsLink ? `📍 พิกัด: ${p._mapsLink}` : '';
     const amenitiesBlock = p.amenities?.length > 0 ? p.amenities.slice(0, 4).map(a => `✅ ${a}`).join('\n') : '';

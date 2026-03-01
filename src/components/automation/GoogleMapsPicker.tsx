@@ -405,7 +405,7 @@ export function GoogleMapsPicker({ value, onChange, onLocationSelect, className 
           )}
         </div>
       </Card>
-      <p className="text-[11px] text-gray-500">
+      <p className="text-[11px] text-muted-foreground">
         Tip: คลิกบนแผนที่เพื่อปักหมุด หรือจับหมุดลากเพื่อปรับตำแหน่งให้เป๊ะ
       </p>
     </div>

@@ -1204,11 +1204,11 @@ export default function Landing() {
                             </div>
                           ) : (
                             <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 bg-slate-800/50">
-                              <Lock className="w-2.5 h-2.5 text-slate-500" />
+                              <Lock className="w-2.5 h-2.5 text-muted-foreground" />
                             </div>
                           )}
                           <span className={`${
-                            f.included ? 'text-slate-300' : 'text-slate-500'
+                            f.included ? 'text-foreground' : 'text-muted-foreground'
                           } ${f.highlight ? `font-semibold ${c.text}` : ''}`}>
                             {isEn ? f.en : f.th}
                           </span>

@@ -60,11 +60,13 @@ interface WorkerSlot {
   progress: SlotProgress;
   logs: LogEntry[];
   generatedCaptions: string[];
+  antiDetection?: Record<string, AntiDetectionModule>;
 }
 
 interface AntiDetectionModule {
   status: string;
   active: boolean;
+  detail?: string | null;
 }
 
 interface WorkerSlotsData {
@@ -96,7 +98,7 @@ function NodeInspectionDialog({
 
   const isActive = slot.status === 'running' || slot.status === 'paused';
 
-  // Build synthetic live log entries for standby nodes
+  // Build live log entries from real worker data
   const liveEntries: { prefix: string; color: string; msg: string }[] = [];
   if (slot.logs.length > 0) {
     slot.logs.forEach(l => {
@@ -110,27 +112,21 @@ function NodeInspectionDialog({
       else if (l.msg.includes('[SYS]') || l.msg.includes('Init') || l.msg.includes('Start')) { prefix = 'SYS'; color = 'text-amber-500'; }
       liveEntries.push({ prefix, color, msg: l.msg });
     });
-  } else {
-    // Standby synthetic logs
-    liveEntries.push(
-      { prefix: 'SYS', color: 'text-amber-500', msg: `Initializing Node_${slot.slotId}...` },
-      { prefix: 'NET', color: 'text-blue-400', msg: 'Proxy connected: SG-Server-001' },
-      { prefix: 'SEC', color: 'text-cyan-400', msg: 'Anti-detection stealth modules loaded' },
-      { prefix: 'SEC', color: 'text-cyan-400', msg: 'Gaussian Jitter: HIGH' },
-      { prefix: 'NET', color: 'text-blue-400', msg: 'SSE stream: Connected' },
-      { prefix: 'SYS', color: 'text-amber-500', msg: `Node_${slot.slotId} on standby — no active task` },
-      { prefix: 'IDLE', color: 'text-slate-500', msg: 'Awaiting task assignment...' },
-    );
   }
 
+  // Use per-slot antiDetection if available, fall back to global
+  const slotAntiDetection = slot.antiDetection || antiDetection;
+
   const antiModules = [
-    { key: 'gaussianJitter', label: 'GAUSSIAN JITTER', desc: 'Human-like timing randomization', icon: Activity, tag: antiDetection.gaussianJitter?.status || 'HIGH' },
-    { key: 'fingerprintMasking', label: 'FINGERPRINT MASKING', desc: 'Browser identity spoofing 100%', icon: Fingerprint, tag: antiDetection.fingerprintMasking?.status || 'OK' },
-    { key: 'webrtcShield', label: 'WEBRTC LEAK SHIELD', desc: 'Real IP leak prevention active', icon: Globe, tag: antiDetection.webrtcShield?.status || 'OK' },
-    { key: 'behaviorSimulation', label: 'BEHAVIOR SIMULATION', desc: 'Mouse/scroll movement emulation', icon: MousePointer2, tag: antiDetection.behaviorSimulation?.status || 'OK' },
-    { key: 'canvasNoise', label: 'CANVAS NOISE', desc: 'Canvas fingerprint randomization', icon: ImageIcon, tag: antiDetection.canvasNoise?.status || 'OK' },
-    { key: 'networkStealth', label: 'NETWORK STEALTH', desc: 'Request header normalization', icon: Wifi, tag: antiDetection.networkStealth?.status || 'OK' },
+    { key: 'gaussianJitter', label: 'GAUSSIAN JITTER', desc: slotAntiDetection.gaussianJitter?.detail || 'Human-like timing randomization', icon: Activity, tag: slotAntiDetection.gaussianJitter?.status || 'OFF', active: slotAntiDetection.gaussianJitter?.active || false },
+    { key: 'fingerprintMasking', label: 'FINGERPRINT MASKING', desc: slotAntiDetection.fingerprintMasking?.detail || 'Browser identity spoofing', icon: Fingerprint, tag: slotAntiDetection.fingerprintMasking?.status || 'OFF', active: slotAntiDetection.fingerprintMasking?.active || false },
+    { key: 'webrtcShield', label: 'WEBRTC LEAK SHIELD', desc: slotAntiDetection.webrtcShield?.detail || 'Real IP leak prevention', icon: Globe, tag: slotAntiDetection.webrtcShield?.status || 'OFF', active: slotAntiDetection.webrtcShield?.active || false },
+    { key: 'behaviorSimulation', label: 'BEHAVIOR SIMULATION', desc: slotAntiDetection.behaviorSimulation?.detail || 'Mouse/scroll movement emulation', icon: MousePointer2, tag: slotAntiDetection.behaviorSimulation?.status || 'OFF', active: slotAntiDetection.behaviorSimulation?.active || false },
+    { key: 'canvasNoise', label: 'CANVAS NOISE', desc: slotAntiDetection.canvasNoise?.detail || 'Canvas fingerprint randomization', icon: ImageIcon, tag: slotAntiDetection.canvasNoise?.status || 'OFF', active: slotAntiDetection.canvasNoise?.active || false },
+    { key: 'networkStealth', label: 'NETWORK STEALTH', desc: slotAntiDetection.networkStealth?.detail || 'Request header normalization', icon: Wifi, tag: slotAntiDetection.networkStealth?.status || 'OFF', active: slotAntiDetection.networkStealth?.active || false },
   ];
+
+  const activeModuleCount = antiModules.filter(m => m.active).length;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -180,16 +176,26 @@ function NodeInspectionDialog({
             {tab === 'live' && (
               <ScrollArea className="h-[360px]">
                 <div className="font-mono text-xs space-y-1 bg-background/50 border border-border rounded-xl p-4">
-                  {liveEntries.map((entry, i) => (
-                    <div key={i} className="flex gap-2">
-                      <span className={cn('font-bold text-[10px] w-10 flex-shrink-0', entry.color)}>[{entry.prefix}]</span>
-                      <span className="text-muted-foreground text-[11px]">{entry.msg}</span>
-                    </div>
-                  ))}
-                  {isActive && (
-                    <div className="flex gap-2 mt-2">
-                      <span className="text-accent font-bold text-[10px] w-10 flex-shrink-0 animate-pulse">{'>'}</span>
-                      <span className="text-accent/60 text-[11px] animate-pulse">Processing...</span>
+                  {liveEntries.length > 0 ? (
+                    <>
+                      {liveEntries.map((entry, i) => (
+                        <div key={i} className="flex gap-2">
+                          <span className={cn('font-bold text-[10px] w-10 flex-shrink-0', entry.color)}>[{entry.prefix}]</span>
+                          <span className="text-muted-foreground text-[11px]">{entry.msg}</span>
+                        </div>
+                      ))}
+                      {isActive && (
+                        <div className="flex gap-2 mt-2">
+                          <span className="text-accent font-bold text-[10px] w-10 flex-shrink-0 animate-pulse">{'>'}</span>
+                          <span className="text-accent/60 text-[11px] animate-pulse">Processing...</span>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground/40">
+                      <Monitor className="w-10 h-10 mb-3 opacity-30" />
+                      <p className="text-xs font-medium">Node on standby</p>
+                      <p className="text-[10px] mt-0.5">Live data will appear when automation starts</p>
                     </div>
                   )}
                 </div>
@@ -201,7 +207,14 @@ function NodeInspectionDialog({
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-black uppercase tracking-tight">Anti-Detection Modules</h3>
-                  <Badge className="bg-green-500/10 text-green-500 border-green-500/20 text-[10px] font-bold">ALL SECURE</Badge>
+                  <Badge className={cn(
+                    'text-[10px] font-bold',
+                    activeModuleCount === antiModules.length
+                      ? 'bg-green-500/10 text-green-500 border-green-500/20'
+                      : activeModuleCount > 0
+                        ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                        : 'bg-muted/10 text-muted-foreground border-border'
+                  )}>{activeModuleCount === antiModules.length ? 'ALL SECURE' : `${activeModuleCount}/${antiModules.length} ACTIVE`}</Badge>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   {antiModules.map(mod => (
@@ -215,14 +228,21 @@ function NodeInspectionDialog({
                       </div>
                       <Badge variant="outline" className={cn(
                         'text-[9px] font-bold flex-shrink-0',
+                        !mod.active ? 'border-muted-foreground/20 text-muted-foreground/50' :
                         mod.tag === 'HIGH' ? 'border-amber-500/30 text-amber-500' : 'border-green-500/30 text-green-500'
                       )}>{mod.tag}</Badge>
                     </div>
                   ))}
                 </div>
-                <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/5 border border-amber-500/20">
-                  <span className="text-[10px] font-bold text-amber-500 flex-shrink-0">NOTE:</span>
-                  <span className="text-[10px] text-muted-foreground">Gaussian Jitter set to HIGH for maximum stealth. All modules auto-calibrated per session.</span>
+                <div className={cn('flex items-center gap-2 p-3 rounded-xl border',
+                  isActive ? 'bg-amber-500/5 border-amber-500/20' : 'bg-muted/5 border-border'
+                )}>
+                  <span className={cn('text-[10px] font-bold flex-shrink-0', isActive ? 'text-amber-500' : 'text-muted-foreground')}>NOTE:</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {isActive
+                      ? 'All modules auto-calibrated per session. Gaussian Jitter provides maximum stealth.'
+                      : 'Modules will activate when automation starts on this node.'}
+                  </span>
                 </div>
               </div>
             )}

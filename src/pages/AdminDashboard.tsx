@@ -2543,67 +2543,87 @@ export default function AdminDashboard() {
                                                     )}
 
                                                     {/* ─── SECURITY TAB ─── */}
-                                                    {inspectTab === 'security' && (
+                                                    {inspectTab === 'security' && (() => {
+                                                        const ad = job?.antiDetection || {};
+                                                        const secModules = [
+                                                            { name: 'Gaussian Jitter', icon: <Activity className="w-4 h-4" />, desc: ad.gaussianJitter?.detail || 'Human-like timing randomization', status: ad.gaussianJitter?.status || 'OFF', active: ad.gaussianJitter?.active || false },
+                                                            { name: 'Fingerprint Masking', icon: <Fingerprint className="w-4 h-4" />, desc: ad.fingerprintMasking?.detail || 'Browser identity spoofing', status: ad.fingerprintMasking?.status || 'OFF', active: ad.fingerprintMasking?.active || false },
+                                                            { name: 'WebRTC Leak Shield', icon: <Globe className="w-4 h-4" />, desc: ad.webrtcShield?.detail || 'Real IP leak prevention', status: ad.webrtcShield?.status || 'OFF', active: ad.webrtcShield?.active || false },
+                                                            { name: 'Behavior Simulation', icon: <MousePointer2 className="w-4 h-4" />, desc: ad.behaviorSimulation?.detail || 'Mouse/scroll movement emulation', status: ad.behaviorSimulation?.status || 'OFF', active: ad.behaviorSimulation?.active || false },
+                                                            { name: 'Canvas Noise', icon: <Sparkles className="w-4 h-4" />, desc: ad.canvasNoise?.detail || 'Canvas fingerprint randomization', status: ad.canvasNoise?.status || 'OFF', active: ad.canvasNoise?.active || false },
+                                                            { name: 'Network Stealth', icon: <Wifi className="w-4 h-4" />, desc: ad.networkStealth?.detail || 'Request header normalization', status: ad.networkStealth?.status || 'OFF', active: ad.networkStealth?.active || false },
+                                                        ];
+                                                        const activeSecCount = secModules.filter(m => m.active).length;
+                                                        return (
                                                         <motion.div key="security" initial={{ opacity: 0, x: 15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="space-y-4">
                                                             <div className="flex items-center justify-between mb-1">
                                                                 <h4 className="text-xs font-black text-white uppercase tracking-tight">Anti-Detection Modules</h4>
-                                                                <span className="text-[9px] text-green-400 font-bold bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20 uppercase">All Secure</span>
+                                                                <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded border uppercase",
+                                                                    activeSecCount === secModules.length ? "text-green-400 bg-green-500/10 border-green-500/20" :
+                                                                    activeSecCount > 0 ? "text-amber-400 bg-amber-500/10 border-amber-500/20" :
+                                                                    "text-foreground bg-slate-800/50 border-slate-700"
+                                                                )}>{activeSecCount === secModules.length ? 'All Secure' : `${activeSecCount}/${secModules.length} Active`}</span>
                                                             </div>
                                                             <div className="grid grid-cols-2 gap-2.5">
-                                                                {[
-                                                                    { name: 'Gaussian Jitter', icon: <Activity className="w-4 h-4" />, desc: 'Human-like timing randomization', status: 'HIGH' },
-                                                                    { name: 'Fingerprint Masking', icon: <Fingerprint className="w-4 h-4" />, desc: 'Browser identity spoofing 100%', status: 'OK' },
-                                                                    { name: 'WebRTC Leak Shield', icon: <Globe className="w-4 h-4" />, desc: 'Real IP leak prevention active', status: 'OK' },
-                                                                    { name: 'Behavior Simulation', icon: <MousePointer2 className="w-4 h-4" />, desc: 'Mouse/scroll movement emulation', status: 'OK' },
-                                                                    { name: 'Canvas Noise', icon: <Sparkles className="w-4 h-4" />, desc: 'Canvas fingerprint randomization', status: 'OK' },
-                                                                    { name: 'Network Stealth', icon: <Wifi className="w-4 h-4" />, desc: 'Request header normalization', status: 'OK' },
-                                                                ].map((m, mi) => (
+                                                                {secModules.map((m, mi) => (
                                                                     <div key={mi} className="p-3 bg-slate-900/50 border border-slate-800 rounded-xl flex items-center gap-3 hover:border-amber-500/20 transition-all group/sec">
-                                                                        <div className="p-1.5 bg-slate-950 rounded-lg text-amber-500/40 group-hover/sec:text-amber-500 transition-colors">{m.icon}</div>
+                                                                        <div className={cn("p-1.5 bg-slate-950 rounded-lg transition-colors", m.active ? "text-amber-500/40 group-hover/sec:text-amber-500" : "text-slate-600")}>{m.icon}</div>
                                                                         <div className="flex-1 min-w-0">
                                                                             <div className="flex items-center justify-between gap-1">
                                                                                 <p className="text-[9px] font-black text-white uppercase tracking-tight truncate">{m.name}</p>
-                                                                                <span className={cn("text-[7px] font-mono font-bold flex-shrink-0", m.status === 'HIGH' ? "text-amber-400" : "text-emerald-500")}>{m.status}</span>
+                                                                                <span className={cn("text-[7px] font-mono font-bold flex-shrink-0",
+                                                                                    !m.active ? "text-slate-600" : m.status === 'HIGH' ? "text-amber-400" : "text-emerald-500"
+                                                                                )}>{m.status}</span>
                                                                             </div>
                                                                             <p className="text-[8px] text-foreground leading-tight">{m.desc}</p>
                                                                         </div>
                                                                     </div>
                                                                 ))}
                                                             </div>
-                                                            <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl">
+                                                            <div className={cn("p-3 rounded-xl border", isActive ? "bg-amber-500/5 border-amber-500/20" : "bg-slate-900/30 border-slate-800")}>
                                                                 <p className="text-[9px] text-foreground">
-                                                                    <span className="text-amber-500 font-bold uppercase mr-1.5">Note:</span>
-                                                                    Gaussian Jitter set to HIGH for maximum stealth. All modules auto-calibrated per session.
+                                                                    <span className={cn("font-bold uppercase mr-1.5", isActive ? "text-amber-500" : "text-foreground")}>Note:</span>
+                                                                    {isActive ? 'All modules auto-calibrated per session. Gaussian Jitter provides maximum stealth.' : 'Modules will activate when automation starts on this node.'}
                                                                 </p>
                                                             </div>
                                                         </motion.div>
-                                                    )}
+                                                        );
+                                                    })()}
 
                                                     {/* ─── LOGS TAB ─── */}
                                                     {inspectTab === 'logs' && (
                                                         <motion.div key="logs" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                                                            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 font-mono text-[10px] min-h-[320px]">
-                                                                <div className="space-y-1.5">
-                                                                    <p className="text-foreground"><span className="text-amber-500/70">[SYS]</span> Initializing Node_{slotId}...</p>
-                                                                    <p className="text-foreground"><span className="text-blue-400/70">[NET]</span> Proxy connected: SG-Server-{slotId}</p>
-                                                                    <p className="text-foreground"><span className="text-emerald-400/70">[SEC]</span> Anti-detection stealth modules loaded</p>
-                                                                    <p className="text-foreground"><span className="text-emerald-400/70">[SEC]</span> Gaussian Jitter: HIGH</p>
-                                                                    <p className="text-foreground"><span className="text-blue-400/70">[NET]</span> SSE stream: {sseConnected ? 'Connected' : 'Disconnected'}</p>
-                                                                    {isActive ? (<>
-                                                                        <p className="text-foreground"><span className="text-green-400/70">[AUTH]</span> Facebook Session: Valid</p>
-                                                                        <p className="text-white"><span className="text-amber-400">[TASK]</span> Target: {job?.automationType === 'marketplace' ? 'Marketplace' : 'Group Posting'} — {job?.groupCount || 0} targets</p>
-                                                                        <p className="text-foreground"><span className="text-cyan-400/70">[USER]</span> {job?.displayName || job?.userId}</p>
-                                                                        {job?.fbAccount && <p className="text-foreground"><span className="text-blue-400/60">[FB]</span> Account: {job.fbAccount}</p>}
-                                                                        {job?.propertyTitle && <p className="text-foreground"><span className="text-amber-400/60">[PROP]</span> {job.propertyTitle}</p>}
-                                                                        {job?.progress && <p className="text-foreground"><span className="text-emerald-400/60">[PROG]</span> Step {job.progress.currentStep}/{job.progress.totalSteps} ({progressPct}%)</p>}
-                                                                        {job?.progress?.latestLog && <p className="text-white"><span className="text-emerald-400">[LOG]</span> {job.progress.latestLog.text}</p>}
-                                                                        <p className="text-foreground"><span className="text-foreground">[TIME]</span> Runtime: {rMin}:{String(rSec).padStart(2, '0')}</p>
-                                                                        <p className="text-foreground animate-pulse"><span className="text-amber-400/50">[WAIT]</span> Anti-spam delay active...</p>
-                                                                    </>) : (<>
-                                                                        <p className="text-foreground"><span className="text-foreground">[SYS]</span> Node_{slotId} on standby — no active task</p>
-                                                                        <p className="text-foreground animate-pulse"><span className="text-foreground">[IDLE]</span> Awaiting task assignment...</p>
-                                                                    </>)}
-                                                                </div>
+                                                            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 font-mono text-[10px] min-h-[320px] max-h-[380px] overflow-y-auto">
+                                                                {isActive && job?.logs && job.logs.length > 0 ? (
+                                                                    <div className="space-y-1">
+                                                                        {job.logs.map((l: any, li: number) => {
+                                                                            const time = new Date(l.time).toLocaleTimeString('th-TH', { hour12: false });
+                                                                            let prefixColor = 'text-slate-500';
+                                                                            let prefix = 'INFO';
+                                                                            if (l.level === 'success' || l.msg?.includes('✅')) { prefix = 'OK'; prefixColor = 'text-green-400'; }
+                                                                            else if (l.level === 'error' || l.msg?.includes('❌')) { prefix = 'ERR'; prefixColor = 'text-red-400'; }
+                                                                            else if (l.level === 'warn' || l.msg?.includes('⚠')) { prefix = 'WARN'; prefixColor = 'text-amber-400'; }
+                                                                            else if (l.msg?.includes('Anti') || l.msg?.includes('stealth') || l.msg?.includes('[SEC]')) { prefix = 'SEC'; prefixColor = 'text-cyan-400'; }
+                                                                            else if (l.msg?.includes('Proxy') || l.msg?.includes('SSE') || l.msg?.includes('[NET]')) { prefix = 'NET'; prefixColor = 'text-blue-400'; }
+                                                                            return (
+                                                                                <p key={li} className="flex gap-2">
+                                                                                    <span className="text-slate-600 flex-shrink-0 w-14">{time}</span>
+                                                                                    <span className={cn("font-bold flex-shrink-0 w-8", prefixColor)}>[{prefix}]</span>
+                                                                                    <span className={cn(l.level === 'error' ? 'text-red-300' : l.level === 'success' ? 'text-green-300' : 'text-foreground')}>{l.msg}</span>
+                                                                                </p>
+                                                                            );
+                                                                        })}
+                                                                        <p className="text-foreground animate-pulse mt-2"><span className="text-amber-400/50">[LIVE]</span> Streaming real-time logs...</p>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="flex flex-col items-center justify-center py-16 text-slate-600">
+                                                                        <Terminal className="w-10 h-10 mb-3 opacity-30" />
+                                                                        <p className="text-xs font-medium">No logs available</p>
+                                                                        <p className="text-[9px] mt-0.5">
+                                                                            {isActive ? 'Waiting for worker to produce logs...' : 'Logs will appear when this node processes tasks'}
+                                                                        </p>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </motion.div>
                                                     )}

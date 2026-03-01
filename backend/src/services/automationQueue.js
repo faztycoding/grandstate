@@ -477,6 +477,22 @@ class AutomationQueue {
             latestLog = status.logs[status.logs.length - 1];
           }
         }
+        // Get real anti-detection status from worker
+        let antiDetection = null;
+        if (info.worker && typeof info.worker.getAntiDetectionStatus === 'function') {
+          antiDetection = info.worker.getAntiDetectionStatus();
+        }
+
+        // Get recent logs for admin inspection
+        let recentLogs = [];
+        if (status && Array.isArray(status.logs)) {
+          recentLogs = status.logs.slice(-50).map(l => ({
+            time: l.time,
+            msg: l.msg,
+            level: l.level || 'info',
+          }));
+        }
+
         return {
           userId: uid.substring(0, 8) + '...',
           fullUserId: uid,
@@ -494,6 +510,8 @@ class AutomationQueue {
             isPaused: status.isPaused,
             latestLog: latestLog,
           } : null,
+          antiDetection,
+          logs: recentLogs,
         };
       }),
       // Waiting queue detail

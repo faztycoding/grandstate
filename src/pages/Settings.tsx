@@ -538,12 +538,12 @@ export default function Settings() {
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-slate-300 ml-1">{isEn ? 'New Password' : 'รหัสผ่านใหม่'}</label>
                   <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••"
-                    className="bg-black border-2 border-slate-800 rounded-xl h-11 px-4 text-sm text-amber-400 focus:border-amber-500/50 placeholder:text-slate-500" />
+                    className="bg-black border-2 border-slate-800 rounded-xl h-11 px-4 text-sm text-amber-400 focus:border-amber-500/50 placeholder:text-muted-foreground" />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-slate-300 ml-1">{isEn ? 'Confirm Password' : 'ยืนยันรหัสผ่าน'}</label>
                   <Input type="password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} placeholder="••••••••"
-                    className="bg-black border-2 border-slate-800 rounded-xl h-11 px-4 text-sm text-amber-400 focus:border-amber-500/50 placeholder:text-slate-500" />
+                    className="bg-black border-2 border-slate-800 rounded-xl h-11 px-4 text-sm text-amber-400 focus:border-amber-500/50 placeholder:text-muted-foreground" />
                 </div>
                 <button onClick={handleChangePassword} disabled={isChangingPassword || !newPassword || !confirmNewPassword}
                   className="w-full py-3.5 bg-slate-950 border-2 border-amber-500 text-amber-500 font-semibold text-sm rounded-xl flex items-center justify-center gap-2 hover:bg-amber-500 hover:text-black transition-all shadow-lg shadow-amber-500/10 disabled:opacity-30 disabled:cursor-not-allowed">
@@ -570,12 +570,12 @@ export default function Settings() {
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-300 ml-1">{isEn ? 'Display Name' : 'ชื่อที่แสดง'}</label>
                 <Input value={displayName} onChange={(e) => handleDisplayNameChange(e.target.value)} placeholder={isEn ? 'Your name' : 'ชื่อของคุณ'}
-                  className="bg-black border-2 border-slate-800 rounded-xl h-11 px-4 text-sm text-cyan-400 focus:border-cyan-500/50 placeholder:text-slate-500" />
+                  className="bg-black border-2 border-slate-800 rounded-xl h-11 px-4 text-sm text-cyan-400 focus:border-cyan-500/50 placeholder:text-muted-foreground" />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-300 ml-1">Line ID</label>
                 <Input value={lineId} onChange={(e) => handleLineIdChange(e.target.value)} placeholder="@yourlineid"
-                  className="bg-black border-2 border-slate-800 rounded-xl h-11 px-4 text-sm text-cyan-400 focus:border-cyan-500/50 placeholder:text-slate-500" />
+                  className="bg-black border-2 border-slate-800 rounded-xl h-11 px-4 text-sm text-cyan-400 focus:border-cyan-500/50 placeholder:text-muted-foreground" />
               </div>
               <button onClick={handleSave} disabled={isSavingProfile}
                 className="w-full py-3.5 bg-cyan-600 text-black font-semibold text-sm rounded-xl flex items-center justify-center gap-2 hover:bg-cyan-500 transition-all shadow-lg shadow-cyan-500/10 disabled:opacity-30">
@@ -1034,7 +1034,7 @@ export default function Settings() {
               </div>
             ) : myTickets.length === 0 ? (
               <div className="text-center py-6">
-                <MessageCircle className="w-8 h-8 mx-auto text-slate-600 mb-2" />
+                <MessageCircle className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
                 <p className="text-[10px] text-slate-400">{isEn ? 'No tickets yet' : 'ยังไม่มีเรื่องแจ้งปัญหา'}</p>
               </div>
             ) : (
@@ -1057,7 +1057,7 @@ export default function Settings() {
                             </div>
                             <p className="text-[11px] font-semibold text-white truncate">{ticket.subject}</p>
                             <p className="text-[9px] text-slate-400 mt-0.5 line-clamp-1">{ticket.description}</p>
-                            <p className="text-[8px] text-slate-500 mt-1 font-mono">{createdDate}</p>
+                            <p className="text-[8px] text-muted-foreground mt-1 font-mono">{createdDate}</p>
                           </div>
                           <Button variant="ghost" size="icon" className="w-7 h-7 text-slate-400 hover:text-red-400 hover:bg-red-500/10 flex-shrink-0"
                             onClick={() => handleDeleteTicket(ticket.id)} disabled={deletingTicketId === ticket.id}>

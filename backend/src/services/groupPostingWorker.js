@@ -4545,6 +4545,46 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
     }
   }
 
+  // Get real anti-detection module status based on actual worker state
+  getAntiDetectionStatus() {
+    const browserUp = this.isBrowserConnected();
+    const hasProfile = !!this.sessionProfile;
+    const isActive = this.isRunning;
+
+    return {
+      gaussianJitter: {
+        status: hasProfile ? 'HIGH' : 'OFF',
+        active: hasProfile && isActive,
+        detail: hasProfile ? `σ=${Math.round(this.sessionProfile.typingSpeed)}ms rush=${this.sessionProfile.rushFactor.toFixed(2)}` : null,
+      },
+      fingerprintMasking: {
+        status: browserUp ? 'OK' : 'OFF',
+        active: browserUp,
+        detail: browserUp ? 'Canvas/WebGL/Audio/Battery/Font spoofing injected' : null,
+      },
+      webrtcShield: {
+        status: browserUp ? 'OK' : 'OFF',
+        active: browserUp,
+        detail: browserUp ? 'IP leak prevention via launch args' : null,
+      },
+      behaviorSimulation: {
+        status: isActive ? 'OK' : 'OFF',
+        active: isActive,
+        detail: isActive ? `scroll=${this.sessionProfile?.scrollSpeed?.toFixed(2) || '1.00'}x typo=${((this.sessionProfile?.typoRate || 0) * 100).toFixed(1)}%` : null,
+      },
+      canvasNoise: {
+        status: browserUp ? 'OK' : 'OFF',
+        active: browserUp,
+        detail: browserUp ? 'Random noise injection per frame' : null,
+      },
+      networkStealth: {
+        status: browserUp ? 'OK' : 'OFF',
+        active: browserUp,
+        detail: browserUp ? 'Header normalization + automation flags disabled' : null,
+      },
+    };
+  }
+
   // Get current status
   getStatus() {
     return {
@@ -4559,6 +4599,7 @@ ${property.title} ${isRent ? 'ให้เช่า' : 'ขาย'}
       startTime: this.startTime,
       endTime: this.endTime,
       generatedCaptions: this.generatedCaptions,
+      antiDetection: this.getAntiDetectionStatus(),
     };
   }
 

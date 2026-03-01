@@ -83,7 +83,7 @@ export function GroupCard({
         )}>
           <Users className={cn(
             "w-6 h-6",
-            group.isActive ? "text-white" : "text-gray-500"
+            group.isActive ? "text-white" : "text-muted-foreground"
           )} />
         </div>
 

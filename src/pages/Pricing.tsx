@@ -340,11 +340,11 @@ export default function Pricing() {
                             </div>
                           ) : (
                             <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 bg-slate-800/50 group-hover/lock:bg-amber-500/20 transition-colors">
-                              <Lock className="w-2.5 h-2.5 text-slate-500 group-hover/lock:text-amber-400 transition-colors" />
+                              <Lock className="w-2.5 h-2.5 text-muted-foreground group-hover/lock:text-amber-400 transition-colors" />
                             </div>
                           )}
                           <span className={cn(
-                            feature.included ? 'text-slate-300' : 'text-slate-500 group-hover/lock:text-slate-400 transition-colors',
+                            feature.included ? 'text-foreground' : 'text-muted-foreground group-hover/lock:text-foreground transition-colors',
                             feature.highlight && cn('font-semibold', c.text)
                           )}>
                             {feature.text}

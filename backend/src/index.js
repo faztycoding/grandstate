@@ -3114,6 +3114,40 @@ app.get('/api/worker-slots', ...adminAuth, (req, res) => {
       automationType: q.automationType,
     }));
 
+    // Build per-slot anti-detection from real worker data
+    // Aggregate: if ANY slot is active, show its real modules; otherwise show idle state
+    let aggregatedAntiDetection = {
+      gaussianJitter: { status: 'OFF', active: false },
+      fingerprintMasking: { status: 'OFF', active: false },
+      webrtcShield: { status: 'OFF', active: false },
+      behaviorSimulation: { status: 'OFF', active: false },
+      canvasNoise: { status: 'OFF', active: false },
+      networkStealth: { status: 'OFF', active: false },
+    };
+    for (const [uid, job] of automationQueue.running.entries()) {
+      const worker = job.worker;
+      if (worker && typeof worker.getAntiDetectionStatus === 'function') {
+        const ad = worker.getAntiDetectionStatus();
+        for (const key of Object.keys(aggregatedAntiDetection)) {
+          if (ad[key]?.active) {
+            aggregatedAntiDetection[key] = ad[key];
+          }
+        }
+        break; // Use first active worker's data
+      }
+    }
+
+    // Also attach per-slot antiDetection to each active slot
+    for (const slot of slots) {
+      if (slot.status !== 'standby') {
+        const job = automationQueue.running.get(slot.userId);
+        const worker = job?.worker;
+        if (worker && typeof worker.getAntiDetectionStatus === 'function') {
+          slot.antiDetection = worker.getAntiDetectionStatus();
+        }
+      }
+    }
+
     res.json({
       success: true,
       maxSlots,
@@ -3121,14 +3155,7 @@ app.get('/api/worker-slots', ...adminAuth, (req, res) => {
       queueCount: queueEntries.length,
       slots,
       waiting,
-      antiDetection: {
-        gaussianJitter: { status: 'HIGH', active: true },
-        fingerprintMasking: { status: 'OK', active: true },
-        webrtcShield: { status: 'OK', active: true },
-        behaviorSimulation: { status: 'OK', active: true },
-        canvasNoise: { status: 'OK', active: true },
-        networkStealth: { status: 'OK', active: true },
-      },
+      antiDetection: aggregatedAntiDetection,
     });
   } catch (error) {
     console.error('Worker slots error:', error);

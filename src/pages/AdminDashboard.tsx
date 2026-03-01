@@ -2616,9 +2616,9 @@ export default function AdminDashboard() {
                                             {/* Left: Tab Navigation */}
                                             <div className="w-[68px] bg-slate-950/50 border-r border-slate-800 flex flex-col items-center py-6 gap-4 flex-shrink-0">
                                                 {([
-                                                    { id: 'monitor' as const, icon: <Monitor size={17} />, label: 'Live' },
-                                                    { id: 'security' as const, icon: <Shield size={17} />, label: 'Secure' },
-                                                    { id: 'logs' as const, icon: <Terminal size={17} />, label: 'Logs' },
+                                                    { id: 'monitor' as const, icon: <Monitor size={17} />, label: 'ไลฟ์' },
+                                                    { id: 'security' as const, icon: <Shield size={17} />, label: 'ความปลอดภัย' },
+                                                    { id: 'logs' as const, icon: <Terminal size={17} />, label: 'บันทึก' },
                                                 ]).map(tab => (
                                                     <button key={tab.id} onClick={() => setInspectTab(tab.id)}
                                                         className={cn("p-3 rounded-xl transition-all flex flex-col items-center gap-1",
@@ -2651,13 +2651,13 @@ export default function AdminDashboard() {
                                                                     {isActive ? (
                                                                         <div className="text-center z-10">
                                                                             <Activity className="text-amber-500/40 mx-auto mb-2 animate-pulse" size={32} />
-                                                                            <p className="text-[9px] font-mono text-amber-500/60 tracking-[0.3em] uppercase">EXECUTING_TASK_{slotId}...</p>
+                                                                            <p className="text-[9px] font-mono text-amber-500/60 tracking-[0.3em] uppercase">กำลังประมวลผล #{slotId}...</p>
                                                                             {job?.progress?.latestLog && <p className="text-[8px] text-emerald-400/40 mt-1 font-mono max-w-[250px] truncate mx-auto">{job.progress.latestLog.text}</p>}
                                                                         </div>
                                                                     ) : (
                                                                         <div className="text-center z-10">
                                                                             <Monitor className="text-foreground mx-auto mb-2" size={32} />
-                                                                            <p className="text-[9px] font-mono text-foreground tracking-[0.2em] uppercase">AWAITING_ASSIGNMENT...</p>
+                                                                            <p className="text-[9px] font-mono text-foreground tracking-[0.2em] uppercase">รอรับงาน...</p>
                                                                         </div>
                                                                     )}
                                                                     {isActive && <motion.div animate={{ x: [0, 80, -40, 15], y: [0, -20, 30, 5] }} transition={{ duration: 6, repeat: Infinity }} className="absolute z-10">
@@ -2666,19 +2666,19 @@ export default function AdminDashboard() {
                                                                 </div>
                                                                 {isActive && <div className="absolute bottom-3 left-4 flex items-center gap-2 z-10">
                                                                     <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                                                                    <span className="text-[8px] font-black text-white uppercase tracking-widest opacity-80">Live View</span>
+                                                                    <span className="text-[8px] font-black text-white uppercase tracking-widest opacity-80">ไลฟ์วิว</span>
                                                                 </div>}
                                                             </div>
 
                                                             {/* Task Info Grid */}
                                                             <div className="grid grid-cols-2 gap-3">
                                                                 <div className="bg-slate-900/60 border border-slate-800 p-3 rounded-xl">
-                                                                    <p className="text-[9px] text-foreground font-bold uppercase mb-1">Target Task</p>
-                                                                    <p className="text-xs font-bold text-white truncate">{isActive ? (job?.propertyTitle || (job?.automationType === 'marketplace' ? 'Marketplace Posting' : 'Group Posting')) : 'No task assigned'}</p>
+                                                                    <p className="text-[9px] text-foreground font-bold uppercase mb-1">งานปัจจุบัน</p>
+                                                                    <p className="text-xs font-bold text-white truncate">{isActive ? (job?.propertyTitle || (job?.automationType === 'marketplace' ? 'โพสต์ Marketplace' : 'โพสต์กลุ่ม')) : 'ยังไม่ได้รับงาน'}</p>
                                                                     {job?.fbAccount && <p className="text-[8px] text-blue-400/60 truncate mt-0.5">FB: {job.fbAccount}</p>}
                                                                 </div>
                                                                 <div className="bg-slate-900/60 border border-slate-800 p-3 rounded-xl">
-                                                                    <p className="text-[9px] text-foreground font-bold uppercase mb-1">Automation Progress</p>
+                                                                    <p className="text-[9px] text-foreground font-bold uppercase mb-1">ความคืบหน้า</p>
                                                                     {isActive ? (<>
                                                                         <div className="flex items-center gap-2">
                                                                             <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
@@ -2687,8 +2687,8 @@ export default function AdminDashboard() {
                                                                             </div>
                                                                             <span className="text-xs font-mono text-amber-400 font-bold">{progressPct}%</span>
                                                                         </div>
-                                                                        <p className="text-[8px] text-foreground mt-1 font-mono">{job?.progress ? `${job.progress.currentStep}/${job.progress.totalSteps} tasks` : `${job?.groupCount || 0} groups`}</p>
-                                                                    </>) : <p className="text-xs text-foreground">Idle</p>}
+                                                                        <p className="text-[8px] text-foreground mt-1 font-mono">{job?.progress ? `${job.progress.currentStep}/${job.progress.totalSteps} งาน` : `${job?.groupCount || 0} กลุ่ม`}</p>
+                                                                    </>) : <p className="text-xs text-foreground">ว่าง</p>}
                                                                 </div>
                                                             </div>
 
@@ -2696,15 +2696,15 @@ export default function AdminDashboard() {
                                                             {isActive && (
                                                                 <div className="grid grid-cols-3 gap-2">
                                                                     <div className="bg-slate-900/60 border border-slate-800 p-2.5 rounded-xl text-center">
-                                                                        <p className="text-[8px] text-foreground font-bold uppercase">User</p>
+                                                                        <p className="text-[8px] text-foreground font-bold uppercase">ผู้ใช้</p>
                                                                         <p className="text-[11px] font-bold text-white truncate">{job?.displayName || job?.userId || '—'}</p>
                                                                     </div>
                                                                     <div className="bg-slate-900/60 border border-slate-800 p-2.5 rounded-xl text-center">
-                                                                        <p className="text-[8px] text-foreground font-bold uppercase">Runtime</p>
+                                                                        <p className="text-[8px] text-foreground font-bold uppercase">เวลาทำงาน</p>
                                                                         <p className="text-sm font-mono font-bold text-emerald-400">{rMin}:{String(rSec).padStart(2, '0')}</p>
                                                                     </div>
                                                                     <div className="bg-slate-900/60 border border-slate-800 p-2.5 rounded-xl text-center">
-                                                                        <p className="text-[8px] text-foreground font-bold uppercase">Groups</p>
+                                                                        <p className="text-[8px] text-foreground font-bold uppercase">กลุ่ม</p>
                                                                         <p className="text-sm font-mono font-bold text-amber-400">{job?.groupCount || 0}</p>
                                                                     </div>
                                                                 </div>
@@ -2727,12 +2727,12 @@ export default function AdminDashboard() {
                                                         return (
                                                         <motion.div key="security" initial={{ opacity: 0, x: 15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="space-y-4">
                                                             <div className="flex items-center justify-between mb-1">
-                                                                <h4 className="text-xs font-black text-white uppercase tracking-tight">Anti-Detection Modules</h4>
+                                                                <h4 className="text-xs font-black text-white uppercase tracking-tight">โมดูลป้องกันการตรวจจับ</h4>
                                                                 <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded border uppercase",
                                                                     activeSecCount === secModules.length ? "text-green-400 bg-green-500/10 border-green-500/20" :
                                                                     activeSecCount > 0 ? "text-amber-400 bg-amber-500/10 border-amber-500/20" :
                                                                     "text-foreground bg-slate-800/50 border-slate-700"
-                                                                )}>{activeSecCount === secModules.length ? 'All Secure' : `${activeSecCount}/${secModules.length} Active`}</span>
+                                                                )}>{activeSecCount === secModules.length ? 'ปลอดภัยทั้งหมด' : `${activeSecCount}/${secModules.length} ใช้งาน`}</span>
                                                             </div>
                                                             <div className="grid grid-cols-2 gap-2.5">
                                                                 {secModules.map((m, mi) => (
@@ -2752,8 +2752,8 @@ export default function AdminDashboard() {
                                                             </div>
                                                             <div className={cn("p-3 rounded-xl border", isActive ? "bg-amber-500/5 border-amber-500/20" : "bg-slate-900/30 border-slate-800")}>
                                                                 <p className="text-[9px] text-foreground">
-                                                                    <span className={cn("font-bold uppercase mr-1.5", isActive ? "text-amber-500" : "text-foreground")}>Note:</span>
-                                                                    {isActive ? 'All modules auto-calibrated per session. Gaussian Jitter provides maximum stealth.' : 'Modules will activate when automation starts on this node.'}
+                                                                    <span className={cn("font-bold uppercase mr-1.5", isActive ? "text-amber-500" : "text-foreground")}>หมายเหตุ:</span>
+                                                                    {isActive ? 'โมดูลทั้งหมดปรับแต่งอัตโนมัติต่อ session — Gaussian Jitter ให้ความลับสูงสุด' : 'โมดูลจะเปิดใช้งานเมื่อ automation เริ่มทำงานบน node นี้'}
                                                                 </p>
                                                             </div>
                                                         </motion.div>
@@ -2788,7 +2788,7 @@ export default function AdminDashboard() {
                                                                 ) : (
                                                                     <div className="flex flex-col items-center justify-center py-16 text-slate-600">
                                                                         <Terminal className="w-10 h-10 mb-3 opacity-30" />
-                                                                        <p className="text-xs font-medium">No logs available</p>
+                                                                        <p className="text-xs font-medium">ยังไม่มีบันทึก</p>
                                                                         <p className="text-[9px] mt-0.5">
                                                                             {isActive ? 'Waiting for worker to produce logs...' : 'Logs will appear when this node processes tasks'}
                                                                         </p>
@@ -2802,33 +2802,41 @@ export default function AdminDashboard() {
 
                                             {/* Right: Controls Panel */}
                                             <div className="w-48 bg-slate-950/50 border-l border-slate-800 p-5 flex flex-col gap-3 flex-shrink-0">
-                                                <p className="text-[9px] font-black text-foreground uppercase tracking-widest mb-1">Node Controls</p>
+                                                <p className="text-[9px] font-black text-foreground uppercase tracking-widest mb-1">การควบคุม Node</p>
 
                                                 {isActive && job?.fullUserId && (<>
                                                     <button
-                                                        className="flex items-center gap-2 px-4 py-3 bg-amber-500 text-black font-black text-[10px] rounded-xl hover:bg-amber-400 transition-all shadow-lg shadow-amber-500/20 uppercase tracking-wider"
+                                                        className="flex items-center gap-2 px-4 py-3 bg-red-600 text-white font-black text-[10px] rounded-xl hover:bg-red-500 transition-all shadow-lg shadow-red-500/20 uppercase tracking-wider"
                                                         disabled={forceStoppingUser === job.fullUserId}
                                                         onClick={() => handleForceStop(job.fullUserId, job.displayName || job.userId)}>
-                                                        {forceStoppingUser === job.fullUserId ? <Loader2 size={14} className="animate-spin" /> : <StopCircle size={14} />} Force Stop
+                                                        {forceStoppingUser === job.fullUserId ? <Loader2 size={14} className="animate-spin" /> : <StopCircle size={14} />} หยุดทันที
+                                                    </button>
+                                                    <button
+                                                        className="flex items-center gap-2 px-4 py-3 bg-slate-800 text-blue-400 font-black text-[10px] rounded-xl hover:bg-slate-700 border border-blue-500/20 transition-all uppercase tracking-wider"
+                                                        onClick={() => { setQueueDetail(null); setActiveTab('users'); setSearchQuery(job.displayName || job.userId || ''); }}>
+                                                        <Users size={14} /> ดูข้อมูลผู้ใช้
                                                     </button>
                                                 </>)}
 
                                                 {!isActive && (
-                                                    <div className="flex items-center gap-2 px-4 py-3 bg-slate-800/50 text-foreground font-black text-[10px] rounded-xl border border-slate-700 uppercase tracking-wider">
-                                                        <Pause size={14} /> Standby
-                                                    </div>
+                                                    <button
+                                                        className="flex items-center gap-2 px-4 py-3 bg-slate-800/50 text-amber-400 font-black text-[10px] rounded-xl border border-amber-500/20 hover:bg-slate-800 hover:border-amber-500/40 transition-all uppercase tracking-wider"
+                                                        disabled={clearingStale}
+                                                        onClick={async () => { setClearingStale(true); try { const r = await adminApiFetch('/api/admin/clear-stale-sessions', { method: 'POST' }); const d = await r.json(); if (d.success) toast.success(`ล้าง ${d.cleared} session เก่าแล้ว`); } catch { toast.error('ล้าง session ไม่สำเร็จ'); } finally { setClearingStale(false); } }}>
+                                                        {clearingStale ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} ล้าง Node
+                                                    </button>
                                                 )}
 
                                                 {/* Status Summary */}
                                                 <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2 mt-2">
                                                     <div className="flex items-center gap-2 mb-1">
                                                         <div className={cn("w-2 h-2 rounded-full", isActive ? "bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.6)]" : "bg-slate-700")} />
-                                                        <span className={cn("text-[9px] font-black uppercase", isActive ? "text-emerald-400" : "text-foreground")}>{isActive ? 'Running' : 'Idle'}</span>
+                                                        <span className={cn("text-[9px] font-black uppercase", isActive ? "text-emerald-400" : "text-foreground")}>{isActive ? 'กำลังทำงาน' : 'ว่าง'}</span>
                                                     </div>
                                                     {isActive && job?.automationType && (
                                                         <div className="flex items-center gap-1">
                                                             {job.automationType === 'marketplace' ? <Store className="w-3 h-3 text-blue-400" /> : <Users className="w-3 h-3 text-emerald-400" />}
-                                                            <span className="text-[9px] text-foreground font-bold uppercase">{job.automationType === 'marketplace' ? 'MKT' : 'Groups'}</span>
+                                                            <span className="text-[9px] text-foreground font-bold uppercase">{job.automationType === 'marketplace' ? 'ตลาด' : 'กลุ่ม'}</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -2836,16 +2844,16 @@ export default function AdminDashboard() {
                                                 {/* Slot Metadata */}
                                                 <div className="mt-auto pt-4 border-t border-slate-800 space-y-1.5">
                                                     <div className="flex justify-between text-[9px]">
-                                                        <span className="text-foreground">Slot</span>
+                                                        <span className="text-foreground">สล็อต</span>
                                                         <span className="text-amber-400 font-mono font-bold">#{slotId}</span>
                                                     </div>
                                                     <div className="flex justify-between text-[9px]">
-                                                        <span className="text-foreground">Engine</span>
+                                                        <span className="text-foreground">เครื่องยนต์</span>
                                                         <span className="text-foreground font-mono">v1.0</span>
                                                     </div>
                                                     <div className="flex justify-between text-[9px]">
-                                                        <span className="text-foreground">SSE</span>
-                                                        <span className={sseConnected ? "text-emerald-400" : "text-red-400"}>{sseConnected ? 'Live' : 'Off'}</span>
+                                                        <span className="text-foreground">เชื่อมต่อ</span>
+                                                        <span className={sseConnected ? "text-emerald-400" : "text-red-400"}>{sseConnected ? 'ไลฟ์' : 'ออฟไลน์'}</span>
                                                     </div>
                                                 </div>
                                             </div>

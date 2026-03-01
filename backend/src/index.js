@@ -2225,23 +2225,66 @@ app.post('/api/facebook/auto-login', ...auth, async (req, res) => {
     console.log(`🔑 [${shortId}] Page title: "${initialTitle}" | URL: ${page.url()}`);
 
     // ── Step 1.5: Handle "Continue as" profile chooser page ──
+    // 3 cases: (A) Same account → "ดำเนินการต่อ", (B) Different account → "ใช้โปรไฟล์อื่น", (C) No chooser → skip
     try {
-      const clickedContinue = await page.evaluate(() => {
+      const activeSlotForCreds = sessionManager.getActiveSlot(req.userId);
+      const hasProfileChooser = await page.evaluate(() => {
         const btns = document.querySelectorAll('[role="button"], button, a, div[tabindex="0"]');
         for (const btn of btns) {
           const text = (btn.textContent || '').trim();
-          if (text === 'ดำเนินการต่อ' || text === 'Continue' || text === 'Log Into') {
-            btn.click();
-            return text;
+          if (text === 'ดำเนินการต่อ' || text === 'Continue') return true;
+        }
+        return false;
+      }).catch(() => false);
+
+      if (hasProfileChooser) {
+        // Compare provided email with stored credentials to decide which button
+        const storedCreds = sessionManager.loadFbCredentials(req.userId, activeSlotForCreds);
+        const isSameAccount = storedCreds && storedCreds.email && storedCreds.email.toLowerCase().trim() === email.toLowerCase().trim();
+
+        if (isSameAccount) {
+          // Case A: Same account → click "ดำเนินการต่อ"
+          console.log(`🔑 [${shortId}] Profile chooser: same account → clicking "ดำเนินการต่อ"`);
+          await page.evaluate(() => {
+            const btns = document.querySelectorAll('[role="button"], button, a, div[tabindex="0"]');
+            for (const btn of btns) {
+              const text = (btn.textContent || '').trim();
+              if (text === 'ดำเนินการต่อ' || text === 'Continue') { btn.click(); return; }
+            }
+          });
+          await new Promise(r => setTimeout(r, 5000));
+        } else {
+          // Case B: Different account → click "ใช้โปรไฟล์อื่น" to get login form
+          console.log(`🔑 [${shortId}] Profile chooser: different account → clicking "ใช้โปรไฟล์อื่น"`);
+          const clickedOther = await page.evaluate(() => {
+            const btns = document.querySelectorAll('[role="button"], button, a, div[tabindex="0"]');
+            for (const btn of btns) {
+              const text = (btn.textContent || '').trim();
+              if (text === 'ใช้โปรไฟล์อื่น' || text === 'Use other account' || text === 'Not you?' || text === 'Log Into Another Account') {
+                btn.click();
+                return text;
+              }
+            }
+            return null;
+          });
+          if (clickedOther) {
+            console.log(`🔑 [${shortId}] Clicked "${clickedOther}" — waiting for login form...`);
+            await new Promise(r => setTimeout(r, 4000));
+          } else {
+            // Fallback: if "ใช้โปรไฟล์อื่น" not found, try clicking "ดำเนินการต่อ" anyway
+            console.log(`🔑 [${shortId}] "ใช้โปรไฟล์อื่น" not found — falling back to "ดำเนินการต่อ"`);
+            await page.evaluate(() => {
+              const btns = document.querySelectorAll('[role="button"], button, a, div[tabindex="0"]');
+              for (const btn of btns) {
+                const text = (btn.textContent || '').trim();
+                if (text === 'ดำเนินการต่อ' || text === 'Continue') { btn.click(); return; }
+              }
+            });
+            await new Promise(r => setTimeout(r, 5000));
           }
         }
-        return null;
-      });
-      if (clickedContinue) {
-        console.log(`🔑 [${shortId}] Auto-clicked "${clickedContinue}" on profile chooser`);
-        await new Promise(r => setTimeout(r, 5000));
       }
-    } catch (e) { /* non-critical */ }
+    } catch (e) { console.log(`⚠️ [${shortId}] Profile chooser handling error:`, e.message); }
 
     // ── Step 2: Check if already logged in ──
     const alreadyLoggedIn = await page.evaluate(() => {
@@ -2370,6 +2413,22 @@ app.post('/api/facebook/auto-login', ...auth, async (req, res) => {
     const postLoginTitle = await page.title().catch(() => '');
     console.log(`🔑 [${shortId}] Post-login URL: ${postLoginUrl}`);
     console.log(`🔑 [${shortId}] Post-login title: "${postLoginTitle}"`);
+
+    // ── Step 7.5: Handle post-login "ดำเนินการต่อ" page ──
+    try {
+      const postLoginClicked = await page.evaluate(() => {
+        const btns = document.querySelectorAll('[role="button"], button, a, div[tabindex="0"]');
+        for (const btn of btns) {
+          const text = (btn.textContent || '').trim();
+          if (text === 'ดำเนินการต่อ' || text === 'Continue') { btn.click(); return text; }
+        }
+        return null;
+      });
+      if (postLoginClicked) {
+        console.log(`🔑 [${shortId}] Post-login: clicked "${postLoginClicked}"`);
+        await new Promise(r => setTimeout(r, 4000));
+      }
+    } catch (e) { /* non-critical */ }
 
     // ── Step 8: Check various outcomes ──
     if (postLoginUrl.includes('checkpoint') || postLoginUrl.includes('two_step_verification') || postLoginUrl.includes('recover') || postLoginUrl.includes('captcha')) {

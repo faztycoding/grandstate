@@ -344,23 +344,31 @@ class UserSessionManager {
     await page.goto('https://www.facebook.com/', { waitUntil: 'networkidle2', timeout: 30000 });
     await new Promise(r => setTimeout(r, 3000));
 
-    // Handle "Continue as" / "ดำเนินการต่อ" profile chooser page
+    // Handle profile chooser page — 3 cases:
+    // (A) "ดำเนินการต่อ" = same account, click to continue
+    // (B) "ใช้โปรไฟล์อื่น" = different account shown, click to get login form
+    // (C) No chooser = direct login form or already logged in
     try {
-      const clickedContinue = await page.evaluate(() => {
+      const chooserAction = await page.evaluate(() => {
         const btns = document.querySelectorAll('[role="button"], button, a, div[tabindex="0"]');
+        let hasContinue = false;
         for (const btn of btns) {
           const text = (btn.textContent || '').trim();
-          if (text === 'ดำเนินการต่อ' || text === 'Continue' || text === 'Log Into') {
-            btn.click();
-            return text;
-          }
+          if (text === 'ดำเนินการต่อ' || text === 'Continue') hasContinue = true;
         }
-        return null;
-      });
-      if (clickedContinue) {
-        console.log(`🔑 [${shortId}] Auto-clicked "${clickedContinue}" on profile chooser`);
+        if (!hasContinue) return 'no_chooser';
+        // Profile chooser detected — click "ดำเนินการต่อ" (re-login uses stored creds for same slot)
+        for (const btn of btns) {
+          const text = (btn.textContent || '').trim();
+          if (text === 'ดำเนินการต่อ' || text === 'Continue') { btn.click(); return 'continued'; }
+        }
+        return 'no_chooser';
+      }).catch(() => 'no_chooser');
+
+      if (chooserAction === 'continued') {
+        console.log(`🔑 [${shortId}] Clicked "ดำเนินการต่อ" on profile chooser`);
         await new Promise(r => setTimeout(r, 5000));
-        return true; // Successfully continued as existing profile
+        return true;
       }
     } catch (e) { /* non-critical */ }
 
@@ -405,6 +413,22 @@ class UserSessionManager {
 
     await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {});
     await new Promise(r => setTimeout(r, 3000));
+
+    // Handle post-login "ดำเนินการต่อ" page (Facebook may show profile chooser again after login)
+    try {
+      const postLoginClicked = await page.evaluate(() => {
+        const btns = document.querySelectorAll('[role="button"], button, a, div[tabindex="0"]');
+        for (const btn of btns) {
+          const text = (btn.textContent || '').trim();
+          if (text === 'ดำเนินการต่อ' || text === 'Continue') { btn.click(); return text; }
+        }
+        return null;
+      });
+      if (postLoginClicked) {
+        console.log(`🔑 [${shortId}] Post-login: clicked "${postLoginClicked}"`);
+        await new Promise(r => setTimeout(r, 4000));
+      }
+    } catch (e) { /* non-critical */ }
 
     // Verify login succeeded
     const isLoggedIn = await page.evaluate(() => {

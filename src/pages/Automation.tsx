@@ -123,7 +123,9 @@ export default function Automation() {
   const [userPackage, setUserPackage] = useState<'free' | 'agent' | 'elite'>(() => {
     return (localStorage.getItem('userPackage') as 'free' | 'agent' | 'elite') || 'free';
   });
-  const [postingMode, setPostingMode] = useState<'group' | 'marketplace'>('marketplace'); // Default to marketplace
+  const [postingMode, setPostingMode] = useState<'group' | 'marketplace'>(() => {
+    return (localStorage.getItem('grandstate-posting-mode') as 'group' | 'marketplace') || 'group';
+  });
   const [selectedFbSlot, setSelectedFbSlot] = useState<number>(activeSlot);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [scheduleMode, setScheduleMode] = useState(false);
@@ -1404,7 +1406,7 @@ export default function Automation() {
                     </div>
                   </div>
                   <button
-                    onClick={() => setPostingMode('group')}
+                    onClick={() => { setPostingMode('group'); localStorage.setItem('grandstate-posting-mode', 'group'); }}
                     className={cn(
                       'p-3 rounded-lg border-2 transition-all text-center',
                       postingMode === 'group'

@@ -106,7 +106,7 @@ export default function Automation() {
   const location = useLocation();
   const { properties } = useSupabaseProperties();
   const { groups, activeGroups, addGroup, deleteGroup, toggleGroupActive } = useSupabaseGroups();
-  const { isConnected, isChecking, user, sessions: fbSessions, connectedCount: fbConnectedCount, activeSlot } = useFacebookConnection();
+  const { isConnected, isChecking, user, sessions: fbSessions, connectedCount: fbConnectedCount, activeSlot, reLogin, checkSessionHealth } = useFacebookConnection();
   const { t, language } = useLanguage();
   const globalAutomation = useGlobalAutomation();
 
@@ -315,6 +315,27 @@ export default function Automation() {
     // Validate post limit based on package
     if (!validatePostLimit()) {
       return;
+    }
+
+    // ── Pre-automation session freshness check ──
+    // If session is older than 3 days, auto re-login using stored credentials
+    try {
+      const health = await checkSessionHealth();
+      if (health && health.activeNeedsRelogin) {
+        toast.info('Session เก่าเกิน 3 วัน — กำลัง re-login อัตโนมัติ...', { duration: 5000 });
+        if (health.activeHasCredentials) {
+          const reResult = await reLogin(health.activeSlot);
+          if (reResult.success) {
+            toast.success(reResult.message || 'Re-login สำเร็จ! กำลังเริ่ม automation...');
+          } else {
+            toast.warning('Re-login ไม่สำเร็จ — automation จะลองต่อด้วย session เดิม');
+          }
+        } else {
+          toast.warning('ไม่มีรหัสผ่านที่บันทึกไว้ — กรุณา re-login ในหน้า Settings ก่อน', { duration: 6000 });
+        }
+      }
+    } catch {
+      // Non-fatal: continue with automation even if health check fails
     }
 
     // Initialize tasks

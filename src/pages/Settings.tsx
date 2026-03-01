@@ -110,6 +110,7 @@ export default function Settings() {
     connect,
     confirmLogin,
     autoLogin,
+    reLogin,
     disconnect,
     checkStatus,
     setActiveSlot
@@ -203,6 +204,7 @@ export default function Settings() {
   const [fbEmail, setFbEmail] = useState('');
   const [fbPassword, setFbPassword] = useState('');
   const [isAutoLogging, setIsAutoLogging] = useState(false);
+  const [reLoggingSlot, setReLoggingSlot] = useState<number | null>(null);
 
   // Auto-detect login: poll every 5 seconds when popup is open (NOT during auto-login)
   useEffect(() => {
@@ -284,6 +286,31 @@ export default function Settings() {
       loginPollRef.current = null;
     }
     setShowLoginPopup(false);
+  };
+
+  // Re-login using stored credentials — if no credentials, fall back to manual login popup
+  const handleReLogin = async (slot: number) => {
+    setReLoggingSlot(slot);
+    try {
+      const result = await reLogin(slot);
+      if (result.success) {
+        toast.success(result.message || `เข้าสู่ระบบใหม่ Slot ${slot + 1} สำเร็จ`);
+        setReLoggingSlot(null);
+        return;
+      }
+      // If no stored credentials, fall back to manual login popup
+      if (result.needCredentials) {
+        toast.info('ยังไม่มีรหัสผ่านที่บันทึกไว้ — กรุณากรอก Email/Password');
+        setReLoggingSlot(null);
+        handleConnectFacebook(slot);
+        return;
+      }
+      // Other error
+      toast.error(result.message || 'เข้าสู่ระบบใหม่ไม่สำเร็จ');
+    } catch {
+      toast.error('เกิดข้อผิดพลาดระหว่างเข้าสู่ระบบใหม่');
+    }
+    setReLoggingSlot(null);
   };
 
   // Profile state — synced with Supabase auth metadata
@@ -813,10 +840,11 @@ export default function Settings() {
                               variant="ghost"
                               size="icon"
                               className="w-7 h-7 text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/30"
-                              onClick={(e) => { e.stopPropagation(); handleConnectFacebook(i); }}
+                              disabled={reLoggingSlot === i}
+                              onClick={(e) => { e.stopPropagation(); handleReLogin(i); }}
                               title={`เข้าสู่ระบบใหม่ Slot ${i + 1}`}
                             >
-                              <RefreshCw className="w-3.5 h-3.5" />
+                              {reLoggingSlot === i ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
                             </Button>
                             <Button
                               variant="ghost"

@@ -204,6 +204,49 @@ export function useFacebookConnection() {
     }
   }, [checkStatus, state.activeSlot]);
 
+  // Re-login using stored credentials (slot-specific)
+  // Returns { success, message, needCredentials? } — if needCredentials=true, caller should show email/password form
+  const reLogin = useCallback(async (slot: number) => {
+    try {
+      const response = await apiFetch('/api/facebook/re-login', {
+        method: 'POST',
+        body: JSON.stringify({ slot }),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+
+      if (data.success) {
+        await checkStatus();
+        return { success: true as const, message: data.message, user: data.user as { name: string; profilePic: string } | undefined };
+      } else {
+        return { success: false as const, message: data.error, needCredentials: data.needCredentials || false };
+      }
+    } catch (error: any) {
+      return { success: false as const, message: error.message, needCredentials: false };
+    }
+  }, [checkStatus]);
+
+  // Check session health — returns which slots need re-login
+  const checkSessionHealth = useCallback(async () => {
+    try {
+      const response = await apiFetch('/api/facebook/session-health');
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      if (data.success) {
+        return data as {
+          success: true;
+          activeSlot: number;
+          activeNeedsRelogin: boolean;
+          activeHasCredentials: boolean;
+          slots: Array<{ slot: number; connected: boolean; name?: string; ageDays: number; hasCredentials: boolean; needsRelogin: boolean }>;
+        };
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }, []);
+
   // Set active slot for posting (persisted to localStorage)
   const setActiveSlot = useCallback((slot: number) => {
     setState(prev => ({ ...prev, activeSlot: slot }));
@@ -215,6 +258,8 @@ export function useFacebookConnection() {
     connect,
     confirmLogin,
     autoLogin,
+    reLogin,
+    checkSessionHealth,
     disconnect,
     checkStatus,
     setActiveSlot,

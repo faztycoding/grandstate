@@ -2401,6 +2401,111 @@ app.post('/api/facebook/auto-login', ...auth, async (req, res) => {
   }
 });
 
+// Re-login to Facebook using stored credentials (slot-specific)
+// Used by re-login button + pre-automation session freshness check
+app.post('/api/facebook/re-login', ...auth, async (req, res) => {
+  try {
+    const { slot } = req.body;
+    const targetSlot = typeof slot === 'number' ? slot : sessionManager.getActiveSlot(req.userId);
+    const shortId = req.userId.substring(0, 8);
+
+    // Load stored credentials for this slot
+    const creds = sessionManager.loadFbCredentials(req.userId, targetSlot);
+    if (!creds || !creds.email || !creds.password) {
+      return res.json({
+        success: false,
+        needCredentials: true,
+        error: 'ไม่มีข้อมูล Email/Password ที่บันทึกไว้สำหรับ Slot นี้ — กรุณากรอก Email และ Password',
+      });
+    }
+
+    // Set active slot to target
+    sessionManager.setActiveSlot(req.userId, targetSlot);
+
+    // Ensure browser is initialized
+    if (!req.groupWorker.browser || !req.groupWorker.page) {
+      console.log(`🔑 [${shortId}] Re-login: initializing browser for slot ${targetSlot}...`);
+      try {
+        await req.groupWorker.initialize();
+      } catch (initErr) {
+        return res.json({ success: false, error: `เปิด Browser ไม่สำเร็จ: ${initErr.message}` });
+      }
+    }
+
+    // Attempt auto re-login using stored credentials
+    console.log(`🔑 [${shortId}] Re-login slot ${targetSlot}: using stored credentials (${creds.email.substring(0, 4)}***)...`);
+    const reloginOk = await sessionManager._autoReloginFb(req.groupWorker, creds.email, creds.password, shortId);
+
+    if (reloginOk) {
+      // Scrape fresh user info
+      const page = req.groupWorker.page;
+      await new Promise(r => setTimeout(r, 2000));
+      const userInfo = await scrapeFbUserInfo(page);
+      const name = userInfo.name || 'Facebook User';
+      const profilePic = userInfo.profilePic || '';
+
+      sessionManager.setFbSession(req.userId, targetSlot, { name, profilePic });
+      console.log(`✅ [${shortId}] Re-login slot ${targetSlot} successful: ${name}`);
+
+      return res.json({
+        success: true,
+        message: `เข้าสู่ระบบใหม่สำเร็จ! ${name}`,
+        slot: targetSlot,
+        user: { name, profilePic },
+      });
+    } else {
+      console.log(`❌ [${shortId}] Re-login slot ${targetSlot} failed`);
+      return res.json({
+        success: false,
+        error: 'เข้าสู่ระบบใหม่ไม่สำเร็จ — Facebook อาจต้องการยืนยันตัวตน หรือรหัสผ่านเปลี่ยน',
+      });
+    }
+  } catch (error) {
+    console.error('Re-login error:', error.message);
+    res.json({ success: false, error: `Re-login ผิดพลาด: ${error.message}` });
+  }
+});
+
+// Session health check — returns session age + whether re-login is recommended
+app.get('/api/facebook/session-health', ...auth, (req, res) => {
+  try {
+    const sessions = sessionManager.getFbSessions(req.userId);
+    const activeSlot = sessionManager.getActiveSlot(req.userId);
+    const now = Date.now();
+    const SESSION_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
+
+    const slotHealth = sessions.map((s, i) => {
+      if (!s || !s.name) return { slot: i, connected: false, hasCredentials: false, needsRelogin: false, ageDays: 0 };
+      const connectedAt = s.connectedAt ? new Date(s.connectedAt).getTime() : 0;
+      const ageMs = connectedAt ? now - connectedAt : Infinity;
+      const ageDays = Math.round(ageMs / (24 * 60 * 60 * 1000) * 10) / 10;
+      const hasCredentials = sessionManager.hasFbCredentials(req.userId, i);
+      return {
+        slot: i,
+        connected: true,
+        name: s.name,
+        connectedAt: s.connectedAt,
+        ageDays,
+        hasCredentials,
+        needsRelogin: ageMs > SESSION_MAX_AGE_MS,
+      };
+    });
+
+    // Check active slot specifically
+    const activeHealth = slotHealth[activeSlot] || { connected: false, needsRelogin: false };
+
+    res.json({
+      success: true,
+      activeSlot,
+      activeNeedsRelogin: activeHealth.connected && activeHealth.needsRelogin,
+      activeHasCredentials: activeHealth.hasCredentials || false,
+      slots: slotHealth,
+    });
+  } catch (error) {
+    res.json({ success: false, error: error.message });
+  }
+});
+
 // Check Facebook connection status — returns ALL session slots + live check
 app.get('/api/facebook/status', ...auth, async (req, res) => {
   try {

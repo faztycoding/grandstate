@@ -20,6 +20,7 @@ function dbToProperty(db: DbProperty): Property {
     description: db.description || '',
     amenities: db.features || [],
     images: db.images || [],
+    isSold: db.status === 'sold',
     contactName: '',
     contactPhone: '',
     createdAt: new Date(db.created_at),
@@ -174,6 +175,7 @@ export function useSupabaseProperties() {
       if (updates.description !== undefined) dbUpdates.description = updates.description;
       if (updates.amenities !== undefined) dbUpdates.features = updates.amenities;
       if (updates.images !== undefined) dbUpdates.images = updates.images;
+      if (updates.isSold !== undefined) dbUpdates.status = updates.isSold ? 'sold' : 'active';
 
       await directUpdate('properties', dbUpdates, { id, user_id: user.id });
 
@@ -234,6 +236,27 @@ export function useSupabaseProperties() {
     };
   }, [fetchProperties]);
 
+  // Toggle sold status
+  const toggleSold = useCallback(async (id: string, isSold: boolean) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setProperties(prev => prev.map(p => p.id === id ? { ...p, isSold } : p));
+        return;
+      }
+      const { error } = await supabase
+        .from('properties')
+        .update({ status: isSold ? 'sold' : 'active', updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('user_id', user.id);
+      if (error) throw error;
+      setProperties(prev => prev.map(p => p.id === id ? { ...p, isSold } : p));
+    } catch (err: any) {
+      console.error('Error toggling sold:', err);
+      throw err;
+    }
+  }, []);
+
   return {
     properties,
     loading,
@@ -241,6 +264,7 @@ export function useSupabaseProperties() {
     addProperty,
     updateProperty,
     deleteProperty,
+    toggleSold,
     refetch: fetchProperties,
   };
 }

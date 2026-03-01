@@ -29,6 +29,7 @@ export interface Property {
   contactLine?: string;
   contacts?: ContactInfo[];
   amenities: string[];
+  isSold?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

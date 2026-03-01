@@ -2,7 +2,7 @@ import { Property } from '@/types/property';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Bed, Bath, Maximize, MapPin, MoreVertical, Pencil, Trash2, Zap, Image as ImageIcon } from 'lucide-react';
+import { Bed, Bath, Maximize, MapPin, MoreVertical, Pencil, Trash2, Zap, Image as ImageIcon, Ban, RefreshCw } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +19,7 @@ interface PropertyCardProps {
   onDelete?: (property: Property) => void;
   onPost?: (property: Property) => void;
   onPreview?: (property: Property) => void;
+  onToggleSold?: (property: Property, isSold: boolean) => void;
 }
 
 const formatPrice = (price: number, listingType: 'sale' | 'rent') => {
@@ -29,7 +30,7 @@ const formatPrice = (price: number, listingType: 'sale' | 'rent') => {
 };
 
 
-export function PropertyCard({ property, onEdit, onDelete, onPost, onPreview }: PropertyCardProps) {
+export function PropertyCard({ property, onEdit, onDelete, onPost, onPreview, onToggleSold }: PropertyCardProps) {
   const { t } = useLanguage();
   return (
     <motion.div
@@ -53,6 +54,23 @@ export function PropertyCard({ property, onEdit, onDelete, onPost, onPreview }: 
           ) : (
             <div className="w-full h-full bg-muted flex items-center justify-center">
               <ImageIcon className="w-12 h-12 text-muted-foreground opacity-50" />
+            </div>
+          )}
+
+          {/* ═══ SOLD OVERLAY ═══ */}
+          {property.isSold && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center"
+              style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}>
+              <motion.div
+                initial={{ scale: 1.6, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                className="px-5 py-3 border-[3px] border-red-500 rounded-xl text-center select-none"
+                style={{ transform: 'rotate(-15deg)', background: 'rgba(255,255,255,0.08)', boxShadow: '0 0 24px rgba(239,68,68,0.45)' }}
+              >
+                <p className="text-red-500 font-black text-2xl tracking-[0.08em] uppercase leading-tight">ปิดการขายแล้ว</p>
+                <p className="text-red-400 font-semibold text-xs tracking-widest mt-0.5">รายการนี้ถูกขายแล้ว</p>
+              </motion.div>
             </div>
           )}
           <div className="absolute top-3 left-3 flex gap-2">
@@ -97,6 +115,14 @@ export function PropertyCard({ property, onEdit, onDelete, onPost, onPreview }: 
                 >
                   <Zap className="w-4 h-4 mr-2" />
                   {t.common.goToAutomation}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className={cn('cursor-pointer', property.isSold ? 'text-emerald-600 hover:bg-emerald-500/10' : 'text-orange-500 hover:bg-orange-500/10')}
+                  onSelect={(e) => { e.stopPropagation(); onToggleSold?.(property, !property.isSold); }}
+                >
+                  {property.isSold
+                    ? <><RefreshCw className="w-4 h-4 mr-2" />เปิดการขายอีกครั้ง</>
+                    : <><Ban className="w-4 h-4 mr-2" />ปิดการขาย</>}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="text-destructive cursor-pointer hover:bg-destructive/10"

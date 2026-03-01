@@ -33,7 +33,7 @@ import { canAddProperty, getUserPackage, getPackageLimits } from '@/hooks/usePac
 export default function Properties() {
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const { properties, loading, addProperty, updateProperty, deleteProperty } = useSupabaseProperties();
+  const { properties, loading, addProperty, updateProperty, deleteProperty, toggleSold } = useSupabaseProperties();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterListing, setFilterListing] = useState<string>('all');
@@ -65,6 +65,15 @@ export default function Properties() {
   const handleDelete = (property: Property) => {
     setDeletingProperty(property);
     setIsDeleteOpen(true);
+  };
+
+  const handleToggleSold = async (property: Property, isSold: boolean) => {
+    try {
+      await toggleSold(property.id, isSold);
+      toast.success(isSold ? 'ปิดการขายแล้ว' : 'เปิดการขายอีกครั้งแล้ว');
+    } catch {
+      toast.error('ไม่สามารถแก้ไขสถานะได้');
+    }
   };
 
   const confirmDelete = async () => {
@@ -202,6 +211,7 @@ export default function Properties() {
                   onDelete={handleDelete}
                   onPost={handlePost}
                   onPreview={handlePreview}
+                  onToggleSold={handleToggleSold}
                 />
               </motion.div>
             ))}

@@ -1008,7 +1008,7 @@ export default function AdminDashboard() {
                             { label: 'Automation', value: liveStats?.automation.currentlyRunning ?? '—', icon: <Zap className="w-4 h-4" />, color: 'text-orange-400' },
                         ].map((s, i) => (
                             <div key={i} className="bg-slate-900/60 border border-slate-800 p-4 rounded-2xl hover:border-slate-700 transition-colors">
-                                <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">{s.icon} {s.label}</div>
+                                <div className="flex items-center gap-1.5 text-[9px] font-bold text-foreground uppercase tracking-wider mb-1.5">{s.icon} {s.label}</div>
                                 <p className={cn('text-xl font-black font-mono', s.color)}>{s.value}</p>
                             </div>
                         ))}
@@ -1019,22 +1019,22 @@ export default function AdminDashboard() {
                         {/* Package Distribution */}
                         <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5">
                             <h4 className="flex items-center gap-2 text-sm font-black text-white uppercase tracking-wide mb-4"><PieChart className="w-4 h-4 text-amber-500" /> {t.admin.packageDistribution}</h4>
-                                {(() => { const fc = licenses.filter(l => l.package === 'free').length; const ac = licenses.filter(l => l.package === 'agent').length; const ec = licenses.filter(l => l.package === 'elite').length; const total = licenses.length || 1; return (<div className="space-y-3">{[{ label: 'Rookie', count: fc, color: 'bg-emerald-500', icon: <Rocket className="w-3.5 h-3.5 text-emerald-500" /> }, { label: 'Top Agent', count: ac, color: 'bg-amber-500', icon: <Star className="w-3.5 h-3.5 text-amber-500" /> }, { label: 'Elite', count: ec, color: 'bg-purple-500', icon: <Crown className="w-3.5 h-3.5 text-purple-500" /> }].map(p => (<div key={p.label} className="space-y-1"><div className="flex justify-between text-sm text-slate-300"><span className="flex items-center gap-1.5">{p.icon} {p.label}</span><span className="font-mono text-slate-400">{p.count} ({Math.round(p.count / total * 100)}%)</span></div><div className="h-2.5 bg-slate-800 rounded-full overflow-hidden"><div className={cn("h-full rounded-full", p.color)} style={{ width: `${p.count / total * 100}%` }} /></div></div>))}</div>); })()}
+                                {(() => { const fc = licenses.filter(l => l.package === 'free').length; const ac = licenses.filter(l => l.package === 'agent').length; const ec = licenses.filter(l => l.package === 'elite').length; const total = licenses.length || 1; return (<div className="space-y-3">{[{ label: 'Rookie', count: fc, color: 'bg-emerald-500', icon: <Rocket className="w-3.5 h-3.5 text-emerald-500" /> }, { label: 'Top Agent', count: ac, color: 'bg-amber-500', icon: <Star className="w-3.5 h-3.5 text-amber-500" /> }, { label: 'Elite', count: ec, color: 'bg-purple-500', icon: <Crown className="w-3.5 h-3.5 text-purple-500" /> }].map(p => (<div key={p.label} className="space-y-1"><div className="flex justify-between text-sm text-slate-300"><span className="flex items-center gap-1.5">{p.icon} {p.label}</span><span className="font-mono text-foreground">{p.count} ({Math.round(p.count / total * 100)}%)</span></div><div className="h-2.5 bg-slate-800 rounded-full overflow-hidden"><div className={cn("h-full rounded-full", p.color)} style={{ width: `${p.count / total * 100}%` }} /></div></div>))}</div>); })()}
                         </div>
                         {/* Revenue */}
                         <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5">
                             <h4 className="flex items-center gap-2 text-sm font-black text-white uppercase tracking-wide mb-4"><DollarSign className="w-4 h-4 text-amber-500" /> {t.admin.revenueByPackage}</h4>
-                                {(() => { const ar = licenses.filter(l => l.package === 'agent').length * 1390; const er = licenses.filter(l => l.package === 'elite').length * 2990; const mx = Math.max(ar, er, 1); return (<div className="space-y-3"><div className="space-y-1"><div className="flex justify-between text-sm text-slate-300"><span className="flex items-center gap-1.5"><Star className="w-3.5 h-3.5 text-amber-500" />Top Agent (฿1,390)</span><span className="font-semibold font-mono text-amber-400">฿{ar.toLocaleString()}</span></div><div className="h-5 bg-slate-800 rounded-lg overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-lg" style={{ width: `${ar / mx * 100}%` }} /></div></div><div className="space-y-1"><div className="flex justify-between text-sm text-slate-300"><span className="flex items-center gap-1.5"><Crown className="w-3.5 h-3.5 text-purple-500" />Elite (฿2,990)</span><span className="font-semibold font-mono text-purple-400">฿{er.toLocaleString()}</span></div><div className="h-5 bg-slate-800 rounded-lg overflow-hidden"><div className="h-full bg-gradient-to-r from-purple-400 to-purple-500 rounded-lg" style={{ width: `${er / mx * 100}%` }} /></div></div><div className="pt-3 border-t border-slate-800 mt-3 flex justify-between items-center"><span className="text-slate-500">{t.admin.totalRevenueAll}</span><span className="text-xl font-bold text-emerald-400 font-mono">฿{(ar + er).toLocaleString()}</span></div></div>); })()}
+                                {(() => { const ar = licenses.filter(l => l.package === 'agent').length * 1390; const er = licenses.filter(l => l.package === 'elite').length * 2990; const mx = Math.max(ar, er, 1); return (<div className="space-y-3"><div className="space-y-1"><div className="flex justify-between text-sm text-slate-300"><span className="flex items-center gap-1.5"><Star className="w-3.5 h-3.5 text-amber-500" />Top Agent (฿1,390)</span><span className="font-semibold font-mono text-amber-400">฿{ar.toLocaleString()}</span></div><div className="h-5 bg-slate-800 rounded-lg overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-lg" style={{ width: `${ar / mx * 100}%` }} /></div></div><div className="space-y-1"><div className="flex justify-between text-sm text-slate-300"><span className="flex items-center gap-1.5"><Crown className="w-3.5 h-3.5 text-purple-500" />Elite (฿2,990)</span><span className="font-semibold font-mono text-purple-400">฿{er.toLocaleString()}</span></div><div className="h-5 bg-slate-800 rounded-lg overflow-hidden"><div className="h-full bg-gradient-to-r from-purple-400 to-purple-500 rounded-lg" style={{ width: `${er / mx * 100}%` }} /></div></div><div className="pt-3 border-t border-slate-800 mt-3 flex justify-between items-center"><span className="text-foreground">{t.admin.totalRevenueAll}</span><span className="text-xl font-bold text-emerald-400 font-mono">฿{(ar + er).toLocaleString()}</span></div></div>); })()}
                         </div>
                     </motion.div>
 
                     {/* Expiring Soon */}
-                    {(() => { const now = new Date(); const sd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); const exp = licenses.filter(l => { const e = new Date(l.expires_at); return l.is_active && e > now && e <= sd; }); if (!exp.length) return null; return (<div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-5 mt-5"><h4 className="flex items-center gap-2 text-sm font-black text-amber-400 uppercase tracking-wide mb-3"><AlertCircle className="w-4 h-4" /> {t.admin.expiringLicenses} ({exp.length})</h4><div className="space-y-2">{exp.slice(0, 5).map(l => { const dl = Math.ceil((new Date(l.expires_at).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)); return (<div key={l.id} className="flex items-center justify-between p-2.5 bg-slate-950/60 rounded-xl border border-slate-800"><div className="flex items-center gap-2"><code className="text-xs font-mono text-amber-400/80 bg-slate-900 px-1.5 py-0.5 rounded">{l.license_key}</code><span className="text-xs text-slate-500">{l.owner_name || 'N/A'}</span></div><div className="flex items-center gap-2"><Badge className={cn(dl <= 2 ? 'bg-red-500/15 text-red-400 border-red-500/30' : 'bg-amber-500/15 text-amber-400 border-amber-500/30', 'text-[10px] border')}>เหลือ {dl} วัน</Badge><Button size="sm" variant="outline" className="h-7 text-xs border-slate-700 text-slate-300 hover:bg-amber-500 hover:text-black hover:border-amber-500" onClick={() => extendLicense(l.id, 30)}>+30 วัน</Button></div></div>); })}</div></div>); })()}
+                    {(() => { const now = new Date(); const sd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); const exp = licenses.filter(l => { const e = new Date(l.expires_at); return l.is_active && e > now && e <= sd; }); if (!exp.length) return null; return (<div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-5 mt-5"><h4 className="flex items-center gap-2 text-sm font-black text-amber-400 uppercase tracking-wide mb-3"><AlertCircle className="w-4 h-4" /> {t.admin.expiringLicenses} ({exp.length})</h4><div className="space-y-2">{exp.slice(0, 5).map(l => { const dl = Math.ceil((new Date(l.expires_at).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)); return (<div key={l.id} className="flex items-center justify-between p-2.5 bg-slate-950/60 rounded-xl border border-slate-800"><div className="flex items-center gap-2"><code className="text-xs font-mono text-amber-400/80 bg-slate-900 px-1.5 py-0.5 rounded">{l.license_key}</code><span className="text-xs text-foreground">{l.owner_name || 'N/A'}</span></div><div className="flex items-center gap-2"><Badge className={cn(dl <= 2 ? 'bg-red-500/15 text-red-400 border-red-500/30' : 'bg-amber-500/15 text-amber-400 border-amber-500/30', 'text-[10px] border')}>เหลือ {dl} วัน</Badge><Button size="sm" variant="outline" className="h-7 text-xs border-slate-700 text-slate-300 hover:bg-amber-500 hover:text-black hover:border-amber-500" onClick={() => extendLicense(l.id, 30)}>+30 วัน</Button></div></div>); })}</div></div>); })()}
 
                     {/* Monthly Report */}
                     <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 mt-5">
                         <h4 className="flex items-center gap-2 text-sm font-black text-white uppercase tracking-wide mb-4"><TrendingUp className="w-4 h-4 text-amber-500" />{t.admin.monthlyReport}</h4>
-                            {(() => { const months: { month: string; count: number; revenue: number }[] = []; const now = new Date(); for (let i = 5; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); const me = new Date(now.getFullYear(), now.getMonth() - i + 1, 0); const ml = licenses.filter(l => { const c = new Date(l.created_at); return c >= d && c <= me; }); const rv = ml.reduce((s, l) => l.package === 'agent' ? s + 1390 : l.package === 'elite' ? s + 2990 : s, 0); months.push({ month: d.toLocaleDateString('th-TH', { month: 'short', year: '2-digit' }), count: ml.length, revenue: rv }); } const mc = Math.max(...months.map(m => m.count), 1); const mr = Math.max(...months.map(m => m.revenue), 1); return (<div className="space-y-4"><div><h4 className="text-xs font-bold text-slate-400 mb-2 flex items-center gap-1.5 uppercase tracking-wider"><Key className="w-3.5 h-3.5 text-blue-400" />จำนวน License</h4><div className="flex items-end gap-2 h-24">{months.map((m, i) => (<div key={i} className="flex-1 flex flex-col items-center gap-0.5"><span className="text-[10px] font-mono text-slate-400">{m.count}</span><div className="w-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-t transition-all" style={{ height: `${(m.count / mc) * 100}%`, minHeight: m.count > 0 ? '6px' : '2px' }} /><span className="text-[10px] text-slate-600">{m.month}</span></div>))}</div></div><div className="pt-3 border-t border-slate-800"><h4 className="text-xs font-bold text-slate-400 mb-2 flex items-center gap-1.5 uppercase tracking-wider"><DollarSign className="w-3.5 h-3.5 text-emerald-400" />รายได้ (บาท)</h4><div className="flex items-end gap-2 h-24">{months.map((m, i) => (<div key={i} className="flex-1 flex flex-col items-center gap-0.5"><span className="text-[10px] font-mono text-slate-400">{m.revenue > 0 ? `฿${(m.revenue / 1000).toFixed(1)}k` : '-'}</span><div className="w-full bg-gradient-to-t from-green-500 to-emerald-400 rounded-t transition-all" style={{ height: `${(m.revenue / mr) * 100}%`, minHeight: m.revenue > 0 ? '6px' : '2px' }} /><span className="text-[10px] text-slated-foreground">{m.month}</span></div>))}</div></div></div>); })()}
+                            {(() => { const months: { month: string; count: number; revenue: number }[] = []; const now = new Date(); for (let i = 5; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); const me = new Date(now.getFullYear(), now.getMonth() - i + 1, 0); const ml = licenses.filter(l => { const c = new Date(l.created_at); return c >= d && c <= me; }); const rv = ml.reduce((s, l) => l.package === 'agent' ? s + 1390 : l.package === 'elite' ? s + 2990 : s, 0); months.push({ month: d.toLocaleDateString('th-TH', { month: 'short', year: '2-digit' }), count: ml.length, revenue: rv }); } const mc = Math.max(...months.map(m => m.count), 1); const mr = Math.max(...months.map(m => m.revenue), 1); return (<div className="space-y-4"><div><h4 className="text-xs font-bold text-foreground mb-2 flex items-center gap-1.5 uppercase tracking-wider"><Key className="w-3.5 h-3.5 text-blue-400" />จำนวน License</h4><div className="flex items-end gap-2 h-24">{months.map((m, i) => (<div key={i} className="flex-1 flex flex-col items-center gap-0.5"><span className="text-[10px] font-mono text-foreground">{m.count}</span><div className="w-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-t transition-all" style={{ height: `${(m.count / mc) * 100}%`, minHeight: m.count > 0 ? '6px' : '2px' }} /><span className="text-[10px] text-foreground">{m.month}</span></div>))}</div></div><div className="pt-3 border-t border-slate-800"><h4 className="text-xs font-bold text-foreground mb-2 flex items-center gap-1.5 uppercase tracking-wider"><DollarSign className="w-3.5 h-3.5 text-emerald-400" />รายได้ (บาท)</h4><div className="flex items-end gap-2 h-24">{months.map((m, i) => (<div key={i} className="flex-1 flex flex-col items-center gap-0.5"><span className="text-[10px] font-mono text-foreground">{m.revenue > 0 ? `฿${(m.revenue / 1000).toFixed(1)}k` : '-'}</span><div className="w-full bg-gradient-to-t from-green-500 to-emerald-400 rounded-t transition-all" style={{ height: `${(m.revenue / mr) * 100}%`, minHeight: m.revenue > 0 ? '6px' : '2px' }} /><span className="text-[10px] text-slated-foreground">{m.month}</span></div>))}</div></div></div>); })()}
                     </div>
                     </div></div>
                 </>)}
@@ -1047,7 +1047,7 @@ export default function AdminDashboard() {
                     {/* Background Gear */}
                     <div className="absolute -top-32 -right-32 opacity-[0.02] pointer-events-none">
                         <motion.div animate={{ rotate: 360 }} transition={{ duration: 120, repeat: Infinity, ease: 'linear' }}>
-                            <Settings size={400} className="text-slate-400" />
+                            <Settings size={400} className="text-foreground" />
                         </motion.div>
                     </div>
                     {/* Scanning line */}
@@ -1064,18 +1064,18 @@ export default function AdminDashboard() {
                                         <div className="w-1.5 h-1.5 rounded-full bg-red-500" /> LIVE
                                     </Badge>
                                 </div>
-                                <p className="text-[10px] text-slate-500 font-mono tracking-widest uppercase">Master Administration Interface</p>
+                                <p className="text-[10px] text-foreground font-mono tracking-widest uppercase">Master Administration Interface</p>
                             </div>
                             <div className="relative w-full md:w-80">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground" size={14} />
                                 <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                                     placeholder="SEARCH BY NAME OR EMAIL..."
-                                    className="w-full bg-slate-900/80 border border-slate-800 rounded-xl py-2.5 pl-9 pr-4 text-[11px] text-amber-400 font-mono placeholder:text-slate-600 focus:border-amber-500/50 focus:outline-none transition-all" />
+                                    className="w-full bg-slate-900/80 border border-slate-800 rounded-xl py-2.5 pl-9 pr-4 text-[11px] text-amber-400 font-mono placeholder:text-foreground focus:border-amber-500/50 focus:outline-none transition-all" />
                             </div>
                         </div>
 
                         {!liveStats ? (
-                            <div className="flex items-center justify-center py-20 text-slate-500 gap-3">
+                            <div className="flex items-center justify-center py-20 text-foreground gap-3">
                                 <Loader2 className="w-6 h-6 animate-spin text-amber-500/50" />
                                 <span className="text-sm font-mono">{t.admin.connectingBackend}</span>
                             </div>
@@ -1087,10 +1087,10 @@ export default function AdminDashboard() {
                                     { label: 'Total Users', value: allUsers.length || liveStats.activeUsers, icon: <Users className="w-3.5 h-3.5" />, color: 'text-blue-400' },
                                     { label: 'Automation', value: liveStats.automation.currentlyRunning, icon: <Activity className="w-3.5 h-3.5" />, color: 'text-amber-400' },
                                     { label: 'Runs Today', value: liveStats.automation.totalRunsToday, icon: <TrendingUp className="w-3.5 h-3.5" />, color: 'text-purple-400' },
-                                    { label: 'Browsers', value: `${liveStats.activeBrowsers}/${liveStats.maxBrowsers}`, icon: <Monitor className="w-3.5 h-3.5" />, color: 'text-slate-400' },
+                                    { label: 'Browsers', value: `${liveStats.activeBrowsers}/${liveStats.maxBrowsers}`, icon: <Monitor className="w-3.5 h-3.5" />, color: 'text-foreground' },
                                 ].map((s, i) => (
                                     <div key={i} className="bg-slate-900/60 border border-slate-800 p-4 rounded-2xl backdrop-blur-sm hover:border-slate-700 transition-colors">
-                                        <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                                        <div className="flex items-center gap-1.5 text-[9px] font-bold text-foreground uppercase tracking-wider mb-1.5">
                                             {s.icon} {s.label}
                                         </div>
                                         <p className={cn('text-2xl font-black font-mono', s.color)}>{s.value}</p>
@@ -1101,7 +1101,7 @@ export default function AdminDashboard() {
                             {/* Tasks summary bar */}
                             {(liveStats.automation.totalTasksCompleted > 0 || liveStats.automation.totalTasksFailed > 0 || liveStats.automation.totalTasksPending > 0) && (
                                 <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-900/60 border border-slate-800 mb-5 text-[11px]">
-                                    <span className="text-slate-500 font-mono text-[10px] uppercase tracking-wider">Tasks</span>
+                                    <span className="text-foreground font-mono text-[10px] uppercase tracking-wider">Tasks</span>
                                     <span className="text-emerald-400 font-bold">✅ {liveStats.automation.totalTasksCompleted}</span>
                                     <span className="text-red-400 font-bold">❌ {liveStats.automation.totalTasksFailed}</span>
                                     {liveStats.automation.totalTasksPending > 0 && <span className="text-amber-400 font-bold">⏳ {liveStats.automation.totalTasksPending}</span>}
@@ -1129,7 +1129,7 @@ export default function AdminDashboard() {
                                     if (b.isOnline !== a.isOnline) return b.isOnline ? 1 : -1;
                                     return b.todayPosts - a.todayPosts;
                                 });
-                                if (sorted.length === 0) return <div className="text-center py-12"><Users className="w-10 h-10 text-slate-700 mx-auto mb-2" /><p className="text-sm text-slate-600 font-mono">{searchQuery ? 'No results found' : t.admin.noUsers}</p></div>;
+                                if (sorted.length === 0) return <div className="text-center py-12"><Users className="w-10 h-10 text-foreground mx-auto mb-2" /><p className="text-sm text-foreground font-mono">{searchQuery ? 'No results found' : t.admin.noUsers}</p></div>;
                                 return (<div className="space-y-3">
                                     <AnimatePresence>
                                     {sorted.map((u, idx) => {
@@ -1189,7 +1189,7 @@ export default function AdminDashboard() {
                                                         {u.banned && <span className="text-[8px] font-black text-red-400 bg-red-500/15 border border-red-500/30 px-2 py-0.5 rounded-full">BANNED</span>}
                                                         {isAdminEmail(u.email) && <span className="text-[8px] font-black text-amber-400 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full flex items-center gap-0.5"><Crown className="w-2.5 h-2.5" />ADMIN</span>}
                                                     </div>
-                                                    <p className="text-[11px] text-slate-500 font-mono truncate">
+                                                    <p className="text-[11px] text-foreground font-mono truncate">
                                                         {u.email || u.userId}
                                                         {(u as any).displayId && <> • <span className="text-amber-500/60">{(u as any).displayId}</span></>}
                                                     </p>
@@ -1213,21 +1213,21 @@ export default function AdminDashboard() {
                                                     )}
                                                     <div className="text-center">
                                                         <p className="text-lg font-black text-white tabular-nums leading-none">{u.todayPosts}</p>
-                                                        <p className="text-[8px] text-slate-600 font-bold uppercase mt-0.5">Posts</p>
+                                                        <p className="text-[8px] text-foreground font-bold uppercase mt-0.5">Posts</p>
                                                     </div>
                                                     <div className="text-center border-l border-slate-800 pl-4">
                                                         <p className="text-lg font-black text-white tabular-nums leading-none">{u.automationRuns}</p>
-                                                        <p className="text-[8px] text-slate-600 font-bold uppercase mt-0.5">Runs</p>
+                                                        <p className="text-[8px] text-foreground font-bold uppercase mt-0.5">Runs</p>
                                                     </div>
                                                     {u.currentTasks.total > 0 && (
                                                         <div className="w-14">
                                                             <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
                                                                 <motion.div initial={{ width: 0 }} animate={{ width: `${taskPct}%` }} className="h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full" />
                                                             </div>
-                                                            <span className="text-[8px] text-slate-600 font-mono">{taskPct}%</span>
+                                                            <span className="text-[8px] text-foreground font-mono">{taskPct}%</span>
                                                         </div>
                                                     )}
-                                                    <button className="p-2.5 bg-slate-800 hover:bg-amber-500 hover:text-black text-slate-400 rounded-xl transition-all" onClick={(e) => { e.stopPropagation(); setExpandedUser(isExpanded ? null : (u.fullUserId || null)); }}>
+                                                    <button className="p-2.5 bg-slate-800 hover:bg-amber-500 hover:text-black text-foreground rounded-xl transition-all" onClick={(e) => { e.stopPropagation(); setExpandedUser(isExpanded ? null : (u.fullUserId || null)); }}>
                                                         <Settings size={16} />
                                                     </button>
                                                 </div>
@@ -1245,13 +1245,13 @@ export default function AdminDashboard() {
                                                             {lic ? (
                                                                 <>
                                                                     <p className="text-[11px] font-mono text-slate-300 truncate">{lic.license_key}</p>
-                                                                    <p className="text-[10px] text-slate-500">
+                                                                    <p className="text-[10px] text-foreground">
                                                                         Expires: <span className="text-slate-300">{new Date(lic.expires_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
                                                                         {!lic.is_active && <span className="text-red-400 ml-1">(suspended)</span>}
                                                                     </p>
                                                                 </>
                                                             ) : (
-                                                                <p className="text-[11px] text-slate-600">No License (Free tier)</p>
+                                                                <p className="text-[11px] text-foreground">No License (Free tier)</p>
                                                             )}
                                                         </div>
 
@@ -1262,9 +1262,9 @@ export default function AdminDashboard() {
                                                                 {(['free', 'agent', 'elite'] as const).map(pkg => {
                                                                     const isActive = userPkg === pkg;
                                                                     const styles = {
-                                                                        free: isActive ? 'bg-emerald-500 text-black border-emerald-500' : 'bg-slate-900 border-slate-700 text-slate-400 hover:border-emerald-500/50 hover:text-emerald-400',
-                                                                        agent: isActive ? 'bg-amber-500 text-black border-amber-500' : 'bg-slate-900 border-slate-700 text-slate-400 hover:border-amber-500/50 hover:text-amber-400',
-                                                                        elite: isActive ? 'bg-purple-500 text-black border-purple-500' : 'bg-slate-900 border-slate-700 text-slate-400 hover:border-purple-500/50 hover:text-purple-400',
+                                                                        free: isActive ? 'bg-emerald-500 text-black border-emerald-500' : 'bg-slate-900 border-slate-700 text-foreground hover:border-emerald-500/50 hover:text-emerald-400',
+                                                                        agent: isActive ? 'bg-amber-500 text-black border-amber-500' : 'bg-slate-900 border-slate-700 text-foreground hover:border-amber-500/50 hover:text-amber-400',
+                                                                        elite: isActive ? 'bg-purple-500 text-black border-purple-500' : 'bg-slate-900 border-slate-700 text-foreground hover:border-purple-500/50 hover:text-purple-400',
                                                                     };
                                                                     const labels = { free: 'ROOKIE', agent: 'AGENT', elite: 'ELITE' };
                                                                     return (
@@ -1302,7 +1302,7 @@ export default function AdminDashboard() {
                                                                     {deletingUser === u.fullUserId ? '...' : <><Trash2 className="w-3 h-3 inline mr-1" />DELETE</>}
                                                                 </button>
                                                                 {u.todayPosts > 0 && (
-                                                                    <span className="text-[10px] text-slate-500 font-mono">✅{u.todaySuccess} ❌{u.todayFailed}</span>
+                                                                    <span className="text-[10px] text-foreground font-mono">✅{u.todaySuccess} ❌{u.todayFailed}</span>
                                                                 )}
                                                                 {u.lineId && <span className="text-[10px] text-green-400 font-mono">LINE: {u.lineId}</span>}
                                                             </div>
@@ -1321,7 +1321,7 @@ export default function AdminDashboard() {
 
                             {/* ── Console Footer ── */}
                             <div className="mt-6 bg-slate-950/80 border border-slate-800 rounded-2xl p-4 font-mono">
-                                <div className="flex items-center gap-2 text-slate-600 text-[9px] mb-3 uppercase tracking-[0.2em] font-black">
+                                <div className="flex items-center gap-2 text-foreground text-[9px] mb-3 uppercase tracking-[0.2em] font-black">
                                     <Activity size={12} className="text-amber-500/50" /> User Activity Log
                                 </div>
                                 <div className="space-y-1 text-[10px]">
@@ -1332,7 +1332,7 @@ export default function AdminDashboard() {
                                             {(u.isRunningGroup || u.isRunningMarketplace) && <span className="text-amber-400/70"> • running automation</span>}
                                         </p>
                                     ))}
-                                    <p className="text-slate-700">
+                                    <p className="text-foreground">
                                         <span className="text-slate-800">[SYS]</span> {allUsers.length || liveStats.activeUsers} users registered • {liveStats.onlineUsers} online • {liveStats.automation.currentlyRunning} automating
                                     </p>
                                     <p className="animate-pulse text-amber-500/40">{'>'} Awaiting admin commands...</p>
@@ -1373,7 +1373,7 @@ export default function AdminDashboard() {
                             </motion.div>
                             <div>
                                 <h2 className="text-xl font-black text-white tracking-tight uppercase">License <span className="text-amber-500">Vault</span></h2>
-                                <p className="text-[10px] text-slate-500 font-mono">Manage all license keys & subscriptions</p>
+                                <p className="text-[10px] text-foreground font-mono">Manage all license keys & subscriptions</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -1402,7 +1402,7 @@ export default function AdminDashboard() {
                                 <p className={cn("text-xl font-black tabular-nums", s.color)}>
                                     {typeof s.value === 'number' ? <AnimatedCounter value={s.value} /> : s.value}
                                 </p>
-                                <p className="text-[9px] text-slate-500 uppercase tracking-wider font-mono mt-0.5">{s.label}</p>
+                                <p className="text-[9px] text-foreground uppercase tracking-wider font-mono mt-0.5">{s.label}</p>
                             </motion.div>
                         ))}
                     </div>
@@ -1411,9 +1411,9 @@ export default function AdminDashboard() {
                     <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3">
                         <div className="flex flex-col md:flex-row gap-2.5">
                             <div className="flex-1 relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground" />
                                 <Input placeholder={t.admin.searchLicense} value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                                    className="pl-10 bg-slate-900/80 border-slate-700 text-amber-400 font-mono placeholder:text-slate-600 focus:border-amber-500/50 h-9" />
+                                    className="pl-10 bg-slate-900/80 border-slate-700 text-amber-400 font-mono placeholder:text-foreground focus:border-amber-500/50 h-9" />
                             </div>
                             <Select value={filterPackage} onValueChange={setFilterPackage}>
                                 <SelectTrigger className="w-[140px] h-9 bg-slate-900/80 border-slate-700"><SelectValue placeholder={t.admin.package} /></SelectTrigger>
@@ -1435,7 +1435,7 @@ export default function AdminDashboard() {
                         <div className="px-4 py-2.5 border-b border-slate-800 flex items-center gap-2">
                             <Key className="w-3.5 h-3.5 text-amber-500" />
                             <span className="text-xs font-black text-white uppercase tracking-wide">License Keys</span>
-                            <span className="text-[9px] font-mono text-slate-600 ml-auto">{filteredLicenses.length} records</span>
+                            <span className="text-[9px] font-mono text-foreground ml-auto">{filteredLicenses.length} records</span>
                         </div>
                         <ScrollArea className="h-[520px]">
                             <div className="p-3 space-y-2">
@@ -1488,15 +1488,15 @@ export default function AdminDashboard() {
                                                     </Badge>
                                                 )}
                                                 <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10"
+                                                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-foreground hover:text-blue-400 hover:bg-blue-500/10"
                                                         title="Copy Key" onClick={() => { navigator.clipboard.writeText(license.license_key); toast.success('Copied!'); }}>
                                                         <Copy className="w-3 h-3" />
                                                     </Button>
-                                                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10"
+                                                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-foreground hover:text-emerald-400 hover:bg-emerald-500/10"
                                                         title="Extend" onClick={() => { setExtendTarget({ id: license.id, key: license.license_key, currentExpiry: license.expires_at }); setExtendDays(30); setExtendMode('days'); setExtendSpecificDate(''); }}>
                                                         <Calendar className="w-3 h-3" />
                                                     </Button>
-                                                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-slate-400 hover:text-red-400 hover:bg-red-500/10"
+                                                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-foreground hover:text-red-400 hover:bg-red-500/10"
                                                         title="Delete" onClick={() => setDeleteTarget({ id: license.id, key: license.license_key })}>
                                                         <Trash2 className="w-3 h-3" />
                                                     </Button>
@@ -1506,27 +1506,27 @@ export default function AdminDashboard() {
                                             {/* Row 2: Owner + User + Expiry + Days remaining */}
                                             <div className="flex items-center gap-4 text-[11px]">
                                                 <div className="flex items-center gap-1.5 min-w-0">
-                                                    <Users className="w-3 h-3 text-slate-600 flex-shrink-0" />
-                                                    <span className="text-slate-400 truncate max-w-[140px]" title={license.owner_name || ''}>
-                                                        {license.owner_name || <span className="italic text-slate-600">ไม่ระบุ</span>}
+                                                    <Users className="w-3 h-3 text-foreground flex-shrink-0" />
+                                                    <span className="text-foreground truncate max-w-[140px]" title={license.owner_name || ''}>
+                                                        {license.owner_name || <span className="italic text-foreground">ไม่ระบุ</span>}
                                                     </span>
                                                     {license.owner_contact && (
-                                                        <span className="text-[9px] text-slate-600 truncate max-w-[80px]">({license.owner_contact})</span>
+                                                        <span className="text-[9px] text-foreground truncate max-w-[80px]">({license.owner_contact})</span>
                                                     )}
                                                 </div>
                                                 <div className="w-px h-3 bg-slate-800" />
                                                 <div className="flex items-center gap-1.5">
-                                                    <Monitor className="w-3 h-3 text-slate-600 flex-shrink-0" />
+                                                    <Monitor className="w-3 h-3 text-foreground flex-shrink-0" />
                                                     {activation ? (
                                                         <span className="text-cyan-400 truncate max-w-[100px]">{activation.device_name || activation.device_id?.substring(0, 10) + '…'}</span>
                                                     ) : (
-                                                        <span className="text-slate-600 italic">ยังไม่มีผู้ใช้</span>
+                                                        <span className="text-foreground italic">ยังไม่มีผู้ใช้</span>
                                                     )}
                                                 </div>
                                                 <div className="w-px h-3 bg-slate-800" />
                                                 <div className="flex items-center gap-1.5">
-                                                    <Clock className="w-3 h-3 text-slate-600 flex-shrink-0" />
-                                                    <span className={cn("tabular-nums", expired ? "text-red-400" : expiringSoon ? "text-amber-400" : "text-slate-400")}>
+                                                    <Clock className="w-3 h-3 text-foreground flex-shrink-0" />
+                                                    <span className={cn("tabular-nums", expired ? "text-red-400" : expiringSoon ? "text-amber-400" : "text-foreground")}>
                                                         {formatDate(license.expires_at)}
                                                     </span>
                                                 </div>
@@ -1534,7 +1534,7 @@ export default function AdminDashboard() {
                                                     <>
                                                         <div className="w-px h-3 bg-slate-800" />
                                                         <span className={cn("text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded",
-                                                            daysLeft <= 7 ? "bg-red-500/10 text-red-400" : daysLeft <= 30 ? "bg-amber-500/10 text-amber-400" : "bg-slate-800 text-slate-400"
+                                                            daysLeft <= 7 ? "bg-red-500/10 text-red-400" : daysLeft <= 30 ? "bg-amber-500/10 text-amber-400" : "bg-slate-800 text-foreground"
                                                         )}>
                                                             เหลือ {daysLeft} วัน
                                                         </span>
@@ -1543,7 +1543,7 @@ export default function AdminDashboard() {
                                                 {license.note && (
                                                     <>
                                                         <div className="w-px h-3 bg-slate-800" />
-                                                        <span className="text-[9px] text-slate-600 truncate max-w-[120px]" title={license.note}>📝 {license.note}</span>
+                                                        <span className="text-[9px] text-foreground truncate max-w-[120px]" title={license.note}>📝 {license.note}</span>
                                                     </>
                                                 )}
                                             </div>
@@ -1564,7 +1564,7 @@ export default function AdminDashboard() {
                         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
                             <div className="relative">
                                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center shadow-2xl">
-                                    <Loader2 className="w-7 h-7 animate-spin text-slate-400" />
+                                    <Loader2 className="w-7 h-7 animate-spin text-foreground" />
                                 </div>
                                 <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-amber-500 animate-pulse" />
                             </div>
@@ -1704,14 +1704,14 @@ export default function AdminDashboard() {
                                     <div className="flex gap-6 md:gap-8 bg-slate-950/60 backdrop-blur-sm px-6 py-4 rounded-2xl border border-amber-500/15 shadow-lg">
                                         <div className="text-center">
                                             <AnimatedCounter value={liveStats.queue.runningCount} className="text-3xl md:text-4xl font-black text-white tabular-nums leading-none" />
-                                            <p className="text-[9px] text-slate-500 uppercase tracking-[0.15em] mt-1 font-bold">Active Threads</p>
+                                            <p className="text-[9px] text-foreground uppercase tracking-[0.15em] mt-1 font-bold">Active Threads</p>
                                         </div>
                                         <div className="w-[1px] bg-slate-800" />
                                         <div className="text-center">
                                             <p className="text-3xl md:text-4xl font-black text-amber-500 tabular-nums leading-none">
                                                 {liveStats.queue.runningCount > 0 ? Math.min(Math.round((liveStats.queue.runningCount / liveStats.queue.maxConcurrent) * 100), 100) : 0}%
                                             </p>
-                                            <p className="text-[9px] text-slate-500 uppercase tracking-[0.15em] mt-1 font-bold">System Load</p>
+                                            <p className="text-[9px] text-foreground uppercase tracking-[0.15em] mt-1 font-bold">System Load</p>
                                         </div>
                                         {liveStats.queue.queueLength > 0 && (
                                             <>
@@ -1757,7 +1757,7 @@ export default function AdminDashboard() {
                                                         <span className="text-[10px] text-amber-500/60 font-mono font-bold tracking-widest">No. {String(i + 1).padStart(3, '0')}</span>
                                                         <div className="flex items-center gap-1.5">
                                                             <motion.div animate={isActive ? { rotate: 360 } : {}} transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
-                                                                className={cn(isActive ? "text-amber-500" : "text-slate-700")}>
+                                                                className={cn(isActive ? "text-amber-500" : "text-foreground")}>
                                                                 <Settings className="w-3.5 h-3.5" />
                                                             </motion.div>
                                                             <div className={cn("w-2 h-2 rounded-full transition-colors",
@@ -1769,16 +1769,16 @@ export default function AdminDashboard() {
                                                     {/* Slot title + status */}
                                                     <div className="mb-2">
                                                         <h4 className={cn("text-xs font-black uppercase transition-colors leading-tight",
-                                                            isActive ? "text-white" : "text-slate-600 group-hover/slot:text-slate-400")}>
+                                                            isActive ? "text-white" : "text-foreground group-hover/slot:text-foreground")}>
                                                             {isActive ? (runJob?.automationType === 'marketplace' ? 'Marketplace' : 'Group Post') : 'Worker Slot'}
                                                         </h4>
                                                         <p className={cn("text-[10px] uppercase font-bold tracking-wider",
-                                                            isActive ? (runJob?.progress?.isPaused ? "text-yellow-400" : "text-emerald-400") : "text-slate-700")}>
+                                                            isActive ? (runJob?.progress?.isPaused ? "text-yellow-400" : "text-emerald-400") : "text-foreground")}>
                                                             {isActive ? (runJob?.progress?.isPaused ? 'Paused' : 'Processing') : 'Standby'}
                                                         </p>
                                                         {/* User ID */}
                                                         <p className={cn("text-[8px] font-mono truncate mt-0.5",
-                                                            isActive ? "text-cyan-400/70" : "text-slate-700/50")}>
+                                                            isActive ? "text-cyan-400/70" : "text-foreground/50")}>
                                                             {isActive ? `USER: ${runJob?.displayName || runJob?.userId || '—'}` : 'No user'}
                                                         </p>
                                                     </div>
@@ -1814,12 +1814,12 @@ export default function AdminDashboard() {
                                                                 <span className="text-[9px] text-emerald-400/70 font-mono">
                                                                     {runJob.progress ? `${runJob.progress.currentStep}/${runJob.progress.totalSteps}` : `${runJob.groupCount}g`}
                                                                 </span>
-                                                                <span className="text-[9px] text-slate-500 font-mono">{runMin}:{String(runSec).padStart(2, '0')}</span>
+                                                                <span className="text-[9px] text-foreground font-mono">{runMin}:{String(runSec).padStart(2, '0')}</span>
                                                             </div>
                                                         </div>
                                                     ) : (
                                                         <div className="flex-1 flex items-center justify-center opacity-0 group-hover/slot:opacity-100 transition-opacity">
-                                                            <span className="text-[9px] text-slate-600 font-mono">Available</span>
+                                                            <span className="text-[9px] text-foreground font-mono">Available</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -1840,7 +1840,7 @@ export default function AdminDashboard() {
                                                 <div key={qi} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-amber-500/5 border border-amber-500/10">
                                                     <span className="text-[10px] font-bold text-amber-400 tabular-nums w-5 text-center">#{q.position}</span>
                                                     <span className="text-[10px] text-slate-300 truncate flex-1">{q.displayName || q.userId}</span>
-                                                    <span className="text-[9px] text-slate-500 tabular-nums">{q.groupCount} groups</span>
+                                                    <span className="text-[9px] text-foreground tabular-nums">{q.groupCount} groups</span>
                                                     <span className="text-[9px] text-amber-400/60 tabular-nums">~{Math.ceil((q.estimatedWaitSec || 300) / 60)}m</span>
                                                 </div>
                                             ))}
@@ -1853,18 +1853,18 @@ export default function AdminDashboard() {
                                     <div className="flex items-center gap-2 mb-3">
                                         <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                                         <span className="text-[9px] text-amber-500/50 uppercase tracking-[0.2em] font-black">Engine Console</span>
-                                        <span className="text-[8px] text-slate-700 font-mono ml-auto">{liveStats.queue.recentHistory?.length || 0} records</span>
+                                        <span className="text-[8px] text-foreground font-mono ml-auto">{liveStats.queue.recentHistory?.length || 0} records</span>
                                     </div>
                                     <div className="space-y-0.5 font-mono">
-                                        <p className="text-[11px]"><span className="text-slate-600">[{new Date().toLocaleDateString('th-TH', { day:'numeric', month:'short' })}]</span> <span className="text-amber-500/50">[SYS]</span> <span className="text-emerald-400/60">Engine initialized — {liveStats.queue.maxConcurrent} worker slots configured</span></p>
-                                        <p className="text-[11px]"><span className="text-slate-600">[{new Date().toLocaleDateString('th-TH', { day:'numeric', month:'short' })}]</span> <span className="text-amber-500/50">[CFG]</span> <span className="text-slate-500">Session timeout: {liveStats.queue.queueTimeoutMin} min — Max concurrent: {liveStats.queue.maxConcurrent}</span></p>
-                                        <p className="text-[11px]"><span className="text-slate-600">[{new Date().toLocaleDateString('th-TH', { day:'numeric', month:'short' })}]</span> <span className="text-amber-500/50">[SEC]</span> <span className="text-blue-400/50">Anti-detection stealth modules loaded</span></p>
-                                        <p className="text-[11px]"><span className="text-slate-600">[{new Date().toLocaleDateString('th-TH', { day:'numeric', month:'short' })}]</span> <span className="text-amber-500/50">[NET]</span> <span className="text-emerald-400/50">{sseConnected ? 'SSE connection stable — heartbeat OK' : 'SSE disconnected — reconnecting...'}</span></p>
+                                        <p className="text-[11px]"><span className="text-foreground">[{new Date().toLocaleDateString('th-TH', { day:'numeric', month:'short' })}]</span> <span className="text-amber-500/50">[SYS]</span> <span className="text-emerald-400/60">Engine initialized — {liveStats.queue.maxConcurrent} worker slots configured</span></p>
+                                        <p className="text-[11px]"><span className="text-foreground">[{new Date().toLocaleDateString('th-TH', { day:'numeric', month:'short' })}]</span> <span className="text-amber-500/50">[CFG]</span> <span className="text-foreground">Session timeout: {liveStats.queue.queueTimeoutMin} min — Max concurrent: {liveStats.queue.maxConcurrent}</span></p>
+                                        <p className="text-[11px]"><span className="text-foreground">[{new Date().toLocaleDateString('th-TH', { day:'numeric', month:'short' })}]</span> <span className="text-amber-500/50">[SEC]</span> <span className="text-blue-400/50">Anti-detection stealth modules loaded</span></p>
+                                        <p className="text-[11px]"><span className="text-foreground">[{new Date().toLocaleDateString('th-TH', { day:'numeric', month:'short' })}]</span> <span className="text-amber-500/50">[NET]</span> <span className="text-emerald-400/50">{sseConnected ? 'SSE connection stable — heartbeat OK' : 'SSE disconnected — reconnecting...'}</span></p>
                                         {liveStats.queue.runningCount > 0 && (
-                                            <p className="text-[11px]"><span className="text-slate-600">[{new Date().toLocaleTimeString('th-TH', { hour12:false })}]</span> <span className="text-emerald-400/60">[RUN]</span> <span className="text-emerald-300/70">{liveStats.queue.runningCount} active thread(s) — automation in progress</span></p>
+                                            <p className="text-[11px]"><span className="text-foreground">[{new Date().toLocaleTimeString('th-TH', { hour12:false })}]</span> <span className="text-emerald-400/60">[RUN]</span> <span className="text-emerald-300/70">{liveStats.queue.runningCount} active thread(s) — automation in progress</span></p>
                                         )}
                                         {liveStats.queue.queueLength > 0 && (
-                                            <p className="text-[11px]"><span className="text-slate-600">[{new Date().toLocaleTimeString('th-TH', { hour12:false })}]</span> <span className="text-yellow-400/60">[QUE]</span> <span className="text-yellow-300/60">{liveStats.queue.queueLength} request(s) pending — awaiting available slot</span></p>
+                                            <p className="text-[11px]"><span className="text-foreground">[{new Date().toLocaleTimeString('th-TH', { hour12:false })}]</span> <span className="text-yellow-400/60">[QUE]</span> <span className="text-yellow-300/60">{liveStats.queue.queueLength} request(s) pending — awaiting available slot</span></p>
                                         )}
 
                                         {/* Per-user automation completion logs */}
@@ -1878,34 +1878,34 @@ export default function AdminDashboard() {
                                                     const typeLabel = h.automationType === 'marketplace' ? 'Marketplace' : 'Group Posting';
                                                     return (
                                                         <p key={hi} className="text-[11px] leading-relaxed">
-                                                            <span className="text-slate-600">[{h.completedAtFull || h.completedAtFormatted}]</span>{' '}
+                                                            <span className="text-foreground">[{h.completedAtFull || h.completedAtFormatted}]</span>{' '}
                                                             <span className={h.success ? "text-emerald-400/70" : "text-red-400/70"}>[{h.success ? 'DONE' : 'FAIL'}]</span>{' '}
                                                             <span className="text-cyan-400/80">USER {gsId}</span>{' '}
-                                                            <span className="text-slate-400">({uid})</span>{' '}
-                                                            <span className="text-slate-500">— {typeLabel} operation completed</span>{' '}
-                                                            <span className="text-slate-500">| Total: </span><span className="text-white/70">{ts?.total ?? h.groupCount}</span>{' '}
-                                                            <span className="text-slate-500">groups | </span>
+                                                            <span className="text-foreground">({uid})</span>{' '}
+                                                            <span className="text-foreground">— {typeLabel} operation completed</span>{' '}
+                                                            <span className="text-foreground">| Total: </span><span className="text-white/70">{ts?.total ?? h.groupCount}</span>{' '}
+                                                            <span className="text-foreground">groups | </span>
                                                             <span className="text-emerald-400/80">Success: {ts?.completed ?? (h.success ? h.groupCount : 0)}</span>{' '}
                                                             <span className="text-red-400/70">Failed: {ts?.failed ?? (h.success ? 0 : h.groupCount)}</span>{' '}
                                                             {(ts?.pendingApproval ?? 0) > 0 && (
                                                                 <span className="text-amber-400/70">Pending Approval: {ts.pendingApproval}</span>
                                                             )}
-                                                            <span className="text-slate-600"> [{h.durationFormatted}]</span>
+                                                            <span className="text-foreground"> [{h.durationFormatted}]</span>
                                                         </p>
                                                     );
                                                 })}
                                             </>
                                         )}
-                                        <p className="text-[11px] animate-pulse mt-1"><span className="text-amber-500/30">{'>'}</span> <span className="text-slate-600">Awaiting next operation...</span></p>
+                                        <p className="text-[11px] animate-pulse mt-1"><span className="text-amber-500/30">{'>'}</span> <span className="text-foreground">Awaiting next operation...</span></p>
                                     </div>
                                 </div>
 
                                 {/* ── Bottom bar ── */}
                                 <div className="flex items-center justify-between mt-4">
-                                    <p className="text-[9px] text-slate-700 uppercase tracking-[0.3em] font-black font-mono">Slot 1 — {liveStats.queue.maxConcurrent}</p>
+                                    <p className="text-[9px] text-foreground uppercase tracking-[0.3em] font-black font-mono">Slot 1 — {liveStats.queue.maxConcurrent}</p>
                                     <div className="flex items-center gap-1.5">
                                         <div className={cn("w-1.5 h-1.5 rounded-full", sseConnected ? "bg-emerald-400 animate-pulse" : "bg-red-400")} />
-                                        <span className="text-[9px] text-slate-600 uppercase tracking-wider font-bold">{sseConnected ? 'Live' : 'Offline'}</span>
+                                        <span className="text-[9px] text-foreground uppercase tracking-wider font-bold">{sseConnected ? 'Live' : 'Offline'}</span>
                                     </div>
                                 </div>
                             </div>
@@ -2270,10 +2270,10 @@ export default function AdminDashboard() {
                                                     { label: 'User', value: queueDetail.data.displayName || queueDetail.data.userId, color: 'text-white' },
                                                     { label: 'Groups', value: `${queueDetail.data.groupCount} groups`, color: 'text-amber-400' },
                                                     { label: 'Runtime', value: `${Math.floor(queueDetail.data.runningSec / 60)}:${String(queueDetail.data.runningSec % 60).padStart(2, '0')}`, color: 'text-emerald-400' },
-                                                    { label: 'Started', value: new Date(queueDetail.data.startedAt).toLocaleTimeString('th-TH', { hour12: false }), color: 'text-slate-400' },
+                                                    { label: 'Started', value: new Date(queueDetail.data.startedAt).toLocaleTimeString('th-TH', { hour12: false }), color: 'text-foreground' },
                                                 ].map((item, idx) => (
                                                     <div key={idx} className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
-                                                        <p className="text-[9px] text-slate-600 font-bold uppercase tracking-wider">{item.label}</p>
+                                                        <p className="text-[9px] text-foreground font-bold uppercase tracking-wider">{item.label}</p>
                                                         <p className={cn("text-sm font-bold font-mono truncate", item.color)}>{item.value}</p>
                                                     </div>
                                                 ))}
@@ -2283,7 +2283,7 @@ export default function AdminDashboard() {
                                             {queueDetail.data.progress && (
                                                 <div className="p-3 rounded-xl bg-slate-900/60 border border-emerald-500/20">
                                                     <div className="flex justify-between text-xs mb-2">
-                                                        <span className="text-slate-500 font-bold uppercase text-[9px]">Progress</span>
+                                                        <span className="text-foreground font-bold uppercase text-[9px]">Progress</span>
                                                         <span className="font-mono font-bold text-emerald-400">{queueDetail.data.progress.currentStep}/{queueDetail.data.progress.totalSteps}</span>
                                                     </div>
                                                     <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
@@ -2291,20 +2291,20 @@ export default function AdminDashboard() {
                                                             initial={{ width: 0 }} animate={{ width: `${(queueDetail.data.progress.currentStep / Math.max(queueDetail.data.progress.totalSteps, 1)) * 100}%` }} />
                                                     </div>
                                                     {queueDetail.data.progress.isPaused && <p className="text-[10px] text-yellow-400 font-bold mt-2">⚠ AUTOMATION PAUSED</p>}
-                                                    {queueDetail.data.progress.latestLog && <p className="text-[10px] text-slate-500 truncate mt-1 font-mono">{queueDetail.data.progress.latestLog.text}</p>}
+                                                    {queueDetail.data.progress.latestLog && <p className="text-[10px] text-foreground truncate mt-1 font-mono">{queueDetail.data.progress.latestLog.text}</p>}
                                                 </div>
                                             )}
 
                                             {/* Security Blueprint */}
                                             <div>
-                                                <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                                <p className="text-[9px] text-foreground font-black uppercase tracking-widest mb-2 flex items-center gap-1.5">
                                                     <Shield className="w-3 h-3 text-amber-500" /> Security Blueprint
                                                 </p>
                                                 <div className="grid grid-cols-2 gap-1.5">
                                                     {['Gaussian Jitter', 'Fingerprint Mask', 'Network Stealth', 'Typing Sim'].map(m => (
                                                         <div key={m} className="flex items-center gap-2 p-2 bg-slate-950/60 border border-slate-800 rounded-lg">
                                                             <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-                                                            <span className="text-[10px] font-bold text-slate-400">{m}</span>
+                                                            <span className="text-[10px] font-bold text-foreground">{m}</span>
                                                             <span className="text-[8px] text-emerald-500/50 ml-auto font-mono">OK</span>
                                                         </div>
                                                     ))}
@@ -2322,11 +2322,11 @@ export default function AdminDashboard() {
                                                     { label: 'Position', value: `#${queueDetail.data.position}`, color: 'text-amber-400' },
                                                     { label: 'Groups', value: `${queueDetail.data.groupCount} groups`, color: 'text-slate-300' },
                                                     { label: 'Waiting', value: `${Math.floor(queueDetail.data.waitingSec / 60)}:${String(queueDetail.data.waitingSec % 60).padStart(2, '0')}`, color: 'text-amber-400' },
-                                                    { label: 'Est. Wait', value: `~${Math.ceil(queueDetail.data.estimatedWaitSec / 60)} min`, color: 'text-slate-400' },
-                                                    { label: 'Enqueued', value: new Date(queueDetail.data.enqueuedAt).toLocaleTimeString('th-TH', { hour12: false }), color: 'text-slate-400' },
+                                                    { label: 'Est. Wait', value: `~${Math.ceil(queueDetail.data.estimatedWaitSec / 60)} min`, color: 'text-foreground' },
+                                                    { label: 'Enqueued', value: new Date(queueDetail.data.enqueuedAt).toLocaleTimeString('th-TH', { hour12: false }), color: 'text-foreground' },
                                                 ].map((item, idx) => (
                                                     <div key={idx} className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
-                                                        <p className="text-[9px] text-slate-600 font-bold uppercase tracking-wider">{item.label}</p>
+                                                        <p className="text-[9px] text-foreground font-bold uppercase tracking-wider">{item.label}</p>
                                                         <p className={cn("text-sm font-bold font-mono truncate", item.color)}>{item.value}</p>
                                                     </div>
                                                 ))}
@@ -2347,11 +2347,11 @@ export default function AdminDashboard() {
                                                     { label: 'Status', value: queueDetail.data.success ? 'SUCCESS' : 'FAILED', color: queueDetail.data.success ? 'text-emerald-400' : 'text-red-400' },
                                                     { label: 'Groups', value: `${queueDetail.data.groupCount} groups`, color: 'text-slate-300' },
                                                     { label: 'Duration', value: queueDetail.data.durationFormatted, color: 'text-amber-400' },
-                                                    { label: 'Completed', value: queueDetail.data.completedAtFormatted, color: 'text-slate-400' },
-                                                    { label: 'Seconds', value: `${queueDetail.data.durationSec}s`, color: 'text-slate-400' },
+                                                    { label: 'Completed', value: queueDetail.data.completedAtFormatted, color: 'text-foreground' },
+                                                    { label: 'Seconds', value: `${queueDetail.data.durationSec}s`, color: 'text-foreground' },
                                                 ].map((item, idx) => (
                                                     <div key={idx} className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
-                                                        <p className="text-[9px] text-slate-600 font-bold uppercase tracking-wider">{item.label}</p>
+                                                        <p className="text-[9px] text-foreground font-bold uppercase tracking-wider">{item.label}</p>
                                                         <p className={cn("text-sm font-bold font-mono truncate", item.color)}>{item.value}</p>
                                                     </div>
                                                 ))}
@@ -2365,16 +2365,16 @@ export default function AdminDashboard() {
                                             <div className="grid grid-cols-2 gap-2">
                                                 <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 text-center">
                                                     <p className="text-3xl font-black text-emerald-400 tabular-nums">{queueDetail.data.totalCompleted}</p>
-                                                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-1">{t.admin.jobsSuccess}</p>
+                                                    <p className="text-[9px] text-foreground font-bold uppercase tracking-wider mt-1">{t.admin.jobsSuccess}</p>
                                                 </div>
                                                 <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/20 text-center">
                                                     <p className="text-3xl font-black text-red-400 tabular-nums">{queueDetail.data.totalFailed}</p>
-                                                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-1">{t.admin.jobsFailed}</p>
+                                                    <p className="text-[9px] text-foreground font-bold uppercase tracking-wider mt-1">{t.admin.jobsFailed}</p>
                                                 </div>
                                             </div>
                                             <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
                                                 <div className="flex justify-between text-xs mb-2">
-                                                    <span className="text-slate-500 font-bold uppercase text-[9px]">Success Rate</span>
+                                                    <span className="text-foreground font-bold uppercase text-[9px]">Success Rate</span>
                                                     <span className="font-mono font-black text-amber-400 text-lg">{queueDetail.data.successRate}%</span>
                                                 </div>
                                                 <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
@@ -2382,12 +2382,12 @@ export default function AdminDashboard() {
                                                 </div>
                                             </div>
                                             <div className="grid grid-cols-3 gap-2 text-center">
-                                                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800"><p className="font-mono font-bold text-white text-sm">{queueDetail.data.avgDurationFormatted}</p><p className="text-[8px] text-slate-600 font-bold uppercase">{t.admin.average}</p></div>
-                                                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800"><p className="font-mono font-bold text-white text-sm">{Math.floor(queueDetail.data.longestJobSec / 60)}:{String(queueDetail.data.longestJobSec % 60).padStart(2, '0')}</p><p className="text-[8px] text-slate-600 font-bold uppercase">{t.admin.longest}</p></div>
-                                                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800"><p className="font-mono font-bold text-white text-sm">{Math.floor(queueDetail.data.shortestJobSec / 60)}:{String(queueDetail.data.shortestJobSec % 60).padStart(2, '0')}</p><p className="text-[8px] text-slate-600 font-bold uppercase">{t.admin.shortest}</p></div>
+                                                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800"><p className="font-mono font-bold text-white text-sm">{queueDetail.data.avgDurationFormatted}</p><p className="text-[8px] text-foreground font-bold uppercase">{t.admin.average}</p></div>
+                                                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800"><p className="font-mono font-bold text-white text-sm">{Math.floor(queueDetail.data.longestJobSec / 60)}:{String(queueDetail.data.longestJobSec % 60).padStart(2, '0')}</p><p className="text-[8px] text-foreground font-bold uppercase">{t.admin.longest}</p></div>
+                                                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800"><p className="font-mono font-bold text-white text-sm">{Math.floor(queueDetail.data.shortestJobSec / 60)}:{String(queueDetail.data.shortestJobSec % 60).padStart(2, '0')}</p><p className="text-[8px] text-foreground font-bold uppercase">{t.admin.shortest}</p></div>
                                             </div>
                                             <div className="flex justify-between items-center p-3 rounded-xl bg-slate-900/60 border border-slate-800">
-                                                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Total Processed</span>
+                                                <span className="text-[9px] text-foreground font-bold uppercase tracking-wider">Total Processed</span>
                                                 <span className="font-mono font-black text-white text-lg">{queueDetail.data.totalProcessed}</span>
                                             </div>
                                         </div>
@@ -2397,7 +2397,7 @@ export default function AdminDashboard() {
                                     {queueDetail?.type === 'system' && queueDetail.data && (
                                         <div className="space-y-4">
                                             <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
-                                                <p className="text-[9px] text-slate-600 font-bold uppercase tracking-wider mb-2">Browser Pool</p>
+                                                <p className="text-[9px] text-foreground font-bold uppercase tracking-wider mb-2">Browser Pool</p>
                                                 <div className="flex items-center gap-3">
                                                     <div className="flex-1 h-3 bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full transition-all" style={{ width: `${(queueDetail.data.activeBrowsers / (queueDetail.data.maxBrowsers || 10)) * 100}%`, boxShadow: '0 0 8px #3b82f6' }} /></div>
                                                     <span className="font-mono font-black text-white text-sm">{queueDetail.data.activeBrowsers}/{queueDetail.data.maxBrowsers}</span>
@@ -2411,23 +2411,23 @@ export default function AdminDashboard() {
                                                     { label: 'Runs Today', value: queueDetail.data.automation?.totalRunsToday || 0, color: 'text-blue-400' },
                                                 ].map((item, idx) => (
                                                     <div key={idx} className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
-                                                        <p className="text-[9px] text-slate-600 font-bold uppercase tracking-wider">{item.label}</p>
+                                                        <p className="text-[9px] text-foreground font-bold uppercase tracking-wider">{item.label}</p>
                                                         <p className={cn("text-xl font-black font-mono tabular-nums", item.color)}>{item.value}</p>
                                                     </div>
                                                 ))}
                                             </div>
                                             <div className="grid grid-cols-2 gap-2">
                                                 <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20 flex justify-between items-center">
-                                                    <span className="text-[9px] text-slate-500 font-bold">Tasks Done</span><span className="font-mono font-bold text-emerald-400">{queueDetail.data.automation?.totalTasksCompleted || 0}</span>
+                                                    <span className="text-[9px] text-foreground font-bold">Tasks Done</span><span className="font-mono font-bold text-emerald-400">{queueDetail.data.automation?.totalTasksCompleted || 0}</span>
                                                 </div>
                                                 <div className="p-3 rounded-xl bg-red-500/5 border border-red-500/20 flex justify-between items-center">
-                                                    <span className="text-[9px] text-slate-500 font-bold">Tasks Failed</span><span className="font-mono font-bold text-red-400">{queueDetail.data.automation?.totalTasksFailed || 0}</span>
+                                                    <span className="text-[9px] text-foreground font-bold">Tasks Failed</span><span className="font-mono font-bold text-red-400">{queueDetail.data.automation?.totalTasksFailed || 0}</span>
                                                 </div>
                                                 <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex justify-between items-center">
-                                                    <span className="text-[9px] text-slate-500 font-bold">Pending</span><span className="font-mono font-bold text-white">{queueDetail.data.automation?.totalTasksPending || 0}</span>
+                                                    <span className="text-[9px] text-foreground font-bold">Pending</span><span className="font-mono font-bold text-white">{queueDetail.data.automation?.totalTasksPending || 0}</span>
                                                 </div>
                                                 <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex justify-between items-center">
-                                                    <span className="text-[9px] text-slate-500 font-bold">Active Users</span><span className="font-mono font-bold text-white">{queueDetail.data.activeUsers || 0}</span>
+                                                    <span className="text-[9px] text-foreground font-bold">Active Users</span><span className="font-mono font-bold text-white">{queueDetail.data.activeUsers || 0}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -2452,7 +2452,7 @@ export default function AdminDashboard() {
                                                 ]).map(tab => (
                                                     <button key={tab.id} onClick={() => setInspectTab(tab.id)}
                                                         className={cn("p-3 rounded-xl transition-all flex flex-col items-center gap-1",
-                                                            inspectTab === tab.id ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20" : "text-slate-500 hover:text-white hover:bg-slate-800")}>
+                                                            inspectTab === tab.id ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20" : "text-foreground hover:text-white hover:bg-slate-800")}>
                                                         {tab.icon}
                                                         <span className="text-[7px] font-black uppercase tracking-tighter">{tab.label}</span>
                                                     </button>
@@ -2469,7 +2469,7 @@ export default function AdminDashboard() {
                                                             <div className="bg-black rounded-2xl border border-slate-800 h-48 relative overflow-hidden">
                                                                 <div className="absolute top-0 inset-x-0 h-7 bg-slate-800/80 backdrop-blur-md flex items-center px-3 justify-between border-b border-white/5 z-10">
                                                                     <div className="flex gap-1.5"><div className="w-2 h-2 rounded-full bg-red-500/50" /><div className="w-2 h-2 rounded-full bg-amber-500/50" /><div className="w-2 h-2 rounded-full bg-green-500/50" /></div>
-                                                                    <div className="bg-slate-900 px-3 py-0.5 rounded-full text-[8px] text-slate-500 font-mono truncate max-w-[280px]">
+                                                                    <div className="bg-slate-900 px-3 py-0.5 rounded-full text-[8px] text-foreground font-mono truncate max-w-[280px]">
                                                                         {isActive ? `https://facebook.com/${job?.automationType === 'marketplace' ? 'marketplace/listing' : 'groups'}/node_${slotId}` : 'about:blank'}
                                                                     </div>
                                                                     <div className="w-8" />
@@ -2486,8 +2486,8 @@ export default function AdminDashboard() {
                                                                         </div>
                                                                     ) : (
                                                                         <div className="text-center z-10">
-                                                                            <Monitor className="text-slate-700 mx-auto mb-2" size={32} />
-                                                                            <p className="text-[9px] font-mono text-slate-600 tracking-[0.2em] uppercase">AWAITING_ASSIGNMENT...</p>
+                                                                            <Monitor className="text-foreground mx-auto mb-2" size={32} />
+                                                                            <p className="text-[9px] font-mono text-foreground tracking-[0.2em] uppercase">AWAITING_ASSIGNMENT...</p>
                                                                         </div>
                                                                     )}
                                                                     {isActive && <motion.div animate={{ x: [0, 80, -40, 15], y: [0, -20, 30, 5] }} transition={{ duration: 6, repeat: Infinity }} className="absolute z-10">
@@ -2503,12 +2503,12 @@ export default function AdminDashboard() {
                                                             {/* Task Info Grid */}
                                                             <div className="grid grid-cols-2 gap-3">
                                                                 <div className="bg-slate-900/60 border border-slate-800 p-3 rounded-xl">
-                                                                    <p className="text-[9px] text-slate-600 font-bold uppercase mb-1">Target Task</p>
+                                                                    <p className="text-[9px] text-foreground font-bold uppercase mb-1">Target Task</p>
                                                                     <p className="text-xs font-bold text-white truncate">{isActive ? (job?.propertyTitle || (job?.automationType === 'marketplace' ? 'Marketplace Posting' : 'Group Posting')) : 'No task assigned'}</p>
                                                                     {job?.fbAccount && <p className="text-[8px] text-blue-400/60 truncate mt-0.5">FB: {job.fbAccount}</p>}
                                                                 </div>
                                                                 <div className="bg-slate-900/60 border border-slate-800 p-3 rounded-xl">
-                                                                    <p className="text-[9px] text-slate-600 font-bold uppercase mb-1">Automation Progress</p>
+                                                                    <p className="text-[9px] text-foreground font-bold uppercase mb-1">Automation Progress</p>
                                                                     {isActive ? (<>
                                                                         <div className="flex items-center gap-2">
                                                                             <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
@@ -2517,8 +2517,8 @@ export default function AdminDashboard() {
                                                                             </div>
                                                                             <span className="text-xs font-mono text-amber-400 font-bold">{progressPct}%</span>
                                                                         </div>
-                                                                        <p className="text-[8px] text-slate-500 mt-1 font-mono">{job?.progress ? `${job.progress.currentStep}/${job.progress.totalSteps} tasks` : `${job?.groupCount || 0} groups`}</p>
-                                                                    </>) : <p className="text-xs text-slate-600">Idle</p>}
+                                                                        <p className="text-[8px] text-foreground mt-1 font-mono">{job?.progress ? `${job.progress.currentStep}/${job.progress.totalSteps} tasks` : `${job?.groupCount || 0} groups`}</p>
+                                                                    </>) : <p className="text-xs text-foreground">Idle</p>}
                                                                 </div>
                                                             </div>
 
@@ -2526,15 +2526,15 @@ export default function AdminDashboard() {
                                                             {isActive && (
                                                                 <div className="grid grid-cols-3 gap-2">
                                                                     <div className="bg-slate-900/60 border border-slate-800 p-2.5 rounded-xl text-center">
-                                                                        <p className="text-[8px] text-slate-600 font-bold uppercase">User</p>
+                                                                        <p className="text-[8px] text-foreground font-bold uppercase">User</p>
                                                                         <p className="text-[11px] font-bold text-white truncate">{job?.displayName || job?.userId || '—'}</p>
                                                                     </div>
                                                                     <div className="bg-slate-900/60 border border-slate-800 p-2.5 rounded-xl text-center">
-                                                                        <p className="text-[8px] text-slate-600 font-bold uppercase">Runtime</p>
+                                                                        <p className="text-[8px] text-foreground font-bold uppercase">Runtime</p>
                                                                         <p className="text-sm font-mono font-bold text-emerald-400">{rMin}:{String(rSec).padStart(2, '0')}</p>
                                                                     </div>
                                                                     <div className="bg-slate-900/60 border border-slate-800 p-2.5 rounded-xl text-center">
-                                                                        <p className="text-[8px] text-slate-600 font-bold uppercase">Groups</p>
+                                                                        <p className="text-[8px] text-foreground font-bold uppercase">Groups</p>
                                                                         <p className="text-sm font-mono font-bold text-amber-400">{job?.groupCount || 0}</p>
                                                                     </div>
                                                                 </div>
@@ -2565,13 +2565,13 @@ export default function AdminDashboard() {
                                                                                 <p className="text-[9px] font-black text-white uppercase tracking-tight truncate">{m.name}</p>
                                                                                 <span className={cn("text-[7px] font-mono font-bold flex-shrink-0", m.status === 'HIGH' ? "text-amber-400" : "text-emerald-500")}>{m.status}</span>
                                                                             </div>
-                                                                            <p className="text-[8px] text-slate-500 leading-tight">{m.desc}</p>
+                                                                            <p className="text-[8px] text-foreground leading-tight">{m.desc}</p>
                                                                         </div>
                                                                     </div>
                                                                 ))}
                                                             </div>
                                                             <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl">
-                                                                <p className="text-[9px] text-slate-400">
+                                                                <p className="text-[9px] text-foreground">
                                                                     <span className="text-amber-500 font-bold uppercase mr-1.5">Note:</span>
                                                                     Gaussian Jitter set to HIGH for maximum stealth. All modules auto-calibrated per session.
                                                                 </p>
@@ -2584,24 +2584,24 @@ export default function AdminDashboard() {
                                                         <motion.div key="logs" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                                                             <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 font-mono text-[10px] min-h-[320px]">
                                                                 <div className="space-y-1.5">
-                                                                    <p className="text-slate-600"><span className="text-amber-500/70">[SYS]</span> Initializing Node_{slotId}...</p>
-                                                                    <p className="text-slate-600"><span className="text-blue-400/70">[NET]</span> Proxy connected: SG-Server-{slotId}</p>
-                                                                    <p className="text-slate-600"><span className="text-emerald-400/70">[SEC]</span> Anti-detection stealth modules loaded</p>
-                                                                    <p className="text-slate-600"><span className="text-emerald-400/70">[SEC]</span> Gaussian Jitter: HIGH</p>
-                                                                    <p className="text-slate-600"><span className="text-blue-400/70">[NET]</span> SSE stream: {sseConnected ? 'Connected' : 'Disconnected'}</p>
+                                                                    <p className="text-foreground"><span className="text-amber-500/70">[SYS]</span> Initializing Node_{slotId}...</p>
+                                                                    <p className="text-foreground"><span className="text-blue-400/70">[NET]</span> Proxy connected: SG-Server-{slotId}</p>
+                                                                    <p className="text-foreground"><span className="text-emerald-400/70">[SEC]</span> Anti-detection stealth modules loaded</p>
+                                                                    <p className="text-foreground"><span className="text-emerald-400/70">[SEC]</span> Gaussian Jitter: HIGH</p>
+                                                                    <p className="text-foreground"><span className="text-blue-400/70">[NET]</span> SSE stream: {sseConnected ? 'Connected' : 'Disconnected'}</p>
                                                                     {isActive ? (<>
-                                                                        <p className="text-slate-600"><span className="text-green-400/70">[AUTH]</span> Facebook Session: Valid</p>
+                                                                        <p className="text-foreground"><span className="text-green-400/70">[AUTH]</span> Facebook Session: Valid</p>
                                                                         <p className="text-white"><span className="text-amber-400">[TASK]</span> Target: {job?.automationType === 'marketplace' ? 'Marketplace' : 'Group Posting'} — {job?.groupCount || 0} targets</p>
-                                                                        <p className="text-slate-600"><span className="text-cyan-400/70">[USER]</span> {job?.displayName || job?.userId}</p>
-                                                                        {job?.fbAccount && <p className="text-slate-600"><span className="text-blue-400/60">[FB]</span> Account: {job.fbAccount}</p>}
-                                                                        {job?.propertyTitle && <p className="text-slate-600"><span className="text-amber-400/60">[PROP]</span> {job.propertyTitle}</p>}
-                                                                        {job?.progress && <p className="text-slate-600"><span className="text-emerald-400/60">[PROG]</span> Step {job.progress.currentStep}/{job.progress.totalSteps} ({progressPct}%)</p>}
+                                                                        <p className="text-foreground"><span className="text-cyan-400/70">[USER]</span> {job?.displayName || job?.userId}</p>
+                                                                        {job?.fbAccount && <p className="text-foreground"><span className="text-blue-400/60">[FB]</span> Account: {job.fbAccount}</p>}
+                                                                        {job?.propertyTitle && <p className="text-foreground"><span className="text-amber-400/60">[PROP]</span> {job.propertyTitle}</p>}
+                                                                        {job?.progress && <p className="text-foreground"><span className="text-emerald-400/60">[PROG]</span> Step {job.progress.currentStep}/{job.progress.totalSteps} ({progressPct}%)</p>}
                                                                         {job?.progress?.latestLog && <p className="text-white"><span className="text-emerald-400">[LOG]</span> {job.progress.latestLog.text}</p>}
-                                                                        <p className="text-slate-600"><span className="text-slate-500">[TIME]</span> Runtime: {rMin}:{String(rSec).padStart(2, '0')}</p>
-                                                                        <p className="text-slate-600 animate-pulse"><span className="text-amber-400/50">[WAIT]</span> Anti-spam delay active...</p>
+                                                                        <p className="text-foreground"><span className="text-foreground">[TIME]</span> Runtime: {rMin}:{String(rSec).padStart(2, '0')}</p>
+                                                                        <p className="text-foreground animate-pulse"><span className="text-amber-400/50">[WAIT]</span> Anti-spam delay active...</p>
                                                                     </>) : (<>
-                                                                        <p className="text-slate-600"><span className="text-slate-500">[SYS]</span> Node_{slotId} on standby — no active task</p>
-                                                                        <p className="text-slate-600 animate-pulse"><span className="text-slate-600">[IDLE]</span> Awaiting task assignment...</p>
+                                                                        <p className="text-foreground"><span className="text-foreground">[SYS]</span> Node_{slotId} on standby — no active task</p>
+                                                                        <p className="text-foreground animate-pulse"><span className="text-foreground">[IDLE]</span> Awaiting task assignment...</p>
                                                                     </>)}
                                                                 </div>
                                                             </div>
@@ -2612,7 +2612,7 @@ export default function AdminDashboard() {
 
                                             {/* Right: Controls Panel */}
                                             <div className="w-48 bg-slate-950/50 border-l border-slate-800 p-5 flex flex-col gap-3 flex-shrink-0">
-                                                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Node Controls</p>
+                                                <p className="text-[9px] font-black text-foreground uppercase tracking-widest mb-1">Node Controls</p>
 
                                                 {isActive && job?.fullUserId && (<>
                                                     <button
@@ -2624,7 +2624,7 @@ export default function AdminDashboard() {
                                                 </>)}
 
                                                 {!isActive && (
-                                                    <div className="flex items-center gap-2 px-4 py-3 bg-slate-800/50 text-slate-600 font-black text-[10px] rounded-xl border border-slate-700 uppercase tracking-wider">
+                                                    <div className="flex items-center gap-2 px-4 py-3 bg-slate-800/50 text-foreground font-black text-[10px] rounded-xl border border-slate-700 uppercase tracking-wider">
                                                         <Pause size={14} /> Standby
                                                     </div>
                                                 )}
@@ -2633,12 +2633,12 @@ export default function AdminDashboard() {
                                                 <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2 mt-2">
                                                     <div className="flex items-center gap-2 mb-1">
                                                         <div className={cn("w-2 h-2 rounded-full", isActive ? "bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.6)]" : "bg-slate-700")} />
-                                                        <span className={cn("text-[9px] font-black uppercase", isActive ? "text-emerald-400" : "text-slate-600")}>{isActive ? 'Running' : 'Idle'}</span>
+                                                        <span className={cn("text-[9px] font-black uppercase", isActive ? "text-emerald-400" : "text-foreground")}>{isActive ? 'Running' : 'Idle'}</span>
                                                     </div>
                                                     {isActive && job?.automationType && (
                                                         <div className="flex items-center gap-1">
                                                             {job.automationType === 'marketplace' ? <Store className="w-3 h-3 text-blue-400" /> : <Users className="w-3 h-3 text-emerald-400" />}
-                                                            <span className="text-[9px] text-slate-400 font-bold uppercase">{job.automationType === 'marketplace' ? 'MKT' : 'Groups'}</span>
+                                                            <span className="text-[9px] text-foreground font-bold uppercase">{job.automationType === 'marketplace' ? 'MKT' : 'Groups'}</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -2646,15 +2646,15 @@ export default function AdminDashboard() {
                                                 {/* Slot Metadata */}
                                                 <div className="mt-auto pt-4 border-t border-slate-800 space-y-1.5">
                                                     <div className="flex justify-between text-[9px]">
-                                                        <span className="text-slate-600">Slot</span>
+                                                        <span className="text-foreground">Slot</span>
                                                         <span className="text-amber-400 font-mono font-bold">#{slotId}</span>
                                                     </div>
                                                     <div className="flex justify-between text-[9px]">
-                                                        <span className="text-slate-600">Engine</span>
-                                                        <span className="text-slate-400 font-mono">v1.0</span>
+                                                        <span className="text-foreground">Engine</span>
+                                                        <span className="text-foreground font-mono">v1.0</span>
                                                     </div>
                                                     <div className="flex justify-between text-[9px]">
-                                                        <span className="text-slate-600">SSE</span>
+                                                        <span className="text-foreground">SSE</span>
                                                         <span className={sseConnected ? "text-emerald-400" : "text-red-400"}>{sseConnected ? 'Live' : 'Off'}</span>
                                                     </div>
                                                 </div>
@@ -2677,24 +2677,24 @@ export default function AdminDashboard() {
                                                                 className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent pointer-events-none" />}
                                                             <div className="flex justify-center mb-1">
                                                                 <motion.div animate={isActive ? { rotate: 360 } : {}} transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
-                                                                    className={cn(isActive ? "text-amber-500" : "text-slate-700")}>
+                                                                    className={cn(isActive ? "text-amber-500" : "text-foreground")}>
                                                                     <Settings className="w-3.5 h-3.5" />
                                                                 </motion.div>
                                                             </div>
-                                                            <p className={cn("text-[10px] font-mono font-black", isActive ? "text-amber-400" : "text-slate-600")}>No. {String(i + 1).padStart(3, '0')}</p>
+                                                            <p className={cn("text-[10px] font-mono font-black", isActive ? "text-amber-400" : "text-foreground")}>No. {String(i + 1).padStart(3, '0')}</p>
                                                             {runningJob ? (<>
                                                                 <p className="text-[8px] font-bold text-white truncate px-0.5 mt-1">{runningJob.displayName || runningJob.userId}</p>
                                                                 <p className="text-[8px] text-emerald-400 font-mono">{runningJob.groupCount}g</p>
-                                                            </>) : <p className="text-[8px] text-slate-700 mt-1 font-mono">STANDBY</p>}
+                                                            </>) : <p className="text-[8px] text-foreground mt-1 font-mono">STANDBY</p>}
                                                         </div>
                                                     );
                                                 })}
                                             </div>
                                             <div className="h-px bg-slate-800" />
                                             <div className="grid grid-cols-3 gap-2 text-center">
-                                                <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20"><p className="text-xl font-black text-emerald-400 tabular-nums">{queueDetail.data.runningCount}</p><p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Running</p></div>
-                                                <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20"><p className="text-xl font-black text-amber-400 tabular-nums">{queueDetail.data.queueLength}</p><p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Waiting</p></div>
-                                                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800"><p className="text-xl font-black text-white tabular-nums">{queueDetail.data.maxConcurrent - queueDetail.data.runningCount}</p><p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Available</p></div>
+                                                <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20"><p className="text-xl font-black text-emerald-400 tabular-nums">{queueDetail.data.runningCount}</p><p className="text-[8px] text-foreground font-bold uppercase tracking-wider">Running</p></div>
+                                                <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20"><p className="text-xl font-black text-amber-400 tabular-nums">{queueDetail.data.queueLength}</p><p className="text-[8px] text-foreground font-bold uppercase tracking-wider">Waiting</p></div>
+                                                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800"><p className="text-xl font-black text-white tabular-nums">{queueDetail.data.maxConcurrent - queueDetail.data.runningCount}</p><p className="text-[8px] text-foreground font-bold uppercase tracking-wider">Available</p></div>
                                             </div>
                                         </div>
                                     )}
@@ -2702,10 +2702,10 @@ export default function AdminDashboard() {
 
                                 {/* Footer terminal line */}
                                 <div className="mt-5 pt-3 border-t border-slate-800 flex items-center justify-between">
-                                    <p className="text-[8px] text-slate-700 font-mono uppercase tracking-[0.3em]">GRAND$TATE ENGINE v1.0</p>
+                                    <p className="text-[8px] text-foreground font-mono uppercase tracking-[0.3em]">GRAND$TATE ENGINE v1.0</p>
                                     <div className="flex items-center gap-1.5">
                                         <div className={cn("w-1.5 h-1.5 rounded-full", sseConnected ? "bg-emerald-400 animate-pulse" : "bg-red-400")} />
-                                        <span className="text-[8px] text-slate-600 font-mono uppercase">{sseConnected ? 'Live' : 'Offline'}</span>
+                                        <span className="text-[8px] text-foreground font-mono uppercase">{sseConnected ? 'Live' : 'Offline'}</span>
                                     </div>
                                 </div>
                             </div>
@@ -2735,7 +2735,7 @@ export default function AdminDashboard() {
                                 { label: 'Resolved', count: tickets.filter(t => t.status === 'resolved' || t.status === 'closed').length, icon: <CheckCircle2 className="w-4 h-4" />, color: 'text-emerald-400' },
                             ].map((s, si) => (
                                 <div key={si} className="bg-slate-900/60 border border-slate-800 p-4 rounded-2xl hover:border-slate-700 transition-colors group">
-                                        <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                                        <div className="flex items-center gap-1.5 text-[9px] font-bold text-foreground uppercase tracking-wider mb-1.5">
                                             <span className={cn("opacity-50 group-hover:opacity-100 transition-opacity", s.color)}>
                                                 {s.gear ? (
                                                     <motion.div animate={s.count > 0 ? { rotate: 360 } : {}} transition={{ duration: 4, repeat: Infinity, ease: "linear" }}>

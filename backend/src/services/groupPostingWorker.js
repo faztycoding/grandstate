@@ -2757,6 +2757,19 @@ export class GroupPostingWorker {
 
     this.browser = await puppeteer.launch(launchOptions);
 
+    // Auto-allow ALL permissions for facebook.com (notifications, geolocation, etc.)
+    // This prevents Chrome from EVER showing permission popups
+    try {
+      const context = this.browser.defaultBrowserContext();
+      await context.overridePermissions('https://www.facebook.com', [
+        'notifications',
+        'geolocation',
+      ]);
+      console.log('🔓 Browser permissions auto-allowed (notifications, geolocation)');
+    } catch (e) {
+      console.log('⚠️ Permission override failed (non-critical):', e.message);
+    }
+
     // Listen for browser disconnect (user closes browser)
     this.browser.on('disconnected', () => {
       console.log('🔴 Browser was closed by user');

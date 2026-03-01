@@ -1066,50 +1066,291 @@ export default function AdminDashboard() {
                 <div className="relative rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(180deg, hsl(222 47% 6%) 0%, hsl(222 47% 4%) 100%)' }}>
                     <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(148,163,184,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.5) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
                     <motion.div animate={{ top: ['-5%', '105%'] }} transition={{ duration: 8, repeat: Infinity, ease: 'linear' }} className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-amber-500/20 to-transparent pointer-events-none z-20" />
-                    <div className="relative z-10 p-6">
-                    <div className="flex items-center gap-3 mb-6 border-b border-amber-500/20 pb-4">
-                        <h2 className="text-2xl font-black text-white tracking-tight uppercase">Command <span className="text-amber-500">Overview</span></h2>
-                        <Badge variant="outline" className="text-[9px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30 gap-1.5 px-2 py-0.5 font-bold"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> LIVE</Badge>
+                    <div className="relative z-10 p-6 space-y-5">
+                    {/* ── Header + Range Selector ── */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-amber-500/20 pb-4">
+                        <div className="flex items-center gap-3">
+                            <h2 className="text-2xl font-black text-white tracking-tight uppercase">Command <span className="text-amber-500">Overview</span></h2>
+                            <Badge variant="outline" className="text-[9px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30 gap-1.5 px-2 py-0.5 font-bold"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> LIVE</Badge>
+                        </div>
+                        <div className="flex items-center gap-1 bg-slate-950/80 border border-slate-800 rounded-xl p-1">
+                            {(['7d', 'month', '3m', '6m', '1y'] as const).map(r => {
+                                const labels: Record<string, string> = { '7d': '7 วัน', 'month': 'เดือนนี้', '3m': '3 เดือน', '6m': '6 เดือน', '1y': '1 ปี' };
+                                return (<button key={r} onClick={() => setChartRange(r)} className={cn("px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all", chartRange === r ? "bg-amber-500 text-black shadow-md shadow-amber-500/30" : "text-slate-400 hover:text-white hover:bg-slate-800")}>{labels[r]}</button>);
+                            })}
+                        </div>
                     </div>
-                    {/* Quick Stats */}
-                    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+                    {/* ── Quick Stats ── */}
+                    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                         {[
-                            { label: t.admin.totalLicenses, value: stats.totalLicenses, icon: <Key className="w-4 h-4" />, color: 'text-blue-400' },
-                            { label: t.admin.activeLicenses, value: stats.activeLicenses, icon: <Check className="w-4 h-4" />, color: 'text-emerald-400' },
-                            { label: t.admin.expiringSoon, value: stats.expiringLicenses, icon: <Clock className="w-4 h-4" />, color: 'text-amber-400' },
-                            { label: t.admin.totalRevenue, value: `฿${stats.totalRevenue.toLocaleString()}`, icon: <DollarSign className="w-4 h-4" />, color: 'text-purple-400' },
-                            { label: t.admin.online, value: liveStats?.onlineUsers ?? '—', icon: <Wifi className="w-4 h-4" />, color: 'text-green-400' },
-                            { label: 'Automation', value: liveStats?.automation.currentlyRunning ?? '—', icon: <Zap className="w-4 h-4" />, color: 'text-orange-400' },
+                            { label: t.admin.totalLicenses, value: stats.totalLicenses, icon: <Key className="w-4 h-4" />, color: 'text-blue-400', border: 'hover:border-blue-500/40' },
+                            { label: t.admin.activeLicenses, value: stats.activeLicenses, icon: <Check className="w-4 h-4" />, color: 'text-emerald-400', border: 'hover:border-emerald-500/40' },
+                            { label: t.admin.expiringSoon, value: stats.expiringLicenses, icon: <Clock className="w-4 h-4" />, color: 'text-amber-400', border: 'hover:border-amber-500/40' },
+                            { label: 'รายได้รวม', value: `฿${stats.totalRevenue.toLocaleString()}`, icon: <DollarSign className="w-4 h-4" />, color: 'text-purple-400', border: 'hover:border-purple-500/40' },
+                            { label: t.admin.online, value: liveStats?.onlineUsers ?? '—', icon: <Wifi className="w-4 h-4" />, color: 'text-green-400', border: 'hover:border-green-500/40' },
+                            { label: 'Automation', value: liveStats?.automation.currentlyRunning ?? '—', icon: <Zap className="w-4 h-4" />, color: 'text-orange-400', border: 'hover:border-orange-500/40' },
                         ].map((s, i) => (
-                            <div key={i} className="bg-slate-900/60 border border-slate-800 p-4 rounded-2xl hover:border-slate-700 transition-colors">
-                                <div className="flex items-center gap-1.5 text-[9px] font-bold text-foreground uppercase tracking-wider mb-1.5">{s.icon} {s.label}</div>
-                                <p className={cn('text-xl font-black font-mono', s.color)}>{s.value}</p>
-                            </div>
+                            <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                                className={cn("bg-slate-900/60 border border-slate-800 p-4 rounded-2xl transition-all", s.border)}>
+                                <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-2">{s.icon} {s.label}</div>
+                                <p className={cn('text-2xl font-black font-mono', s.color)}>{s.value}</p>
+                            </motion.div>
                         ))}
                     </motion.div>
 
-                    {/* Charts */}
-                    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.4 }} className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
-                        {/* Package Distribution */}
+                    {/* ── Package Distribution + Revenue ── */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5">
-                            <h4 className="flex items-center gap-2 text-sm font-black text-white uppercase tracking-wide mb-4"><PieChart className="w-4 h-4 text-amber-500" /> {t.admin.packageDistribution}</h4>
-                                {(() => { const fc = licenses.filter(l => l.package === 'free').length; const ac = licenses.filter(l => l.package === 'agent').length; const ec = licenses.filter(l => l.package === 'elite').length; const total = licenses.length || 1; return (<div className="space-y-3">{[{ label: 'Rookie', count: fc, color: 'bg-emerald-500', icon: <Rocket className="w-3.5 h-3.5 text-emerald-500" /> }, { label: 'Top Agent', count: ac, color: 'bg-amber-500', icon: <Star className="w-3.5 h-3.5 text-amber-500" /> }, { label: 'Elite', count: ec, color: 'bg-purple-500', icon: <Crown className="w-3.5 h-3.5 text-purple-500" /> }].map(p => (<div key={p.label} className="space-y-1"><div className="flex justify-between text-sm text-slate-300"><span className="flex items-center gap-1.5">{p.icon} {p.label}</span><span className="font-mono text-foreground">{p.count} ({Math.round(p.count / total * 100)}%)</span></div><div className="h-2.5 bg-slate-800 rounded-full overflow-hidden"><div className={cn("h-full rounded-full", p.color)} style={{ width: `${p.count / total * 100}%` }} /></div></div>))}</div>); })()}
+                            <h4 className="flex items-center gap-2 text-sm font-black text-white uppercase tracking-wide mb-5"><PieChart className="w-4 h-4 text-amber-500" /> {t.admin.packageDistribution}</h4>
+                            {(() => {
+                                const fc = licenses.filter(l => l.package === 'free').length;
+                                const ac = licenses.filter(l => l.package === 'agent').length;
+                                const ec = licenses.filter(l => l.package === 'elite').length;
+                                const total = licenses.length || 1;
+                                return (
+                                    <div className="space-y-4">
+                                        {[
+                                            { label: 'Rookie', count: fc, bar: 'bg-gradient-to-r from-emerald-500 to-emerald-400', text: 'text-emerald-400', icon: <Rocket className="w-3.5 h-3.5" /> },
+                                            { label: 'Top Agent', count: ac, bar: 'bg-gradient-to-r from-amber-500 to-amber-400', text: 'text-amber-400', icon: <Star className="w-3.5 h-3.5" /> },
+                                            { label: 'Elite', count: ec, bar: 'bg-gradient-to-r from-purple-500 to-purple-400', text: 'text-purple-400', icon: <Crown className="w-3.5 h-3.5" /> },
+                                        ].map(p => (
+                                            <div key={p.label} className="space-y-1.5">
+                                                <div className="flex justify-between items-center">
+                                                    <span className={cn("flex items-center gap-1.5 text-sm font-semibold", p.text)}>{p.icon} {p.label}</span>
+                                                    <span className="font-mono text-sm text-white font-bold">{p.count} <span className="text-slate-500 text-xs">({Math.round(p.count / total * 100)}%)</span></span>
+                                                </div>
+                                                <div className="h-2.5 bg-slate-800 rounded-full overflow-hidden">
+                                                    <motion.div initial={{ width: 0 }} animate={{ width: `${p.count / total * 100}%` }} transition={{ delay: 0.3, duration: 0.7 }} className={cn("h-full rounded-full", p.bar)} />
+                                                </div>
+                                            </div>
+                                        ))}
+                                        <div className="flex justify-between items-center pt-3 border-t border-slate-800">
+                                            <span className="text-xs text-slate-500">รวมทั้งหมด</span>
+                                            <span className="font-black text-white font-mono">{licenses.length} <span className="text-slate-500 font-normal text-xs">licenses</span></span>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </div>
-                        {/* Revenue */}
                         <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5">
-                            <h4 className="flex items-center gap-2 text-sm font-black text-white uppercase tracking-wide mb-4"><DollarSign className="w-4 h-4 text-amber-500" /> {t.admin.revenueByPackage}</h4>
-                                {(() => { const ar = licenses.filter(l => l.package === 'agent').length * 1390; const er = licenses.filter(l => l.package === 'elite').length * 2990; const mx = Math.max(ar, er, 1); return (<div className="space-y-3"><div className="space-y-1"><div className="flex justify-between text-sm text-slate-300"><span className="flex items-center gap-1.5"><Star className="w-3.5 h-3.5 text-amber-500" />Top Agent (฿1,390)</span><span className="font-semibold font-mono text-amber-400">฿{ar.toLocaleString()}</span></div><div className="h-5 bg-slate-800 rounded-lg overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-lg" style={{ width: `${ar / mx * 100}%` }} /></div></div><div className="space-y-1"><div className="flex justify-between text-sm text-slate-300"><span className="flex items-center gap-1.5"><Crown className="w-3.5 h-3.5 text-purple-500" />Elite (฿2,990)</span><span className="font-semibold font-mono text-purple-400">฿{er.toLocaleString()}</span></div><div className="h-5 bg-slate-800 rounded-lg overflow-hidden"><div className="h-full bg-gradient-to-r from-purple-400 to-purple-500 rounded-lg" style={{ width: `${er / mx * 100}%` }} /></div></div><div className="pt-3 border-t border-slate-800 mt-3 flex justify-between items-center"><span className="text-foreground">{t.admin.totalRevenueAll}</span><span className="text-xl font-bold text-emerald-400 font-mono">฿{(ar + er).toLocaleString()}</span></div></div>); })()}
+                            <h4 className="flex items-center gap-2 text-sm font-black text-white uppercase tracking-wide mb-5"><DollarSign className="w-4 h-4 text-emerald-500" /> {t.admin.revenueByPackage}</h4>
+                            {(() => {
+                                const ar = licenses.filter(l => l.package === 'agent').length * 1390;
+                                const er = licenses.filter(l => l.package === 'elite').length * 2990;
+                                const mx = Math.max(ar, er, 1);
+                                const agentCnt = licenses.filter(l => l.package === 'agent').length;
+                                const eliteCnt = licenses.filter(l => l.package === 'elite').length;
+                                return (
+                                    <div className="space-y-4">
+                                        {[
+                                            { label: 'Top Agent', price: '฿1,390', rev: ar, cnt: agentCnt, bar: 'bg-gradient-to-r from-amber-500 to-amber-400', text: 'text-amber-400', icon: <Star className="w-3.5 h-3.5" /> },
+                                            { label: 'Elite', price: '฿2,990', rev: er, cnt: eliteCnt, bar: 'bg-gradient-to-r from-purple-500 to-purple-400', text: 'text-purple-400', icon: <Crown className="w-3.5 h-3.5" /> },
+                                        ].map(p => (
+                                            <div key={p.label} className="space-y-1.5">
+                                                <div className="flex justify-between items-center">
+                                                    <span className={cn("flex items-center gap-1.5 text-sm font-semibold", p.text)}>{p.icon} {p.label} <span className="text-slate-500 font-normal text-xs">({p.price} × {p.cnt})</span></span>
+                                                    <span className={cn("font-mono text-sm font-bold", p.text)}>฿{p.rev.toLocaleString()}</span>
+                                                </div>
+                                                <div className="h-5 bg-slate-800 rounded-lg overflow-hidden">
+                                                    <motion.div initial={{ width: 0 }} animate={{ width: `${p.rev / mx * 100}%` }} transition={{ delay: 0.4, duration: 0.7 }} className={cn("h-full rounded-lg", p.bar)} />
+                                                </div>
+                                            </div>
+                                        ))}
+                                        <div className="pt-3 border-t border-slate-800 flex justify-between items-center">
+                                            <span className="text-sm text-slate-400">{t.admin.totalRevenueAll}</span>
+                                            <span className="text-2xl font-black text-emerald-400 font-mono">฿{(ar + er).toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </div>
-                    </motion.div>
-
-                    {/* Expiring Soon */}
-                    {(() => { const now = new Date(); const sd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); const exp = licenses.filter(l => { const e = new Date(l.expires_at); return l.is_active && e > now && e <= sd; }); if (!exp.length) return null; return (<div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-5 mt-5"><h4 className="flex items-center gap-2 text-sm font-black text-amber-400 uppercase tracking-wide mb-3"><AlertCircle className="w-4 h-4" /> {t.admin.expiringLicenses} ({exp.length})</h4><div className="space-y-2">{exp.slice(0, 5).map(l => { const dl = Math.ceil((new Date(l.expires_at).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)); return (<div key={l.id} className="flex items-center justify-between p-2.5 bg-slate-950/60 rounded-xl border border-slate-800"><div className="flex items-center gap-2"><code className="text-xs font-mono text-amber-400/80 bg-slate-900 px-1.5 py-0.5 rounded">{l.license_key}</code><span className="text-xs text-foreground">{l.owner_name || 'N/A'}</span></div><div className="flex items-center gap-2"><Badge className={cn(dl <= 2 ? 'bg-red-500/15 text-red-400 border-red-500/30' : 'bg-amber-500/15 text-amber-400 border-amber-500/30', 'text-[10px] border')}>เหลือ {dl} วัน</Badge><Button size="sm" variant="outline" className="h-7 text-xs border-slate-700 text-slate-300 hover:bg-amber-500 hover:text-black hover:border-amber-500" onClick={() => extendLicense(l.id, 30)}>+30 วัน</Button></div></div>); })}</div></div>); })()}
-
-                    {/* Monthly Report */}
-                    <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 mt-5">
-                        <h4 className="flex items-center gap-2 text-sm font-black text-white uppercase tracking-wide mb-4"><TrendingUp className="w-4 h-4 text-amber-500" />{t.admin.monthlyReport}</h4>
-                            {(() => { const months: { month: string; count: number; revenue: number }[] = []; const now = new Date(); for (let i = 5; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); const me = new Date(now.getFullYear(), now.getMonth() - i + 1, 0); const ml = licenses.filter(l => { const c = new Date(l.created_at); return c >= d && c <= me; }); const rv = ml.reduce((s, l) => l.package === 'agent' ? s + 1390 : l.package === 'elite' ? s + 2990 : s, 0); months.push({ month: d.toLocaleDateString('th-TH', { month: 'short', year: '2-digit' }), count: ml.length, revenue: rv }); } const mc = Math.max(...months.map(m => m.count), 1); const mr = Math.max(...months.map(m => m.revenue), 1); return (<div className="space-y-4"><div><h4 className="text-xs font-bold text-foreground mb-2 flex items-center gap-1.5 uppercase tracking-wider"><Key className="w-3.5 h-3.5 text-blue-400" />จำนวน License</h4><div className="flex items-end gap-2 h-24">{months.map((m, i) => (<div key={i} className="flex-1 flex flex-col items-center gap-0.5"><span className="text-[10px] font-mono text-foreground">{m.count}</span><div className="w-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-t transition-all" style={{ height: `${(m.count / mc) * 100}%`, minHeight: m.count > 0 ? '6px' : '2px' }} /><span className="text-[10px] text-foreground">{m.month}</span></div>))}</div></div><div className="pt-3 border-t border-slate-800"><h4 className="text-xs font-bold text-foreground mb-2 flex items-center gap-1.5 uppercase tracking-wider"><DollarSign className="w-3.5 h-3.5 text-emerald-400" />รายได้ (บาท)</h4><div className="flex items-end gap-2 h-24">{months.map((m, i) => (<div key={i} className="flex-1 flex flex-col items-center gap-0.5"><span className="text-[10px] font-mono text-foreground">{m.revenue > 0 ? `฿${(m.revenue / 1000).toFixed(1)}k` : '-'}</span><div className="w-full bg-gradient-to-t from-green-500 to-emerald-400 rounded-t transition-all" style={{ height: `${(m.revenue / mr) * 100}%`, minHeight: m.revenue > 0 ? '6px' : '2px' }} /><span className="text-[10px] text-slated-foreground">{m.month}</span></div>))}</div></div></div>); })()}
                     </div>
+
+                    {/* ── Time-Range Chart ── */}
+                    {(() => {
+                        const now = new Date();
+                        const periods: { label: string; start: Date; end: Date }[] = [];
+                        if (chartRange === '7d') {
+                            for (let i = 6; i >= 0; i--) {
+                                const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+                                const end = new Date(d); end.setHours(23, 59, 59);
+                                periods.push({ label: d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }), start: d, end });
+                            }
+                        } else if (chartRange === 'month') {
+                            const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+                            for (let i = 1; i <= daysInMonth; i++) {
+                                const d = new Date(now.getFullYear(), now.getMonth(), i);
+                                if (d > now) break;
+                                const end = new Date(d); end.setHours(23, 59, 59);
+                                periods.push({ label: String(i), start: d, end });
+                            }
+                        } else {
+                            const mCount = chartRange === '3m' ? 3 : chartRange === '6m' ? 6 : 12;
+                            for (let i = mCount - 1; i >= 0; i--) {
+                                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                                const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
+                                periods.push({ label: d.toLocaleDateString('th-TH', { month: 'short', year: '2-digit' }), start: d, end });
+                            }
+                        }
+                        const data = periods.map(p => {
+                            const pl = licenses.filter(l => { const c = new Date(l.created_at); return c >= p.start && c <= p.end; });
+                            const rev = pl.reduce((s, l) => l.package === 'agent' ? s + 1390 : l.package === 'elite' ? s + 2990 : s, 0);
+                            return { ...p, count: pl.length, revenue: rev };
+                        });
+                        const maxC = Math.max(...data.map(d => d.count), 1);
+                        const maxR = Math.max(...data.map(d => d.revenue), 1);
+                        const rangeLabel: Record<string, string> = { '7d': '7 วันล่าสุด', 'month': 'เดือนนี้', '3m': '3 เดือนล่าสุด', '6m': '6 เดือนล่าสุด', '1y': '1 ปีล่าสุด' };
+                        return (
+                            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5">
+                                <h4 className="flex items-center gap-2 text-sm font-black text-white uppercase tracking-wide mb-5">
+                                    <TrendingUp className="w-4 h-4 text-amber-500" /> กราฟรายงาน — {rangeLabel[chartRange]}
+                                </h4>
+                                <div className="space-y-6">
+                                    <div>
+                                        <p className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-3 flex items-center gap-1.5"><Key className="w-3.5 h-3.5" /> จำนวน License</p>
+                                        <div className="flex items-end gap-1 h-28">
+                                            {data.map((d, i) => (
+                                                <div key={i} className="flex-1 flex flex-col items-center gap-1 group cursor-default">
+                                                    <div className="relative w-full flex items-end" style={{ height: '80px' }}>
+                                                        <motion.div key={`${chartRange}-lc-${i}`} initial={{ height: 0 }} animate={{ height: d.count > 0 ? `${(d.count / maxC) * 100}%` : '3px' }} transition={{ delay: i * 0.03, duration: 0.5, ease: 'easeOut' }}
+                                                            className={cn("w-full rounded-t-md", d.count > 0 ? "bg-gradient-to-t from-blue-600 to-blue-400 shadow-lg shadow-blue-500/20" : "bg-slate-800")} />
+                                                        {d.count > 0 && <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] font-mono font-bold text-blue-300 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">{d.count}</span>}
+                                                    </div>
+                                                    <span className="text-[8px] text-slate-500 text-center leading-tight">{d.label}</span>
+                                                    {d.count > 0 && <span className="text-[8px] font-mono font-bold text-blue-400">{d.count}</span>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="pt-4 border-t border-slate-800">
+                                        <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3 flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5" /> รายได้ (บาท)</p>
+                                        <div className="flex items-end gap-1 h-28">
+                                            {data.map((d, i) => (
+                                                <div key={i} className="flex-1 flex flex-col items-center gap-1 group cursor-default">
+                                                    <div className="relative w-full flex items-end" style={{ height: '80px' }}>
+                                                        <motion.div key={`${chartRange}-rv-${i}`} initial={{ height: 0 }} animate={{ height: d.revenue > 0 ? `${(d.revenue / maxR) * 100}%` : '3px' }} transition={{ delay: i * 0.03, duration: 0.5, ease: 'easeOut' }}
+                                                            className={cn("w-full rounded-t-md", d.revenue > 0 ? "bg-gradient-to-t from-emerald-600 to-emerald-400 shadow-lg shadow-emerald-500/20" : "bg-slate-800")} />
+                                                        {d.revenue > 0 && <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] font-mono font-bold text-emerald-300 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">฿{d.revenue.toLocaleString()}</span>}
+                                                    </div>
+                                                    <span className="text-[8px] text-slate-500 text-center leading-tight">{d.label}</span>
+                                                    {d.revenue > 0 && <span className="text-[8px] font-mono font-bold text-emerald-400">฿{(d.revenue / 1000).toFixed(1)}k</span>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
+
+                    {/* ── Revenue Detail Table (12 months) ── */}
+                    {(() => {
+                        const now = new Date();
+                        const months = Array.from({ length: 12 }, (_, idx) => {
+                            const i = 11 - idx;
+                            const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                            const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
+                            const ml = licenses.filter(l => { const c = new Date(l.created_at); return c >= start && c <= end; });
+                            const free = ml.filter(l => l.package === 'free').length;
+                            const agent = ml.filter(l => l.package === 'agent').length;
+                            const elite = ml.filter(l => l.package === 'elite').length;
+                            const revenue = agent * 1390 + elite * 2990;
+                            const startStr = start.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+                            const endStr = end.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+                            return { label: start.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' }), range: `${startStr} – ${endStr}`, free, agent, elite, count: ml.length, revenue };
+                        });
+                        const totalRev = months.reduce((s, m) => s + m.revenue, 0);
+                        const exportCSV = () => {
+                            const header = 'เดือน,ช่วงวันที่,Rookie (ฟรี),Top Agent (฿1390),Elite (฿2990),รวม License,รายได้รวม (฿)';
+                            const rows = months.map(m => `${m.label},"${m.range}",${m.free},${m.agent},${m.elite},${m.count},${m.revenue}`).join('\n');
+                            const csv = `\uFEFF${header}\n${rows}\nรวมทั้งหมด,,,,,,${totalRev}`;
+                            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url; a.download = `grandstate_revenue_${new Date().toISOString().slice(0, 7)}.csv`; a.click();
+                            URL.revokeObjectURL(url);
+                            toast.success('ส่งออกข้อมูลรายได้สำเร็จ');
+                        };
+                        return (
+                            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-5 py-4 border-b border-slate-800 gap-3">
+                                    <div>
+                                        <h4 className="flex items-center gap-2 text-sm font-black text-white uppercase tracking-wide"><TrendingUp className="w-4 h-4 text-purple-400" /> รายได้รายละเอียด</h4>
+                                        <p className="text-[10px] text-slate-500 mt-0.5">ข้อมูลย้อนหลัง 12 เดือน — แยกตามแพ็คเกจ พร้อมช่วงวันที่</p>
+                                    </div>
+                                    <button onClick={exportCSV} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-[11px] rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex-shrink-0">
+                                        <Download className="w-3.5 h-3.5" /> ส่งออก CSV
+                                    </button>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-[11px]">
+                                        <thead>
+                                            <tr className="border-b border-slate-800 bg-slate-950/40">
+                                                <th className="text-left px-5 py-3 text-slate-400 font-bold uppercase tracking-wider">เดือน</th>
+                                                <th className="text-left px-4 py-3 text-slate-400 font-bold uppercase tracking-wider">ช่วงวันที่</th>
+                                                <th className="text-center px-3 py-3 text-emerald-400 font-bold">Rookie</th>
+                                                <th className="text-center px-3 py-3 text-amber-400 font-bold">Top Agent</th>
+                                                <th className="text-center px-3 py-3 text-purple-400 font-bold">Elite</th>
+                                                <th className="text-center px-3 py-3 text-blue-400 font-bold">รวม</th>
+                                                <th className="text-right px-5 py-3 text-emerald-400 font-bold">รายได้</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {months.map((m, i) => (
+                                                <tr key={i} className={cn("border-b border-slate-800/50 transition-colors hover:bg-slate-800/30", m.revenue > 0 ? "bg-emerald-500/[0.02]" : "")}>
+                                                    <td className="px-5 py-3 text-white font-semibold whitespace-nowrap">{m.label}</td>
+                                                    <td className="px-4 py-3 text-slate-400 font-mono text-[10px] whitespace-nowrap">{m.range}</td>
+                                                    <td className="px-3 py-3 text-center"><span className={cn("font-mono font-bold", m.free > 0 ? "text-emerald-400" : "text-slate-700")}>{m.free > 0 ? m.free : '—'}</span></td>
+                                                    <td className="px-3 py-3 text-center"><span className={cn("font-mono font-bold", m.agent > 0 ? "text-amber-400" : "text-slate-700")}>{m.agent > 0 ? m.agent : '—'}</span></td>
+                                                    <td className="px-3 py-3 text-center"><span className={cn("font-mono font-bold", m.elite > 0 ? "text-purple-400" : "text-slate-700")}>{m.elite > 0 ? m.elite : '—'}</span></td>
+                                                    <td className="px-3 py-3 text-center"><span className={cn("font-mono font-bold", m.count > 0 ? "text-blue-400" : "text-slate-700")}>{m.count > 0 ? m.count : '—'}</span></td>
+                                                    <td className="px-5 py-3 text-right"><span className={cn("font-mono font-bold text-sm", m.revenue > 0 ? "text-emerald-400" : "text-slate-700")}>{m.revenue > 0 ? `฿${m.revenue.toLocaleString()}` : '—'}</span></td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                        <tfoot>
+                                            <tr className="border-t-2 border-amber-500/30 bg-amber-500/5">
+                                                <td colSpan={2} className="px-5 py-4 text-sm font-black text-white uppercase tracking-wide">รวมทั้งหมด</td>
+                                                <td className="px-3 py-4 text-center font-black text-emerald-400 font-mono">{months.reduce((s, m) => s + m.free, 0)}</td>
+                                                <td className="px-3 py-4 text-center font-black text-amber-400 font-mono">{months.reduce((s, m) => s + m.agent, 0)}</td>
+                                                <td className="px-3 py-4 text-center font-black text-purple-400 font-mono">{months.reduce((s, m) => s + m.elite, 0)}</td>
+                                                <td className="px-3 py-4 text-center font-black text-blue-400 font-mono">{months.reduce((s, m) => s + m.count, 0)}</td>
+                                                <td className="px-5 py-4 text-right text-lg font-black text-emerald-400 font-mono">฿{totalRev.toLocaleString()}</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        );
+                    })()}
+
+                    {/* ── Expiring Soon ── */}
+                    {(() => {
+                        const now = new Date();
+                        const sd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+                        const exp = licenses.filter(l => { const e = new Date(l.expires_at); return l.is_active && e > now && e <= sd; });
+                        if (!exp.length) return null;
+                        return (
+                            <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-5">
+                                <h4 className="flex items-center gap-2 text-sm font-black text-amber-400 uppercase tracking-wide mb-3"><AlertCircle className="w-4 h-4" /> {t.admin.expiringLicenses} ({exp.length})</h4>
+                                <div className="space-y-2">
+                                    {exp.slice(0, 5).map(l => {
+                                        const dl = Math.ceil((new Date(l.expires_at).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                                        return (
+                                            <div key={l.id} className="flex items-center justify-between p-2.5 bg-slate-950/60 rounded-xl border border-slate-800">
+                                                <div className="flex items-center gap-2"><code className="text-xs font-mono text-amber-400/80 bg-slate-900 px-1.5 py-0.5 rounded">{l.license_key}</code><span className="text-xs text-slate-400">{l.owner_name || 'N/A'}</span></div>
+                                                <div className="flex items-center gap-2">
+                                                    <Badge className={cn(dl <= 2 ? 'bg-red-500/15 text-red-400 border-red-500/30' : 'bg-amber-500/15 text-amber-400 border-amber-500/30', 'text-[10px] border')}>เหลือ {dl} วัน</Badge>
+                                                    <Button size="sm" variant="outline" className="h-7 text-xs border-slate-700 text-slate-300 hover:bg-amber-500 hover:text-black hover:border-amber-500" onClick={() => extendLicense(l.id, 30)}>+30 วัน</Button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    })()}
+
                     </div></div>
                 </>)}
 

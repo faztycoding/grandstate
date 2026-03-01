@@ -2178,7 +2178,7 @@ export default function AdminDashboard() {
                                     const days = Array.from(dayMap.entries()); // sorted newest first
 
                                     return (
-                                        <div className="mt-5 bg-slate-950/80 backdrop-blur-sm rounded-xl border border-slate-800 overflow-hidden">
+                                        <div className="mt-5 bg-slate-950/80 backdrop-blur-sm rounded-xl border border-slate-800 overflow-hidden" onClick={e => e.stopPropagation()}>
                                             {/* Console header */}
                                             <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-800">
                                                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -2213,7 +2213,7 @@ export default function AdminDashboard() {
                                                             {/* Day header — clickable */}
                                                             <button
                                                                 className="w-full flex items-center gap-2 px-4 py-2 hover:bg-slate-800/40 transition-colors text-left"
-                                                                onClick={() => toggleDay(key)}>
+                                                                onClick={e => { e.stopPropagation(); toggleDay(key); }}>
                                                                 <span className={cn("text-[9px] transition-transform", isOpen ? "rotate-90" : "rotate-0")}>▶</span>
                                                                 <span className="text-[10px] font-bold text-amber-400/80">[{label}]</span>
                                                                 <span className="text-[9px] text-slate-500 ml-1">{entries.length} events</span>

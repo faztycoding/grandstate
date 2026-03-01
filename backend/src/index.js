@@ -2170,6 +2170,27 @@ app.post('/api/facebook/connect', ...auth, async (req, res) => {
     sessionManager.registerBrowserStart();
 
     await req.groupWorker.page.goto('https://www.facebook.com', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await new Promise(r => setTimeout(r, 3000));
+
+    // Auto-click "ดำเนินการต่อ" (Continue as) button if Facebook shows profile chooser
+    try {
+      const clicked = await req.groupWorker.page.evaluate(() => {
+        // Look for "ดำเนินการต่อ" or "Continue" or "Log In" button
+        const btns = document.querySelectorAll('[role="button"], button, a, div[tabindex="0"]');
+        for (const btn of btns) {
+          const text = (btn.textContent || '').trim();
+          if (text === 'ดำเนินการต่อ' || text === 'Continue' || text === 'Log Into' || text === 'เข้าสู่ระบบ') {
+            btn.click();
+            return text;
+          }
+        }
+        return null;
+      });
+      if (clicked) {
+        console.log(`🔗 [FB] Auto-clicked "${clicked}" on profile chooser`);
+        await new Promise(r => setTimeout(r, 3000));
+      }
+    } catch (e) { /* non-critical */ }
 
     res.json({ success: true, message: 'Browser opened - Please login to Facebook', status: 'pending_login', slot });
   } catch (error) {
@@ -2202,6 +2223,25 @@ app.post('/api/facebook/auto-login', ...auth, async (req, res) => {
 
     const initialTitle = await page.title().catch(() => '');
     console.log(`🔑 [${shortId}] Page title: "${initialTitle}" | URL: ${page.url()}`);
+
+    // ── Step 1.5: Handle "Continue as" profile chooser page ──
+    try {
+      const clickedContinue = await page.evaluate(() => {
+        const btns = document.querySelectorAll('[role="button"], button, a, div[tabindex="0"]');
+        for (const btn of btns) {
+          const text = (btn.textContent || '').trim();
+          if (text === 'ดำเนินการต่อ' || text === 'Continue' || text === 'Log Into') {
+            btn.click();
+            return text;
+          }
+        }
+        return null;
+      });
+      if (clickedContinue) {
+        console.log(`🔑 [${shortId}] Auto-clicked "${clickedContinue}" on profile chooser`);
+        await new Promise(r => setTimeout(r, 5000));
+      }
+    } catch (e) { /* non-critical */ }
 
     // ── Step 2: Check if already logged in ──
     const alreadyLoggedIn = await page.evaluate(() => {

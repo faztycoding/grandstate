@@ -523,12 +523,12 @@ export default function Automation() {
               toast.success(notif.message, { duration: 5000 });
               // Browser push notification (if permission granted)
               if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-                new Notification('HomePost Pro', { body: notif.message, icon: '/favicon.ico' });
+                new Notification('GrandState', { body: notif.message, icon: '/favicon.ico' });
               }
             } else if (notif.type === 'queue_timeout') {
               toast.error(notif.message, { duration: 6000 });
               if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-                new Notification('HomePost Pro', { body: notif.message, icon: '/favicon.ico' });
+                new Notification('GrandState', { body: notif.message, icon: '/favicon.ico' });
               }
             }
           }

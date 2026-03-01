@@ -71,6 +71,7 @@ import { useAppTheme, THEME_PALETTES } from '@/hooks/useTheme';
 import { useLicenseAuth } from '@/hooks/useLicenseAuth';
 import { supabase } from '@/lib/supabase';
 import { apiFetch } from '@/lib/config';
+import { APP_VERSION } from '@/lib/version';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const PKG_CONFIG = {
@@ -357,7 +358,7 @@ export default function Settings() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   const handleChangePassword = async () => {
-    if (!newPassword || !confirmNewPassword) {
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
       toast.error(isEn ? 'Please fill in all fields' : 'กรุณากรอกข้อมูลให้ครบ');
       return;
     }
@@ -369,8 +370,27 @@ export default function Settings() {
       toast.error(isEn ? 'Passwords do not match' : 'รหัสผ่านใหม่ไม่ตรงกัน');
       return;
     }
+    if (currentPassword === newPassword) {
+      toast.error(isEn ? 'New password must be different from current password' : 'รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสเดิม');
+      return;
+    }
     setIsChangingPassword(true);
     try {
+      // Verify current password by re-authenticating
+      const email = authUser?.email;
+      if (!email) {
+        toast.error(isEn ? 'User email not found' : 'ไม่พบอีเมลผู้ใช้');
+        return;
+      }
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email,
+        password: currentPassword,
+      });
+      if (verifyError) {
+        toast.error(isEn ? 'Current password is incorrect' : 'รหัสผ่านปัจจุบันไม่ถูกต้อง');
+        return;
+      }
+      // Current password verified — now update to new password
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
       toast.success(isEn ? 'Password changed successfully' : 'เปลี่ยนรหัสผ่านสำเร็จ');
@@ -440,22 +460,36 @@ export default function Settings() {
     toast.success(s.resetConfirm);
   };
 
-  const handleExportData = () => {
-    const data = {
-      profile: { name: displayName, lineId },
-      properties: JSON.parse(localStorage.getItem('properties') || '[]'),
-      groups: JSON.parse(localStorage.getItem('groups') || '[]'),
-      postHistory: JSON.parse(localStorage.getItem('healthcheck_post_history') || '[]'),
-      exportedAt: new Date().toISOString(),
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `grandstate-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success(t.common.success);
+  const handleExportData = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error(isEn ? 'Not logged in' : 'ยังไม่ได้เข้าสู่ระบบ'); return; }
+
+      const [propertiesRes, groupsRes, postHistoryRes] = await Promise.all([
+        supabase.from('properties').select('*').eq('user_id', user.id),
+        supabase.from('facebook_groups').select('*').eq('user_id', user.id),
+        apiFetch('/api/posting-history').then(r => r.json()).catch(() => ({ history: [] })),
+      ]);
+
+      const data = {
+        profile: { name: displayName, lineId, email: user.email },
+        properties: propertiesRes.data || [],
+        groups: groupsRes.data || [],
+        postHistory: postHistoryRes.history || [],
+        exportedAt: new Date().toISOString(),
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `grandstate-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(t.common.success);
+    } catch (err) {
+      console.error('Export error:', err);
+      toast.error(isEn ? 'Export failed' : 'ส่งออกข้อมูลไม่สำเร็จ');
+    }
   };
 
   // Real usage stats
@@ -615,6 +649,11 @@ export default function Settings() {
               </div>
               <div className="space-y-4">
                 <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-300 ml-1">{isEn ? 'Current Password' : 'รหัสผ่านปัจจุบัน'}</label>
+                  <Input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="••••••••"
+                    className="bg-black border-2 border-slate-800 rounded-xl h-11 px-4 text-sm text-amber-400 focus:border-amber-500/50 placeholder:text-muted-foreground" />
+                </div>
+                <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-slate-300 ml-1">{isEn ? 'New Password' : 'รหัสผ่านใหม่'}</label>
                   <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••"
                     className="bg-black border-2 border-slate-800 rounded-xl h-11 px-4 text-sm text-amber-400 focus:border-amber-500/50 placeholder:text-muted-foreground" />
@@ -624,7 +663,7 @@ export default function Settings() {
                   <Input type="password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} placeholder="••••••••"
                     className="bg-black border-2 border-slate-800 rounded-xl h-11 px-4 text-sm text-amber-400 focus:border-amber-500/50 placeholder:text-muted-foreground" />
                 </div>
-                <button onClick={handleChangePassword} disabled={isChangingPassword || !newPassword || !confirmNewPassword}
+                <button onClick={handleChangePassword} disabled={isChangingPassword || !currentPassword || !newPassword || !confirmNewPassword}
                   className="w-full py-3.5 bg-slate-950 border-2 border-amber-500 text-amber-500 font-semibold text-sm rounded-xl flex items-center justify-center gap-2 hover:bg-amber-500 hover:text-black transition-all shadow-lg shadow-amber-500/10 disabled:opacity-30 disabled:cursor-not-allowed">
                   {isChangingPassword ? <><Loader2 className="w-4 h-4 animate-spin" />{isEn ? 'Changing...' : 'กำลังเปลี่ยน...'}</> : <><ShieldCheck size={16} />{isEn ? 'Change Password' : 'เปลี่ยนรหัสผ่าน'}</>}
                 </button>
@@ -1078,7 +1117,7 @@ export default function Settings() {
               </div>
               <div className="flex items-center justify-between text-[9px]">
                 <span className="text-slate-400 uppercase tracking-wider font-bold">Version</span>
-                <span className="text-slate-400 font-mono">Grand$tate v1.0</span>
+                <span className="text-slate-400 font-mono">Grand$tate v{APP_VERSION}</span>
               </div>
             </div>
           </div>

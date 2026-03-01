@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { motion, useInView } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { useRef, useState, useEffect } from 'react';
+import { APP_VERSION } from '@/lib/version';
 
 // ── Animated Counter ──
 function AnimCounter({ target, duration = 1.2 }: { target: number; duration?: number }) {
@@ -433,7 +434,7 @@ export default function Pricing() {
               LINE @grandstate
             </a>
           </p>
-          <p className="text-xs text-slate-400 font-mono mt-3 tracking-widest">GRAND$TATE ENGINE v1.0</p>
+          <p className="text-xs text-slate-400 font-mono mt-3 tracking-widest">GRAND$TATE ENGINE v{APP_VERSION}</p>
         </div>
       </div>
     </DashboardLayout>

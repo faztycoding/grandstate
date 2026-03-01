@@ -154,6 +154,7 @@ export function GroupCard({
               checked={group.isActive}
               onCheckedChange={() => onToggleActive?.(group)}
               className="data-[state=checked]:bg-green-500"
+              aria-label={`Toggle ${group.name} active`}
             />
             
             {/* Open group URL - hidden on mobile */}
@@ -161,9 +162,10 @@ export function GroupCard({
               href={group.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden sm:inline-flex items-center justify-center h-9 w-9 rounded-md text-muted-foreground hover:text-primary hover:bg-accent"
+              className="inline-flex items-center justify-center h-8 w-8 sm:h-9 sm:w-9 rounded-md text-muted-foreground hover:text-primary hover:bg-accent"
               onClick={(e) => e.stopPropagation()}
               title="เปิดกลุ่ม"
+              aria-label={`Open ${group.name} in Facebook`}
             >
               <ExternalLink className="w-4 h-4" />
             </a>
@@ -173,12 +175,13 @@ export function GroupCard({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 text-muted-foreground hover:text-primary hidden sm:inline-flex"
+                className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-primary"
                 onClick={(e) => {
                   e.stopPropagation();
                   onEdit(group);
                 }}
                 title="แก้ไข"
+                aria-label={`Edit ${group.name}`}
               >
                 <Pencil className="w-4 h-4" />
               </Button>
@@ -194,6 +197,7 @@ export function GroupCard({
                 onDelete?.(group);
               }}
               title="ลบ"
+              aria-label={`Delete ${group.name}`}
             >
               <Trash2 className="w-4 h-4" />
             </Button>

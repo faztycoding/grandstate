@@ -32,16 +32,9 @@ import { useLicenseAuth, LicenseInfo } from '@/hooks/useLicenseAuth';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { PACKAGE_LIMITS } from '@/hooks/usePackageLimits';
 import { supabase } from '@/lib/supabase';
+import { apiFetch } from '@/lib/config';
 import { cn } from '@/lib/utils';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-
-interface SubscriptionHistoryItem {
-    id: string;
-    action: string;
-    package: string;
-    amount: number;
-    date: string;
-}
 
 const packageInfo = {
     free: {
@@ -71,9 +64,7 @@ export default function UserProfile() {
     const navigate = useNavigate();
     const { license, logout, currentPackage, limits } = useLicenseAuth();
     const { displayId } = useUserProfile();
-    const [subscriptionHistory, setSubscriptionHistory] = useState<SubscriptionHistoryItem[]>([]);
-
-    // Usage stats (mock - would come from actual usage tracking)
+    // Usage stats from backend
     const [usageStats, setUsageStats] = useState({
         postsToday: 0,
         groupsUsed: 0,
@@ -91,13 +82,20 @@ export default function UserProfile() {
     }, [license]);
 
     const fetchUsageStats = async () => {
-        // In a real app, this would fetch from a usage tracking table
-        // For now, we'll use mock data
-        setUsageStats({
-            postsToday: Math.floor(Math.random() * (pkgLimits.postsPerDay * 0.7)),
-            groupsUsed: Math.floor(Math.random() * (pkgLimits.maxGroups * 0.8)),
-            propertiesUsed: Math.floor(Math.random() * 10),
-        });
+        try {
+            const res = await apiFetch('/api/user/real-stats');
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const json = await res.json();
+            if (json.success) {
+                setUsageStats({
+                    postsToday: json.postsToday ?? 0,
+                    groupsUsed: json.groupsCount ?? 0,
+                    propertiesUsed: json.propertiesCount ?? 0,
+                });
+            }
+        } catch (err) {
+            console.warn('Failed to fetch usage stats:', err);
+        }
     };
 
     const formatDate = (dateString: string) => {

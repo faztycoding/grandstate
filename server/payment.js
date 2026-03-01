@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 const Omise = require('omise');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -66,6 +67,10 @@ function requirePaymentConfig(req, res, next) {
     }
     next();
 }
+
+// Rate limiting
+const chargeLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { success: false, error: 'Too many payment requests, please try again later' } });
+const webhookLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, message: { error: 'Too many webhook calls' } });
 
 // Middleware
 app.use(cors());
@@ -165,7 +170,7 @@ async function sendLicenseEmail(to, license) {
     const htmlContent = `
     <div style="font-family: 'Sarabun', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
         <div style="text-align: center; margin-bottom: 20px;">
-            <h1 style="color: #4F46E5; margin: 0;">HomePost Pro</h1>
+            <h1 style="color: #4F46E5; margin: 0;">GrandState</h1>
             <p style="color: #666;">ขอบคุณที่ไว้วางใจเลือกใช้บริการของเรา</p>
         </div>
         
@@ -179,7 +184,7 @@ async function sendLicenseEmail(to, license) {
         <div style="margin-bottom: 20px;">
             <h3 style="color: #374151;">วิธีใช้งาน:</h3>
             <ol style="color: #4B5563; line-height: 1.6;">
-                <li>เปิดโปรแกรม HomePost Pro</li>
+                <li>เปิดเว็บ GrandState (grandstate.io)</li>
                 <li>ไปที่หน้าตั้งค่า (Settings)</li>
                 <li>กรอก License Key ด้านบนลงในช่อง "Activate License"</li>
                 <li>กดปุ่มยืนยัน</li>
@@ -187,15 +192,15 @@ async function sendLicenseEmail(to, license) {
         </div>
 
         <div style="border-top: 1px solid #eee; padding-top: 20px; text-align: center; font-size: 12px; color: #9CA3AF;">
-            <p>หากมีข้อสงสัย ติดต่อเราได้ที่ Line OA: @homepostpro</p>
-            <p>© 2026 HomePost Pro. All rights reserved.</p>
+            <p>หากมีข้อสงสัย ติดต่อเราได้ที่ Line OA: @grandstate</p>
+            <p>© 2026 GrandState. All rights reserved.</p>
         </div>
     </div>
     `;
 
     try {
         await transporter.sendMail({
-            from: `"HomePost Pro Team" <${EMAIL_USER}>`,
+            from: `"GrandState Team" <${EMAIL_USER}>`,
             to: to,
             subject: `🎉 License Key ของคุณมาแล้ว! - ${license.licenseKey}`,
             html: htmlContent,
@@ -209,7 +214,7 @@ async function sendLicenseEmail(to, license) {
 // ===========================================
 // ENDPOINT: Create Charge
 // ===========================================
-app.post('/api/payment/charge', requirePaymentConfig, async (req, res) => {
+app.post('/api/payment/charge', chargeLimiter, requirePaymentConfig, async (req, res) => {
     try {
         const { source, token, amount, currency, package: packageId, description, email } = req.body;
 
@@ -328,7 +333,7 @@ app.get('/api/payment/status/:chargeId', requirePaymentConfig, async (req, res) 
 // ===========================================
 // ENDPOINT: Webhook (with signature verification)
 // ===========================================
-app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), requirePaymentConfig, async (req, res) => {
+app.post('/api/payment/webhook', webhookLimiter, express.raw({ type: 'application/json' }), requirePaymentConfig, async (req, res) => {
     try {
         // Verify webhook signature if available
         const signature = req.headers['omise-signature'];

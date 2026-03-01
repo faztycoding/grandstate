@@ -97,6 +97,7 @@ export function PropertyCard({ property, onEdit, onDelete, onPost, onPreview, on
                   size="icon"
                   className="h-8 w-8 bg-background/90 backdrop-blur-sm hover:bg-background shadow-md"
                   onClick={(e) => e.stopPropagation()}
+                  aria-label={`Actions for ${property.title}`}
                 >
                   <MoreVertical className="w-5 h-5" />
                 </Button>

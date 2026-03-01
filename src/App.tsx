@@ -9,6 +9,7 @@ import { ThemeProvider } from "@/hooks/useTheme";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AdminRoute } from "@/components/AdminRoute";
+import { CookieConsent } from "@/components/CookieConsent";
 import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
 
@@ -88,6 +89,7 @@ const App = () => (
             </Routes>
             </Suspense>
           </BrowserRouter>
+          <CookieConsent />
         </TooltipProvider>
       </LanguageProvider>
     </ThemeProvider>

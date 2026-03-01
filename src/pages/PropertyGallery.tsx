@@ -4,6 +4,7 @@ import { PropertyGalleryForm, PropertyFormData } from '@/components/automation/P
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { supabase } from '@/lib/supabase';
 
 export default function PropertyGallery() {
   const { t } = useLanguage();
@@ -23,17 +24,33 @@ export default function PropertyGallery() {
 
   const handleSave = async (data: PropertyFormData) => {
     setIsSaving(true);
-    
-    // Simulate saving
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Store as draft
-    const drafts = JSON.parse(localStorage.getItem('propertyDrafts') || '[]');
-    drafts.push({ ...data, savedAt: new Date().toISOString() });
-    localStorage.setItem('propertyDrafts', JSON.stringify(drafts));
-    
-    toast.success(g.saved);
-    setIsSaving(false);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error('กรุณาเข้าสู่ระบบก่อน'); return; }
+
+      const { error } = await supabase.from('properties').insert({
+        user_id: user.id,
+        title: data.title || 'Draft Property',
+        description: data.description || '',
+        price: parseFloat(data.price) || 0,
+        property_type: data.propertyType || 'house',
+        listing_type: data.listingType || 'sale',
+        location: data.location || '',
+        bedrooms: parseInt(data.bedrooms) || 0,
+        bathrooms: parseInt(data.bathrooms) || 0,
+        area_sqm: parseFloat(data.squareMeters) || 0,
+        images: data.images || [],
+        is_sold: false,
+      });
+
+      if (error) throw error;
+      toast.success(g.saved);
+    } catch (err) {
+      console.error('Save draft error:', err);
+      toast.error('บันทึกไม่สำเร็จ');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (

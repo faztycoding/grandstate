@@ -207,6 +207,9 @@ export default function AdminDashboard() {
     const [sseConnected, setSseConnected] = useState(false);
     const [sseLastUpdate, setSseLastUpdate] = useState<number>(0);
 
+    // Chart range for overview time-range filter
+    const [chartRange, setChartRange] = useState<'7d' | 'month' | '3m' | '6m' | '1y'>('month');
+
     // Clear job history
     const handleClearHistory = async (type: 'all' | 'success' | 'failed') => {
         const labels = { all: 'ทั้งหมด', success: 'ที่สำเร็จ', failed: 'ที่ล้มเหลว' };
@@ -217,7 +220,7 @@ export default function AdminDashboard() {
             const data = await res.json();
             if (data.success) { toast.success(`ลบประวัติสำเร็จ: ${data.removed} รายการ`); }
             else { toast.error(data.error || 'ลบไม่สำเร็จ'); }
-        } catch { toast.error('Network error'); } finally { setClearingHistory(false); }
+        } catch { toast.error(language === 'th' ? 'เกิดข้อผิดพลาด' : 'Network error'); } finally { setClearingHistory(false); }
     };
 
     // Export job history as CSV
@@ -238,7 +241,7 @@ export default function AdminDashboard() {
             document.body.appendChild(a); a.click();
             document.body.removeChild(a); URL.revokeObjectURL(url);
             toast.success(`Export สำเร็จ: ${data.history.length} รายการ`);
-        } catch { toast.error('Export ล้มเหลว'); } finally { setExportingHistory(false); }
+        } catch { toast.error(language === 'th' ? 'Export ล้มเหลว' : 'Export failed'); } finally { setExportingHistory(false); }
     };
 
     // Clear stale/ghost sessions manually
@@ -250,7 +253,7 @@ export default function AdminDashboard() {
             const data = await res.json();
             if (data.success) { toast.success(data.message); }
             else { toast.error(data.error); }
-        } catch { toast.error('Network error'); } finally { setClearingStale(false); }
+        } catch { toast.error(language === 'th' ? 'เกิดข้อผิดพลาด' : 'Network error'); } finally { setClearingStale(false); }
     };
 
     // Admin force-stop
@@ -286,7 +289,7 @@ export default function AdminDashboard() {
             const res = await apiFetch('/api/admin/ban-user', { method: 'POST', body: JSON.stringify({ targetUserId: fullUserId, banned: ban }) });
             const data = await res.json();
             if (data.success) { toast.success(data.message); } else { toast.error(data.error); }
-        } catch { toast.error('Failed'); } finally { setBanningUser(null); }
+        } catch { toast.error(language === 'th' ? 'ดำเนินการไม่สำเร็จ' : 'Failed'); } finally { setBanningUser(null); }
     };
 
     // User management: delete user + all data
@@ -317,7 +320,7 @@ export default function AdminDashboard() {
             const res = await apiFetch('/api/admin/change-package', { method: 'POST', body: JSON.stringify({ targetUserId: fullUserId, newPackage: newPkg, displayName }) });
             const data = await res.json();
             if (data.success) { toast.success(`เปลี่ยนเป็น ${newPkg.toUpperCase()} สำเร็จ`); await Promise.all([fetchUserLicenses(), fetchAllUsers()]); } else { toast.error(data.error); }
-        } catch { toast.error('Failed'); } finally { setChangingPkgUser(null); }
+        } catch { toast.error(language === 'th' ? 'ดำเนินการไม่สำเร็จ' : 'Failed'); } finally { setChangingPkgUser(null); }
     };
 
     // User licenses map: userId -> license info
@@ -400,9 +403,9 @@ export default function AdminDashboard() {
         try {
             const { error } = await supabase.from('support_tickets').delete().eq('id', ticketId);
             if (error) throw error;
-            toast.success('ลบ Ticket สำเร็จ');
+            toast.success(language === 'th' ? 'ลบ Ticket สำเร็จ' : 'Ticket deleted');
             fetchTickets();
-        } catch { toast.error('ลบไม่สำเร็จ'); } finally { setDeletingTicketId(null); }
+        } catch { toast.error(language === 'th' ? 'ลบไม่สำเร็จ' : 'Delete failed'); } finally { setDeletingTicketId(null); }
     };
 
     const handleReplyTicket = async (ticketId: string) => {
@@ -1269,7 +1272,7 @@ export default function AdminDashboard() {
                             const a = document.createElement('a');
                             a.href = url; a.download = `grandstate_revenue_${new Date().toISOString().slice(0, 7)}.csv`; a.click();
                             URL.revokeObjectURL(url);
-                            toast.success('ส่งออกข้อมูลรายได้สำเร็จ');
+                            toast.success(language === 'th' ? 'ส่งออกข้อมูลรายได้สำเร็จ' : 'Revenue data exported');
                         };
                         return (
                             <div className="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden">
@@ -3063,7 +3066,7 @@ export default function AdminDashboard() {
                                                     <button
                                                         className="flex items-center gap-2 px-4 py-3 bg-slate-800/50 text-amber-400 font-black text-[10px] rounded-xl border border-amber-500/20 hover:bg-slate-800 hover:border-amber-500/40 transition-all uppercase tracking-wider"
                                                         disabled={clearingStale}
-                                                        onClick={async () => { setClearingStale(true); try { const r = await adminApiFetch('/api/admin/clear-stale-sessions', { method: 'POST' }); const d = await r.json(); if (d.success) toast.success(`ล้าง ${d.cleared} session เก่าแล้ว`); } catch { toast.error('ล้าง session ไม่สำเร็จ'); } finally { setClearingStale(false); } }}>
+                                                        onClick={async () => { setClearingStale(true); try { const r = await apiFetch('/api/admin/clear-stale-sessions', { method: 'POST' }); const d = await r.json(); if (d.success) toast.success(`ล้าง ${d.cleared} session เก่าแล้ว`); } catch { toast.error(language === 'th' ? 'ล้าง session ไม่สำเร็จ' : 'Failed to clear sessions'); } finally { setClearingStale(false); } }}>
                                                         {clearingStale ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} ล้าง Node
                                                     </button>
                                                 )}

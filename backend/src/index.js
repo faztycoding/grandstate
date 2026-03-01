@@ -69,9 +69,12 @@ app.use(express.json({ limit: '50mb' }));
 // Rate limiting
 const apiLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 60, // 60 requests per minute per IP
+  max: 200, // 200 requests per minute per IP
   message: { success: false, error: 'Too many requests, please try again later' },
-  skip: (req) => req.path === '/session/active-users' || req.path === '/session/presence',
+  skip: (req) => {
+    const skipPaths = ['/session/active-users', '/session/presence', '/group-automation/status', '/marketplace-automation/status', '/group-automation/queue-status', '/health-check', '/worker-slots'];
+    return skipPaths.some(p => req.path.includes(p));
+  },
 });
 app.use('/api/', apiLimiter);
 
@@ -1403,7 +1406,10 @@ app.post('/api/group-automation/start', ...auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Group automation start error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    // Return 409 for "already running" instead of 500
+    const isAlreadyRunning = error.message?.includes('Automation') && error.message?.includes('กำลังทำงาน');
+    const statusCode = isAlreadyRunning ? 409 : 500;
+    res.status(statusCode).json({ success: false, error: error.message, errorType: isAlreadyRunning ? 'already_running' : 'server_error' });
   }
 });
 

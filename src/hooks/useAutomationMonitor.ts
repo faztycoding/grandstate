@@ -99,7 +99,7 @@ export function useAutomationMonitor() {
       } catch {
         // Silent — backend might be unavailable
       }
-    }, 1500);
+    }, 3000);
   }, []);
 
   // ── Poll queue status ──
@@ -130,7 +130,7 @@ export function useAutomationMonitor() {
           if (queuePollingRef.current) { clearInterval(queuePollingRef.current); queuePollingRef.current = null; }
         }
       } catch { /* silent */ }
-    }, 2000);
+    }, 5000);
   }, [startPolling]);
 
   // ── Initial check on mount — detect running automation ──

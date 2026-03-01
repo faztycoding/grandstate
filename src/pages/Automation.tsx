@@ -543,7 +543,7 @@ export default function Automation() {
           }
         }
       } catch { /* silent */ }
-    }, 2000);
+    }, 5000);
   }, []);
 
   // Cleanup queue polling on unmount
@@ -643,7 +643,7 @@ export default function Automation() {
       } catch (error) {
         // Silently fail - backend might not be running
       }
-    }, 1000);
+    }, 3000);
   }, [postingMode, refetchHealth, t]);
 
   // Cleanup polling on unmount

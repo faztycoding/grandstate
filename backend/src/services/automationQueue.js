@@ -90,6 +90,9 @@ class AutomationQueue {
   async tryStartOrEnqueue(userId, automationFn, config, extraContext = {}) {
     const automationType = extraContext.automationType || 'group';
 
+    // Run cleanup FIRST to clear any ghost/stale entries before any checks
+    this._cleanupStaleEntries();
+
     // If this user already has a running automation, reject
     if (this.running.has(userId)) {
       throw new Error('คุณมี Automation กำลังทำงานอยู่แล้ว กรุณารอให้เสร็จก่อน');
@@ -105,9 +108,6 @@ class AutomationQueue {
         estimatedWaitSec: this._estimateWait(pos, automationType),
       };
     }
-
-    // Run cleanup first to clear any ghost running entries before checking capacity
-    this._cleanupStaleEntries();
 
     // If there's capacity → run immediately
     if (this.running.size < this.maxConcurrent) {

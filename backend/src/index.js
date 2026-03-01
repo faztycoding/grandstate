@@ -2641,6 +2641,25 @@ app.post('/api/facebook/confirm-login', ...auth, async (req, res) => {
     const activeSlot = sessionManager.getActiveSlot(req.userId);
     const shortId = req.userId.substring(0, 8);
 
+    // Handle "Continue as" / "ดำเนินการต่อ" page first
+    try {
+      const clickedContinue = await page.evaluate(() => {
+        const btns = document.querySelectorAll('[role="button"], button, a, div[tabindex="0"]');
+        for (const btn of btns) {
+          const text = (btn.textContent || '').trim();
+          if (text === 'ดำเนินการต่อ' || text === 'Continue' || text === 'Log Into') {
+            btn.click();
+            return text;
+          }
+        }
+        return null;
+      });
+      if (clickedContinue) {
+        console.log(`🔗 [confirm-login] [${shortId}] Auto-clicked "${clickedContinue}" on profile chooser`);
+        await new Promise(r => setTimeout(r, 4000));
+      }
+    } catch (e) { /* non-critical */ }
+
     // Check if login form is present on current page
     const hasLoginForm = await page.evaluate(() => {
       return !!(document.querySelector('input[name="email"]') ||
@@ -2649,10 +2668,10 @@ app.post('/api/facebook/confirm-login', ...auth, async (req, res) => {
                 document.querySelector('#pass'));
     }).catch(() => true);
 
-    // Also check page title
+    // Check page title for explicit login keywords (NOT just 'facebook' — homepage also has that title)
     const pageTitle = await page.title().catch(() => '');
     const titleLower = pageTitle.toLowerCase();
-    const titleIsLogin = titleLower.includes('log in') || titleLower.includes('เข้าสู่ระบบ') || titleLower === 'facebook';
+    const titleIsLogin = titleLower.includes('log in') || titleLower.includes('เข้าสู่ระบบ');
 
     const isLoggedIn = !hasLoginForm && !titleIsLogin;
     console.log(`🔍 [confirm-login] [${shortId}] hasLoginForm=${hasLoginForm} titleIsLogin=${titleIsLogin} title="${pageTitle}" → logged_in=${isLoggedIn}`);

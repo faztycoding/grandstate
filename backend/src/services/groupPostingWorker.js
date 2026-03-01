@@ -2828,21 +2828,34 @@ export class GroupPostingWorker {
       const url = this.page.url();
       // If on facebook.com, check DOM for login form elements
       if (url.includes('facebook.com') && !url.includes('/login') && !url.includes('m.facebook.com/login')) {
-        const isLoggedIn = await this.page.evaluate(() => {
-          // Any of these = NOT logged in (login form visible)
-          if (document.querySelector('input[name="email"]')) return false;
-          if (document.querySelector('input[name="pass"]')) return false;
-          if (document.querySelector('#email')) return false;
-          if (document.querySelector('#pass')) return false;
-          if (document.querySelector('button[name="login"]')) return false;
-          if (document.querySelector('#m_login_email')) return false;
-          if (document.querySelector('form[action*="login"]')) return false;
-          // Extra: check page title for login keywords
+        const result = await this.page.evaluate(() => {
+          // Check for login form elements = NOT logged in
+          if (document.querySelector('input[name="email"]')) return 'login_form';
+          if (document.querySelector('input[name="pass"]')) return 'login_form';
+          if (document.querySelector('#email')) return 'login_form';
+          if (document.querySelector('#pass')) return 'login_form';
+          if (document.querySelector('button[name="login"]')) return 'login_form';
+          if (document.querySelector('#m_login_email')) return 'login_form';
+          if (document.querySelector('form[action*="login"]')) return 'login_form';
+          // Check for "Continue as" / "ดำเนินการต่อ" page
+          const btns = document.querySelectorAll('[role="button"], button, a, div[tabindex="0"]');
+          for (const btn of btns) {
+            const text = (btn.textContent || '').trim();
+            if (text === 'ดำเนินการต่อ' || text === 'Continue' || text === 'Log Into') {
+              btn.click();
+              return 'continue_clicked';
+            }
+          }
+          // Check title for explicit login keywords (but NOT just 'facebook' — homepage also has that title)
           const title = (document.title || '').toLowerCase();
-          if (title.includes('log in') || title.includes('เข้าสู่ระบบ') || title === 'facebook') return false;
+          if (title.includes('log in') || title.includes('เข้าสู่ระบบ')) return 'login_page';
+          return 'logged_in';
+        }).catch(() => 'error');
+        if (result === 'continue_clicked') {
+          await this.delay(4000);
           return true;
-        }).catch(() => false);
-        return isLoggedIn;
+        }
+        return result === 'logged_in';
       }
       return false;
     } catch (error) {
@@ -2870,6 +2883,24 @@ export class GroupPostingWorker {
 
       await this.delay(2000);
 
+      // Handle "Continue as" page if it appears
+      try {
+        const clicked = await this.page.evaluate(() => {
+          const btns = document.querySelectorAll('[role="button"], button, a, div[tabindex="0"]');
+          for (const btn of btns) {
+            const text = (btn.textContent || '').trim();
+            if (text === 'ดำเนินการต่อ' || text === 'Continue' || text === 'Log Into') {
+              btn.click();
+              return text;
+            }
+          }
+          return null;
+        });
+        if (clicked) {
+          await this.delay(4000);
+        }
+      } catch (e) { /* non-critical */ }
+
       const isLoggedIn = await this.page.evaluate(() => {
         if (document.querySelector('input[name="email"]')) return false;
         if (document.querySelector('input[name="pass"]')) return false;
@@ -2877,7 +2908,7 @@ export class GroupPostingWorker {
         if (document.querySelector('#pass')) return false;
         if (document.querySelector('button[name="login"]')) return false;
         const title = (document.title || '').toLowerCase();
-        if (title.includes('log in') || title.includes('เข้าสู่ระบบ') || title === 'facebook') return false;
+        if (title.includes('log in') || title.includes('เข้าสู่ระบบ')) return false;
         return true;
       });
 

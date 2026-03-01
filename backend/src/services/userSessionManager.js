@@ -344,6 +344,26 @@ class UserSessionManager {
     await page.goto('https://www.facebook.com/', { waitUntil: 'networkidle2', timeout: 30000 });
     await new Promise(r => setTimeout(r, 3000));
 
+    // Handle "Continue as" / "ดำเนินการต่อ" profile chooser page
+    try {
+      const clickedContinue = await page.evaluate(() => {
+        const btns = document.querySelectorAll('[role="button"], button, a, div[tabindex="0"]');
+        for (const btn of btns) {
+          const text = (btn.textContent || '').trim();
+          if (text === 'ดำเนินการต่อ' || text === 'Continue' || text === 'Log Into') {
+            btn.click();
+            return text;
+          }
+        }
+        return null;
+      });
+      if (clickedContinue) {
+        console.log(`🔑 [${shortId}] Auto-clicked "${clickedContinue}" on profile chooser`);
+        await new Promise(r => setTimeout(r, 5000));
+        return true; // Successfully continued as existing profile
+      }
+    } catch (e) { /* non-critical */ }
+
     // Check if already logged in
     const alreadyLoggedIn = await page.evaluate(() => {
       return !document.querySelector('input[name="email"]') &&

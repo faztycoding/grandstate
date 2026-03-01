@@ -2706,6 +2706,7 @@ export class GroupPostingWorker {
       '--disable-gpu',
       '--no-first-run',
       '--disable-extensions',
+      '--disable-notifications',
       ...stealthArgs,
     ];
     const localArgs = [
@@ -2717,6 +2718,7 @@ export class GroupPostingWorker {
       '--disable-gpu',
       '--disable-software-rasterizer',
       '--disable-extensions',
+      '--disable-notifications',
       '--no-first-run',
       ...stealthArgs,
     ];

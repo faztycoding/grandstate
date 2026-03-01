@@ -364,6 +364,7 @@ export default function AdminDashboard() {
     const [ticketFilter, setTicketFilter] = useState<string>('all');
     const [replyingTicket, setReplyingTicket] = useState<string | null>(null);
     const [replyText, setReplyText] = useState('');
+    const [deletingTicketId, setDeletingTicketId] = useState<string | null>(null);
 
     const fetchTickets = useCallback(async () => {
         setTicketsLoading(true);
@@ -391,6 +392,17 @@ export default function AdminDashboard() {
             toast.success(`อัปเดตสถานะเป็น ${newStatus}`);
             fetchTickets();
         } catch { toast.error(t.admin.toastUpdateFail); }
+    };
+
+    const handleDeleteTicket = async (ticketId: string, subject: string) => {
+        if (!confirm(`ลบ Ticket "${subject}"?\nลบถาวร กู้คืนไม่ได้`)) return;
+        setDeletingTicketId(ticketId);
+        try {
+            const { error } = await supabase.from('support_tickets').delete().eq('id', ticketId);
+            if (error) throw error;
+            toast.success('ลบ Ticket สำเร็จ');
+            fetchTickets();
+        } catch { toast.error('ลบไม่สำเร็จ'); } finally { setDeletingTicketId(null); }
     };
 
     const handleReplyTicket = async (ticketId: string) => {
@@ -2971,7 +2983,7 @@ export default function AdminDashboard() {
                             ) : (
                                 <div className="divide-y divide-border">
                                     {/* Table Header */}
-                                    <div className="hidden md:grid grid-cols-[100px_1fr_100px_120px_120px] gap-3 px-4 py-2.5 bg-muted/40 text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
+                                    <div className="hidden md:grid grid-cols-[100px_1fr_100px_120px_170px] gap-3 px-4 py-2.5 bg-muted/40 text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
                                         <span>Ticket ID</span>
                                         <span>Subject</span>
                                         <span>Priority</span>
@@ -3002,7 +3014,7 @@ export default function AdminDashboard() {
                                         return (
                                             <div key={ticket.id} className={cn("transition-all", ticket.status === 'open' && "bg-red-500/[0.02]")}>
                                                 {/* Main row */}
-                                                <div className="grid grid-cols-1 md:grid-cols-[100px_1fr_100px_120px_120px] gap-2 md:gap-3 items-start px-4 py-3 hover:bg-muted/30 transition-colors">
+                                                <div className="grid grid-cols-1 md:grid-cols-[100px_1fr_100px_120px_170px] gap-2 md:gap-3 items-start px-4 py-3 hover:bg-muted/30 transition-colors">
                                                     {/* Ticket ID */}
                                                     <div className="font-mono text-sm font-bold text-accent">{ticketNum}</div>
 
@@ -3049,7 +3061,7 @@ export default function AdminDashboard() {
                                                     </div>
 
                                                     {/* Action */}
-                                                    <div className="flex justify-end">
+                                                    <div className="flex justify-end items-center gap-1.5">
                                                         <Button
                                                             size="sm"
                                                             variant={isExpanded ? 'outline' : 'default'}
@@ -3058,6 +3070,15 @@ export default function AdminDashboard() {
                                                         >
                                                             <MessageCircle className="w-3 h-3 mr-1" />
                                                             {isExpanded ? 'CLOSE' : 'VIEW & REPLY'}
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            disabled={deletingTicketId === ticket.id}
+                                                            className="h-7 w-7 p-0 text-red-400 hover:text-red-500 hover:bg-red-500/10 flex-shrink-0"
+                                                            onClick={() => handleDeleteTicket(ticket.id, ticket.subject)}
+                                                        >
+                                                            {deletingTicketId === ticket.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                                                         </Button>
                                                     </div>
                                                 </div>

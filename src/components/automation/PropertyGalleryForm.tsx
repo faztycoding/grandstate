@@ -288,8 +288,8 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                     className={cn(
                       "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all",
                       isSelected
-                        ? "border-amber-500 bg-amber-50 shadow-md"
-                        : "border-gray-100 hover:border-gray-200 bg-white"
+                        ? "border-amber-500 bg-amber-50 dark:bg-amber-500/10 shadow-md"
+                        : "border-border hover:border-muted-foreground/30 bg-card"
                     )}
                   >
                     <div className={cn(
@@ -323,7 +323,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                   "py-4 px-6 rounded-xl font-semibold text-base transition-all",
                   formData.listingType === 'sale'
                     ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg"
-                    : "bg-gray-100 text-foreground hover:bg-gray-200"
+                    : "bg-muted text-foreground hover:bg-muted/80"
                 )}
               >
                 {g.sale}
@@ -335,7 +335,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                   "py-4 px-6 rounded-xl font-semibold text-base transition-all",
                   formData.listingType === 'rent'
                     ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg"
-                    : "bg-gray-100 text-foreground hover:bg-gray-200"
+                    : "bg-muted text-foreground hover:bg-muted/80"
                 )}
               >
                 {g.rent}
@@ -363,7 +363,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                 value={imageUrlInput}
                 onChange={(e) => setImageUrlInput(e.target.value)}
                 placeholder={g.pasteImageUrl}
-                className="h-10 border-gray-200 focus:border-amber-500 flex-1"
+                className="h-10 border-border focus:border-amber-500 flex-1"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && imageUrlInput.trim()) {
                     e.preventDefault();
@@ -403,8 +403,8 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
               className={cn(
                 "border-2 border-dashed rounded-2xl p-8 transition-all cursor-pointer",
                 isDragging
-                  ? "border-amber-500 bg-amber-50"
-                  : "border-gray-200 hover:border-amber-300 bg-gray-50"
+                  ? "border-amber-500 bg-amber-50 dark:bg-amber-500/10"
+                  : "border-border hover:border-amber-300 bg-muted/50"
               )}
               onClick={() => fileInputRef.current?.click()}
             >
@@ -491,7 +491,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                 value={formData.title}
                 onChange={(e) => updateField('title', e.target.value)}
                 placeholder={g.titlePlaceholder}
-                className="h-12 border-gray-200 focus:border-amber-500 focus:ring-amber-500"
+                className="h-12 border-border focus:border-amber-500 focus:ring-amber-500"
               />
             </div>
 
@@ -507,7 +507,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                   value={formData.price}
                   onChange={(e) => updateField('price', e.target.value)}
                   placeholder="0"
-                  className="h-12 border-gray-200 focus:border-amber-500 focus:ring-amber-500"
+                  className="h-12 border-border focus:border-amber-500 focus:ring-amber-500"
                 />
               </div>
               <div>
@@ -520,7 +520,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                   value={formData.squareMeters}
                   onChange={(e) => updateField('squareMeters', e.target.value)}
                   placeholder="0"
-                  className="h-12 border-gray-200 focus:border-amber-500 focus:ring-amber-500"
+                  className="h-12 border-border focus:border-amber-500 focus:ring-amber-500"
                 />
               </div>
             </div>
@@ -536,7 +536,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                   value={formData.bedrooms}
                   onValueChange={(v) => updateField('bedrooms', v)}
                 >
-                  <SelectTrigger className="h-12 border-gray-200 focus:border-amber-500 focus:ring-amber-500">
+                  <SelectTrigger className="h-12 border-border focus:border-amber-500 focus:ring-amber-500">
                     <SelectValue placeholder={g.selectCount} />
                   </SelectTrigger>
                   <SelectContent>
@@ -557,7 +557,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                   value={formData.bathrooms}
                   onValueChange={(v) => updateField('bathrooms', v)}
                 >
-                  <SelectTrigger className="h-12 border-gray-200 focus:border-amber-500 focus:ring-amber-500">
+                  <SelectTrigger className="h-12 border-border focus:border-amber-500 focus:ring-amber-500">
                     <SelectValue placeholder={g.selectCount} />
                   </SelectTrigger>
                   <SelectContent>
@@ -584,7 +584,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                     value={formData.location}
                     onChange={(e) => updateField('location', e.target.value)}
                     placeholder="Bangkok"
-                    className="h-10 border-gray-200 focus:border-amber-500"
+                    className="h-10 border-border focus:border-amber-500"
                   />
                 </div>
                 <div>
@@ -593,7 +593,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                     value={formData.district}
                     onChange={(e) => updateField('district', e.target.value)}
                     placeholder="Klong Toey"
-                    className="h-10 border-gray-200 focus:border-amber-500"
+                    className="h-10 border-border focus:border-amber-500"
                   />
                 </div>
                 <div>
@@ -602,7 +602,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                     value={formData.province}
                     onChange={(e) => updateField('province', e.target.value)}
                     placeholder="Bangkok"
-                    className="h-10 border-gray-200 focus:border-amber-500"
+                    className="h-10 border-border focus:border-amber-500"
                   />
                 </div>
               </div>
@@ -636,7 +636,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                 value={formData.description}
                 onChange={(e) => updateField('description', e.target.value)}
                 placeholder={g.descPlaceholder}
-                className="min-h-[120px] border-gray-200 focus:border-amber-500 focus:ring-amber-500 resize-none"
+                className="min-h-[120px] border-border focus:border-amber-500 focus:ring-amber-500 resize-none"
               />
             </div>
           </CardContent>
@@ -669,7 +669,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="grid grid-cols-12 gap-3 items-end p-3 bg-gray-50 rounded-lg"
+                  className="grid grid-cols-12 gap-3 items-end p-3 bg-muted/50 rounded-lg"
                 >
                   <div className="col-span-4">
                     <label className="block text-xs text-muted-foreground mb-1">{g.contactName} {index + 1}</label>
@@ -679,7 +679,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                         value={contact.name}
                         onChange={(e) => updateContact(contact.id, 'name', e.target.value)}
                         placeholder={g.contactNamePlaceholder}
-                        className="h-10 pl-10 border-gray-200 focus:border-amber-500"
+                        className="h-10 pl-10 border-border focus:border-amber-500"
                       />
                     </div>
                   </div>
@@ -691,7 +691,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                         value={contact.phone}
                         onChange={(e) => updateContact(contact.id, 'phone', e.target.value)}
                         placeholder="081-234-5678"
-                        className="h-10 pl-10 border-gray-200 focus:border-amber-500"
+                        className="h-10 pl-10 border-border focus:border-amber-500"
                       />
                     </div>
                   </div>
@@ -703,7 +703,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                         value={contact.lineId}
                         onChange={(e) => updateContact(contact.id, 'lineId', e.target.value)}
                         placeholder="@yourlineid"
-                        className="h-10 pl-10 border-gray-200 focus:border-amber-500"
+                        className="h-10 pl-10 border-border focus:border-amber-500"
                       />
                     </div>
                   </div>
@@ -750,7 +750,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
             
             <CardContent className="p-0">
               {/* Preview Image */}
-              <div className="aspect-video bg-gray-100 relative">
+              <div className="aspect-video bg-muted relative">
                 {formData.images.length > 0 ? (
                   <img
                     src={formData.images[0]}
@@ -825,7 +825,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
               </div>
 
               {/* Facebook Style Info */}
-              <div className="bg-gray-50 p-4 border-t">
+              <div className="bg-muted/50 p-4 border-t border-border">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold">
                     f
@@ -876,7 +876,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                       key={prop.id}
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
-                      className="flex items-center gap-3 p-2 rounded-lg bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors"
+                      className="flex items-center gap-3 p-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
                       onClick={() => {
                         const contacts = prop.contacts || [{ 
                           id: '1', 
@@ -906,12 +906,12 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                       {prop.images && prop.images.length > 0 ? (
                         <img src={prop.images[0]} alt="" className="w-10 h-10 rounded object-cover" />
                       ) : (
-                        <div className="w-10 h-10 rounded bg-gray-200 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded bg-muted flex items-center justify-center">
                           <ImageIcon className="w-5 h-5 text-muted-foreground" />
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
+                        <p className="text-sm font-medium text-foreground truncate">
                           {prop.title || g.noTitle}
                         </p>
                         <p className="text-xs text-muted-foreground">

@@ -96,10 +96,10 @@ export function MarketplacePropertyForm({
         {/* Header - Like Facebook */}
         <div className="p-4 border-b flex items-center justify-between">
           <div>
-            <p className="text-xs text-blue-600 font-medium">Marketplace</p>
-            <h2 className="text-lg font-bold text-gray-900">รายการบ้านใหม่</h2>
+            <p className="text-xs text-muted-foreground font-medium">Marketplace</p>
+            <h2 className="text-lg font-bold text-foreground">รายการบ้านใหม่</h2>
           </div>
-          <Button variant="ghost" size="sm" className="text-blue-600 font-medium">
+          <Button variant="ghost" size="sm" className="text-muted-foreground font-medium">
             บันทึกฉบับร่าง
           </Button>
         </div>
@@ -113,16 +113,16 @@ export function MarketplacePropertyForm({
             </AvatarFallback>
           </Avatar>
           <div>
-            <p className="font-medium text-gray-900">User</p>
-            <p className="text-xs text-gray-500">
-              ประกาศใน Marketplace · <span className="text-gray-400">🌐</span> สาธารณะ
+            <p className="font-medium text-foreground">User</p>
+            <p className="text-xs text-muted-foreground">
+              ประกาศใน Marketplace · <span className="text-muted-foreground">🌐</span> สาธารณะ
             </p>
           </div>
         </div>
 
         {/* Photo Upload Section */}
         <div className="p-4 border-b">
-          <p className="text-sm text-gray-600 mb-2">
+          <p className="text-sm text-foreground mb-2">
             รูปภาพ · {formData.images.length} / 50 - คุณสามารถเพิ่มรูปภาพได้ถึง 50 รูป
           </p>
           
@@ -134,10 +134,10 @@ export function MarketplacePropertyForm({
                 onClick={() => fileInputRef.current?.click()}
               >
                 <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center mb-2">
-                  <Plus className="w-6 h-6 text-gray-600" />
+                  <Plus className="w-6 h-6 text-foreground" />
                 </div>
-                <p className="font-medium text-gray-900">เพิ่มรูปภาพ</p>
-                <p className="text-sm text-gray-500">หรือลากแล้ววาง</p>
+                <p className="font-medium text-foreground">เพิ่มรูปภาพ</p>
+                <p className="text-sm text-muted-foreground">หรือลากแล้ววาง</p>
               </div>
             ) : (
               <div className="grid grid-cols-3 gap-2">
@@ -160,7 +160,7 @@ export function MarketplacePropertyForm({
                   className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-100"
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <Plus className="w-6 h-6 text-gray-400" />
+                  <Plus className="w-6 h-6 text-muted-foreground" />
                 </div>
               </div>
             )}
@@ -183,7 +183,7 @@ export function MarketplacePropertyForm({
               </div>
               <div>
                 <p className="text-sm font-medium">อัพโหลดรูปภาพจากโทรศัพท์</p>
-                <p className="text-xs text-blue-600">โดยตรง เรียนรู้เพิ่มเติม</p>
+                <p className="text-xs text-muted-foreground">โดยตรง เรียนรู้เพิ่มเติม</p>
               </div>
             </div>
             <Button variant="outline" size="sm">ลองใช้ดู</Button>
@@ -277,7 +277,7 @@ export function MarketplacePropertyForm({
               placeholder="คำอธิบายอสังหาริมทรัพย์"
               className="border-0 bg-gray-50 min-h-[100px] resize-none"
             />
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-muted-foreground mt-2">
               ใส่รายละเอียด เช่น สาธารณูปโภค สิ่งอำนวยความสะดวก เงินมัดจำ และความพร้อมให้บริการ
             </p>
           </div>
@@ -285,8 +285,8 @@ export function MarketplacePropertyForm({
           {/* Advanced Section */}
           <div className="p-4">
             <div className="flex items-center justify-between mb-4">
-              <span className="font-medium text-gray-900">รายละเอียดขั้นสูง</span>
-              <span className="text-sm text-gray-500">ระบุหรือไม่ก็ได้</span>
+              <span className="font-medium text-foreground">รายละเอียดขั้นสูง</span>
+              <span className="text-sm text-muted-foreground">ระบุหรือไม่ก็ได้</span>
             </div>
             <Input
               type="number"
@@ -299,12 +299,12 @@ export function MarketplacePropertyForm({
         </div>
 
         {/* Footer Note */}
-        <div className="p-4 bg-gray-50 text-xs text-gray-500">
+        <div className="p-4 bg-gray-50 text-xs text-muted-foreground">
           <p>
             สินค้าใน Marketplace จะแสดงต่อสาธารณะและทุกคนทั้งที่ใช้หรือไม่ใช้ Facebook 
             จะสามารถมองเห็นได้ เราไม่อนุญาตให้แสดงสินค้า เช่น สัตว์ ยาเสพติด อาวุธ 
             สินค้าปลอม และสินค้าอื่นๆ ที่ละเมิดนโยบายทรัพย์สินทางปัญญาใน Marketplace 
-            โปรดดู<span className="text-blue-600">นโยบายการค้า</span>ของเรา
+            โปรดดู<span className="text-muted-foreground">นโยบายการค้า</span>ของเรา
           </p>
         </div>
 

@@ -316,7 +316,7 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
                                 {displayAvatar ? (
                                     <img src={displayAvatar} alt="Profile" className="w-full h-full object-cover" />
                                 ) : (
-                                    <div className="flex items-center justify-center w-full h-full text-xl sm:text-2xl font-bold opacity-50 text-slate-500">
+                                    <div className="flex items-center justify-center w-full h-full text-xl sm:text-2xl font-bold opacity-50 text-muted-foreground">
                                         {initials}
                                     </div>
                                 )}
@@ -434,7 +434,7 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
                                         <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
                                             <span>หมดอายุ: {formatDate(license.expiresAt.toString())}</span>
                                             <span className={cn(
-                                                isExpired && "text-red-500 font-semibold",
+                                                isExpired && "text-muted-foreground font-semibold",
                                                 isExpiringSoon && "text-amber-500 font-semibold"
                                             )}>
                                                 ({isExpired ? 'หมดอายุแล้ว' : `${daysRemaining} วัน`})
@@ -443,7 +443,7 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
                                         {/* Expired warning inline */}
                                         {isExpired && (
                                             <div className="flex items-start gap-2 p-2.5 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800">
-                                                <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                                                <AlertCircle className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
                                                 <p className="text-xs text-red-600 dark:text-red-400">
                                                     License หมดอายุแล้ว กรุณาติดต่อผู้ดูแลระบบเพื่อต่ออายุ
                                                 </p>
@@ -491,7 +491,7 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
                                             </Button>
                                         </div>
                                         {activationError && (
-                                            <p className="text-xs text-red-500 flex items-center gap-1">
+                                            <p className="text-xs text-muted-foreground flex items-center gap-1">
                                                 <AlertCircle className="w-3 h-3" />
                                                 {activationError}
                                             </p>
@@ -508,7 +508,7 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
                                 {/* Facebook Status Card */}
                                 <div className="p-4 rounded-xl border bg-card text-card-foreground shadow-sm flex items-center justify-between">
                                     <div className="flex items-center gap-3">
-                                        <div className={cn("p-2 rounded-full", isFbConnected ? "bg-blue-100 text-blue-600" : "bg-zinc-100 text-zinc-500")}>
+                                        <div className={cn("p-2 rounded-full", isFbConnected ? "bg-blue-100 text-foreground" : "bg-zinc-100 text-zinc-500")}>
                                             <Facebook className="w-5 h-5" />
                                         </div>
                                         <div>

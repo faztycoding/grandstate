@@ -160,7 +160,7 @@ export function LocationPicker({
   return (
     <div ref={containerRef} className={cn('relative', className)}>
       <div className="relative">
-        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
         <Input
           ref={inputRef}
           value={value || searchQuery}
@@ -194,14 +194,14 @@ export function LocationPicker({
               </div>
               <div>
                 <p className="font-medium text-blue-600">ใช้ตำแหน่งปัจจุบัน</p>
-                <p className="text-xs text-gray-500">เปิด GPS เพื่อค้นหาตำแหน่งของคุณ</p>
+                <p className="text-xs text-blue-600">เปิด GPS เพื่อค้นหาตำแหน่งของคุณ</p>
               </div>
             </button>
 
             {/* Recent Locations */}
             {recentLocations.length > 0 && !searchQuery && (
               <div className="py-2">
-                <p className="px-4 py-1 text-xs text-gray-500 font-medium">ค้นหาล่าสุด</p>
+                <p className="px-4 py-1 text-xs text-muted-foreground font-medium">ค้นหาล่าสุด</p>
                 {recentLocations.map((loc, idx) => (
                   <button
                     key={`recent-${idx}`}
@@ -209,7 +209,7 @@ export function LocationPicker({
                     onClick={() => handleSelect(loc)}
                     className="w-full flex items-center gap-3 px-4 py-2 hover:bg-gray-50 text-left"
                   >
-                    <Clock className="w-4 h-4 text-gray-400" />
+                    <Clock className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm">{loc}</span>
                   </button>
                 ))}
@@ -219,12 +219,12 @@ export function LocationPicker({
             {/* Search Results */}
             <div className="py-2">
               {searchQuery && (
-                <p className="px-4 py-1 text-xs text-gray-500 font-medium">
+                <p className="px-4 py-1 text-xs text-muted-foreground font-medium">
                   ผลการค้นหา ({filteredLocations.length})
                 </p>
               )}
               {!searchQuery && (
-                <p className="px-4 py-1 text-xs text-gray-500 font-medium">สถานที่ยอดนิยม</p>
+                <p className="px-4 py-1 text-xs text-muted-foreground font-medium">สถานที่ยอดนิยม</p>
               )}
               {filteredLocations.slice(0, 15).map((location) => (
                 <button
@@ -233,17 +233,17 @@ export function LocationPicker({
                   onClick={() => handleSelect(location.name)}
                   className="w-full flex items-center gap-3 px-4 py-2 hover:bg-gray-50 text-left"
                 >
-                  <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                   <div className="min-w-0">
                     <p className="text-sm truncate">{location.name}</p>
                     {location.type === 'area' && (
-                      <p className="text-xs text-gray-400">พื้นที่</p>
+                      <p className="text-xs text-muted-foreground">พื้นที่</p>
                     )}
                   </div>
                 </button>
               ))}
               {filteredLocations.length === 0 && (
-                <div className="px-4 py-8 text-center text-gray-500">
+                <div className="px-4 py-8 text-center text-muted-foreground">
                   <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">ไม่พบสถานที่ที่ค้นหา</p>
                   <p className="text-xs">ลองพิมพ์ชื่อจังหวัดหรือย่าน</p>

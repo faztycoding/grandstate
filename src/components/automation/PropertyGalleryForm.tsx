@@ -75,7 +75,7 @@ interface PropertyGalleryFormProps {
 
 const PROPERTY_TYPE_IDS = ['condo', 'house', 'townhouse', 'apartment', 'land', 'commercial'] as const;
 const PROPERTY_TYPE_ICONS = {
-  condo: { icon: Building2, color: 'bg-blue-100 text-blue-600 border-blue-200' },
+  condo: { icon: Building2, color: 'bg-blue-100 text-muted-foreground border-blue-200' },
   house: { icon: Home, color: 'bg-orange-100 text-orange-600 border-orange-200' },
   townhouse: { icon: Building, color: 'bg-green-100 text-green-600 border-green-200' },
   apartment: { icon: Warehouse, color: 'bg-purple-100 text-purple-600 border-purple-200' },
@@ -270,7 +270,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
         {/* Property Type Selection */}
         <Card className="border-0 shadow-lg">
           <CardContent className="p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-amber-500" />
               {g.propertyType}
             </h3>
@@ -300,7 +300,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                     </div>
                     <span className={cn(
                       "text-xs font-medium",
-                      isSelected ? "text-amber-700" : "text-gray-600"
+                      isSelected ? "text-amber-700" : "text-foreground"
                     )}>
                       {(g as any)[typeId]}
                     </span>
@@ -314,7 +314,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
         {/* Listing Type Toggle */}
         <Card className="border-0 shadow-lg">
           <CardContent className="p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">{g.listingType}</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-4">{g.listingType}</h3>
             <div className="grid grid-cols-2 gap-3">
               <motion.button
                 whileTap={{ scale: 0.98 }}
@@ -323,7 +323,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                   "py-4 px-6 rounded-xl font-semibold text-base transition-all",
                   formData.listingType === 'sale'
                     ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    : "bg-gray-100 text-foreground hover:bg-gray-200"
                 )}
               >
                 {g.sale}
@@ -335,7 +335,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                   "py-4 px-6 rounded-xl font-semibold text-base transition-all",
                   formData.listingType === 'rent'
                     ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    : "bg-gray-100 text-foreground hover:bg-gray-200"
                 )}
               >
                 {g.rent}
@@ -348,7 +348,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
         <Card className="border-0 shadow-lg">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
                 <ImageIcon className="w-5 h-5 text-amber-500" />
                 {g.images}
               </h3>
@@ -416,8 +416,8 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                   >
                     <Upload className="w-8 h-8 text-white" />
                   </motion.div>
-                  <p className="font-semibold text-gray-900 mb-1">{g.addImages}</p>
-                  <p className="text-sm text-gray-500">{g.dragOrClick}</p>
+                  <p className="font-semibold text-foreground mb-1">{g.addImages}</p>
+                  <p className="text-sm text-muted-foreground">{g.dragOrClick}</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
@@ -479,14 +479,14 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
         {/* Main Details */}
         <Card className="border-0 shadow-lg">
           <CardContent className="p-6 space-y-5">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
               <Home className="w-5 h-5 text-amber-500" />
               {g.mainDetails}
             </h3>
 
             {/* Title */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">{g.title}</label>
+              <label className="block text-sm font-medium text-foreground mb-2">{g.title}</label>
               <Input
                 value={formData.title}
                 onChange={(e) => updateField('title', e.target.value)}
@@ -498,7 +498,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
             {/* Price & Size Row */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+                <label className="block text-sm font-medium text-foreground mb-2 flex items-center gap-1">
                   <DollarSign className="w-4 h-4 text-amber-500" />
                   {g.priceBaht}
                 </label>
@@ -511,7 +511,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+                <label className="block text-sm font-medium text-foreground mb-2 flex items-center gap-1">
                   <Maximize2 className="w-4 h-4 text-amber-500" />
                   {g.areaSqm}
                 </label>
@@ -528,7 +528,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
             {/* Bedrooms & Bathrooms */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+                <label className="block text-sm font-medium text-foreground mb-2 flex items-center gap-1">
                   <BedDouble className="w-4 h-4 text-amber-500" />
                   {g.bedrooms}
                 </label>
@@ -549,7 +549,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                 </Select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+                <label className="block text-sm font-medium text-foreground mb-2 flex items-center gap-1">
                   <Bath className="w-4 h-4 text-amber-500" />
                   {g.bathrooms}
                 </label>
@@ -573,13 +573,13 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
 
             {/* Location */}
             <div className="space-y-4">
-              <label className="block text-sm font-medium text-gray-700 flex items-center gap-1">
+              <label className="block text-sm font-medium text-foreground flex items-center gap-1">
                 <MapPin className="w-4 h-4 text-amber-500" />
                 {g.location}
               </label>
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">{g.addressSoi}</label>
+                  <label className="block text-xs text-muted-foreground mb-1">{g.addressSoi}</label>
                   <Input
                     value={formData.location}
                     onChange={(e) => updateField('location', e.target.value)}
@@ -588,7 +588,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">{g.district}</label>
+                  <label className="block text-xs text-muted-foreground mb-1">{g.district}</label>
                   <Input
                     value={formData.district}
                     onChange={(e) => updateField('district', e.target.value)}
@@ -597,7 +597,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">{g.province}</label>
+                  <label className="block text-xs text-muted-foreground mb-1">{g.province}</label>
                   <Input
                     value={formData.province}
                     onChange={(e) => updateField('province', e.target.value)}
@@ -609,7 +609,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
               
               {/* Google Maps Picker */}
               <div>
-                <label className="block text-xs text-gray-500 mb-1">{g.googleMapsPin}</label>
+                <label className="block text-xs text-muted-foreground mb-1">{g.googleMapsPin}</label>
                 <GoogleMapsPicker
                   value={formData.googleMapsLink}
                   onChange={(value) => updateField('googleMapsLink', value)}
@@ -628,7 +628,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+              <label className="block text-sm font-medium text-foreground mb-2 flex items-center gap-1">
                 <FileText className="w-4 h-4 text-amber-500" />
                 {g.description}
               </label>
@@ -646,7 +646,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
         <Card className="border-0 shadow-lg">
           <CardContent className="p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
                 <Phone className="w-5 h-5 text-amber-500" />
                 {g.contactInfo}
               </h3>
@@ -672,9 +672,9 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                   className="grid grid-cols-12 gap-3 items-end p-3 bg-gray-50 rounded-lg"
                 >
                   <div className="col-span-4">
-                    <label className="block text-xs text-gray-500 mb-1">{g.contactName} {index + 1}</label>
+                    <label className="block text-xs text-muted-foreground mb-1">{g.contactName} {index + 1}</label>
                     <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input
                         value={contact.name}
                         onChange={(e) => updateContact(contact.id, 'name', e.target.value)}
@@ -684,9 +684,9 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                     </div>
                   </div>
                   <div className="col-span-3">
-                    <label className="block text-xs text-gray-500 mb-1">{g.phone}</label>
+                    <label className="block text-xs text-muted-foreground mb-1">{g.phone}</label>
                     <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input
                         value={contact.phone}
                         onChange={(e) => updateContact(contact.id, 'phone', e.target.value)}
@@ -696,9 +696,9 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                     </div>
                   </div>
                   <div className="col-span-4">
-                    <label className="block text-xs text-gray-500 mb-1">{g.lineId}</label>
+                    <label className="block text-xs text-muted-foreground mb-1">{g.lineId}</label>
                     <div className="relative">
-                      <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input
                         value={contact.lineId}
                         onChange={(e) => updateContact(contact.id, 'lineId', e.target.value)}
@@ -758,7 +758,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
+                  <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground">
                     <ImageIcon className="w-12 h-12 mb-2" />
                     <p className="text-sm">{g.noImages}</p>
                   </div>
@@ -773,32 +773,32 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
               {/* Preview Details */}
               <div className="p-4 space-y-3">
                 <div>
-                  <h4 className="text-lg font-bold text-gray-900">
+                  <h4 className="text-lg font-bold text-foreground">
                     {formData.title || g.untitled}
                   </h4>
                   <p className="text-xl font-bold text-amber-600">
                     {formatPrice(formData.price)}
-                    {formData.listingType === 'rent' && <span className="text-sm font-normal text-gray-500">{g.perMonth}</span>}
+                    {formData.listingType === 'rent' && <span className="text-sm font-normal text-muted-foreground">{g.perMonth}</span>}
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2 text-gray-500 text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
                   <MapPin className="w-4 h-4" />
                   <span>{formData.location || g.locationLabel}</span>
                 </div>
 
                 <div className="flex items-center gap-4 py-3 border-t border-b">
                   <div className="flex items-center gap-1">
-                    <BedDouble className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">{formData.bedrooms || '-'} {g.bedroomUnit}</span>
+                    <BedDouble className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-foreground">{formData.bedrooms || '-'} {g.bedroomUnit}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Bath className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">{formData.bathrooms || '-'} {g.bathroomUnit}</span>
+                    <Bath className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-foreground">{formData.bathrooms || '-'} {g.bathroomUnit}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Maximize2 className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">{formData.squareMeters || '-'} {g.sqm}</span>
+                    <Maximize2 className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-foreground">{formData.squareMeters || '-'} {g.sqm}</span>
                   </div>
                 </div>
 
@@ -809,7 +809,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                   <Badge variant="secondary" className={cn(
                     formData.listingType === 'sale' 
                       ? "bg-green-100 text-green-700"
-                      : "bg-blue-100 text-blue-700"
+                      : "bg-blue-100 text-foreground"
                   )}>
                     {formData.listingType === 'sale' ? g.sale : g.rent}
                   </Badge>
@@ -817,7 +817,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
 
                 {formData.description && (
                   <div className="pt-2">
-                    <p className="text-sm text-gray-600 line-clamp-3">
+                    <p className="text-sm text-foreground line-clamp-3">
                       {formData.description}
                     </p>
                   </div>
@@ -826,7 +826,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
 
               {/* Facebook Style Info */}
               <div className="bg-gray-50 p-4 border-t">
-                <div className="flex items-center gap-2 text-xs text-gray-500">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold">
                     f
                   </div>
@@ -864,7 +864,7 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
           {properties.length > 0 && (
             <Card className="border-0 shadow-lg mt-4">
               <CardContent className="p-4">
-                <h4 className="font-semibold text-gray-800 mb-3 flex items-center justify-between">
+                <h4 className="font-semibold text-foreground mb-3 flex items-center justify-between">
                   <span className="flex items-center gap-2">
                     <FileText className="w-4 h-4 text-amber-500" />
                     {g.savedProperties} ({properties.length})
@@ -907,14 +907,14 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
                         <img src={prop.images[0]} alt="" className="w-10 h-10 rounded object-cover" />
                       ) : (
                         <div className="w-10 h-10 rounded bg-gray-200 flex items-center justify-center">
-                          <ImageIcon className="w-5 h-5 text-gray-400" />
+                          <ImageIcon className="w-5 h-5 text-muted-foreground" />
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">
                           {prop.title || g.noTitle}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-muted-foreground">
                           {prop.price ? `฿${prop.price.toLocaleString()}` : g.noPrice}
                         </p>
                       </div>

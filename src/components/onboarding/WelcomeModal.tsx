@@ -32,7 +32,7 @@ const STEPS = [
     icon: Users,
     gradient: 'from-blue-500 to-cyan-500',
     bgLight: 'bg-blue-50 dark:bg-blue-950/20',
-    textColor: 'text-blue-600 dark:text-blue-400',
+    textColor: 'text-muted-foreground dark:text-muted-foreground',
     borderColor: 'border-blue-200 dark:border-blue-800/50',
     ringColor: 'ring-blue-500/20',
   },
@@ -201,12 +201,12 @@ export function WelcomeModal() {
                     </p>
 
                     {/* Title */}
-                    <h3 className="font-bold text-gray-800 dark:text-gray-100 text-sm leading-snug mb-1.5">
+                    <h3 className="font-bold text-foreground dark:text-gray-100 text-sm leading-snug mb-1.5">
                       {step.title}
                     </h3>
 
                     {/* Description */}
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                    <p className="text-[11px] text-muted-foreground dark:text-muted-foreground leading-relaxed">
                       {step.desc}
                     </p>
                   </motion.div>
@@ -233,7 +233,7 @@ export function WelcomeModal() {
                 className="flex items-center justify-center gap-3 sm:gap-5 mt-3 mb-4"
               >
                 {FEATURES.map((f, i) => (
-                  <div key={i} className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-gray-400 dark:text-gray-500">
+                  <div key={i} className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-muted-foreground dark:text-muted-foreground">
                     <f.icon className="w-3.5 h-3.5" />
                     <span>{f.label}</span>
                   </div>
@@ -267,12 +267,12 @@ export function WelcomeModal() {
                     onChange={(e) => setDontShowAgain(e.target.checked)}
                     className="w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 accent-orange-500"
                   />
-                  <span className="text-[11px] text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors select-none">
+                  <span className="text-[11px] text-muted-foreground group-hover:text-foreground dark:group-hover:text-gray-300 transition-colors select-none">
                     ไม่ต้องแสดงอีก
                   </span>
                 </label>
                 {!dontShowAgain && (
-                  <span className="text-[10px] text-gray-300 dark:text-gray-600 font-mono">
+                  <span className="text-[10px] text-gray-300 dark:text-foreground font-mono">
                     แสดงอีกครั้งใน 7 วัน
                   </span>
                 )}
@@ -280,7 +280,7 @@ export function WelcomeModal() {
             </div>
 
             {/* Machine status footer */}
-            <div className="px-5 sm:px-6 pb-3 flex items-center justify-between text-[8px] text-gray-300 dark:text-gray-600 font-mono tracking-wider">
+            <div className="px-5 sm:px-6 pb-3 flex items-center justify-between text-[8px] text-gray-300 dark:text-foreground font-mono tracking-wider">
               <span>GRAND$TATE CORE v1.0</span>
               <span className="flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />

@@ -38,7 +38,7 @@ interface SupportTicketDialogProps {
 }
 
 const CATEGORIES = [
-  { value: 'general', label: 'ทั่วไป', labelEn: 'General', icon: HelpCircle, color: 'text-blue-500' },
+  { value: 'general', label: 'ทั่วไป', labelEn: 'General', icon: HelpCircle, color: 'text-muted-foreground' },
   { value: 'bug', label: 'แจ้งบัค / ข้อผิดพลาด', labelEn: 'Bug Report', icon: Bug, color: 'text-red-500' },
   { value: 'feature', label: 'ขอฟีเจอร์ใหม่', labelEn: 'Feature Request', icon: Lightbulb, color: 'text-amber-500' },
   { value: 'billing', label: 'การชำระเงิน / แพ็กเกจ', labelEn: 'Billing / Package', icon: CreditCard, color: 'text-emerald-500' },
@@ -221,7 +221,7 @@ export function SupportTicketDialog({ open, onOpenChange }: SupportTicketDialogP
                       <h2 className="text-lg font-bold text-white">
                         {isEn ? 'Report an Issue' : 'แจ้งปัญหา'}
                       </h2>
-                      <p className="text-[11px] text-gray-400">
+                      <p className="text-[11px] text-muted-foreground">
                         {isEn ? 'We\'ll resolve it ASAP' : 'เราจะรีบแก้ไขให้ไวที่สุดเมื่อได้รับเรื่อง'}
                       </p>
                     </div>
@@ -230,7 +230,7 @@ export function SupportTicketDialog({ open, onOpenChange }: SupportTicketDialogP
                     variant="ghost"
                     size="icon"
                     onClick={handleCancel}
-                    className="w-8 h-8 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg"
+                    className="w-8 h-8 text-muted-foreground hover:text-white hover:bg-white/10 rounded-lg"
                   >
                     <X className="w-4 h-4" />
                   </Button>
@@ -250,7 +250,7 @@ export function SupportTicketDialog({ open, onOpenChange }: SupportTicketDialogP
 
                 {/* Category selector */}
                 <div className="mb-4">
-                  <Label className="text-xs font-semibold text-gray-300 mb-2 block">
+                  <Label className="text-xs font-semibold text-foreground mb-2 block">
                     {isEn ? 'Category' : 'หมวดหมู่'}
                   </Label>
                   <div className="grid grid-cols-3 gap-2">
@@ -268,8 +268,8 @@ export function SupportTicketDialog({ open, onOpenChange }: SupportTicketDialogP
                               : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/8"
                           )}
                         >
-                          <CatIcon className={cn("w-4 h-4", isSelected ? cat.color : "text-gray-500")} />
-                          <span className={cn("text-[10px] font-medium leading-tight", isSelected ? "text-white" : "text-gray-400")}>
+                          <CatIcon className={cn("w-4 h-4", isSelected ? cat.color : "text-muted-foreground")} />
+                          <span className={cn("text-[10px] font-medium leading-tight", isSelected ? "text-white" : "text-muted-foreground")}>
                             {isEn ? cat.labelEn : cat.label}
                           </span>
                         </button>
@@ -280,31 +280,31 @@ export function SupportTicketDialog({ open, onOpenChange }: SupportTicketDialogP
 
                 {/* Subject */}
                 <div className="mb-4">
-                  <Label className="text-xs font-semibold text-gray-300 mb-1.5 block">
+                  <Label className="text-xs font-semibold text-foreground mb-1.5 block">
                     {isEn ? 'Subject' : 'หัวข้อ'}
                   </Label>
                   <Input
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
                     placeholder={isEn ? 'Brief description of the issue...' : 'สรุปปัญหาสั้นๆ...'}
-                    className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-cyan-500/50 focus:ring-cyan-500/20"
+                    className="bg-white/5 border-white/10 text-white placeholder:text-muted-foreground focus:border-cyan-500/50 focus:ring-cyan-500/20"
                     maxLength={100}
                   />
                 </div>
 
                 {/* Description */}
                 <div className="mb-5">
-                  <Label className="text-xs font-semibold text-gray-300 mb-1.5 block">
+                  <Label className="text-xs font-semibold text-foreground mb-1.5 block">
                     {isEn ? 'Details' : 'รายละเอียด'}
                   </Label>
                   <Textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder={isEn ? 'Describe the issue in detail...' : 'อธิบายรายละเอียดปัญหา...'}
-                    className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-cyan-500/50 focus:ring-cyan-500/20 min-h-[100px] resize-none"
+                    className="bg-white/5 border-white/10 text-white placeholder:text-muted-foreground focus:border-cyan-500/50 focus:ring-cyan-500/20 min-h-[100px] resize-none"
                     maxLength={2000}
                   />
-                  <p className="text-[10px] text-gray-500 mt-1 text-right">{description.length}/2000</p>
+                  <p className="text-[10px] text-muted-foreground mt-1 text-right">{description.length}/2000</p>
                 </div>
 
                 {/* Promise banner */}
@@ -314,7 +314,7 @@ export function SupportTicketDialog({ open, onOpenChange }: SupportTicketDialogP
                     <p className="text-[11px] font-semibold text-emerald-300">
                       {isEn ? 'We\'ll get back to you ASAP' : 'เราจะรีบแก้ไขให้ไวที่สุด'}
                     </p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
                       {isEn
                         ? 'Our team will review and respond to your issue as soon as it\'s received.'
                         : 'ทีมงานจะตรวจสอบและดำเนินการแก้ไขให้ทันทีที่ได้รับเรื่อง'
@@ -328,7 +328,7 @@ export function SupportTicketDialog({ open, onOpenChange }: SupportTicketDialogP
                   <Button
                     variant="ghost"
                     onClick={handleCancel}
-                    className="flex-1 h-11 text-gray-400 hover:text-white hover:bg-white/10 rounded-xl border border-white/10"
+                    className="flex-1 h-11 text-muted-foreground hover:text-white hover:bg-white/10 rounded-xl border border-white/10"
                   >
                     {isEn ? 'Cancel' : 'ยกเลิก'}
                   </Button>

@@ -97,7 +97,7 @@ function getLogColor(msg: string, level: string): string {
     if (level === 'error' || msg.includes('❌') || msg.includes('🚨')) return 'text-red-400';
     if (level === 'success' || msg.includes('✅') || msg.includes('🏁')) return 'text-emerald-400';
     if (level === 'warn' || msg.includes('⏳') || msg.includes('🔄') || msg.includes('🕓')) return 'text-amber-400';
-    if (level === 'start' || msg.includes('🚀') || msg.includes('📦')) return 'text-blue-400';
+    if (level === 'start' || msg.includes('🚀') || msg.includes('📦')) return 'text-muted-foreground';
     return 'text-zinc-400';
 }
 
@@ -188,7 +188,7 @@ export function TaskProgressPopup({
             badgeCls: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/25',
         },
         failed: {
-            icon: <XCircle className="w-3.5 h-3.5 text-red-500" />,
+            icon: <XCircle className="w-3.5 h-3.5 text-muted-foreground" />,
             badge: 'ล้มเหลว',
             badgeCls: 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/25',
         },
@@ -274,7 +274,7 @@ export function TaskProgressPopup({
                                             </button>
                                             <button onClick={() => onStop()}
                                                 className="p-1.5 rounded-lg hover:bg-red-500/10 transition-colors" title="Stop">
-                                                <Square className="w-3.5 h-3.5 text-muted-foreground hover:text-red-500" />
+                                                <Square className="w-3.5 h-3.5 text-muted-foreground hover:text-muted-foreground" />
                                             </button>
                                         </>
                                     )}
@@ -423,7 +423,7 @@ export function TaskProgressPopup({
                                                 )}>
                                                     {successRate >= 80 ? <Trophy className="w-4 h-4 text-emerald-500" /> :
                                                      successRate >= 50 ? <BarChart3 className="w-4 h-4 text-accent" /> :
-                                                     <AlertTriangle className="w-4 h-4 text-red-500" />}
+                                                     <AlertTriangle className="w-4 h-4 text-muted-foreground" />}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-sm font-semibold">

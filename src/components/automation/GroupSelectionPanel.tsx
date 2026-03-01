@@ -43,7 +43,7 @@ export function GroupSelectionPanel({
       <CardContent className="p-0">
         {/* Header */}
         <div className="p-4 border-b">
-          <p className="text-xs text-blue-600 font-medium">Marketplace</p>
+          <p className="text-xs text-muted-foreground font-medium">Marketplace</p>
           <h2 className="text-lg font-bold text-gray-900">ลงประกาศในที่อื่นๆ</h2>
         </div>
 
@@ -75,7 +75,7 @@ export function GroupSelectionPanel({
                   <p className="font-medium text-gray-900 truncate text-sm">
                     {group.name}
                   </p>
-                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <span>สมาชิก {group.memberCount} คน</span>
                     <span>·</span>
                     {group.isPrivate ? (
@@ -111,13 +111,13 @@ export function GroupSelectionPanel({
         {/* Footer */}
         <div className="p-4 border-t bg-white">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-gray-600">
+            <span className="text-sm text-muted-foreground">
               เลือก {selectedGroups.length} กลุ่ม
             </span>
             <Button
               variant="ghost"
               size="sm"
-              className="text-blue-600"
+              className="text-muted-foreground"
               onClick={() => onSelectionChange([])}
             >
               ล้างทั้งหมด

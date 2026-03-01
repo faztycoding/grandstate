@@ -3074,6 +3074,7 @@ app.get('/api/worker-slots', ...adminAuth, (req, res) => {
           slotId: slotNum,
           status: workerStatus?.isPaused ? 'paused' : 'running',
           userId: job.userId,
+          fullUserId: job.fullUserId,
           displayName: job.displayName || 'User',
           fbAccount: job.fbAccount || null,
           propertyTitle: job.propertyTitle || null,
@@ -3139,8 +3140,8 @@ app.get('/api/worker-slots', ...adminAuth, (req, res) => {
 
     // Also attach per-slot antiDetection to each active slot
     for (const slot of slots) {
-      if (slot.status !== 'standby') {
-        const job = automationQueue.running.get(slot.userId);
+      if (slot.status !== 'standby' && slot.fullUserId) {
+        const job = automationQueue.running.get(slot.fullUserId);
         const worker = job?.worker;
         if (worker && typeof worker.getAntiDetectionStatus === 'function') {
           slot.antiDetection = worker.getAntiDetectionStatus();

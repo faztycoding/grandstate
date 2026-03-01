@@ -846,7 +846,7 @@ export default function Automation() {
               </div>
 
               {filteredProperties.length > 0 ? (
-                <ScrollArea className="h-[280px] pr-4">
+                <div className="max-h-[280px] overflow-y-auto pr-1">
                   <div className="grid grid-cols-1 gap-3">
                     {filteredProperties.map((property) => (
                       <motion.div
@@ -899,7 +899,7 @@ export default function Automation() {
                       </motion.div>
                     ))}
                   </div>
-                </ScrollArea>
+                </div>
               ) : (
                 <div className="text-center py-8">
                   <Building2 className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
@@ -954,7 +954,7 @@ export default function Automation() {
               )}
 
               {groups.length > 0 ? (
-                <ScrollArea className="h-[250px] pr-4">
+                <div className="max-h-[280px] overflow-y-auto pr-1">
                   <div className="space-y-2">
                     {groups.map((group) => (
                       <div
@@ -1016,7 +1016,7 @@ export default function Automation() {
                       </div>
                     ))}
                   </div>
-                </ScrollArea>
+                </div>
               ) : (
                 <div className="text-center py-8">
                   <Users className="w-12 h-12 mx-auto text-muted-foreground mb-3" />

@@ -111,10 +111,21 @@ export default function Auth() {
     setIsSubmitting(true);
     try {
       console.log('[Auth] handleSignIn: starting...', email);
-      const result = await signIn(email, password);
+      const result = await signIn(email.trim().toLowerCase(), password);
       console.log('[Auth] handleSignIn: result =', result);
       if (!result.success) {
-        setError(result.error || 'เข้าสู่ระบบไม่สำเร็จ');
+        const errMsg = result.error || '';
+        if (errMsg.includes('Invalid login') || errMsg.includes('invalid') || errMsg.includes('credentials')) {
+          setError(isEn ? 'Invalid email or password' : 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+        } else if (errMsg.includes('rate limit') || errMsg.includes('too many')) {
+          setError(isEn ? 'Too many attempts. Please wait.' : 'ลองบ่อยเกินไป กรุณารอสักครู่');
+        } else if (errMsg.includes('not confirmed') || errMsg.includes('confirm')) {
+          setError(isEn ? 'Please confirm your email first' : 'กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ');
+        } else if (errMsg === 'TIMEOUT') {
+          setError(isEn ? 'Connection timeout. Please try again.' : 'หมดเวลาเชื่อมต่อ กรุณาลองใหม่');
+        } else {
+          setError(errMsg || (isEn ? 'Sign in failed' : 'เข้าสู่ระบบไม่สำเร็จ'));
+        }
       }
       // If success, useEffect will handle redirect or show license activation
     } catch (err: any) {
@@ -128,22 +139,44 @@ export default function Auth() {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (password.length < 6) {
-      setError('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
+
+    // Trim inputs
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedName = fullName.trim();
+    const trimmedDisplay = displayName.trim();
+
+    // Validate full name
+    if (trimmedName.length < 2) {
+      setError(isEn ? 'Full name must be at least 2 characters' : 'ชื่อ-นามสกุลต้องมีอย่างน้อย 2 ตัวอักษร');
       return;
     }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setError(isEn ? 'Please enter a valid email address' : 'กรุณากรอกอีเมลที่ถูกต้อง');
+      return;
+    }
+
+    // Validate password strength
+    if (password.length < 6) {
+      setError(isEn ? 'Password must be at least 6 characters' : 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
+      return;
+    }
+    if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+      setError(isEn ? 'Password must contain both letters and numbers' : 'รหัสผ่านต้องมีทั้งตัวอักษรและตัวเลข');
+      return;
+    }
+
     setIsSubmitting(true);
-    const result = await signUp(email, password, fullName, displayName);
+    const result = await signUp(trimmedEmail, password, trimmedName, trimmedDisplay);
     setIsSubmitting(false);
     if (result.success) {
       // Sync display name to localStorage for Header
-      if (displayName.trim()) {
-        localStorage.setItem('profile_display_name', displayName.trim());
-        localStorage.setItem('profile_name', fullName.trim());
-        window.dispatchEvent(new Event('profile-updated'));
-      } else if (fullName.trim()) {
-        localStorage.setItem('profile_display_name', fullName.trim());
-        localStorage.setItem('profile_name', fullName.trim());
+      const nameToStore = trimmedDisplay || trimmedName;
+      if (nameToStore) {
+        localStorage.setItem('profile_display_name', nameToStore);
+        localStorage.setItem('profile_name', trimmedName);
         window.dispatchEvent(new Event('profile-updated'));
       }
       if (result.error) {
@@ -153,7 +186,19 @@ export default function Auth() {
       }
       // If auto-signed-in, useEffect handles the rest
     } else {
-      setError(result.error || 'สมัครสมาชิกไม่สำเร็จ');
+      // Translate common Supabase errors to Thai
+      const errMsg = result.error || '';
+      if (errMsg.includes('already registered') || errMsg.includes('already been registered')) {
+        setError(isEn ? 'This email is already registered' : 'อีเมลนี้ถูกใช้งานแล้ว กรุณาเข้าสู่ระบบแทน');
+      } else if (errMsg.includes('rate limit') || errMsg.includes('too many')) {
+        setError(isEn ? 'Too many attempts. Please wait a moment.' : 'ลองบ่อยเกินไป กรุณารอสักครู่');
+      } else if (errMsg.includes('invalid') && errMsg.includes('email')) {
+        setError(isEn ? 'Invalid email address' : 'รูปแบบอีเมลไม่ถูกต้อง');
+      } else if (errMsg.includes('weak password') || errMsg.includes('password')) {
+        setError(isEn ? 'Password is too weak' : 'รหัสผ่านไม่ปลอดภัย กรุณาใช้ตัวอักษร+ตัวเลข');
+      } else {
+        setError(errMsg || (isEn ? 'Sign up failed' : 'สมัครสมาชิกไม่สำเร็จ'));
+      }
     }
   };
 

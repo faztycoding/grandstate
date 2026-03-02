@@ -171,7 +171,11 @@ export function useLicenseAuth() {
     const signIn = useCallback(async (email: string, password: string): Promise<AuthResult> => {
         try {
             console.log('[Auth] signIn attempt:', email);
-            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            const signInPromise = supabase.auth.signInWithPassword({ email, password });
+            const timeoutPromise = new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('TIMEOUT')), 15000)
+            );
+            const { data, error } = await Promise.race([signInPromise, timeoutPromise]);
 
             if (error) {
                 console.error('[Auth] signIn error:', error.message, error);
@@ -189,6 +193,9 @@ export function useLicenseAuth() {
             return { success: true };
         } catch (err: any) {
             console.error('[Auth] signIn exception:', err);
+            if (err.message === 'TIMEOUT') {
+                return { success: false, error: 'เชื่อมต่อ Server ไม่ได้ — กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่' };
+            }
             return { success: false, error: err.message || 'เข้าสู่ระบบไม่สำเร็จ' };
         }
     }, []);

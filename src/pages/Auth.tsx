@@ -108,12 +108,20 @@ export default function Auth() {
     e.preventDefault();
     setError(null);
     setIsSubmitting(true);
-    const result = await signIn(email, password);
-    setIsSubmitting(false);
-    if (!result.success) {
-      setError(result.error || 'เข้าสู่ระบบไม่สำเร็จ');
+    try {
+      console.log('[Auth] handleSignIn: starting...', email);
+      const result = await signIn(email, password);
+      console.log('[Auth] handleSignIn: result =', result);
+      if (!result.success) {
+        setError(result.error || 'เข้าสู่ระบบไม่สำเร็จ');
+      }
+      // If success, useEffect will handle redirect or show license activation
+    } catch (err: any) {
+      console.error('[Auth] handleSignIn crash:', err);
+      setError('เกิดข้อผิดพลาด: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsSubmitting(false);
     }
-    // If success, useEffect will handle redirect or show license activation
   };
 
   const handleSignUp = async (e: React.FormEvent) => {

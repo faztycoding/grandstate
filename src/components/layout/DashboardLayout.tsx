@@ -163,6 +163,7 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
             queuePosition={automationMonitor.state.queuePosition}
             queueEstimate={automationMonitor.state.queueEstimate}
             queueRunningJobs={automationMonitor.state.queueRunningJobs}
+            orderId={automationMonitor.state.orderId}
             fbUser={popupFbUser}
             onStop={automationMonitor.stopAutomation}
             onPause={automationMonitor.pauseAutomation}

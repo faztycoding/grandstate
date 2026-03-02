@@ -28,6 +28,7 @@ export interface AutomationMonitorState {
   startTime: number | null;
   endTime: number | null;
   mode: 'group' | 'marketplace' | null;
+  orderId: string | null;  // Order ID (AUTO0000001 format)
   // Queue
   queuePosition: number | null;
   queueEstimate: number;
@@ -45,6 +46,7 @@ const INITIAL_STATE: AutomationMonitorState = {
   startTime: null,
   endTime: null,
   mode: null,
+  orderId: null,
   queuePosition: null,
   queueEstimate: 0,
   queueRunningJobs: null,
@@ -98,6 +100,7 @@ export function useAutomationMonitor() {
             endTime: typeof data.endTime === 'number' ? data.endTime : prev.endTime,
             generatedCaptions: Array.isArray(data.generatedCaptions) && data.generatedCaptions.length > 0
               ? data.generatedCaptions : prev.generatedCaptions,
+            orderId: data.orderId || prev.orderId,
             mode,
           };
         });

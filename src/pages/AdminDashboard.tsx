@@ -2591,6 +2591,7 @@ export default function AdminDashboard() {
                                                         onClick={() => setQueueDetail({ type: 'history', data: h })}>
                                                         <div className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0 ring-2 ring-offset-1 ring-offset-background transition-all group-hover/hist:scale-125", h.success ? "bg-emerald-500 ring-emerald-200 dark:ring-emerald-800" : "bg-red-500 ring-red-200 dark:ring-red-800")} />
                                                         <span className="font-mono text-muted-foreground w-14 flex-shrink-0 hidden md:inline">{h.completedAtFormatted}</span>
+                                                        {h.orderId && <span className="font-mono text-[9px] text-amber-500 font-bold flex-shrink-0">{h.orderId}</span>}
                                                         <span className="font-medium flex-1 truncate">{h.displayId || uuidToDisplayId(h.userId)}</span>
                                                         {h.automationType && <span className={cn("text-[8px] font-bold uppercase px-1 py-0.5 rounded flex-shrink-0", h.automationType === 'marketplace' ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" : "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400")}>{h.automationType === 'marketplace' ? 'MKT' : 'GRP'}</span>}
                                                         <span className="text-muted-foreground flex-shrink-0">{h.groupCount}g</span>

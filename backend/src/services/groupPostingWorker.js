@@ -4936,6 +4936,7 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
       endTime: this.endTime,
       generatedCaptions: this.generatedCaptions,
       antiDetection: this.getAntiDetectionStatus(),
+      orderId: this.orderId || null,  // Order ID assigned by automationQueue
     };
   }
 

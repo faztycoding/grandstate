@@ -26,21 +26,24 @@ const __dirname = path.dirname(__filename);
 const MAX_CONCURRENT = parseInt(process.env.MAX_CONCURRENT_AUTOMATIONS || '10', 10);
 const QUEUE_TIMEOUT_MS = 30 * 60 * 1000; // 30 min max wait in queue
 const HISTORY_FILE = path.join(__dirname, '../../data/queue-history.json');
+const ORDER_COUNTER_FILE = path.join(__dirname, '../../data/order-counter.json');
 const MAX_HISTORY = 100;
 
 class AutomationQueue {
   constructor() {
-    this.running = new Map();   // userId -> { startedAt, groupCount, automationType, ... }
+    this.running = new Map();   // userId -> { startedAt, groupCount, automationType, orderId, ... }
     this.queue = [];            // [{ userId, config, resolve, reject, enqueuedAt, automationType }]
     this.history = [];          // persisted completed jobs
     this.maxConcurrent = MAX_CONCURRENT;
+    this.orderCounter = 0;      // Sequential order counter (AUTO0000001, AUTO0000002, ...)
 
     // Notification map: userId -> { type, message, timestamp }
     // Entries are consumed (deleted) when polled by the user
     this.notifications = new Map();
 
-    // Load persisted history
+    // Load persisted history and order counter
     this._loadHistory();
+    this._loadOrderCounter();
 
     // Cleanup stale queue entries every 60s
     this._cleanupTimer = setInterval(() => this._cleanupStaleEntries(), 60_000);
@@ -76,6 +79,40 @@ class AutomationQueue {
     } catch (err) {
       console.warn('⚠️ [Queue] Could not save history:', err.message);
     }
+  }
+
+  _loadOrderCounter() {
+    try {
+      if (fs.existsSync(ORDER_COUNTER_FILE)) {
+        const raw = fs.readFileSync(ORDER_COUNTER_FILE, 'utf-8');
+        const data = JSON.parse(raw);
+        this.orderCounter = data.counter || 0;
+        console.log(`📂 [Queue] Loaded order counter: ${this.orderCounter}`);
+      }
+    } catch (err) {
+      console.warn('⚠️ [Queue] Could not load order counter:', err.message);
+    }
+  }
+
+  _saveOrderCounter() {
+    try {
+      const dir = path.dirname(ORDER_COUNTER_FILE);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(ORDER_COUNTER_FILE, JSON.stringify({ counter: this.orderCounter, updatedAt: Date.now() }));
+    } catch (err) {
+      console.warn('⚠️ [Queue] Could not save order counter:', err.message);
+    }
+  }
+
+  /**
+   * Generate next Order ID in format AUTO0000001
+   */
+  _generateOrderId() {
+    this.orderCounter++;
+    this._saveOrderCounter();
+    return `AUTO${String(this.orderCounter).padStart(7, '0')}`;
   }
 
   // ─── Core Queue Logic ──────────────────────────────────────────
@@ -146,8 +183,10 @@ class AutomationQueue {
    */
   _startJob(userId, automationFn, config, extraContext = {}) {
     const automationType = extraContext.automationType || 'group';
+    const orderId = this._generateOrderId();
     const jobInfo = {
       userId,
+      orderId,
       startedAt: Date.now(),
       groupCount: config.groups?.length || 0,
       worker: extraContext.worker,
@@ -158,6 +197,11 @@ class AutomationQueue {
       automationType,
     };
     this.running.set(userId, jobInfo);
+    
+    // Store orderId in worker so it can be retrieved by status endpoint
+    if (extraContext.worker && typeof extraContext.worker === 'object') {
+      extraContext.worker.orderId = orderId;
+    }
 
     const shortId = userId.substring(0, 8);
     console.log(`▶️ [Queue] Starting ${automationType} automation for ${shortId} (${this.running.size}/${this.maxConcurrent} slots used)`);
@@ -200,6 +244,7 @@ class AutomationQueue {
     }
 
     const record = {
+      orderId: job.orderId,
       userId: userId.substring(0, 8) + '...',
       fullUserId: userId,
       displayName: job.displayName || userId.substring(0, 8),

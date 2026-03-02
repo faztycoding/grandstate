@@ -65,6 +65,7 @@ interface TaskProgressPopupProps {
     queuePosition?: number | null;
     queueEstimate?: number;
     queueRunningJobs?: Array<{ displayName: string; groupCount: number; runningSec: number; automationType: string }> | null;
+    orderId?: string | null;  // Order ID (AUTO0000001 format)
     fbUser?: { name: string; profilePic?: string } | null;
     onStop: () => void;
     onPause: () => void;
@@ -118,6 +119,7 @@ export function TaskProgressPopup({
     queuePosition,
     queueEstimate,
     queueRunningJobs,
+    orderId,
     fbUser,
     onStop,
     onPause,
@@ -441,6 +443,7 @@ export function TaskProgressPopup({
                                                         {successRate >= 80 ? 'ยอดเยี่ยม!' : successRate >= 50 ? 'ดำเนินการเสร็จ' : 'พบปัญหา'}
                                                     </p>
                                                     <p className="text-[10px] text-muted-foreground">
+                                                        {orderId && <span className="font-mono text-accent mr-1.5">Order: {orderId}</span>}
                                                         อัตราสำเร็จ {successRate}%{duration > 0 && ` · ${formatDuration(duration)}`}
                                                     </p>
                                                 </div>

@@ -2813,6 +2813,7 @@ export class MarketplaceWorker {
       startTime: this.startTime,
       endTime: this.endTime,
       generatedCaptions: this.generatedCaptions,
+      orderId: this.orderId || null,  // Order ID assigned by automationQueue
     };
   }
 

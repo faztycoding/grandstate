@@ -43,6 +43,22 @@ import { LocationPicker } from './LocationPicker';
 import { GoogleMapsPicker } from './GoogleMapsPicker';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { AlertCircle, CheckCircle2 } from 'lucide-react';
+
+// Facebook image upload requirements
+const MAX_IMAGE_SIZE_MB = 10;
+const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = [
+  'image/jpeg',
+  'image/jpg', 
+  'image/png',
+  'image/gif',
+  'image/tiff',
+  'image/heic',
+  'image/heif',
+  'image/webp',
+];
+const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'tiff', 'heic', 'heif', 'webp'];
 
 export interface ContactInfo {
   id: string;
@@ -202,9 +218,29 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
   const handleImageUpload = useCallback((files: FileList | null) => {
     if (!files) return;
     
+    let validCount = 0;
+    let invalidCount = 0;
+    const errors: string[] = [];
+    
     Array.from(files).forEach(file => {
-      if (!file.type.startsWith('image/')) return;
+      // Validate file type
+      const ext = file.name.split('.').pop()?.toLowerCase() || '';
+      const isValidType = ALLOWED_IMAGE_TYPES.includes(file.type) || ALLOWED_EXTENSIONS.includes(ext);
+      if (!isValidType) {
+        invalidCount++;
+        errors.push(`${file.name}: ไฟล์ต้องเป็น JPG, PNG, GIF, TIFF, HEIF หรือ WebP`);
+        return;
+      }
       
+      // Validate file size
+      if (file.size > MAX_IMAGE_SIZE_BYTES) {
+        invalidCount++;
+        const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+        errors.push(`${file.name}: ไฟล์ใหญ่เกินไป (${sizeMB}MB) ต้องไม่เกิน ${MAX_IMAGE_SIZE_MB}MB`);
+        return;
+      }
+      
+      validCount++;
       const reader = new FileReader();
       reader.onload = (event) => {
         const base64 = event.target?.result as string;
@@ -215,6 +251,17 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
       };
       reader.readAsDataURL(file);
     });
+    
+    // Show feedback
+    if (validCount > 0) {
+      toast.success(`เพิ่มรูปภาพ ${validCount} รูป`);
+    }
+    if (invalidCount > 0) {
+      toast.error(`${invalidCount} รูปไม่ผ่านเกณฑ์`, {
+        description: errors.slice(0, 3).join('\n') + (errors.length > 3 ? `\n...และอีก ${errors.length - 3} รูป` : ''),
+        duration: 6000,
+      });
+    }
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -355,6 +402,30 @@ export function PropertyGalleryForm({ onSubmit, onSave }: PropertyGalleryFormPro
               <Badge variant="secondary" className="bg-amber-100 text-amber-700">
                 {formData.images.length} / 50 {g.imagesCount}
               </Badge>
+            </div>
+
+            {/* Upload Guidelines */}
+            <div className="mb-4 p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                <div className="text-xs text-blue-700 dark:text-blue-300">
+                  <p className="font-semibold mb-1">เกณฑ์การอัพโหลดรูปภาพ (Facebook)</p>
+                  <ul className="space-y-0.5 text-blue-600 dark:text-blue-400">
+                    <li className="flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3 h-3" />
+                      <span>ขนาดไฟล์: ไม่เกิน <strong>10 MB</strong> ต่อรูป</span>
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3 h-3" />
+                      <span>รูปแบบ: <strong>JPG, PNG, GIF, TIFF, HEIF, WebP</strong></span>
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3 h-3" />
+                      <span>แนะนำ: ความละเอียดสูง, แนวนอน, ไม่มีลายน้ำ</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
             </div>
 
             {/* Add Image Button */}

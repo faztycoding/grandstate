@@ -34,9 +34,17 @@ import { PACKAGE_LIMITS } from '@/hooks/usePackageLimits';
 import { supabase } from '@/lib/supabase';
 import { apiFetch } from '@/lib/config';
 import { cn } from '@/lib/utils';
+import { isAdminEmail } from '@/lib/config';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 
 const packageInfo = {
+    admin: {
+        name: 'Admin',
+        icon: Shield,
+        color: 'text-red-600',
+        bgColor: 'bg-red-100',
+        gradient: 'from-red-600 to-rose-500'
+    },
     free: {
         name: 'Rookie',
         icon: Rocket,
@@ -62,8 +70,9 @@ const packageInfo = {
 
 export default function UserProfile() {
     const navigate = useNavigate();
-    const { license, logout, currentPackage, limits } = useLicenseAuth();
+    const { user, license, logout, currentPackage, limits } = useLicenseAuth();
     const { displayId } = useUserProfile();
+    const isAdmin = isAdminEmail(user?.email);
     // Usage stats from backend
     const [usageStats, setUsageStats] = useState({
         postsToday: 0,
@@ -71,15 +80,19 @@ export default function UserProfile() {
         propertiesUsed: 0,
     });
 
-    const pkg = packageInfo[currentPackage as keyof typeof packageInfo] || packageInfo.free;
+    const pkgKey = isAdmin ? 'admin' : currentPackage;
+    const pkg = packageInfo[pkgKey as keyof typeof packageInfo] || packageInfo.free;
     const PkgIcon = pkg.icon;
-    const pkgLimits = PACKAGE_LIMITS[currentPackage as keyof typeof PACKAGE_LIMITS] || PACKAGE_LIMITS.free;
+    const pkgLimits = isAdmin
+        ? { postsPerDay: 9999, maxGroups: 9999, maxProperties: 9999 }
+        : (PACKAGE_LIMITS[currentPackage as keyof typeof PACKAGE_LIMITS] || PACKAGE_LIMITS.free);
 
     useEffect(() => {
-        if (license) {
+        // Fetch stats for admin (even without license) and licensed users
+        if (license || isAdmin) {
             fetchUsageStats();
         }
-    }, [license]);
+    }, [license, isAdmin]);
 
     const fetchUsageStats = async () => {
         try {
@@ -121,10 +134,21 @@ export default function UserProfile() {
         return formatDate(dateString);
     };
 
+    // Admin users get a virtual license if they don't have one
+    const effectiveLicense: LicenseInfo | null = license || (isAdmin ? {
+        id: 'admin',
+        licenseKey: 'ADMIN-ACCESS',
+        package: 'elite' as const,
+        maxFbSessions: 99,
+        ownerName: user?.user_metadata?.full_name || user?.email || 'Admin',
+        expiresAt: new Date(Date.now() + 365 * 86400000),
+        isActive: true,
+    } : null);
+
     const getDaysRemaining = () => {
-        if (!license?.expiresAt) return 0;
+        if (!effectiveLicense?.expiresAt) return 0;
         const now = new Date();
-        const expiry = new Date(license.expiresAt);
+        const expiry = new Date(effectiveLicense.expiresAt);
         const diffDays = Math.ceil((expiry.getTime() - now.getTime()) / 86400000);
         return Math.max(0, diffDays);
     };
@@ -138,7 +162,7 @@ export default function UserProfile() {
         navigate('/auth?logout=true');
     };
 
-    if (!license) {
+    if (!effectiveLicense) {
         return (
             <DashboardLayout title="โปรไฟล์ผู้ใช้" subtitle="ข้อมูลบัญชีและแพ็กเกจ">
                 <div className="rounded-2xl border border-border bg-card p-8 text-center">
@@ -177,11 +201,11 @@ export default function UserProfile() {
                                     <div className="flex items-center gap-2">
                                         <h2 className="text-2xl font-bold">{pkg.name}</h2>
                                         <Badge className={cn(pkg.bgColor, pkg.color)}>
-                                            {currentPackage.toUpperCase()}
+                                            {isAdmin ? 'ADMIN' : currentPackage.toUpperCase()}
                                         </Badge>
                                     </div>
                                     <p className="text-muted-foreground">
-                                        {license.ownerName || 'ผู้ใช้งาน GrandState'}
+                                        {effectiveLicense.ownerName || 'ผู้ใช้งาน GrandState'}
                                     </p>
                                     {displayId && (
                                         <div className="flex items-center gap-1.5 mt-1">
@@ -217,7 +241,7 @@ export default function UserProfile() {
                                 <div>
                                     <p className="text-sm text-muted-foreground">License Key</p>
                                     <code className="text-lg font-mono bg-muted px-3 py-1 rounded-lg">
-                                        {license.licenseKey}
+                                        {effectiveLicense.licenseKey}
                                     </code>
                                 </div>
                                 <div>
@@ -227,7 +251,7 @@ export default function UserProfile() {
                                         isExpired && 'text-red-500',
                                         isExpiringSoon && 'text-amber-500'
                                     )}>
-                                        {formatDate(license.expiresAt.toString())}
+                                        {formatDate(effectiveLicense.expiresAt.toString())}
                                     </p>
                                 </div>
                                 <div>
@@ -345,10 +369,10 @@ export default function UserProfile() {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Monitor className="w-5 h-5" />
-                                Facebook Sessions (สูงสุด {license.maxFbSessions} บัญชี)
+                                Facebook Sessions (สูงสุด {effectiveLicense.maxFbSessions} บัญชี)
                             </CardTitle>
                             <CardDescription>
-                                แพ็คเกจของคุณรองรับ Facebook ได้ {license.maxFbSessions} บัญชีพร้อมกัน — login จากเครื่องไหนก็ได้ไม่จำกัด
+                                แพ็คเกจของคุณรองรับ Facebook ได้ {effectiveLicense.maxFbSessions} บัญชีพร้อมกัน — login จากเครื่องไหนก็ได้ไม่จำกัด
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -359,7 +383,7 @@ export default function UserProfile() {
                                 <div>
                                     <p className="font-medium text-sm">เข้าใช้งานจากเครื่องไหนก็ได้</p>
                                     <p className="text-xs text-muted-foreground">
-                                        ไม่จำกัดจำนวนอุปกรณ์ — จำกัดเฉพาะ Facebook session ({license.maxFbSessions} บัญชี)
+                                        ไม่จำกัดจำนวนอุปกรณ์ — จำกัดเฉพาะ Facebook session ({effectiveLicense.maxFbSessions} บัญชี)
                                     </p>
                                 </div>
                             </div>

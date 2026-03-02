@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
+import { isAdminEmail } from '@/lib/config';
 
 // ── Constants ──
 const LICENSE_KEY_REGEX = /^GS[A-Z0-9]{3}-[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{5}$/;
@@ -370,8 +371,11 @@ export function LicenseAuthProvider({ children }: { children: ReactNode }) {
     const isLicenseActive = !!license;
     // Free tier: login is enough — license key only needed for paid plans
     const isFullyReady = isAuthenticated;
-    const currentPackage = license?.package || 'free';
-    const limits = packageLimits[currentPackage];
+    const isAdmin = isAdminEmail(user?.email);
+    const currentPackage = isAdmin ? 'elite' : (license?.package || 'free');
+    const limits = isAdmin
+        ? { postsPerDay: 9999, maxGroups: 9999, maxProperties: 9999 }
+        : packageLimits[currentPackage];
 
     // Days remaining helper
     const daysRemaining = license?.expiresAt

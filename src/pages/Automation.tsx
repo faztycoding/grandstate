@@ -356,6 +356,15 @@ export default function Automation() {
     setAutomationStartTime(Date.now());
     setAutomationEndTime(null);
 
+    // Show TaskProgressPopup IMMEDIATELY (before API call)
+    globalAutomation?.notifyStarted(postingMode, {
+      totalSteps: tasks.length,
+      tasks,
+      logs: [],
+      startTime: Date.now(),
+      generatedCaptions: [],
+    });
+
     toast.info(t.automation.automationStarting, {
       description: `${t.automation.postingTo} ${selectedGroups.length} ${t.automation.groups}`,
     });
@@ -482,7 +491,7 @@ export default function Automation() {
       setAutomationStartTime(typeof result.startTime === 'number' ? result.startTime : Date.now());
       setAutomationEndTime(typeof result.endTime === 'number' ? result.endTime : null);
 
-      // Notify global monitor → persistent popup across all pages
+      // Update popup with real backend data (popup already showing from early notify)
       globalAutomation?.notifyStarted(postingMode, {
         totalSteps: result.totalSteps ?? groupsData.length,
         tasks: result.tasks ?? [],
@@ -797,9 +806,11 @@ export default function Automation() {
   const completedTasks = automation.tasks.filter(t => t.status === 'completed').length;
   const pendingApprovalTasks = automation.tasks.filter(t => t.status === 'pending_approval').length;
   const failedTasks = automation.tasks.filter(t => t.status === 'failed').length;
+  const inProgressTasks = automation.tasks.filter(t => t.status === 'in_progress').length;
   const resolvedTasks = completedTasks + pendingApprovalTasks + failedTasks;
+  const effectiveProgress = resolvedTasks + (inProgressTasks * 0.5);
   const progressPercent = automation.totalSteps > 0
-    ? Math.round((resolvedTasks / automation.totalSteps) * 100)
+    ? Math.min(Math.round((effectiveProgress / automation.totalSteps) * 100), 99)
     : 0;
 
   return (

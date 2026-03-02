@@ -278,8 +278,11 @@ export function useAutomationMonitor() {
   const completedTasks = state.tasks.filter(t => t.status === 'completed').length;
   const pendingApprovalTasks = state.tasks.filter(t => t.status === 'pending_approval').length;
   const failedTasks = state.tasks.filter(t => t.status === 'failed').length;
+  const inProgressTasks = state.tasks.filter(t => t.status === 'in_progress').length;
   const resolvedTasks = completedTasks + pendingApprovalTasks + failedTasks;
-  const progressPercent = state.totalSteps > 0 ? Math.round((resolvedTasks / state.totalSteps) * 100) : 0;
+  // Count in_progress tasks as 50% done so progress bar moves during automation
+  const effectiveProgress = resolvedTasks + (inProgressTasks * 0.5);
+  const progressPercent = state.totalSteps > 0 ? Math.min(Math.round((effectiveProgress / state.totalSteps) * 100), 99) : 0;
 
   return {
     state,

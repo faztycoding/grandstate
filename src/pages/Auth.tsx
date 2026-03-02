@@ -65,6 +65,7 @@ export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [licenseKey, setLicenseKey] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -132,9 +133,19 @@ export default function Auth() {
       return;
     }
     setIsSubmitting(true);
-    const result = await signUp(email, password, fullName);
+    const result = await signUp(email, password, fullName, displayName);
     setIsSubmitting(false);
     if (result.success) {
+      // Sync display name to localStorage for Header
+      if (displayName.trim()) {
+        localStorage.setItem('profile_display_name', displayName.trim());
+        localStorage.setItem('profile_name', fullName.trim());
+        window.dispatchEvent(new Event('profile-updated'));
+      } else if (fullName.trim()) {
+        localStorage.setItem('profile_display_name', fullName.trim());
+        localStorage.setItem('profile_name', fullName.trim());
+        window.dispatchEvent(new Event('profile-updated'));
+      }
       if (result.error) {
         // Email confirmation needed
         setSuccessMsg(result.error);
@@ -409,6 +420,15 @@ export default function Auth() {
                         <Input id="fullName" placeholder={isEn ? 'John Doe' : 'เช่น สมชาย ใจดี'} value={fullName}
                           onChange={e => setFullName(e.target.value)} className={cn("pl-11", glassInput)} required />
                       </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={glassLabel}>{isEn ? 'Display Name' : 'ชื่อที่แสดง (โปรไฟล์)'}</label>
+                      <div className="relative">
+                        <Sparkles className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                        <Input id="displayName" placeholder={isEn ? 'Nickname or brand name' : 'ชื่อเล่น หรือ ชื่อแบรนด์'} value={displayName}
+                          onChange={e => setDisplayName(e.target.value)} className={cn("pl-11", glassInput)} />
+                      </div>
+                      <p className="text-[11px] text-white/25 pl-1">{isEn ? 'Shown on your profile (can change later)' : 'แสดงบนโปรไฟล์ของคุณ (เปลี่ยนทีหลังได้)'}</p>
                     </div>
                     <div className="space-y-1.5">
                       <label className={glassLabel}>{isEn ? 'Email' : 'อีเมล'}</label>

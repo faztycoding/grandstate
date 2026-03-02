@@ -64,7 +64,7 @@ interface LicenseAuthContextValue {
     currentPackage: 'free' | 'agent' | 'elite';
     limits: { postsPerDay: number; maxGroups: number; maxProperties: number };
     daysRemaining: number | null;
-    signUp: (email: string, password: string, fullName?: string) => Promise<AuthResult>;
+    signUp: (email: string, password: string, fullName?: string, displayName?: string) => Promise<AuthResult>;
     signIn: (email: string, password: string) => Promise<AuthResult>;
     signOut: () => Promise<void>;
     resetPassword: (email: string) => Promise<AuthResult>;
@@ -166,12 +166,12 @@ export function LicenseAuthProvider({ children }: { children: ReactNode }) {
     }, []);
 
     // ── 2. Sign Up (Email + Password) ──
-    const signUp = useCallback(async (email: string, password: string, fullName?: string): Promise<AuthResult> => {
+    const signUp = useCallback(async (email: string, password: string, fullName?: string, displayName?: string): Promise<AuthResult> => {
         try {
             const { data, error } = await supabase.auth.signUp({
                 email,
                 password,
-                options: { data: { full_name: fullName } },
+                options: { data: { full_name: fullName, display_name: displayName || fullName } },
             });
 
             if (error) return { success: false, error: error.message };

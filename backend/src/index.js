@@ -2539,35 +2539,96 @@ app.post('/api/facebook/auto-login', ...auth, async (req, res) => {
     } catch (e) { /* non-critical */ }
 
     // ── Step 8: Check various outcomes ──
-    if (postLoginUrl.includes('checkpoint') || postLoginUrl.includes('two_step_verification') || postLoginUrl.includes('recover') || postLoginUrl.includes('captcha')) {
-      console.log(`⚠️ [${shortId}] Checkpoint/verification required`);
+    // 8a: URL-based checkpoint detection (expanded patterns)
+    const checkpointPatterns = ['checkpoint', 'two_step_verification', 'recover', 'captcha', 'login/identify', 'login_attempt', 'confirmemail', 'approve', 'accountquality'];
+    const isCheckpointUrl = checkpointPatterns.some(p => postLoginUrl.includes(p));
+    if (isCheckpointUrl) {
+      console.log(`⚠️ [${shortId}] Checkpoint/verification URL detected: ${postLoginUrl}`);
+      // Save screenshot for debugging
+      try { await page.screenshot({ path: `data/debug-checkpoint-${shortId}.png`, fullPage: false }); } catch {}
       return res.json({ success: false, error: 'Facebook ต้องการยืนยันตัวตน (2FA/Checkpoint) — กรุณาลองเปิดหน้าต่าง Browser ด้วยตนเอง' });
     }
 
-    // Check for error messages
-    const errorMsg = await page.evaluate(() => {
-      const errEl = document.querySelector('#login_error, .login_error_box, [data-sigil="m_login_notice"], [role="alert"]');
-      return errEl ? errEl.textContent?.trim() : '';
-    }).catch(() => '');
+    // 8b: DOM-based checkpoint detection (Facebook sometimes stays on same URL)
+    const pageAnalysis = await page.evaluate(() => {
+      const body = document.body?.innerText || '';
+      const bodyLower = body.toLowerCase();
 
-    if (errorMsg) {
-      console.log(`❌ [${shortId}] Login error: ${errorMsg.substring(0, 100)}`);
-      return res.json({ success: false, error: errorMsg });
+      // Check for verification/checkpoint content
+      const verificationKeywords = [
+        'enter the code', 'ใส่รหัส', 'รหัสยืนยัน', 'verification code',
+        'approve this login', 'อนุมัติการเข้าสู่ระบบ',
+        'check your email', 'ตรวจสอบอีเมล',
+        'suspicious login', 'การเข้าสู่ระบบที่น่าสงสัย',
+        'recognize this device', 'จำอุปกรณ์นี้',
+        'one-time password', 'two-factor', 'authenticator',
+        'we need to confirm', 'เราต้องยืนยัน',
+        'account has been locked', 'บัญชีถูกล็อค',
+        'identity confirmation', 'ยืนยันตัวตน',
+        'trust this browser', 'เชื่อถือเบราว์เซอร์นี้',
+      ];
+      const isVerification = verificationKeywords.some(kw => bodyLower.includes(kw));
+
+      // Check for error messages (expanded selectors)
+      const errorSelectors = [
+        '#login_error', '.login_error_box', '[data-sigil="m_login_notice"]',
+        '[role="alert"]', '._9ay7', '.uiBoxRed', '._585n', '._585p',
+        '[data-testid="royal_login_form_error"]',
+        'div[class*="error"]', 'div[class*="Error"]',
+      ];
+      let errorText = '';
+      for (const sel of errorSelectors) {
+        const el = document.querySelector(sel);
+        if (el && el.textContent?.trim()) {
+          errorText = el.textContent.trim();
+          break;
+        }
+      }
+
+      // Check if login form is still present (visible only — hidden inputs don't count)
+      const hasVisibleLoginForm = (() => {
+        const emailEl = document.querySelector('input[name="email"], #email');
+        const passEl = document.querySelector('input[name="pass"], #pass');
+        if (emailEl) {
+          const rect = emailEl.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) return true;
+        }
+        if (passEl) {
+          const rect = passEl.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) return true;
+        }
+        return false;
+      })();
+
+      return {
+        isVerification,
+        errorText: errorText.substring(0, 300),
+        hasVisibleLoginForm,
+        bodySnippet: body.substring(0, 500),
+        title: document.title || '',
+      };
+    }).catch(() => ({ isVerification: false, errorText: '', hasVisibleLoginForm: true, bodySnippet: '', title: '' }));
+
+    console.log(`🔑 [${shortId}] Page analysis: verification=${pageAnalysis.isVerification}, error="${pageAnalysis.errorText?.substring(0,80)}", loginForm=${pageAnalysis.hasVisibleLoginForm}, title="${pageAnalysis.title}"`);
+
+    // 8c: Verification/checkpoint detected via DOM content
+    if (pageAnalysis.isVerification) {
+      console.log(`⚠️ [${shortId}] Verification page detected via DOM content`);
+      try { await page.screenshot({ path: `data/debug-verify-${shortId}.png`, fullPage: false }); } catch {}
+      return res.json({ success: false, error: 'Facebook ต้องการยืนยันตัวตน — อาจต้องกรอกรหัสจาก SMS/Email หรืออนุมัติจากอุปกรณ์อื่น กรุณาเปิด Browser ด้วยตนเอง' });
     }
 
-    // Check if login form is still present → login failed
-    const stillHasLoginForm = await page.evaluate(() => {
-      return !!(document.querySelector('input[name="email"]') ||
-                document.querySelector('input[name="pass"]') ||
-                document.querySelector('#email') ||
-                document.querySelector('#pass'));
-    }).catch(() => true);
+    // 8d: Facebook showed an error message
+    if (pageAnalysis.errorText) {
+      console.log(`❌ [${shortId}] Login error: ${pageAnalysis.errorText.substring(0, 100)}`);
+      return res.json({ success: false, error: pageAnalysis.errorText });
+    }
 
-    if (stillHasLoginForm) {
+    // 8e: Login form still visible → wrong password or other issue
+    if (pageAnalysis.hasVisibleLoginForm) {
       console.log(`❌ [${shortId}] Login form still visible — login failed`);
-      // Take screenshot of the page for debugging
-      const bodyText = await page.evaluate(() => document.body.innerText?.substring(0, 500) || '').catch(() => '');
-      console.log(`❌ [${shortId}] Page text: ${bodyText.substring(0, 200)}`);
+      console.log(`❌ [${shortId}] Page text: ${pageAnalysis.bodySnippet.substring(0, 200)}`);
+      try { await page.screenshot({ path: `data/debug-loginfail-${shortId}.png`, fullPage: false }); } catch {}
       return res.json({ success: false, error: 'Login ไม่สำเร็จ — รหัสผ่านอาจไม่ถูกต้อง หรือ Facebook ต้องการยืนยันตัวตน' });
     }
 

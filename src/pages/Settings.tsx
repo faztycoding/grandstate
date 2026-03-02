@@ -1228,7 +1228,8 @@ export default function Settings() {
 
       {/* Facebook Login Dialog — World-class UI */}
       <Dialog open={showLoginPopup} onOpenChange={(open) => { if (!open) handleCloseLoginPopup(); }}>
-        <DialogContent className="sm:max-w-[440px] p-0 overflow-hidden border-0 shadow-2xl">
+        <DialogContent className="sm:max-w-[440px] p-0 overflow-hidden border-0 shadow-2xl" aria-describedby={undefined}>
+          <DialogTitle className="sr-only">เชื่อมต่อ Facebook</DialogTitle>
           {/* Gradient Header */}
           <div className={cn(
             "relative px-6 pt-6 pb-5 text-white transition-all duration-500",

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { PropertyCard } from '@/components/property/PropertyCard';
 import { PropertyForm } from '@/components/property/PropertyForm';
@@ -22,12 +22,11 @@ import {
 } from '@/components/ui/dialog';
 import { useSupabaseProperties } from '@/hooks/useSupabaseProperties';
 import { Property } from '@/types/property';
-import { Plus, Search, SlidersHorizontal, Building2, LayoutGrid, Lock, Loader2 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Plus, Search, SlidersHorizontal, Building2, LayoutGrid, Lock, Loader2, CheckCircle2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { PropertyGridSkeleton } from '@/components/ui/skeleton-loaders';
-import { PropertyUpdateSuccess } from '@/components/ui/PropertyUpdateSuccess';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { canAddProperty, getUserPackage, getPackageLimits } from '@/hooks/usePackageLimits';
 
@@ -42,10 +41,15 @@ export default function Properties() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [deletingProperty, setDeletingProperty] = useState<Property | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
-  const [successMode, setSuccessMode] = useState<'update' | 'add'>('update');
   const [previewProperty, setPreviewProperty] = useState<Property | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [successPopup, setSuccessPopup] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!successPopup) return;
+    const timer = setTimeout(() => setSuccessPopup(null), 2200);
+    return () => clearTimeout(timer);
+  }, [successPopup]);
 
   const handlePreview = (property: Property) => {
     setPreviewProperty(property);
@@ -100,12 +104,10 @@ export default function Properties() {
     try {
       if (editingProperty) {
         await updateProperty(editingProperty.id, data);
-        setSuccessMode('update');
-        setShowSuccessPopup(true);
+        setSuccessPopup(t.properties.updateSuccess || 'อัปเดตสินทรัพย์เรียบร้อยแล้ว');
       } else {
         await addProperty(data);
-        setSuccessMode('add');
-        setShowSuccessPopup(true);
+        setSuccessPopup(t.properties.addSuccess || 'เพิ่มสินทรัพย์เรียบร้อยแล้ว');
       }
       setIsFormOpen(false);
       setEditingProperty(null);
@@ -302,19 +304,60 @@ export default function Properties() {
         onPost={handlePost}
       />
 
+      {/* Success Animation Popup */}
+      <AnimatePresence>
+        {successPopup && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm"
+            onClick={() => setSuccessPopup(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.7, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.85, opacity: 0, y: -10 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              className="bg-background/95 backdrop-blur-xl border border-emerald-500/20 rounded-2xl shadow-2xl shadow-emerald-500/10 px-8 py-7 flex flex-col items-center gap-4 max-w-xs mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 15, delay: 0.15 }}
+                className="w-16 h-16 rounded-full bg-emerald-500/15 flex items-center justify-center"
+              >
+                <motion.div
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ delay: 0.3, duration: 0.4 }}
+                >
+                  <CheckCircle2 className="w-9 h-9 text-emerald-500" />
+                </motion.div>
+              </motion.div>
+              <div className="text-center">
+                <p className="text-lg font-bold text-foreground">{successPopup}</p>
+                <p className="text-xs text-muted-foreground mt-1">ข้อมูลถูกบันทึกเรียบร้อยแล้ว</p>
+              </div>
+              <motion.div
+                initial={{ width: '100%' }}
+                animate={{ width: '0%' }}
+                transition={{ duration: 2.2, ease: 'linear' }}
+                className="h-0.5 bg-emerald-500/50 rounded-full self-start"
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Delete Confirmation Dialog */}
       <DeletePropertyDialog
         property={deletingProperty}
         open={isDeleteOpen}
         onOpenChange={setIsDeleteOpen}
         onConfirm={confirmDelete}
-      />
-
-      {/* Success Popup */}
-      <PropertyUpdateSuccess
-        show={showSuccessPopup}
-        mode={successMode}
-        onClose={() => setShowSuccessPopup(false)}
       />
     </DashboardLayout>
   );

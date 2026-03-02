@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 
@@ -52,10 +52,34 @@ const packageLimits = {
     elite: { postsPerDay: 750, maxGroups: 750, maxProperties: Infinity },
 };
 
+// ── Context type ──
+interface LicenseAuthContextValue {
+    user: User | null;
+    isLoading: boolean;
+    isAuthenticated: boolean;
+    license: LicenseInfo | null;
+    isLicenseActive: boolean;
+    isValidating: boolean;
+    isFullyReady: boolean;
+    currentPackage: 'free' | 'agent' | 'elite';
+    limits: { postsPerDay: number; maxGroups: number; maxProperties: number };
+    daysRemaining: number | null;
+    signUp: (email: string, password: string, fullName?: string) => Promise<AuthResult>;
+    signIn: (email: string, password: string) => Promise<AuthResult>;
+    signOut: () => Promise<void>;
+    resetPassword: (email: string) => Promise<AuthResult>;
+    activateLicense: (key: string) => Promise<LicenseValidationResult>;
+    validateKey: (key: string) => Promise<LicenseValidationResult>;
+    logout: () => Promise<void>;
+    checkStoredLicense: () => Promise<void>;
+}
+
+const LicenseAuthContext = createContext<LicenseAuthContextValue | null>(null);
+
 // ══════════════════════════════════════════
-//  Main Hook: Supabase Auth + License
+//  Provider: runs auth logic ONCE for entire app
 // ══════════════════════════════════════════
-export function useLicenseAuth() {
+export function LicenseAuthProvider({ children }: { children: ReactNode }) {
     const cachedLicense = getCachedLicense();
     const [user, setUser] = useState<User | null>(null);
     const [license, setLicense] = useState<LicenseInfo | null>(cachedLicense);
@@ -354,35 +378,37 @@ export function useLicenseAuth() {
         ? Math.max(0, Math.ceil((license.expiresAt.getTime() - Date.now()) / 86400000))
         : null;
 
-    return {
-        // Auth state
+    const value: LicenseAuthContextValue = {
         user,
         isLoading,
         isAuthenticated,
-
-        // License state
         license,
         isLicenseActive,
         isValidating,
         isFullyReady,
-
-        // Package info
         currentPackage,
         limits,
         daysRemaining,
-
-        // Auth actions
         signUp,
         signIn,
         signOut,
         resetPassword,
-
-        // License actions
         activateLicense,
-
-        // Backward compatibility
         validateKey,
         logout,
         checkStoredLicense,
     };
+
+    return React.createElement(LicenseAuthContext.Provider, { value }, children);
+}
+
+// ══════════════════════════════════════════
+//  Hook: reads from the single Provider instance
+// ══════════════════════════════════════════
+export function useLicenseAuth(): LicenseAuthContextValue {
+    const ctx = useContext(LicenseAuthContext);
+    if (!ctx) {
+        throw new Error('useLicenseAuth must be used within <LicenseAuthProvider>');
+    }
+    return ctx;
 }

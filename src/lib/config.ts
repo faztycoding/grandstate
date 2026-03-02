@@ -13,8 +13,6 @@ export function isAdminEmail(email: string | undefined): boolean {
   return ADMIN_EMAILS.includes(email.toLowerCase());
 }
 
-export const ADMIN_SECRET: string = import.meta.env.VITE_ADMIN_SECRET || '';
-
 /**
  * Authenticated fetch — auto-attaches Supabase JWT token
  * Use this instead of raw fetch() for all backend API calls

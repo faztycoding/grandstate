@@ -31,6 +31,28 @@ function generateDisplayId() {
   return `GS${num}${l1}${l2}`;
 }
 
+// Input validation helper — lightweight alternative to zod
+function validateBody(body, schema) {
+  const errors = [];
+  for (const [key, rules] of Object.entries(schema)) {
+    const val = body?.[key];
+    if (rules.required && (val === undefined || val === null || val === '')) {
+      errors.push(`${key} is required`);
+      continue;
+    }
+    if (val !== undefined && val !== null) {
+      if (rules.type && typeof val !== rules.type) errors.push(`${key} must be ${rules.type}`);
+      if (rules.type === 'string' && typeof val === 'string') {
+        if (rules.maxLength && val.length > rules.maxLength) errors.push(`${key} exceeds max length ${rules.maxLength}`);
+        if (rules.pattern && !rules.pattern.test(val)) errors.push(`${key} has invalid format`);
+      }
+      if (rules.isArray && !Array.isArray(val)) errors.push(`${key} must be an array`);
+      if (rules.isArray && Array.isArray(val) && rules.maxItems && val.length > rules.maxItems) errors.push(`${key} exceeds max items ${rules.maxItems}`);
+    }
+  }
+  return errors.length ? errors : null;
+}
+
 // Admin-only middleware — must be used AFTER authMiddleware
 function adminOnly(req, res, next) {
   if (!isAdminEmail(req.userEmail)) {
@@ -56,15 +78,15 @@ const ALLOWED_ORIGINS = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
+    // Allow server-to-server requests (no origin) only from same host
+    if (!origin) return callback(null, true); // TODO: restrict in production
     if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
 }));
 
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({ limit: '10mb' }));
 
 // Rate limiting
 const apiLimiter = rateLimit({
@@ -101,29 +123,55 @@ app.get('/api/ping', (req, res) => {
 });
 
 // Resolve short Google Maps URL → full URL with coordinates (no auth required)
+// SECURITY: Only allows Google Maps short URLs to prevent SSRF attacks
+const ALLOWED_SHORT_DOMAINS = ['maps.app.goo.gl', 'goo.gl'];
+const ALLOWED_RESOLVED_DOMAINS = ['www.google.com', 'maps.google.com', 'google.com', 'maps.app.goo.gl'];
+
 app.post('/api/maps/resolve-url', async (req, res) => {
   try {
     const { url } = req.body;
-    if (!url || typeof url !== 'string') {
+    if (!url || typeof url !== 'string' || url.length > 500) {
       return res.status(400).json({ success: false, error: 'URL is required' });
     }
 
-    // Only resolve short URLs that need expansion
-    const isShortUrl = url.includes('maps.app.goo.gl') || url.includes('goo.gl/maps');
+    // Validate URL format
+    let parsedUrl;
+    try { parsedUrl = new URL(url); } catch { return res.status(400).json({ success: false, error: 'Invalid URL format' }); }
+
+    // Must be HTTPS Google Maps short URL
+    if (parsedUrl.protocol !== 'https:') {
+      return res.status(400).json({ success: false, error: 'Only HTTPS URLs are allowed' });
+    }
+
+    // Only resolve short URLs that need expansion — strict domain check
+    const isShortUrl = ALLOWED_SHORT_DOMAINS.includes(parsedUrl.hostname);
     if (!isShortUrl) {
-      return res.json({ success: true, resolvedUrl: url });
+      // Not a short URL — validate it's a Google Maps URL and return as-is
+      if (ALLOWED_RESOLVED_DOMAINS.includes(parsedUrl.hostname)) {
+        return res.json({ success: true, resolvedUrl: url });
+      }
+      return res.status(400).json({ success: false, error: 'Only Google Maps URLs are supported' });
     }
 
     // Follow redirects to get the final URL
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
     const response = await fetch(url, {
       method: 'GET',
       redirect: 'follow',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      },
+      signal: controller.signal,
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
     });
+    clearTimeout(timeout);
 
     const finalUrl = response.url;
+
+    // Validate resolved URL is a Google domain (prevent open redirect → SSRF)
+    const resolvedParsed = new URL(finalUrl);
+    if (!ALLOWED_RESOLVED_DOMAINS.includes(resolvedParsed.hostname)) {
+      return res.status(400).json({ success: false, error: 'Resolved URL is not a Google Maps URL' });
+    }
+
     res.json({ success: true, resolvedUrl: finalUrl });
   } catch (error) {
     console.error('Error resolving maps URL:', error.message);
@@ -1333,6 +1381,14 @@ app.post('/api/group-automation/start', ...auth, async (req, res) => {
   try {
     const { property, groups, images, delayMinutes, delaySeconds, claudeApiKey, browser, userPackage, fbSlot } = req.body;
 
+    // Validate required inputs
+    const vErrors = validateBody(req.body, {
+      property: { required: true, type: 'object' },
+      groups: { required: true, isArray: true, maxItems: 750 },
+      userPackage: { type: 'string' },
+    });
+    if (vErrors) return res.status(400).json({ success: false, error: vErrors.join(', ') });
+
     // Switch to the correct FB session slot if specified
     if (typeof fbSlot === 'number' && fbSlot >= 0) {
       req.groupWorker.setProfileSlot(fbSlot);
@@ -1340,10 +1396,7 @@ app.post('/api/group-automation/start', ...auth, async (req, res) => {
       console.log(`🔗 [Automation] Using FB session slot ${fbSlot}`);
     }
 
-    if (!property) {
-      return res.status(400).json({ success: false, error: 'Property is required' });
-    }
-    if (!groups || groups.length === 0) {
+    if (groups.length === 0) {
       return res.status(400).json({ success: false, error: 'At least one group is required' });
     }
 

@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { LanguageProvider } from "@/i18n/LanguageContext";
 import { ThemeProvider } from "@/hooks/useTheme";
+import { LicenseAuthProvider } from "@/hooks/useLicenseAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AdminRoute } from "@/components/AdminRoute";
@@ -52,6 +53,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <LanguageProvider>
+        <LicenseAuthProvider>
         <TooltipProvider>
           <Toaster />
           <Sonner />
@@ -91,6 +93,7 @@ const App = () => (
           </BrowserRouter>
           <CookieConsent />
         </TooltipProvider>
+        </LicenseAuthProvider>
       </LanguageProvider>
     </ThemeProvider>
   </QueryClientProvider>

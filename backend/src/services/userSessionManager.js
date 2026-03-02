@@ -8,21 +8,40 @@ import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 
-// Simple encryption for stored FB credentials (not military-grade, but prevents plaintext on disk)
-const CRED_KEY = process.env.CRED_ENCRYPT_KEY || 'gs_default_key_2024_change_me!!';
+// Encryption for stored FB credentials — requires CRED_ENCRYPT_KEY env var
+const CRED_KEY = process.env.CRED_ENCRYPT_KEY;
+if (!CRED_KEY) {
+  console.error('⚠️  CRED_ENCRYPT_KEY env var is not set! Using fallback key. Set a strong key in production.');
+}
+const EFFECTIVE_CRED_KEY = CRED_KEY || 'gs_default_key_2024_change_me!!';
+
 function encryptText(text) {
   const iv = crypto.randomBytes(16);
-  const key = crypto.scryptSync(CRED_KEY, 'salt', 32);
+  const salt = crypto.randomBytes(16);
+  const key = crypto.scryptSync(EFFECTIVE_CRED_KEY, salt, 32);
   const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
   let encrypted = cipher.update(text, 'utf8', 'hex');
   encrypted += cipher.final('hex');
-  return iv.toString('hex') + ':' + encrypted;
+  // Format: v2:salt:iv:ciphertext (v2 prefix distinguishes from legacy format)
+  return 'v2:' + salt.toString('hex') + ':' + iv.toString('hex') + ':' + encrypted;
 }
 function decryptText(data) {
   try {
+    // v2 format: v2:salt:iv:ciphertext
+    if (data.startsWith('v2:')) {
+      const [, saltHex, ivHex, encrypted] = data.split(':');
+      const salt = Buffer.from(saltHex, 'hex');
+      const iv = Buffer.from(ivHex, 'hex');
+      const key = crypto.scryptSync(EFFECTIVE_CRED_KEY, salt, 32);
+      const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+      return decrypted;
+    }
+    // Legacy format: iv:ciphertext (fixed salt)
     const [ivHex, encrypted] = data.split(':');
     const iv = Buffer.from(ivHex, 'hex');
-    const key = crypto.scryptSync(CRED_KEY, 'salt', 32);
+    const key = crypto.scryptSync(EFFECTIVE_CRED_KEY, 'salt', 32);
     const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
     let decrypted = decipher.update(encrypted, 'hex', 'utf8');
     decrypted += decipher.final('utf8');

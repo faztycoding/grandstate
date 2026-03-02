@@ -20,7 +20,7 @@ import { useLanguage } from '@/i18n/LanguageContext';
 
 interface PropertyFormProps {
   initialData?: Partial<Property>;
-  onSubmit: (data: Partial<Property>) => void;
+  onSubmit: (data: Partial<Property>) => void | Promise<void>;
   onCancel?: () => void;
 }
 
@@ -46,6 +46,7 @@ export function PropertyForm({ initialData, onSubmit, onCancel }: PropertyFormPr
   const [placeResults, setPlaceResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showPlaceResults, setShowPlaceResults] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const placeContainerRef = useRef<HTMLDivElement>(null);
   
@@ -297,21 +298,27 @@ export function PropertyForm({ initialData, onSubmit, onCancel }: PropertyFormPr
     handleChange('images', updated);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const primaryContact = contacts[0] || { name: '', phone: '', lineId: '' };
-    onSubmit({ 
-      ...formData, 
-      images: imageUrls,
-      location: formData.location,
-      district: formData.district,
-      province: formData.province,
-      description: formData.description + (googleMapsLink ? `\n📍 ${googleMapsLink}` : ''),
-      contactName: primaryContact.name,
-      contactPhone: primaryContact.phone,
-      contactLine: primaryContact.lineId,
-      contacts: contacts,
-    });
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const primaryContact = contacts[0] || { name: '', phone: '', lineId: '' };
+      await onSubmit({ 
+        ...formData, 
+        images: imageUrls,
+        location: formData.location,
+        district: formData.district,
+        province: formData.province,
+        description: formData.description + (googleMapsLink ? `\n📍 ${googleMapsLink}` : ''),
+        contactName: primaryContact.name,
+        contactPhone: primaryContact.phone,
+        contactLine: primaryContact.lineId,
+        contacts: contacts,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -757,9 +764,9 @@ export function PropertyForm({ initialData, onSubmit, onCancel }: PropertyFormPr
             {f.cancel}
           </Button>
         )}
-        <Button type="submit" variant="accent" size="lg">
-          <Building2 className="w-4 h-4 mr-2" />
-          {initialData?.id ? f.updateProperty : f.saveProperty}
+        <Button type="submit" variant="accent" size="lg" disabled={isSubmitting}>
+          {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Building2 className="w-4 h-4 mr-2" />}
+          {isSubmitting ? (initialData?.id ? 'กำลังอัปเดต...' : 'กำลังบันทึก...') : (initialData?.id ? f.updateProperty : f.saveProperty)}
         </Button>
       </div>
     </form>

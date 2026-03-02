@@ -102,15 +102,21 @@ export default function Properties() {
 
   const handleFormSubmit = async (data: Partial<Property>) => {
     try {
-      if (editingProperty) {
-        await updateProperty(editingProperty.id, data);
-        setSuccessPopup(t.properties.updateSuccess || 'อัปเดตสินทรัพย์เรียบร้อยแล้ว');
+      const isEdit = !!editingProperty;
+      if (isEdit) {
+        await updateProperty(editingProperty!.id, data);
       } else {
         await addProperty(data);
-        setSuccessPopup(t.properties.addSuccess || 'เพิ่มสินทรัพย์เรียบร้อยแล้ว');
       }
+      // Close dialog first — let it unmount cleanly
       setIsFormOpen(false);
       setEditingProperty(null);
+      // Show feedback after dialog unmounts (next tick)
+      const msg = isEdit
+        ? (t.properties.updateSuccess || 'อัปเดตสินทรัพย์เรียบร้อยแล้ว')
+        : (t.properties.addSuccess || 'เพิ่มสินทรัพย์เรียบร้อยแล้ว');
+      toast.success(msg);
+      setTimeout(() => setSuccessPopup(msg), 150);
     } catch (err: any) {
       toast.error('บันทึกไม่สำเร็จ: ' + (err.message || 'Unknown error'));
     }

@@ -209,7 +209,7 @@ export default function Properties() {
           <PropertyGridSkeleton count={8} />
         )}
 
-        {!loading && filteredProperties.length > 0 ? (
+        {filteredProperties.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredProperties.map((property, index) => (
               <motion.div
@@ -229,7 +229,7 @@ export default function Properties() {
               </motion.div>
             ))}
           </div>
-        ) : (
+        ) : !loading ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -263,7 +263,7 @@ export default function Properties() {
               </Button>
             )}
           </motion.div>
-        )}
+        ) : null}
 
         {/* Stats */}
         {properties.length > 0 && (

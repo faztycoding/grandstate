@@ -77,6 +77,9 @@ export interface DbProperty {
   features: string[] | null;
   images: string[] | null;
   status: 'active' | 'inactive' | 'sold' | 'rented';
+  contact_name: string | null;
+  contact_phone: string | null;
+  contact_line: string | null;
   created_at: string;
   updated_at: string;
 }

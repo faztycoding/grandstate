@@ -21,8 +21,9 @@ function dbToProperty(db: DbProperty): Property {
     amenities: db.features || [],
     images: db.images || [],
     isSold: db.status === 'sold',
-    contactName: '',
-    contactPhone: '',
+    contactName: db.contact_name || '',
+    contactPhone: db.contact_phone || '',
+    contactLine: db.contact_line || '',
     createdAt: new Date(db.created_at),
     updatedAt: new Date(db.updated_at),
   };
@@ -46,6 +47,9 @@ function propertyToDb(property: Partial<Property>, userId: string): Record<strin
     features: property.amenities || [],
     images: property.images || [],
     status: 'active',
+    contact_name: property.contactName ?? null,
+    contact_phone: property.contactPhone ?? null,
+    contact_line: property.contactLine ?? null,
   };
 }
 
@@ -176,6 +180,9 @@ export function useSupabaseProperties() {
       if (updates.amenities !== undefined) dbUpdates.features = updates.amenities;
       if (updates.images !== undefined) dbUpdates.images = updates.images;
       if (updates.isSold !== undefined) dbUpdates.status = updates.isSold ? 'sold' : 'active';
+      if (updates.contactName !== undefined) dbUpdates.contact_name = updates.contactName || null;
+      if (updates.contactPhone !== undefined) dbUpdates.contact_phone = updates.contactPhone || null;
+      if (updates.contactLine !== undefined) dbUpdates.contact_line = updates.contactLine || null;
 
       await directUpdate('properties', dbUpdates, { id, user_id: user.id });
 

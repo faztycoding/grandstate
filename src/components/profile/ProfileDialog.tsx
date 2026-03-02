@@ -295,7 +295,8 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
             />
 
             <Dialog open={open} onOpenChange={onOpenChange}>
-                <DialogContent className="max-w-xl max-h-[90vh] w-[calc(100vw-2rem)] sm:w-full p-0 gap-0 overflow-hidden border-none shadow-2xl">
+                <DialogContent className="max-w-xl max-h-[90vh] w-[calc(100vw-2rem)] sm:w-full p-0 gap-0 overflow-hidden border-none shadow-2xl" aria-describedby={undefined}>
+                    <DialogTitle className="sr-only">โปรไฟล์ของฉัน</DialogTitle>
                     {/* Hidden File Input */}
                     <input
                         type="file"

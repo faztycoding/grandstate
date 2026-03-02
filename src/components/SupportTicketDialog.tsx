@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -111,7 +111,8 @@ export function SupportTicketDialog({ open, onOpenChange }: SupportTicketDialogP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg p-0 overflow-hidden border-0 bg-transparent shadow-none">
+      <DialogContent className="sm:max-w-lg p-0 overflow-hidden border-0 bg-transparent shadow-none" aria-describedby={undefined}>
+        <DialogTitle className="sr-only">แจ้งปัญหา / ส่ง Support Ticket</DialogTitle>
         <AnimatePresence mode="wait">
           {showSuccess ? (
             /* ═══ Envelope Send Animation ═══ */

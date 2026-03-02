@@ -2,6 +2,7 @@ import { Property } from '@/types/property';
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -78,7 +79,8 @@ export function PropertyPreviewModal({ property, open, onClose, onEdit, onPost }
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden p-0 gap-0">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden p-0 gap-0" aria-describedby={undefined}>
+        <DialogTitle className="sr-only">ดูรายละเอียดสินทรัพย์</DialogTitle>
         <div className="overflow-y-auto max-h-[90vh]">
           {/* === IMAGE SECTION === */}
           <div className="relative h-[280px] bg-muted overflow-hidden">

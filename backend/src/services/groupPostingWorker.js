@@ -4047,11 +4047,44 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
       if (preparedFilePaths && preparedFilePaths.length > 0) {
         // Use pre-prepared file paths (parallel-safe)
         await this.uploadPreparedImages(page, preparedFilePaths);
-        await this.delay(1500);
+        await this.delay(2000);
       } else if (images && images.length > 0) {
         // Fallback: prepare + upload (single-tab mode)
         await this.uploadImagesToPostOnTab(page, images);
-        await this.delay(1500);
+        await this.delay(2000);
+      }
+
+      // ── Step 3b: Check for image upload errors ──
+      if ((preparedFilePaths && preparedFilePaths.length > 0) || (images && images.length > 0)) {
+        const uploadError = await page.evaluate(() => {
+          const body = document.body?.innerText || '';
+          const errorKws = [
+            'ไม่สามารถอัพโหลดไฟล์', 'ไม่สามารถอัปโหลดไฟล์', 'อัพโหลดไม่สำเร็จ',
+            "couldn't upload", "can't upload", 'upload failed', 'unable to upload',
+            'ไม่สามารถเพิ่มรูปภาพ', "couldn't add photo",
+          ];
+          for (const kw of errorKws) {
+            if (body.toLowerCase().includes(kw.toLowerCase())) return kw;
+          }
+          return null;
+        });
+        if (uploadError) {
+          console.log(`🚨 Image upload error detected: "${uploadError}"`);
+          // Try to dismiss the error and continue without images
+          try {
+            await page.evaluate(() => {
+              const btns = document.querySelectorAll('[role="button"], button');
+              for (const b of btns) {
+                const t = (b.textContent || '').toLowerCase();
+                if (t.includes('ลองอีกครั้ง') || t.includes('retry') || t.includes('ตกลง') || t.includes('ok')) {
+                  b.click(); break;
+                }
+              }
+            });
+            await this.delay(1000);
+          } catch (e) { /* ignore */ }
+          console.log('⚠️ Continuing without images...');
+        }
       }
 
       // ── Step 4: Type caption (human-like: randomly type or paste) ──
@@ -4076,9 +4109,15 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
       // Wait for Post button to become enabled
       let submitted = false;
       const POST_TEXTS = ['โพสต์', 'Post', 'post', 'ส่ง', 'Submit', 'Publish', 'เผยแพร่'];
-      for (let attempt = 0; attempt < 8 && !submitted; attempt++) {
-        if (attempt > 0) await this.delay(attempt < 4 ? 1500 : 2500);
+      for (let attempt = 0; attempt < 10 && !submitted; attempt++) {
+        if (attempt > 0) await this.delay(attempt < 4 ? 2000 : 3000);
+
+        // Step A: Find the button and mark it with a data attribute
         const result = await page.evaluate((postTexts) => {
+          // Remove old marker
+          const old = document.querySelector('[data-grandstate-post-btn]');
+          if (old) old.removeAttribute('data-grandstate-post-btn');
+
           const dialogs = document.querySelectorAll('[role="dialog"]');
           let postDialog = null;
           for (const dialog of dialogs) {
@@ -4089,7 +4128,6 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
             }
           }
           if (!postDialog) {
-            // Fallback: pick first non-notification dialog
             for (const d of dialogs) {
               const txt = (d.textContent || '').toLowerCase();
               if (txt.includes('notification') || txt.includes('การแจ้งเตือน')) continue;
@@ -4099,6 +4137,10 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
           }
           if (!postDialog) return { found: false, debug: 'no dialog found' };
 
+          // Check for upload errors inside dialog
+          const dialogText = postDialog.innerText || '';
+          const hasUploadErr = ['ไม่สามารถอัพโหลด', 'ไม่สามารถอัปโหลด', "couldn't upload", 'upload failed'].some(k => dialogText.toLowerCase().includes(k.toLowerCase()));
+
           const buttons = postDialog.querySelectorAll('[role="button"], button');
           const debugBtns = [];
           let postBtn = null;
@@ -4106,15 +4148,12 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
             const text = btn.textContent?.trim() || '';
             const ariaLabel = btn.getAttribute('aria-label') || '';
             const isDisabled = (btn.getAttribute('aria-disabled') === 'true') || btn.disabled;
-            // Collect debug info for first 20 buttons
             if (debugBtns.length < 20) debugBtns.push({ text: text.slice(0, 30), ariaLabel: ariaLabel.slice(0, 30), disabled: isDisabled });
-            // Check exact match first
             if (postTexts.includes(text) || postTexts.includes(ariaLabel)) {
               if (!isDisabled) { postBtn = btn; break; }
             }
           }
           if (!postBtn) {
-            // Fuzzy fallback: look for buttons containing post text
             for (const btn of buttons) {
               const text = (btn.textContent?.trim() || '').toLowerCase();
               const ariaLabel = (btn.getAttribute('aria-label') || '').toLowerCase();
@@ -4126,16 +4165,38 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
             }
           }
           if (postBtn) {
-            postBtn.click();
-            return { found: true, clicked: true };
+            // Mark with data attribute for Puppeteer native click
+            postBtn.setAttribute('data-grandstate-post-btn', 'true');
+            return { found: true, marked: true, hasUploadErr };
           }
-          return { found: false, debug: `${buttons.length} buttons`, samples: debugBtns.slice(0, 5) };
+          return { found: false, debug: `${buttons.length} buttons`, samples: debugBtns.slice(0, 5), hasUploadErr };
         }, POST_TEXTS);
 
-        if (result.clicked) {
-          submitted = true;
-        } else if (attempt < 7) {
-          console.log(`   ⏳ Post button not ready (${attempt + 1}/8): ${result.debug}`, result.samples ? JSON.stringify(result.samples) : '');
+        if (result.hasUploadErr) {
+          console.log('⚠️ Upload error detected in dialog — Post button may be disabled');
+        }
+
+        if (result.marked) {
+          // Step B: Use Puppeteer native click (works with React event system)
+          try {
+            await page.click('[data-grandstate-post-btn]');
+            console.log('✅ Post button clicked (native Puppeteer click)');
+            submitted = true;
+          } catch (clickErr) {
+            // Fallback: try evaluate click
+            console.log('⚠️ Native click failed, trying evaluate click...');
+            const evalClick = await page.evaluate(() => {
+              const btn = document.querySelector('[data-grandstate-post-btn]');
+              if (btn) { btn.click(); return true; }
+              return false;
+            });
+            if (evalClick) {
+              console.log('✅ Post button clicked (evaluate fallback)');
+              submitted = true;
+            }
+          }
+        } else if (attempt < 9) {
+          console.log(`   ⏳ Post button not ready (${attempt + 1}/10): ${result.debug}`, result.samples ? JSON.stringify(result.samples) : '');
         }
       }
       if (!submitted) throw new Error('Failed to submit — Post button disabled or not found');
@@ -4143,20 +4204,29 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
       // Wait for post dialog to close (= post submitted successfully)
       // IMPORTANT: Filter out Notifications dialog — it stays open permanently
       console.log('⏳ Waiting for post to submit...');
-      await page.waitForFunction(() => {
-        const dialogs = document.querySelectorAll('[role="dialog"]');
-        for (const d of dialogs) {
-          const text = (d.textContent || '').toLowerCase();
-          // Skip notification dialogs
-          if (text.includes('notification') || text.includes('การแจ้งเตือน') || text.includes('unread') || text.includes('push notification')) continue;
-          // A non-notification dialog is still open (post dialog)
-          return false;
-        }
-        // All non-notification dialogs closed = post submitted
-        return true;
-      }, { timeout: 20000 }).catch(() => {
-        console.log('⚠️ Post dialog still visible after 20s — post may still be processing');
-      });
+      let dialogClosed = false;
+      try {
+        await page.waitForFunction(() => {
+          const dialogs = document.querySelectorAll('[role="dialog"]');
+          for (const d of dialogs) {
+            const text = (d.textContent || '').toLowerCase();
+            if (text.includes('notification') || text.includes('การแจ้งเตือน') || text.includes('unread') || text.includes('push notification')) continue;
+            return false;
+          }
+          return true;
+        }, { timeout: 25000 });
+        dialogClosed = true;
+      } catch {
+        console.log('⚠️ Post dialog still visible after 25s');
+        // Take screenshot for debugging
+        try {
+          const ssPath = path.join(process.cwd(), 'temp', `dialog_stuck_${Date.now()}.png`);
+          if (!fs.existsSync(path.join(process.cwd(), 'temp'))) fs.mkdirSync(path.join(process.cwd(), 'temp'), { recursive: true });
+          await page.screenshot({ path: ssPath, fullPage: false });
+          console.log(`📸 Dialog stuck screenshot: ${ssPath}`);
+        } catch (ssErr) { /* ignore */ }
+        throw new Error('Post dialog did not close — post likely NOT submitted');
+      }
       await this.delay(2000);
 
       // ── Step 6: Verify post submission — check errors, pending, success ──

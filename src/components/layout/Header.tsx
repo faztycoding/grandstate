@@ -18,11 +18,19 @@ import { useFacebookConnection } from '@/hooks/useFacebookConnection';
 import { useLicenseAuth } from '@/hooks/useLicenseAuth';
 import { getUserPackage, getPackageLimits } from '@/hooks/usePackageLimits';
 import { cn } from '@/lib/utils';
+import { isAdminEmail } from '@/lib/config';
 import { ProfileDialog } from '@/components/profile/ProfileDialog';
 import { useMobileSidebar } from '@/components/layout/Sidebar';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 
 const PKG_THEME = {
+  admin: {
+    label: 'Admin',
+    gradient: 'from-red-600 to-rose-500',
+    ring: 'ring-red-400/50',
+    badge: 'bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30',
+    icon: Shield,
+  },
   free: {
     label: 'Rookie',
     gradient: 'from-emerald-500 to-teal-500',
@@ -202,7 +210,8 @@ export function Header({ title, subtitle }: HeaderProps) {
       window.removeEventListener('profile-updated', handler);
     };
   }, []);
-  const theme = PKG_THEME[pkg] || PKG_THEME.free;
+  const isAdmin = isAdminEmail(authUser?.email);
+  const theme = isAdmin ? PKG_THEME.admin : (PKG_THEME[pkg] || PKG_THEME.free);
   const PkgIcon = theme.icon;
 
   return (

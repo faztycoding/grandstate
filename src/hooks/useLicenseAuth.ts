@@ -69,7 +69,9 @@ export function useLicenseAuth() {
         const init = async () => {
             try {
                 // Check existing Supabase session
+                console.log('[Auth] init: checking session...');
                 const { data: { session } } = await supabase.auth.getSession();
+                console.log('[Auth] init: session =', session ? `user=${session.user?.email}` : 'null');
 
                 if (session?.user) {
                     if (mounted) {
@@ -168,9 +170,11 @@ export function useLicenseAuth() {
     // ── 3. Sign In (Email + Password) ──
     const signIn = useCallback(async (email: string, password: string): Promise<AuthResult> => {
         try {
+            console.log('[Auth] signIn attempt:', email);
             const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
             if (error) {
+                console.error('[Auth] signIn error:', error.message, error);
                 if (error.message.includes('Invalid login')) {
                     return { success: false, error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' };
                 }
@@ -180,9 +184,11 @@ export function useLicenseAuth() {
                 return { success: false, error: error.message };
             }
 
+            console.log('[Auth] signIn success, user:', data.user?.email);
             if (data.user) setUser(data.user);
             return { success: true };
         } catch (err: any) {
+            console.error('[Auth] signIn exception:', err);
             return { success: false, error: err.message || 'เข้าสู่ระบบไม่สำเร็จ' };
         }
     }, []);

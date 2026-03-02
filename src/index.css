@@ -921,3 +921,83 @@
     color: rgb(148 163 184 / 0.8);
   }
 }
+
+/* ── Admin Glow Animations ── */
+@keyframes admin-shield-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.4)) drop-shadow(0 0 8px rgba(239, 68, 68, 0.2));
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.7)) drop-shadow(0 0 16px rgba(239, 68, 68, 0.4));
+  }
+}
+
+@keyframes admin-pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+@keyframes admin-gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes admin-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.admin-shield-glow {
+  animation: admin-shield-glow 2s ease-in-out infinite;
+}
+
+.admin-pulse-ring {
+  animation: admin-pulse-ring 2s ease-out infinite;
+}
+
+.admin-gradient-animated {
+  background-size: 200% 200%;
+  animation: admin-gradient-shift 4s ease infinite;
+}
+
+.admin-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.admin-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 40%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(255, 255, 255, 0.08) 60%,
+    transparent 100%
+  );
+  animation: admin-shimmer 3s ease-in-out infinite;
+  pointer-events: none;
+}

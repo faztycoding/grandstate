@@ -250,16 +250,16 @@ export function Header({ title, subtitle }: HeaderProps) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="gap-2 pl-1.5 pr-2 h-10 hover:bg-muted/80">
-                <Avatar className={cn('w-8 h-8 ring-2', theme.ring)}>
+                <Avatar className={cn('w-8 h-8 ring-2', theme.ring, isAdmin && 'admin-pulse-ring')}>
                   <AvatarImage src={displayAvatar} />
-                  <AvatarFallback className={cn('bg-gradient-to-br text-white text-xs font-bold', theme.gradient)}>
+                  <AvatarFallback className={cn('bg-gradient-to-br text-white text-xs font-bold', theme.gradient, isAdmin && 'admin-gradient-animated')}>
                     {initials || 'U'}
                   </AvatarFallback>
                 </Avatar>
                 <div className="hidden md:flex flex-col items-start">
                   <span className="font-medium text-sm max-w-[120px] truncate leading-tight">{displayName}</span>
                   <span className="text-xs text-muted-foreground leading-tight flex items-center gap-0.5">
-                    <PkgIcon className="w-2.5 h-2.5" />
+                    <PkgIcon className={cn('w-2.5 h-2.5', isAdmin && 'admin-shield-glow text-red-500')} />
                     {theme.label}
                   </span>
                 </div>
@@ -268,11 +268,11 @@ export function Header({ title, subtitle }: HeaderProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-72 p-0 overflow-hidden">
               {/* Profile Banner — package-themed gradient */}
-              <div className={cn('bg-gradient-to-r p-4', theme.gradient)}>
+              <div className={cn('bg-gradient-to-r p-4', theme.gradient, isAdmin && 'admin-gradient-animated admin-shimmer')}>
                 <div className="flex items-center gap-3">
-                  <Avatar className="w-12 h-12 ring-2 ring-white/40">
+                  <Avatar className={cn('w-12 h-12 ring-2 ring-white/40', isAdmin && 'admin-pulse-ring')}>
                     <AvatarImage src={displayAvatar} />
-                    <AvatarFallback className="bg-white/20 text-white text-sm font-bold">
+                    <AvatarFallback className={cn('bg-white/20 text-white text-sm font-bold', isAdmin && 'admin-gradient-animated')}>
                       {initials || 'U'}
                     </AvatarFallback>
                   </Avatar>
@@ -282,8 +282,8 @@ export function Header({ title, subtitle }: HeaderProps) {
                       <p className="text-white/70 text-xs truncate">{profileEmail}</p>
                     )}
                     <div className="flex items-center gap-1.5 mt-1">
-                      <Badge className="bg-white/20 text-white border-white/30 text-[10px] px-1.5 py-0 font-semibold">
-                        <PkgIcon className="w-2.5 h-2.5 mr-0.5" />
+                      <Badge className={cn('bg-white/20 text-white border-white/30 text-[10px] px-1.5 py-0 font-semibold', isAdmin && 'admin-pulse-ring')}>
+                        <PkgIcon className={cn('w-2.5 h-2.5 mr-0.5', isAdmin && 'admin-shield-glow')} />
                         {theme.label}
                       </Badge>
                       {isConnected && (

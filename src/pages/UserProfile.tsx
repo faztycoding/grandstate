@@ -187,20 +187,22 @@ export default function UserProfile() {
                     <Card className="overflow-hidden">
                         <div className={cn(
                             'h-24 bg-gradient-to-r',
-                            pkg.gradient
+                            pkg.gradient,
+                            isAdmin && 'admin-gradient-animated admin-shimmer'
                         )} />
                         <CardContent className="relative pt-0">
                             <div className="flex flex-col md:flex-row md:items-end gap-4 -mt-12">
                                 <div className={cn(
                                     'w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg',
-                                    pkg.bgColor
+                                    pkg.bgColor,
+                                    isAdmin && 'admin-pulse-ring'
                                 )}>
-                                    <PkgIcon className={cn('w-10 h-10', pkg.color)} />
+                                    <PkgIcon className={cn('w-10 h-10', pkg.color, isAdmin && 'admin-shield-glow')} />
                                 </div>
                                 <div className="flex-1 pb-2">
                                     <div className="flex items-center gap-2">
                                         <h2 className="text-2xl font-bold">{pkg.name}</h2>
-                                        <Badge className={cn(pkg.bgColor, pkg.color)}>
+                                        <Badge className={cn(pkg.bgColor, pkg.color, isAdmin && 'admin-pulse-ring')}>
                                             {isAdmin ? 'ADMIN' : currentPackage.toUpperCase()}
                                         </Badge>
                                     </div>

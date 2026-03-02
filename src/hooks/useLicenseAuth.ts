@@ -377,6 +377,13 @@ export function LicenseAuthProvider({ children }: { children: ReactNode }) {
         ? { postsPerDay: 9999, maxGroups: 9999, maxProperties: 9999 }
         : packageLimits[currentPackage];
 
+    // Sync package to localStorage for getUserPackage() used across pages
+    useEffect(() => {
+        if (isAuthenticated) {
+            localStorage.setItem('userPackage', currentPackage);
+        }
+    }, [isAuthenticated, currentPackage]);
+
     // Days remaining helper
     const daysRemaining = license?.expiresAt
         ? Math.max(0, Math.ceil((license.expiresAt.getTime() - Date.now()) / 86400000))

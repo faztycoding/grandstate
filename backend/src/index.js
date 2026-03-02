@@ -94,7 +94,7 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({ limit: '10mb' }));
 
 // Rate limiting
 const apiLimiter = rateLimit({
@@ -107,6 +107,46 @@ const apiLimiter = rateLimit({
   },
 });
 app.use('/api/', apiLimiter);
+
+// ── Server-side package resolver ── verifies actual package from DB, cached per session
+// SECURITY: Never trust userPackage from frontend — always resolve from Supabase
+async function resolveUserPackage(userId) {
+  // Check cache first (valid for 5 minutes)
+  const session = sessionManager.getSession(userId);
+  if (session._verifiedPkg && session._verifiedPkgAt && Date.now() - session._verifiedPkgAt < 5 * 60 * 1000) {
+    return session._verifiedPkg;
+  }
+  // Admin bypass
+  if (isAdminEmail(session?.email)) {
+    session._verifiedPkg = 'elite';
+    session._verifiedPkgAt = Date.now();
+    return 'elite';
+  }
+  try {
+    const supaUrl = process.env.SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+    const resp = await fetch(
+      `${supaUrl}/rest/v1/license_keys?bound_user_id=eq.${userId}&is_active=eq.true&select=package,expires_at&order=created_at.desc&limit=1`,
+      { headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` } }
+    );
+    if (resp.ok) {
+      const rows = await resp.json();
+      if (rows.length > 0) {
+        const lic = rows[0];
+        const expired = lic.expires_at && new Date(lic.expires_at) < new Date();
+        const pkg = expired ? 'free' : (lic.package || 'free');
+        session._verifiedPkg = pkg;
+        session._verifiedPkgAt = Date.now();
+        return pkg;
+      }
+    }
+  } catch (e) {
+    console.error('resolveUserPackage error:', e.message);
+  }
+  session._verifiedPkg = 'free';
+  session._verifiedPkgAt = Date.now();
+  return 'free';
+}
 
 // Session middleware — runs after auth, attaches per-user session to req
 // Also touches presence so every authenticated call keeps the user visible in admin stats
@@ -127,7 +167,7 @@ const adminAuth = [authMiddleware, adminOnly, attachSession];
 
 // Health endpoint (no auth required)
 app.get('/api/ping', (req, res) => {
-  res.json({ success: true, message: 'GrandState API is running', sessions: sessionManager.getStats(), queue: { maxConcurrent: automationQueue.maxConcurrent, running: automationQueue.running.size, queued: automationQueue.queue.length } });
+  res.json({ success: true, message: 'GrandState API is running', uptime: Math.floor(process.uptime()) });
 });
 
 // Resolve short Google Maps URL → full URL with coordinates (no auth required)
@@ -181,7 +221,7 @@ app.post('/api/maps/resolve-url', async (req, res) => {
 // ============================================
 // MOUNT ROUTE MODULES
 // ============================================
-const deps = { auth, adminAuth, sessionManager, automationQueue, ADMIN_EMAILS, validateBody, generateDisplayId };
+const deps = { auth, adminAuth, sessionManager, automationQueue, ADMIN_EMAILS, validateBody, generateDisplayId, resolveUserPackage, isAdminEmail };
 
 app.use('/api', createUserRoutes(deps));
 app.use('/api', createPostingRoutes(deps));

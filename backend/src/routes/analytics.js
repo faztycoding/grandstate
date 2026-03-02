@@ -6,15 +6,17 @@ import { Router } from 'express';
  * - GET /health-check
  * - GET /security-score
  */
-export default function createAnalyticsRoutes({ auth }) {
+export default function createAnalyticsRoutes({ auth, resolveUserPackage }) {
   const router = Router();
 
   // Get posting analytics (aggregated from postingTracker)
-  router.get('/analytics', ...auth, (req, res) => {
+  router.get('/analytics', ...auth, async (req, res) => {
     try {
-      const { userPackage, days } = req.query;
+      const { days } = req.query;
+      // SECURITY: Resolve package from DB instead of trusting frontend
+      const userPackage = await resolveUserPackage(req.userId);
       const tracker = req.postingTracker;
-      const todayStats = tracker.getTodayStats(userPackage || 'free');
+      const todayStats = tracker.getTodayStats(userPackage);
       const history = tracker.history || {};
       const archive = history.dailyArchive || {};
       const currentDay = history.currentDay;

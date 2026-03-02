@@ -8,7 +8,7 @@ import { Router } from 'express';
  * - POST /schedules/:id/cancel
  * - DELETE /schedules/:id
  */
-export default function createScheduleRoutes({ auth, sessionManager }) {
+export default function createScheduleRoutes({ auth, sessionManager, resolveUserPackage }) {
   const router = Router();
 
   // Get all schedules
@@ -23,12 +23,15 @@ export default function createScheduleRoutes({ auth, sessionManager }) {
   });
 
   // Create a new scheduled post
-  router.post('/schedules', ...auth, (req, res) => {
+  router.post('/schedules', ...auth, async (req, res) => {
     try {
-      const { scheduledAt, mode, property, groups, caption, images, delaySeconds, captionStyle, userPackage, browser, fbSlot, fbAccountName } = req.body;
+      const { scheduledAt, mode, property, groups, caption, images, delaySeconds, captionStyle, browser, fbSlot, fbAccountName } = req.body;
       if (!scheduledAt || !mode || !property || !groups?.length) {
         return res.status(400).json({ success: false, error: 'Missing required fields' });
       }
+
+      // SECURITY: Resolve package from DB instead of trusting frontend
+      const userPackage = await resolveUserPackage(req.userId);
 
       const slotToUse = fbSlot ?? sessionManager.getActiveSlot(req.userId);
       const hasCredentials = sessionManager.hasFbCredentials(req.userId, slotToUse);

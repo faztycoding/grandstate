@@ -19,7 +19,7 @@ import { Router } from 'express';
  * - POST /marketplace-automation/resume
  * - POST /marketplace-automation/stop
  */
-export default function createAutomationRoutes({ auth, sessionManager, automationQueue, validateBody }) {
+export default function createAutomationRoutes({ auth, sessionManager, automationQueue, validateBody, resolveUserPackage }) {
   const router = Router();
 
   // ====================================
@@ -29,15 +29,17 @@ export default function createAutomationRoutes({ auth, sessionManager, automatio
   // Start group posting automation (with queue system)
   router.post('/group-automation/start', ...auth, async (req, res) => {
     try {
-      const { property, groups, images, delayMinutes, delaySeconds, claudeApiKey, browser, userPackage, fbSlot } = req.body;
+      const { property, groups, images, delayMinutes, delaySeconds, claudeApiKey, browser, fbSlot } = req.body;
 
       // Validate required inputs
       const vErrors = validateBody(req.body, {
         property: { required: true, type: 'object' },
         groups: { required: true, isArray: true, maxItems: 750 },
-        userPackage: { type: 'string' },
       });
       if (vErrors) return res.status(400).json({ success: false, error: vErrors.join(', ') });
+
+      // SECURITY: Resolve actual package from DB, never trust frontend
+      const userPackage = await resolveUserPackage(req.userId);
 
       // Switch to the correct FB session slot if specified
       if (typeof fbSlot === 'number' && fbSlot >= 0) {
@@ -50,7 +52,7 @@ export default function createAutomationRoutes({ auth, sessionManager, automatio
         return res.status(400).json({ success: false, error: 'At least one group is required' });
       }
 
-      // Validate post limit based on package
+      // Validate post limit based on verified package
       const packageLimits = { free: 10, agent: 300, elite: 750 };
       const limit = packageLimits[userPackage] || 10;
       if (groups.length > limit) {
@@ -219,17 +221,21 @@ export default function createAutomationRoutes({ auth, sessionManager, automatio
   // Generate caption using Claude API
   router.post('/group-automation/generate-caption', ...auth, async (req, res) => {
     try {
-      const { property, style, claudeApiKey, userPackage = 'free', requiredCaptions = 1 } = req.body;
+      const { property, style, claudeApiKey, requiredCaptions = 1 } = req.body;
       if (claudeApiKey) req.groupWorker.initAnthropicClient(claudeApiKey);
 
-      console.log(`📝 Generate caption request - Package: ${userPackage}, Required: ${requiredCaptions}`);
+      // SECURITY: Resolve package from DB + cap captions to 5
+      const userPackage = await resolveUserPackage(req.userId);
+      const cappedCaptions = Math.min(Math.max(1, requiredCaptions), 5);
+
+      console.log(`📝 Generate caption request - Package: ${userPackage}, Required: ${cappedCaptions}`);
       const allCaptions = [];
-      for (let i = 0; i < requiredCaptions; i++) {
+      for (let i = 0; i < cappedCaptions; i++) {
         const caption = await req.groupWorker.generateCaption(property, style || 'friendly', userPackage);
         allCaptions.push(caption);
       }
       const fullResponse = allCaptions.join('\n\n---\n\n');
-      res.json({ success: true, caption: fullResponse, captions: allCaptions, package: userPackage, captionCount: allCaptions.length, requiredCaptions });
+      res.json({ success: true, caption: fullResponse, captions: allCaptions, package: userPackage, captionCount: allCaptions.length, requiredCaptions: cappedCaptions });
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }
   });
 
@@ -240,10 +246,13 @@ export default function createAutomationRoutes({ auth, sessionManager, automatio
   // Start marketplace automation
   router.post('/marketplace-automation/start', ...auth, async (req, res) => {
     try {
-      const { property, groups, caption, images, delayMinutes, delaySeconds, captionStyle, claudeApiKey, browser, userPackage } = req.body;
+      const { property, groups, caption, images, delayMinutes, delaySeconds, captionStyle, claudeApiKey, browser } = req.body;
 
       if (!property) return res.status(400).json({ success: false, error: 'Property is required' });
       if (!groups || groups.length === 0) return res.status(400).json({ success: false, error: 'At least one group is required' });
+
+      // SECURITY: Resolve actual package from DB
+      const userPackage = await resolveUserPackage(req.userId);
 
       const packageLimits = { free: 10, agent: 300, elite: 750 };
       const limit = packageLimits[userPackage] || 10;

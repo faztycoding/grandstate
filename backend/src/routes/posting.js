@@ -9,22 +9,25 @@ import { Router } from 'express';
  * - GET  /posting-history/:propertyId
  * - GET  /available-groups/:propertyId
  */
-export default function createPostingRoutes({ auth }) {
+export default function createPostingRoutes({ auth, resolveUserPackage, isAdminEmail }) {
   const router = Router();
 
   // Today's stats (daily usage, limit, next reset)
-  router.get('/posting/today', ...auth, (req, res) => {
-    const { userPackage } = req.query;
-    res.json({ success: true, ...req.postingTracker.getTodayStats(userPackage || 'free') });
+  router.get('/posting/today', ...auth, async (req, res) => {
+    // SECURITY: Resolve package from DB instead of trusting frontend
+    const userPackage = await resolveUserPackage(req.userId);
+    res.json({ success: true, ...req.postingTracker.getTodayStats(userPackage) });
   });
 
   // Pre-flight check before starting automation
-  router.post('/posting/preflight', ...auth, (req, res) => {
-    const { propertyId, groupIds, userPackage } = req.body;
+  router.post('/posting/preflight', ...auth, async (req, res) => {
+    const { propertyId, groupIds } = req.body;
     if (!propertyId || !groupIds) {
       return res.status(400).json({ success: false, error: 'propertyId and groupIds required' });
     }
-    const result = req.postingTracker.preflightCheck(propertyId, groupIds, userPackage || 'free');
+    // SECURITY: Resolve package from DB
+    const userPackage = await resolveUserPackage(req.userId);
+    const result = req.postingTracker.preflightCheck(propertyId, groupIds, userPackage);
     res.json({ success: true, ...result });
   });
 
@@ -54,11 +57,15 @@ export default function createPostingRoutes({ auth }) {
     res.json({ success: true, availableGroups: available });
   });
 
-  // Reset all posting analytics data
+  // Reset all posting analytics data — ADMIN ONLY
   router.post('/analytics/reset', ...auth, (req, res) => {
     try {
+      // SECURITY: Only admin can reset analytics
+      if (!isAdminEmail(req.userEmail)) {
+        return res.status(403).json({ success: false, error: 'Admin access required' });
+      }
       req.postingTracker.resetAll();
-      console.log('✅ Analytics data reset via API');
+      console.log('✅ Analytics data reset via API by', req.userEmail);
       res.json({ success: true, message: 'All analytics data reset' });
     } catch (error) {
       console.error('❌ Reset failed:', error);

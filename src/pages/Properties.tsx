@@ -27,6 +27,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { PropertyGridSkeleton } from '@/components/ui/skeleton-loaders';
+import { PropertyUpdateSuccess } from '@/components/ui/PropertyUpdateSuccess';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { canAddProperty, getUserPackage, getPackageLimits } from '@/hooks/usePackageLimits';
 
@@ -41,6 +42,8 @@ export default function Properties() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [deletingProperty, setDeletingProperty] = useState<Property | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [successMode, setSuccessMode] = useState<'update' | 'add'>('update');
   const [previewProperty, setPreviewProperty] = useState<Property | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
@@ -97,10 +100,12 @@ export default function Properties() {
     try {
       if (editingProperty) {
         await updateProperty(editingProperty.id, data);
-        toast.success(t.properties.updateSuccess);
+        setSuccessMode('update');
+        setShowSuccessPopup(true);
       } else {
         await addProperty(data);
-        toast.success(t.properties.addSuccess);
+        setSuccessMode('add');
+        setShowSuccessPopup(true);
       }
       setIsFormOpen(false);
       setEditingProperty(null);
@@ -303,6 +308,13 @@ export default function Properties() {
         open={isDeleteOpen}
         onOpenChange={setIsDeleteOpen}
         onConfirm={confirmDelete}
+      />
+
+      {/* Success Popup */}
+      <PropertyUpdateSuccess
+        show={showSuccessPopup}
+        mode={successMode}
+        onClose={() => setShowSuccessPopup(false)}
       />
     </DashboardLayout>
   );

@@ -597,10 +597,29 @@ export function mutateImageBuffer(buffer, index = 0) {
     }
   }
   
-  // ── 3. Append unique invisible comment ──
-  // Add a unique byte sequence at the end (changes file hash 100%)
-  const uniqueTag = Buffer.from(`\x00\x00${Date.now().toString(36)}${index}${Math.random().toString(36).slice(2, 8)}\x00`);
-  return Buffer.concat([mutated, uniqueTag]);
+  // ── 3. Inject unique JPEG Comment segment (0xFF 0xFE) before EOI ──
+  // Inserting a valid JPEG comment segment changes the file hash 100%
+  // while keeping the file structure valid (unlike appending after EOI which breaks readers)
+  const commentStr = `gs:${Date.now().toString(36)}:${index}:${Math.random().toString(36).slice(2, 8)}`;
+  const commentData = Buffer.from(commentStr, 'utf8');
+  const commentLen = commentData.length + 2; // +2 for the length field itself
+  const commentSegment = Buffer.alloc(4 + commentData.length);
+  commentSegment[0] = 0xFF; // JPEG marker
+  commentSegment[1] = 0xFE; // COM marker
+  commentSegment[2] = (commentLen >> 8) & 0xFF; // length high byte
+  commentSegment[3] = commentLen & 0xFF;        // length low byte
+  commentData.copy(commentSegment, 4);
+
+  // Find EOI marker (0xFF 0xD9) and insert comment before it
+  let eoiIndex = -1;
+  for (let i = mutated.length - 2; i >= 0; i--) {
+    if (mutated[i] === 0xFF && mutated[i + 1] === 0xD9) { eoiIndex = i; break; }
+  }
+  if (eoiIndex >= 0) {
+    return Buffer.concat([mutated.slice(0, eoiIndex), commentSegment, mutated.slice(eoiIndex)]);
+  }
+  // Fallback: file has no EOI (non-JPEG or truncated) — just append comment segment
+  return Buffer.concat([mutated, commentSegment]);
 }
 
 /**

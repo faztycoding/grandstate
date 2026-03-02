@@ -20,8 +20,12 @@ import {
     LogOut,
     Trash2,
     Check,
-    AlertCircle
+    AlertCircle,
+    Zap,
+    Eye,
+    EyeOff
 } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -71,8 +75,10 @@ const packageInfo = {
 export default function UserProfile() {
     const navigate = useNavigate();
     const { user, license, logout, currentPackage, limits } = useLicenseAuth();
-    const { displayId } = useUserProfile();
+    const { displayId } = useUserProfile(user?.id);
     const isAdmin = isAdminEmail(user?.email);
+    const [adminKeyRevealed, setAdminKeyRevealed] = useState(false);
+    const [lightningStrike, setLightningStrike] = useState(false);
     // Usage stats from backend
     const [usageStats, setUsageStats] = useState({
         postsToday: 0,
@@ -231,75 +237,210 @@ export default function UserProfile() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
                 >
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Key className="w-5 h-5" />
-                                ข้อมูล License
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex flex-wrap gap-6">
-                                <div>
-                                    <p className="text-sm text-muted-foreground">License Key</p>
-                                    <code className="text-lg font-mono bg-muted px-3 py-1 rounded-lg">
-                                        {effectiveLicense.licenseKey}
-                                    </code>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-muted-foreground">วันหมดอายุ</p>
-                                    <p className={cn(
-                                        'text-lg font-semibold',
-                                        isExpired && 'text-red-500',
-                                        isExpiringSoon && 'text-amber-500'
-                                    )}>
-                                        {formatDate(effectiveLicense.expiresAt.toString())}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-muted-foreground">เหลืออีก</p>
-                                    <p className={cn(
-                                        'text-lg font-semibold',
-                                        isExpired && 'text-red-500',
-                                        isExpiringSoon && 'text-amber-500'
-                                    )}>
-                                        {isExpired ? 'หมดอายุแล้ว' : `${daysRemaining} วัน`}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {(isExpired || isExpiringSoon) && (
-                                <div className={cn(
-                                    'p-4 rounded-lg flex items-center gap-3',
-                                    isExpired ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'
-                                )}>
-                                    <AlertCircle className="w-5 h-5" />
-                                    <div className="flex-1">
-                                        <p className="font-medium">
-                                            {isExpired ? 'License หมดอายุแล้ว' : 'License ใกล้หมดอายุ'}
+                    {isAdmin ? (
+                        /* ═══ ADMIN: ADMINISTRATOR LICENSE ═══ */
+                        <Card className="overflow-hidden border-red-500/20">
+                            <CardHeader className="bg-gradient-to-r from-red-950/80 via-rose-950/60 to-red-950/80 border-b border-red-500/20">
+                                <CardTitle className="flex items-center gap-2 text-red-400">
+                                    <Shield className="w-5 h-5 admin-shield-glow" />
+                                    ADMINISTRATOR LICENSE
+                                    <Badge className="ml-auto bg-red-500/20 text-red-300 border-red-500/30 text-[10px]">
+                                        <Zap className="w-3 h-3 mr-0.5" /> SUPREME ACCESS
+                                    </Badge>
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-5 space-y-5">
+                                {/* License Key Field with Lightning Border */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                                            <Key className="w-3.5 h-3.5" /> License Key
                                         </p>
-                                        <p className="text-sm opacity-80">
-                                            {isExpired
-                                                ? 'กรุณาต่ออายุเพื่อใช้งานต่อ'
-                                                : `เหลืออีก ${daysRemaining} วัน กรุณาต่ออายุก่อนหมด`
-                                            }
+                                        <button
+                                            className="p-1.5 rounded-lg hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-all"
+                                            onClick={() => {
+                                                if (!adminKeyRevealed) {
+                                                    setLightningStrike(true);
+                                                    setTimeout(() => {
+                                                        setAdminKeyRevealed(true);
+                                                        setLightningStrike(false);
+                                                    }, 600);
+                                                } else {
+                                                    setAdminKeyRevealed(false);
+                                                }
+                                            }}
+                                        >
+                                            {adminKeyRevealed ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        </button>
+                                    </div>
+                                    <div className="relative">
+                                        {/* Lightning bolt strike overlay */}
+                                        <AnimatePresence>
+                                            {lightningStrike && (
+                                                <motion.div
+                                                    className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    exit={{ opacity: 0 }}
+                                                >
+                                                    {/* Central bolt */}
+                                                    <motion.div
+                                                        className="absolute inset-0 bg-gradient-to-b from-red-500/40 via-transparent to-red-500/40 rounded-xl"
+                                                        initial={{ opacity: 0 }}
+                                                        animate={{ opacity: [0, 1, 0.3, 1, 0] }}
+                                                        transition={{ duration: 0.6, times: [0, 0.1, 0.2, 0.3, 0.6] }}
+                                                    />
+                                                    {/* Lightning SVG */}
+                                                    <motion.svg
+                                                        viewBox="0 0 100 120"
+                                                        className="absolute w-16 h-20 text-red-400"
+                                                        initial={{ opacity: 0, scaleY: 0 }}
+                                                        animate={{ opacity: [0, 1, 0.4, 1, 0], scaleY: [0, 1, 1, 1, 1] }}
+                                                        transition={{ duration: 0.6, times: [0, 0.12, 0.25, 0.4, 0.6] }}
+                                                    >
+                                                        <path d="M55 0 L35 50 L50 50 L30 120 L75 45 L55 45 Z" fill="currentColor" opacity="0.9" />
+                                                    </motion.svg>
+                                                    {/* Spark particles */}
+                                                    {[...Array(8)].map((_, i) => (
+                                                        <motion.div
+                                                            key={i}
+                                                            className="absolute w-1 h-1 bg-red-400 rounded-full"
+                                                            initial={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+                                                            animate={{
+                                                                opacity: 0,
+                                                                x: (Math.random() - 0.5) * 120,
+                                                                y: (Math.random() - 0.5) * 80,
+                                                                scale: 0,
+                                                            }}
+                                                            transition={{ duration: 0.5, delay: 0.1 + i * 0.03 }}
+                                                        />
+                                                    ))}
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+
+                                        {/* License key display box */}
+                                        <div className={cn(
+                                            'relative rounded-xl px-4 py-3 font-mono text-lg tracking-wider bg-gradient-to-r from-red-950/50 via-rose-950/30 to-red-950/50',
+                                            'admin-license-border'
+                                        )}>
+                                            {/* Small crackling sparks on border */}
+                                            <div className="absolute -top-0.5 left-[20%] w-1 h-1 bg-red-400 rounded-full animate-ping opacity-40" />
+                                            <div className="absolute -bottom-0.5 right-[30%] w-0.5 h-0.5 bg-orange-400 rounded-full animate-ping opacity-30" style={{ animationDelay: '1s' }} />
+                                            <div className="absolute top-[50%] -right-0.5 w-0.5 h-0.5 bg-red-300 rounded-full animate-ping opacity-30" style={{ animationDelay: '2s' }} />
+                                            <div className="absolute top-[50%] -left-0.5 w-1 h-1 bg-orange-400 rounded-full animate-ping opacity-25" style={{ animationDelay: '0.5s' }} />
+
+                                            <div className="flex items-center justify-between">
+                                                {adminKeyRevealed ? (
+                                                    <motion.span
+                                                        className="text-red-300 font-bold admin-electric-reveal"
+                                                        key="revealed"
+                                                    >
+                                                        ADMIN-SUPREME-ACCESS
+                                                    </motion.span>
+                                                ) : (
+                                                    <span className="text-muted-foreground">
+                                                        {'•'.repeat(24)}
+                                                    </span>
+                                                )}
+                                                <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px] ml-3">
+                                                    Active
+                                                </Badge>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Admin License Details */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-3 rounded-xl bg-red-950/30 border border-red-500/10">
+                                        <p className="text-[10px] text-red-400/60 uppercase tracking-wider mb-1">สถานะ</p>
+                                        <p className="text-sm font-bold text-emerald-400 flex items-center gap-1.5">
+                                            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                                            Permanent Active
                                         </p>
                                     </div>
-                                    <Button
-                                        size="sm"
-                                        className={cn(
-                                            isExpired
-                                                ? 'bg-red-500 hover:bg-red-600'
-                                                : 'bg-amber-500 hover:bg-amber-600'
-                                        )}
-                                        onClick={() => navigate('/pricing')}
-                                    >
-                                        ต่ออายุ
-                                    </Button>
+                                    <div className="p-3 rounded-xl bg-red-950/30 border border-red-500/10">
+                                        <p className="text-[10px] text-red-400/60 uppercase tracking-wider mb-1">หมดอายุ</p>
+                                        <p className="text-sm font-bold text-red-300 flex items-center gap-1.5">
+                                            <Zap className="w-3.5 h-3.5" /> ไม่มีวันหมดอายุ
+                                        </p>
+                                    </div>
                                 </div>
-                            )}
-                        </CardContent>
-                    </Card>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        /* ═══ Normal User: Standard License ═══ */
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Key className="w-5 h-5" />
+                                    ข้อมูล License
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="flex flex-wrap gap-6">
+                                    <div>
+                                        <p className="text-sm text-muted-foreground">License Key</p>
+                                        <code className="text-lg font-mono bg-muted px-3 py-1 rounded-lg">
+                                            {effectiveLicense.licenseKey}
+                                        </code>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-muted-foreground">วันหมดอายุ</p>
+                                        <p className={cn(
+                                            'text-lg font-semibold',
+                                            isExpired && 'text-red-500',
+                                            isExpiringSoon && 'text-amber-500'
+                                        )}>
+                                            {formatDate(effectiveLicense.expiresAt.toString())}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-muted-foreground">เหลืออีก</p>
+                                        <p className={cn(
+                                            'text-lg font-semibold',
+                                            isExpired && 'text-red-500',
+                                            isExpiringSoon && 'text-amber-500'
+                                        )}>
+                                            {isExpired ? 'หมดอายุแล้ว' : `${daysRemaining} วัน`}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {(isExpired || isExpiringSoon) && (
+                                    <div className={cn(
+                                        'p-4 rounded-lg flex items-center gap-3',
+                                        isExpired ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'
+                                    )}>
+                                        <AlertCircle className="w-5 h-5" />
+                                        <div className="flex-1">
+                                            <p className="font-medium">
+                                                {isExpired ? 'License หมดอายุแล้ว' : 'License ใกล้หมดอายุ'}
+                                            </p>
+                                            <p className="text-sm opacity-80">
+                                                {isExpired
+                                                    ? 'กรุณาต่ออายุเพื่อใช้งานต่อ'
+                                                    : `เหลืออีก ${daysRemaining} วัน กรุณาต่ออายุก่อนหมด`
+                                                }
+                                            </p>
+                                        </div>
+                                        <Button
+                                            size="sm"
+                                            className={cn(
+                                                isExpired
+                                                    ? 'bg-red-500 hover:bg-red-600'
+                                                    : 'bg-amber-500 hover:bg-amber-600'
+                                            )}
+                                            onClick={() => navigate('/pricing')}
+                                        >
+                                            ต่ออายุ
+                                        </Button>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
                 </motion.div>
 
                 {/* Usage Stats */}
@@ -308,11 +449,16 @@ export default function UserProfile() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
                 >
-                    <Card>
+                    <Card className={isAdmin ? 'border-red-500/10' : ''}>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Package className="w-5 h-5" />
-                                การใช้งานวันนี้
+                                {isAdmin ? 'โควต้าการใช้งาน' : 'การใช้งานวันนี้'}
+                                {isAdmin && (
+                                    <Badge className="ml-auto bg-red-500/15 text-red-400 border-red-500/20 text-[10px] gap-1">
+                                        <Zap className="w-3 h-3" /> UNLIMITED
+                                    </Badge>
+                                )}
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
@@ -321,39 +467,48 @@ export default function UserProfile() {
                                     <div className="flex justify-between text-sm">
                                         <span>โพสต์วันนี้</span>
                                         <span className="font-medium">
-                                            {usageStats.postsToday} / {pkgLimits.postsPerDay}
+                                            {isAdmin ? (
+                                                <>{usageStats.postsToday} / <span className="text-red-400">∞</span></>
+                                            ) : (
+                                                <>{usageStats.postsToday} / {pkgLimits.postsPerDay}</>
+                                            )}
                                         </span>
                                     </div>
                                     <Progress
-                                        value={(usageStats.postsToday / pkgLimits.postsPerDay) * 100}
-                                        className="h-2"
+                                        value={isAdmin ? Math.min(usageStats.postsToday * 0.5, 30) : (usageStats.postsToday / pkgLimits.postsPerDay) * 100}
+                                        className={cn('h-2', isAdmin && '[&>div]:bg-gradient-to-r [&>div]:from-red-500 [&>div]:to-rose-500')}
                                     />
                                 </div>
                                 <div className="space-y-2">
                                     <div className="flex justify-between text-sm">
                                         <span>กลุ่มที่ใช้</span>
                                         <span className="font-medium">
-                                            {usageStats.groupsUsed} / {pkgLimits.maxGroups}
+                                            {isAdmin ? (
+                                                <>{usageStats.groupsUsed} / <span className="text-red-400">∞</span></>
+                                            ) : (
+                                                <>{usageStats.groupsUsed} / {pkgLimits.maxGroups}</>
+                                            )}
                                         </span>
                                     </div>
                                     <Progress
-                                        value={(usageStats.groupsUsed / pkgLimits.maxGroups) * 100}
-                                        className="h-2"
+                                        value={isAdmin ? Math.min(usageStats.groupsUsed * 0.5, 30) : (usageStats.groupsUsed / pkgLimits.maxGroups) * 100}
+                                        className={cn('h-2', isAdmin && '[&>div]:bg-gradient-to-r [&>div]:from-red-500 [&>div]:to-rose-500')}
                                     />
                                 </div>
                                 <div className="space-y-2">
                                     <div className="flex justify-between text-sm">
                                         <span>สินทรัพย์</span>
                                         <span className="font-medium">
-                                            {usageStats.propertiesUsed} / {pkgLimits.maxProperties === Infinity ? '∞' : pkgLimits.maxProperties}
+                                            {isAdmin ? (
+                                                <>{usageStats.propertiesUsed} / <span className="text-red-400">∞</span></>
+                                            ) : (
+                                                <>{usageStats.propertiesUsed} / {pkgLimits.maxProperties === Infinity ? '∞' : pkgLimits.maxProperties}</>
+                                            )}
                                         </span>
                                     </div>
                                     <Progress
-                                        value={pkgLimits.maxProperties === Infinity
-                                            ? 10
-                                            : (usageStats.propertiesUsed / pkgLimits.maxProperties) * 100
-                                        }
-                                        className="h-2"
+                                        value={isAdmin ? Math.min(usageStats.propertiesUsed * 0.5, 30) : (pkgLimits.maxProperties === Infinity ? 10 : (usageStats.propertiesUsed / pkgLimits.maxProperties) * 100)}
+                                        className={cn('h-2', isAdmin && '[&>div]:bg-gradient-to-r [&>div]:from-red-500 [&>div]:to-rose-500')}
                                     />
                                 </div>
                             </div>

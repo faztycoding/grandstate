@@ -226,7 +226,7 @@ function SidebarContent({
   const navigate = useNavigate();
   const { t, language } = useLanguage();
   const { user, signOut } = useLicenseAuth();
-  const { displayId } = useUserProfile();
+  const { displayId } = useUserProfile(user?.id);
 
   const activeUsersLabel = language === 'th' ? 'ผู้ใช้งานในระบบ' : 'ACTIVE USERS';
   const onlineLabel = language === 'th' ? 'ออนไลน์' : 'online';

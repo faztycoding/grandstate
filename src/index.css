@@ -1001,3 +1001,76 @@
   animation: admin-shimmer 3s ease-in-out infinite;
   pointer-events: none;
 }
+
+/* ── Admin License Lightning Effects ── */
+@keyframes lightning-border {
+  0%, 100% {
+    box-shadow:
+      0 0 5px rgba(239, 68, 68, 0.3),
+      0 0 10px rgba(239, 68, 68, 0.1),
+      inset 0 0 5px rgba(239, 68, 68, 0.05);
+  }
+  25% {
+    box-shadow:
+      0 0 10px rgba(239, 68, 68, 0.6),
+      0 0 20px rgba(239, 68, 68, 0.3),
+      0 0 40px rgba(239, 68, 68, 0.1),
+      inset 0 0 8px rgba(239, 68, 68, 0.1);
+  }
+  50% {
+    box-shadow:
+      0 0 5px rgba(251, 146, 60, 0.4),
+      0 0 15px rgba(251, 146, 60, 0.2),
+      inset 0 0 5px rgba(251, 146, 60, 0.05);
+  }
+  75% {
+    box-shadow:
+      0 0 12px rgba(239, 68, 68, 0.7),
+      0 0 25px rgba(239, 68, 68, 0.4),
+      0 0 50px rgba(239, 68, 68, 0.15),
+      inset 0 0 10px rgba(239, 68, 68, 0.15);
+  }
+}
+
+@keyframes lightning-flash {
+  0% { opacity: 0; transform: scaleY(0) translateX(-50%); }
+  10% { opacity: 1; transform: scaleY(1) translateX(-50%); }
+  20% { opacity: 0.3; }
+  30% { opacity: 1; }
+  50% { opacity: 0; transform: scaleY(1) translateX(-50%); }
+  100% { opacity: 0; transform: scaleY(0) translateX(-50%); }
+}
+
+@keyframes spark-float {
+  0% { opacity: 1; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(var(--spark-x, 10px), var(--spark-y, -20px)) scale(0); }
+}
+
+@keyframes electric-reveal {
+  0% { opacity: 0; filter: blur(8px) brightness(3); }
+  30% { opacity: 1; filter: blur(0) brightness(2); }
+  60% { filter: blur(0) brightness(1.5); }
+  100% { opacity: 1; filter: blur(0) brightness(1); }
+}
+
+@keyframes bolt-strike {
+  0% { clip-path: inset(0 0 100% 0); opacity: 1; }
+  15% { clip-path: inset(0 0 0% 0); opacity: 1; }
+  30% { opacity: 0.3; }
+  45% { opacity: 1; }
+  60% { opacity: 0; }
+  100% { opacity: 0; clip-path: inset(0 0 0% 0); }
+}
+
+.admin-license-border {
+  animation: lightning-border 3s ease-in-out infinite;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.admin-electric-reveal {
+  animation: electric-reveal 0.8s ease-out forwards;
+}
+
+.admin-bolt-strike {
+  animation: bolt-strike 0.6s ease-out forwards;
+}

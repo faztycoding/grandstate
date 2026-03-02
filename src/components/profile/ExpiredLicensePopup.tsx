@@ -4,6 +4,7 @@ import { AlertTriangle, ShieldOff, Clock, User, Copy, Check, X } from 'lucide-re
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { uuidToDisplayId } from '@/lib/displayId';
 
 interface ExpiredLicensePopupProps {
     show: boolean;
@@ -16,15 +17,14 @@ export function ExpiredLicensePopup({ show, userId, onClose }: ExpiredLicensePop
 
     const handleCopyId = () => {
         if (userId) {
-            navigator.clipboard.writeText(userId);
+            navigator.clipboard.writeText(displayId);
             setCopied(true);
             toast.success('คัดลอก User ID แล้ว');
             setTimeout(() => setCopied(false), 2000);
         }
     };
 
-    // Truncate user ID for display
-    const displayId = userId ? (userId.length > 12 ? userId.slice(0, 8) + '...' + userId.slice(-4) : userId) : '—';
+    const displayId = userId ? uuidToDisplayId(userId) : '—';
 
     return (
         <AnimatePresence>

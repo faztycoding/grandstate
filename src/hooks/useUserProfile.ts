@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/config';
+import { uuidToDisplayId } from '@/lib/displayId';
 
 interface UserProfile {
   id: string;
@@ -8,7 +9,7 @@ interface UserProfile {
   display_id: string;
 }
 
-export function useUserProfile() {
+export function useUserProfile(userId?: string) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -35,5 +36,9 @@ export function useUserProfile() {
     return () => { mounted = false; };
   }, []);
 
-  return { profile, displayId: profile?.display_id || null, isLoading };
+  // Use API display_id if it's in GS format, otherwise generate deterministic fallback
+  const rawId = profile?.display_id || null;
+  const displayId = rawId && rawId.startsWith('GS') ? rawId : (userId ? uuidToDisplayId(userId) : null);
+
+  return { profile, displayId, isLoading };
 }

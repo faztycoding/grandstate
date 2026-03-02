@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isAdminEmail, apiFetch, API_BASE } from '@/lib/config';
+import { uuidToDisplayId } from '@/lib/displayId';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { User } from '@supabase/supabase-js';
 import {
@@ -2590,7 +2591,7 @@ export default function AdminDashboard() {
                                                         onClick={() => setQueueDetail({ type: 'history', data: h })}>
                                                         <div className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0 ring-2 ring-offset-1 ring-offset-background transition-all group-hover/hist:scale-125", h.success ? "bg-emerald-500 ring-emerald-200 dark:ring-emerald-800" : "bg-red-500 ring-red-200 dark:ring-red-800")} />
                                                         <span className="font-mono text-muted-foreground w-14 flex-shrink-0 hidden md:inline">{h.completedAtFormatted}</span>
-                                                        <span className="font-medium flex-1 truncate">{h.userId}</span>
+                                                        <span className="font-medium flex-1 truncate">{h.displayId || uuidToDisplayId(h.userId)}</span>
                                                         {h.automationType && <span className={cn("text-[8px] font-bold uppercase px-1 py-0.5 rounded flex-shrink-0", h.automationType === 'marketplace' ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" : "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400")}>{h.automationType === 'marketplace' ? 'MKT' : 'GRP'}</span>}
                                                         <span className="text-muted-foreground flex-shrink-0">{h.groupCount}g</span>
                                                         <span className="font-mono font-semibold tabular-nums w-12 text-right flex-shrink-0">{h.durationFormatted}</span>
@@ -2650,7 +2651,7 @@ export default function AdminDashboard() {
                                                 {queueDetail?.type === 'slot-inspect' && `Node Inspection #${String((queueDetail.data?.slotIndex ?? 0) + 1).padStart(3, '0')}`}
                                             </span>
                                             <p className="text-[9px] text-amber-500/40 font-mono uppercase tracking-[0.2em] mt-0.5">
-                                                {queueDetail?.type === 'running' && `thread_${queueDetail.data?.userId?.slice(0,8) || 'unknown'}`}
+                                                {queueDetail?.type === 'running' && `thread_${queueDetail.data?.userId ? uuidToDisplayId(queueDetail.data.userId) : 'unknown'}`}
                                                 {queueDetail?.type === 'queued' && `queue_pos_${queueDetail.data?.position || 0}`}
                                                 {queueDetail?.type === 'history' && 'historical_data_log'}
                                                 {queueDetail?.type === 'stats' && 'performance_metrics'}

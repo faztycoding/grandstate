@@ -53,7 +53,7 @@ export default function createUserRoutes({ auth, sessionManager, ADMIN_EMAILS, g
         profile = rows[0] || null;
       }
 
-      if (profile && !profile.display_id) {
+      if (profile && (!profile.display_id || !profile.display_id.startsWith('GS'))) {
         const newId = generateDisplayId();
         await fetch(`${supaUrl}/rest/v1/users?id=eq.${req.userId}`, {
           method: 'PATCH',

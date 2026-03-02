@@ -1172,22 +1172,35 @@ export default function Automation() {
                   <span className={cn("text-[10px] font-mono uppercase tracking-wider transition-colors",
                     automation.isRunning ? "text-accent/70" : "text-muted-foreground"
                   )}>
-                    {automation.isRunning ? 'Production Progress' : 'System Ready'}
+                    {automation.isRunning ? 'Production Progress' : 'Today\'s Performance'}
                   </span>
-                  {automation.totalSteps > 0 && (
+                  {automation.isRunning && automation.totalSteps > 0 ? (
                     <Badge className="text-[10px] font-mono bg-accent/10 text-accent border-accent/20">
                       {resolvedTasks}/{automation.totalSteps}
+                    </Badge>
+                  ) : !automation.isRunning && (
+                    <Badge className="text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+                      {healthResult.stats.postsToday} โพสต์วันนี้
                     </Badge>
                   )}
                 </div>
                 {/* Custom progress bar */}
                 <div className="h-2 bg-slate-800 rounded-full overflow-hidden relative">
-                  <motion.div
-                    className="h-full rounded-full bg-gradient-to-r from-accent to-amber-500"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progressPercent}%` }}
-                    transition={{ duration: 0.5 }}
-                  />
+                  {automation.isRunning ? (
+                    <motion.div
+                      className="h-full rounded-full bg-gradient-to-r from-accent to-amber-500"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${progressPercent}%` }}
+                      transition={{ duration: 0.5 }}
+                    />
+                  ) : (
+                    <motion.div
+                      className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min((healthResult.stats.postsToday / Math.max(getPackageLimits(userPackage).postsPerDay, 1)) * 100, 100)}%` }}
+                      transition={{ duration: 0.8 }}
+                    />
+                  )}
                   {automation.isRunning && (
                     <motion.div
                       animate={{ x: ['-100%', '400%'] }}
@@ -1196,13 +1209,21 @@ export default function Automation() {
                     />
                   )}
                 </div>
-                {automation.isRunning && (
-                  <div className="flex justify-between text-[10px]">
-                    <span className="text-emerald-400 font-mono">{completedTasks + pendingApprovalTasks} สำเร็จ</span>
-                    {failedTasks > 0 && <span className="text-red-400 font-mono">{failedTasks} ล้มเหลว</span>}
-                    <span className="text-accent font-mono font-bold">{progressPercent}%</span>
-                  </div>
-                )}
+                <div className="flex justify-between text-[10px]">
+                  {automation.isRunning ? (
+                    <>
+                      <span className="text-emerald-400 font-mono">{completedTasks + pendingApprovalTasks} สำเร็จ</span>
+                      {failedTasks > 0 && <span className="text-red-400 font-mono">{failedTasks} ล้มเหลว</span>}
+                      <span className="text-accent font-mono font-bold">{progressPercent}%</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-emerald-400 font-mono">{healthResult.stats.postsToday} สำเร็จ</span>
+                      <span className="text-cyan-400 font-mono">{healthResult.stats.postsThisHour} /ชม.</span>
+                      <span className="text-muted-foreground font-mono">{Math.round((healthResult.stats.postsToday / Math.max(getPackageLimits(userPackage).postsPerDay, 1)) * 100)}%</span>
+                    </>
+                  )}
+                </div>
               </div>
 
               {/* ═══ ANTI-DETECTION MODULE PANELS ═══ */}

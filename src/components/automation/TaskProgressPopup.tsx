@@ -219,7 +219,9 @@ export function TaskProgressPopup({
         ? `QUEUE #${queuePosition}`
         : isDone ? 'MISSION COMPLETE' : isPaused ? 'PAUSED' : 'POSTING';
 
-    const progressPct = totalSteps > 0 ? Math.round((resolvedTasks / totalSteps) * 100) : 0;
+    // Use the progressPercent prop (includes in_progress as ~50%) for consistency
+    // with the PRODUCTION PROGRESS bar in Automation page
+    const progressPct = progressPercent;
 
     return (
         <AnimatePresence>

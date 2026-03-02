@@ -76,20 +76,31 @@ export function useAutomationMonitor() {
         const data = await res.json();
         if (!data.success) return;
 
-        setState(prev => ({
-          ...prev,
-          isRunning: data.isRunning ?? prev.isRunning,
-          isPaused: data.isPaused ?? prev.isPaused,
-          currentStep: data.currentStep ?? prev.currentStep,
-          totalSteps: data.totalSteps ?? prev.totalSteps,
-          tasks: data.tasks ?? prev.tasks,
-          logs: Array.isArray(data.logs) ? data.logs : prev.logs,
-          startTime: typeof data.startTime === 'number' ? data.startTime : prev.startTime,
-          endTime: typeof data.endTime === 'number' ? data.endTime : prev.endTime,
-          generatedCaptions: Array.isArray(data.generatedCaptions) && data.generatedCaptions.length > 0
-            ? data.generatedCaptions : prev.generatedCaptions,
-          mode,
-        }));
+        setState(prev => {
+          // Protect against backend returning empty data before automation actually starts
+          const newTasks = (Array.isArray(data.tasks) && data.tasks.length > 0) ? data.tasks : prev.tasks;
+          const newIsRunning = data.isRunning ?? prev.isRunning;
+          // If backend says not running but we have no resolved tasks yet, keep prev state
+          // (backend might not have started processing our request yet)
+          const hasAnyResult = Array.isArray(data.tasks) && data.tasks.some((t: any) =>
+            t.status === 'completed' || t.status === 'pending_approval' || t.status === 'failed' || t.status === 'in_progress'
+          );
+          const effectiveIsRunning = (!newIsRunning && !hasAnyResult && prev.isRunning) ? true : newIsRunning;
+          return {
+            ...prev,
+            isRunning: effectiveIsRunning,
+            isPaused: data.isPaused ?? prev.isPaused,
+            currentStep: data.currentStep ?? prev.currentStep,
+            totalSteps: data.totalSteps || prev.totalSteps,
+            tasks: newTasks,
+            logs: Array.isArray(data.logs) && data.logs.length > 0 ? data.logs : prev.logs,
+            startTime: typeof data.startTime === 'number' ? data.startTime : prev.startTime,
+            endTime: typeof data.endTime === 'number' ? data.endTime : prev.endTime,
+            generatedCaptions: Array.isArray(data.generatedCaptions) && data.generatedCaptions.length > 0
+              ? data.generatedCaptions : prev.generatedCaptions,
+            mode,
+          };
+        });
 
         if (!data.isRunning) {
           // Automation finished — stop polling, keep data for results display
@@ -250,7 +261,7 @@ export function useAutomationMonitor() {
   }, []);
 
   // ── Called by Automation page when user starts a new automation ──
-  const notifyStarted = useCallback((mode: 'group' | 'marketplace', initialData?: Partial<AutomationMonitorState>) => {
+  const notifyStarted = useCallback((mode: 'group' | 'marketplace', initialData?: Partial<AutomationMonitorState>, shouldPoll = false) => {
     setState(prev => ({
       ...prev,
       isRunning: true,
@@ -259,7 +270,8 @@ export function useAutomationMonitor() {
       ...(initialData || {}),
     }));
     setShowPopup(true);
-    startPolling(mode);
+    // Only start polling if explicitly requested (after API call succeeds)
+    if (shouldPoll) startPolling(mode);
   }, [startPolling]);
 
   const notifyQueued = useCallback((mode: 'group' | 'marketplace', position: number, estimate: number) => {
@@ -297,5 +309,6 @@ export function useAutomationMonitor() {
     dismissPopup,
     notifyStarted,
     notifyQueued,
+    startPolling,
   };
 }

@@ -356,14 +356,14 @@ export default function Automation() {
     setAutomationStartTime(Date.now());
     setAutomationEndTime(null);
 
-    // Show TaskProgressPopup IMMEDIATELY (before API call)
+    // Show TaskProgressPopup IMMEDIATELY (before API call) — no polling yet
     globalAutomation?.notifyStarted(postingMode, {
       totalSteps: tasks.length,
       tasks,
       logs: [],
       startTime: Date.now(),
       generatedCaptions: [],
-    });
+    }, false);
 
     toast.info(t.automation.automationStarting, {
       description: `${t.automation.postingTo} ${selectedGroups.length} ${t.automation.groups}`,
@@ -491,16 +491,16 @@ export default function Automation() {
       setAutomationStartTime(typeof result.startTime === 'number' ? result.startTime : Date.now());
       setAutomationEndTime(typeof result.endTime === 'number' ? result.endTime : null);
 
-      // Update popup with real backend data (popup already showing from early notify)
+      // Update popup with real backend data + START polling now that backend confirmed
       globalAutomation?.notifyStarted(postingMode, {
         totalSteps: result.totalSteps ?? groupsData.length,
         tasks: result.tasks ?? [],
         logs: Array.isArray(result.logs) ? result.logs : [],
         startTime: typeof result.startTime === 'number' ? result.startTime : Date.now(),
         generatedCaptions: result.generatedCaptions || [],
-      });
+      }, true);
 
-      // Start polling for status updates
+      // Start local polling for status updates
       pollAutomationStatus(postingMode);
     } catch (error) {
       toast.error(t.automation.automationError, {

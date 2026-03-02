@@ -123,8 +123,9 @@ export function TaskProgressPopup({
     onPause,
     onDismiss,
 }: TaskProgressPopupProps) {
-    const [isMinimized, setIsMinimized] = useState(false);
-    const [isExpanded, setIsExpanded] = useState(false);
+    const [isMinimized, setIsMinimized] = useState(() => sessionStorage.getItem('taskPopup_minimized') === 'true');
+    const [isExpanded, setIsExpanded] = useState(() => sessionStorage.getItem('taskPopup_expanded') === 'true');
+    const wasAlreadyRunning = useRef(isRunning || tasks.length > 0);
     const [activeTab, setActiveTab] = useState<TabType>('tasks');
     const [elapsed, setElapsed] = useState('0:00');
     const [countdown, setCountdown] = useState(queueEstimate || 0);
@@ -142,6 +143,10 @@ export function TaskProgressPopup({
     const isInQueue = !!(queuePosition && queuePosition > 0);
     const successRate = totalSteps > 0 ? Math.round((posted / totalSteps) * 100) : 0;
     const duration = startTime && endTime ? endTime - startTime : 0;
+
+    // Persist minimize/expand preference across page navigations
+    useEffect(() => { sessionStorage.setItem('taskPopup_minimized', String(isMinimized)); }, [isMinimized]);
+    useEffect(() => { sessionStorage.setItem('taskPopup_expanded', String(isExpanded)); }, [isExpanded]);
 
     useEffect(() => { setCountdown(queueEstimate || 0); }, [queueEstimate]);
 
@@ -221,7 +226,7 @@ export function TaskProgressPopup({
             <motion.div
                 drag
                 dragMomentum={false}
-                initial={{ opacity: 0, y: 40, scale: 0.95 }}
+                initial={wasAlreadyRunning.current ? false : { opacity: 0, y: 40, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1, width: isExpanded ? 520 : 420 }}
                 exit={{ opacity: 0, y: 40, scale: 0.95 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
@@ -279,7 +284,11 @@ export function TaskProgressPopup({
                                         </>
                                     )}
                                     {isDone && (
-                                        <button onClick={() => onDismiss()}
+                                        <button onClick={() => {
+                                            sessionStorage.removeItem('taskPopup_minimized');
+                                            sessionStorage.removeItem('taskPopup_expanded');
+                                            onDismiss();
+                                        }}
                                             className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="Close">
                                             <X className="w-3.5 h-3.5 text-muted-foreground" />
                                         </button>

@@ -584,13 +584,13 @@ export default function Landing() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.6 }}
             >
-              <Badge className="mb-8 bg-white/10 text-white/90 border-white/20 backdrop-blur-md text-sm px-5 py-1.5 shadow-lg" variant="outline">
+              <Badge className="mb-4 md:mb-8 bg-white/10 text-white/90 border-white/20 backdrop-blur-md text-xs md:text-sm px-3 md:px-5 py-1 md:py-1.5 shadow-lg" variant="outline">
                 🇹🇭 {isEn ? 'Built for Thai Real Estate Agents' : 'สำหรับนายหน้าอสังหาฯ ไทยโดยเฉพาะ'}
               </Badge>
             </motion.div>
 
             {/* Main heading — cinematic */}
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-extrabold mb-6 leading-[0.95] tracking-tight text-white drop-shadow-2xl">
+            <h1 className="text-3xl sm:text-4xl md:text-7xl lg:text-8xl font-extrabold mb-4 md:mb-6 leading-[0.95] tracking-tight text-white drop-shadow-2xl">
               <motion.span
                 initial={{ opacity: 0, y: 30, filter: 'blur(10px)' }}
                 animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
@@ -612,7 +612,7 @@ export default function Landing() {
                 initial={{ opacity: 0, y: 30, filter: 'blur(10px)' }}
                 animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
                 transition={{ delay: 0.9, duration: 0.8 }}
-                className="block text-3xl md:text-4xl lg:text-5xl font-bold mt-3 text-white/80"
+                className="block text-lg sm:text-2xl md:text-4xl lg:text-5xl font-bold mt-2 md:mt-3 text-white/80"
               >
                 {isEn ? 'Smart. Rapid. Secure.' : 'ฉลาดกว่า เข้าถึงไวกว่า ปลอดภัยที่สุด'}
               </motion.span>
@@ -622,7 +622,7 @@ export default function Landing() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 1.1, duration: 0.8 }}
-              className="text-lg md:text-xl text-white/60 max-w-2xl mx-auto mb-12 leading-relaxed"
+              className="text-sm md:text-xl text-white/60 max-w-2xl mx-auto mb-6 md:mb-12 leading-relaxed px-2 md:px-0"
             >
               {isEn
                 ? 'Empower your listings with AI-driven automation. Scale your reach across Facebook Groups and Marketplace effortlessly. Spend less time posting, and more time closing deals.'
@@ -636,11 +636,11 @@ export default function Landing() {
               transition={{ delay: 1.3, duration: 0.6 }}
               className="flex flex-col sm:flex-row gap-4 justify-center"
             >
-              <Link to="/auth" className="inline-flex items-center justify-center gap-2 px-10 py-4 rounded-2xl text-base font-bold bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-2xl shadow-amber-500/30 hover:shadow-amber-500/50 hover:scale-105 transition-all duration-300 btn-shine">
+              <Link to="/auth" className="inline-flex items-center justify-center gap-2 px-6 md:px-10 py-3 md:py-4 rounded-xl md:rounded-2xl text-sm md:text-base font-bold bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-2xl shadow-amber-500/30 hover:shadow-amber-500/50 hover:scale-105 transition-all duration-300 btn-shine">
                 {isEn ? 'Start Free' : 'เริ่มต้นใช้งานฟรี'}
                 <ArrowRight className="w-5 h-5" />
               </Link>
-              <a href="#packages" onClick={(e) => { e.preventDefault(); document.getElementById('packages')?.scrollIntoView({ behavior: 'smooth' }); }} className="inline-flex items-center justify-center gap-2 px-10 py-4 rounded-2xl text-base font-semibold bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 hover:scale-105 transition-all duration-300 shadow-lg cursor-pointer">
+              <a href="#packages" onClick={(e) => { e.preventDefault(); document.getElementById('packages')?.scrollIntoView({ behavior: 'smooth' }); }} className="inline-flex items-center justify-center gap-2 px-6 md:px-10 py-3 md:py-4 rounded-xl md:rounded-2xl text-sm md:text-base font-semibold bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 hover:scale-105 transition-all duration-300 shadow-lg cursor-pointer">
                 {isEn ? 'View Plans' : 'ดูแพ็กเกจ'}
                 <Crown className="w-5 h-5" />
               </a>
@@ -651,7 +651,7 @@ export default function Landing() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1.6, duration: 0.7 }}
-              className="mt-16 flex flex-wrap justify-center gap-3 md:gap-4"
+              className="mt-8 md:mt-16 grid grid-cols-4 gap-2 md:flex md:flex-wrap md:justify-center md:gap-4"
             >
               {[
                 { val: '750+', lab: isEn ? 'Posts/Day' : 'โพสต์/วัน', Icon: Zap, color: 'text-amber-400', bg: 'bg-amber-400/10' },
@@ -665,13 +665,13 @@ export default function Landing() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 1.8 + i * 0.1 }}
                   whileHover={{ scale: 1.05, y: -2 }}
-                  className="bg-white/[0.06] backdrop-blur-xl border border-white/[0.08] rounded-2xl px-6 py-4 text-center min-w-[110px] hover:bg-white/[0.1] hover:border-white/15 transition-all duration-300 group"
+                  className="bg-white/[0.06] backdrop-blur-xl border border-white/[0.08] rounded-xl md:rounded-2xl px-2 md:px-6 py-3 md:py-4 text-center min-w-0 md:min-w-[110px] hover:bg-white/[0.1] hover:border-white/15 transition-all duration-300 group"
                 >
-                  <div className={`w-9 h-9 mx-auto mb-2 rounded-xl ${s.bg} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
-                    <s.Icon className={`w-4.5 h-4.5 ${s.color}`} />
+                  <div className={`w-7 h-7 md:w-9 md:h-9 mx-auto mb-1 md:mb-2 rounded-lg md:rounded-xl ${s.bg} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+                    <s.Icon className={`w-3.5 h-3.5 md:w-4.5 md:h-4.5 ${s.color}`} />
                   </div>
-                  <p className="text-white font-bold text-lg leading-tight">{s.val}</p>
-                  <p className="text-white/45 text-[11px] mt-0.5">{s.lab}</p>
+                  <p className="text-white font-bold text-sm md:text-lg leading-tight">{s.val}</p>
+                  <p className="text-white/45 text-[9px] md:text-[11px] mt-0.5">{s.lab}</p>
                 </motion.div>
               ))}
             </motion.div>
@@ -737,10 +737,10 @@ export default function Landing() {
       </section>
 
       {/* ═══════════════ STATS — 3D Neon Modules ═══════════════ */}
-      <section className="py-20 px-6 relative overflow-hidden">
+      <section className="py-12 md:py-20 px-4 md:px-6 relative overflow-hidden">
         <div className="absolute inset-0 data-circuit opacity-20" />
         <div className="container mx-auto relative z-10">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
             {[
               { value: 750, suffix: '+', label: isEn ? 'Posts / Day' : 'โพสต์ / วัน', sublabel: isEn ? 'Elite package' : 'แพ็กเกจ Elite', iconType: 'gear' },
               { value: 10, suffix: 'x', label: isEn ? 'Time Saved' : 'ประหยัดเวลา', sublabel: isEn ? 'vs manual posting' : 'เทียบกับโพสต์มือ', iconType: 'pulse' },
@@ -753,7 +753,7 @@ export default function Landing() {
                 whileInView={{ opacity: 1, y: 0, scale: 1 }}
                 viewport={{ once: true, margin: '-50px' }}
                 transition={{ delay: index * 0.15, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                className="neon-card rounded-2xl p-5 md:p-6 text-center relative overflow-hidden group"
+                className="neon-card rounded-xl md:rounded-2xl p-4 md:p-6 text-center relative overflow-hidden group"
               >
                 {/* Shimmer effect on hover */}
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
@@ -793,7 +793,7 @@ export default function Landing() {
                     </div>
                   )}
                 </div>
-                <p className="text-3xl md:text-4xl font-bold gradient-text tabular-nums">
+                <p className="text-2xl md:text-4xl font-bold gradient-text tabular-nums">
                   <CascadingNumber value={stat.value} suffix={stat.suffix} duration={2.5} />
                 </p>
                 <p className="font-semibold mt-1 text-sm">{stat.label}</p>
@@ -805,7 +805,7 @@ export default function Landing() {
       </section>
 
       {/* ═══════════════ NEURAL FLOW — AI Core (Mysterious) ═══════════════ */}
-      <section className="py-24 px-6 relative overflow-hidden bg-gradient-to-b from-background via-black/5 to-background dark:from-background dark:via-purple-950/10 dark:to-background">
+      <section className="py-14 md:py-24 px-4 md:px-6 relative overflow-hidden bg-gradient-to-b from-background via-black/5 to-background dark:from-background dark:via-purple-950/10 dark:to-background">
         {/* Subtle radial glow */}
         <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 50%, hsl(270 60% 50% / 0.06) 0%, transparent 60%)' }} />
         <div className="absolute inset-0 data-circuit opacity-10" />
@@ -828,13 +828,13 @@ export default function Landing() {
                 {isEn ? 'Classified Technology' : 'เทคโนโลยีเฉพาะ'}
               </Badge>
             </motion.div>
-            <h2 className="text-3xl md:text-5xl font-extrabold mb-4">
+            <h2 className="text-2xl md:text-5xl font-extrabold mb-4">
               {isEn ? 'The AI Behind ' : 'เบื้องหลัง '}
               <span style={{ background: 'linear-gradient(135deg, #a855f7, #6366f1, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                 {isEn ? 'Everything' : 'ทุกสิ่ง'}
               </span>
             </h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+            <p className="text-muted-foreground text-sm md:text-lg max-w-2xl mx-auto">
               {isEn
                 ? 'Our proprietary AI Core processes, generates, and distributes — all in milliseconds. Some things are better left unseen.'
                 : 'AI Core ประมวลผล สร้างแคปชั่น และกระจายโพสต์ในเสี้ยววินาที บางสิ่ง... ดีกว่าไม่ต้องเห็น'}
@@ -927,27 +927,27 @@ export default function Landing() {
       </section>
 
       {/* ═══════════════ FEATURES — Card Grid ═══════════════ */}
-      <section className="py-20 px-6 relative">
+      <section className="py-12 md:py-20 px-4 md:px-6 relative">
         <div className="absolute inset-0 data-circuit opacity-10" />
         <div className="container mx-auto relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mb-14"
+            className="text-center mb-8 md:mb-14"
           >
             <Badge className="mb-4 bg-accent/10 text-accent border-accent/20" variant="outline">
               {isEn ? 'Full-Featured' : 'ฟีเจอร์ครบครัน'}
             </Badge>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-2xl md:text-4xl font-bold mb-4">
               {isEn ? 'Every Tool an Agent Needs' : 'ทุกเครื่องมือที่นายหน้าต้องการ'}
             </h2>
-            <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+            <p className="text-muted-foreground text-sm md:text-lg max-w-xl mx-auto">
               {isEn ? 'All-in-one app: properties, groups, posting, analytics — everything in one place.' : 'ครบจบในแอปเดียว จัดการทรัพย์สิน กลุ่ม โพสต์ สถิติ ทั้งหมดในที่เดียว'}
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {features.map((feature, index) => (
               <motion.div
                 key={feature.title}
@@ -981,11 +981,11 @@ export default function Landing() {
       </section>
 
       {/* ═══════════════ BENEFITS — Why GrandState ═══════════════ */}
-      <section className="py-20 px-6 relative overflow-hidden">
+      <section className="py-12 md:py-20 px-4 md:px-6 relative overflow-hidden">
         <div className="absolute inset-0 bg-muted/30" />
         <div className="absolute inset-0 data-circuit opacity-10" />
         <div className="container mx-auto relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12 items-center">
             <motion.div
               initial={{ opacity: 0, x: -30 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -995,11 +995,11 @@ export default function Landing() {
               <Badge className="mb-4 bg-accent/10 text-accent border-accent/20" variant="outline">
                 {isEn ? 'Why GrandState?' : 'ทำไมต้อง GrandState?'}
               </Badge>
-              <h2 className="text-3xl md:text-4xl font-bold mb-6">
+              <h2 className="text-2xl md:text-4xl font-bold mb-4 md:mb-6">
                 {isEn ? 'Focus on Selling' : 'มุ่งเน้นขาย'}<br />
                 <span className="gradient-text">{isEn ? 'Let the system post for you' : 'ปล่อยให้ระบบโพสต์ให้'}</span>
               </h2>
-              <p className="text-muted-foreground text-lg mb-8">
+              <p className="text-muted-foreground text-sm md:text-lg mb-6 md:mb-8">
                 {isEn
                   ? 'Stop wasting time copy-pasting to groups. GrandState works for you while you focus on closing deals.'
                   : 'หยุดเสียเวลานั่ง copy-paste ทีละกลุ่ม GrandState ทำงานแทนคุณ ขณะที่คุณโฟกัสกับการปิดดีลและดูแลลูกค้า'}
@@ -1068,7 +1068,7 @@ export default function Landing() {
       </section>
 
       {/* ═══════════════ PACKAGES — Dark Factory Cards ═══════════════ */}
-      <section id="packages" className="py-20 px-6 relative scroll-mt-20 overflow-hidden" style={{ background: 'linear-gradient(180deg, hsl(222 47% 6%) 0%, hsl(222 47% 4%) 100%)' }}>
+      <section id="packages" className="py-12 md:py-20 px-4 md:px-6 relative scroll-mt-20 overflow-hidden" style={{ background: 'linear-gradient(180deg, hsl(222 47% 6%) 0%, hsl(222 47% 4%) 100%)' }}>
         {/* Blueprint Grid BG */}
         <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(148,163,184,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.5) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
         {/* Floating particles */}
@@ -1094,7 +1094,7 @@ export default function Landing() {
                 {isEn ? 'Select your engine spec' : 'เลือกสเปกเครื่องยนต์ของคุณ'}
               </span>
             </div>
-            <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-4">
+            <h2 className="text-2xl md:text-4xl font-black text-white tracking-tight mb-4">
               {isEn ? 'Transparent ' : 'ราคาชัดเจน '}
               <span className="bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
                 {isEn ? 'Pricing' : 'โปร่งใส'}
@@ -1251,7 +1251,7 @@ export default function Landing() {
       </section>
 
       {/* ═══════════════ SECURITY — Shield ═══════════════ */}
-      <section className="py-16 px-6 relative overflow-hidden">
+      <section className="py-12 md:py-16 px-4 md:px-6 relative overflow-hidden">
         <div className="absolute inset-0 bg-muted/30" />
         <div className="container mx-auto relative z-10">
           <motion.div
@@ -1294,7 +1294,7 @@ export default function Landing() {
       </section>
 
       {/* ═══════════════ CTA — Final Call ═══════════════ */}
-      <section className="py-20 px-6">
+      <section className="py-12 md:py-20 px-4 md:px-6">
         <div className="container mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 30, scale: 0.97 }}
@@ -1313,16 +1313,16 @@ export default function Landing() {
                 animate={{ x: ['-100%', '200%'] }}
                 transition={{ duration: 5, repeat: Infinity, ease: 'linear' }}
               />
-              <CardContent className="p-10 md:p-16 text-center relative z-10">
+              <CardContent className="p-6 md:p-16 text-center relative z-10">
                 <motion.h2
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4"
+                  className="text-2xl md:text-4xl lg:text-5xl font-bold mb-4"
                 >
                   {isEn ? 'Ready to boost your real estate sales?' : 'พร้อมเพิ่มยอดขายอสังหาฯ หรือยัง?'}
                 </motion.h2>
-                <p className="text-lg text-white/70 mb-10 max-w-xl mx-auto">
+                <p className="text-sm md:text-lg text-white/70 mb-6 md:mb-10 max-w-xl mx-auto">
                   {isEn ? 'Start free today. No credit card required.' : 'เริ่มต้นฟรีวันนี้ ไม่ต้องผูกบัตร สมัครใช้งานได้เลย'}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -1343,7 +1343,7 @@ export default function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="py-10 px-6 border-t">
+      <footer className="py-8 md:py-10 px-4 md:px-6 border-t">
         <div className="container mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
             <div>

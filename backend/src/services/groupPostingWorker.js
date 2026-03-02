@@ -4157,15 +4157,54 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
       }, { timeout: 20000 }).catch(() => {
         console.log('⚠️ Post dialog still visible after 20s — post may still be processing');
       });
-      await this.delay(1500);
+      await this.delay(2000);
 
-      // ── Step 6: Check for pending approval + Get post URL ──
+      // ── Step 6: Verify post submission — check errors, pending, success ──
+      // 6a: Check for Facebook error messages/toasts
+      const errorCheck = await page.evaluate(() => {
+        const errorKws = [
+          'something went wrong', 'try again', 'ลองอีกครั้ง', 'ไม่สามารถ', 'couldn\'t post',
+          'unable to post', 'error', 'ข้อผิดพลาด', 'can\'t post', 'โพสต์ไม่ได้',
+          'temporarily blocked', 'ถูกบล็อก', 'spam', 'community standards', 'มาตรฐานชุมชน',
+          'removed your post', 'ลบโพสต์ของคุณ', 'goes against', 'ขัดต่อ',
+        ];
+        const alerts = document.querySelectorAll('[role="alert"], [role="status"], [aria-live="polite"], [aria-live="assertive"]');
+        for (const el of alerts) {
+          const t = (el.textContent || '').toLowerCase();
+          for (const kw of errorKws) {
+            if (t.includes(kw)) return { hasError: true, message: el.textContent.trim().slice(0, 200) };
+          }
+        }
+        // Also check for error dialogs that may have appeared
+        const dialogs = document.querySelectorAll('[role="dialog"]');
+        for (const d of dialogs) {
+          const t = (d.textContent || '').toLowerCase();
+          if (t.includes('notification') || t.includes('การแจ้งเตือน')) continue;
+          for (const kw of errorKws) {
+            if (t.includes(kw)) return { hasError: true, message: d.textContent.trim().slice(0, 200) };
+          }
+        }
+        return { hasError: false };
+      });
+
+      if (errorCheck.hasError) {
+        console.log(`🚨 Facebook error detected after submit: ${errorCheck.message}`);
+        // Take screenshot for debugging
+        try {
+          const ssPath = path.join(process.cwd(), 'temp', `error_post_${Date.now()}.png`);
+          if (!fs.existsSync(path.join(process.cwd(), 'temp'))) fs.mkdirSync(path.join(process.cwd(), 'temp'), { recursive: true });
+          await page.screenshot({ path: ssPath, fullPage: false });
+          console.log(`📸 Error screenshot: ${ssPath}`);
+        } catch (ssErr) { /* ignore */ }
+        return { success: false, error: `Facebook rejected: ${errorCheck.message}`, actualGroupName };
+      }
+
+      // 6b: Check for pending approval
       const postResult = await page.evaluate(() => {
         const bodyText = (document.body?.innerText || document.body?.textContent || '').toLowerCase();
         const pendingKws = ['pending approval', 'awaiting approval', 'pending', 'รอการอนุมัติ', 'กำลังรอการอนุมัติ', 'รอดำเนินการ', 'your post is pending', 'โพสต์ของคุณกำลังรอ'];
         const pendingApproval = pendingKws.some(kw => bodyText.includes(kw));
 
-        // Check toasts/alerts too
         const alerts = document.querySelectorAll('[role="alert"], [role="status"], [aria-live="polite"], [aria-live="assertive"]');
         let alertPending = false;
         for (const el of alerts) {
@@ -4183,8 +4222,46 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
         return { success: true, pendingApproval: true, postUrl: postResult.postUrl, actualGroupName };
       }
 
-      console.log(`✅ Successfully posted to group: ${actualGroupName || groupUrl}`);
-      return { success: true, postUrl: postResult.postUrl, actualGroupName };
+      // 6c: Verify post actually appeared — reload group and check for caption text
+      await this.delay(2000);
+      const captionSnippet = (caption || '').slice(0, 50).trim();
+      let verified = false;
+      if (captionSnippet.length > 10) {
+        try {
+          // Scroll to top to see latest posts
+          await page.evaluate(() => window.scrollTo(0, 0));
+          await this.delay(1500);
+          verified = await page.evaluate((snippet) => {
+            const posts = document.querySelectorAll('[data-pagelet*="FeedUnit"], [role="article"], [class*="userContent"]');
+            for (const post of posts) {
+              if ((post.textContent || '').includes(snippet)) return true;
+            }
+            // Broader check — look at entire visible text
+            const mainContent = document.querySelector('[role="main"]');
+            if (mainContent && (mainContent.textContent || '').includes(snippet)) return true;
+            return false;
+          }, captionSnippet);
+        } catch (e) {
+          console.log('⚠️ Post verification check failed:', e.message);
+        }
+      }
+
+      // Take debug screenshot
+      try {
+        const ssPath = path.join(process.cwd(), 'temp', `post_${verified ? 'ok' : 'unverified'}_${Date.now()}.png`);
+        if (!fs.existsSync(path.join(process.cwd(), 'temp'))) fs.mkdirSync(path.join(process.cwd(), 'temp'), { recursive: true });
+        await page.screenshot({ path: ssPath, fullPage: false });
+        console.log(`📸 Post screenshot (${verified ? 'VERIFIED' : 'UNVERIFIED'}): ${ssPath}`);
+      } catch (ssErr) { /* ignore */ }
+
+      if (verified) {
+        console.log(`✅ Post VERIFIED in feed: ${actualGroupName || groupUrl}`);
+        return { success: true, postUrl: postResult.postUrl, actualGroupName };
+      } else {
+        // Post dialog closed but post not found in feed — likely pending admin approval or silently rejected
+        console.log(`⚠️ Post submitted but NOT found in feed — may be pending admin review: ${actualGroupName || groupUrl}`);
+        return { success: true, pendingApproval: true, postUrl: postResult.postUrl, actualGroupName };
+      }
 
     } catch (error) {
       console.error(`❌ Failed to post to group: ${error.message}`);

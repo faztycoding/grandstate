@@ -4075,37 +4075,67 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
       console.log('🔄 Submitting post...');
       // Wait for Post button to become enabled
       let submitted = false;
-      for (let attempt = 0; attempt < 5 && !submitted; attempt++) {
-        if (attempt > 0) await this.delay(1000);
-        submitted = await page.evaluate(() => {
+      const POST_TEXTS = ['โพสต์', 'Post', 'post', 'ส่ง', 'Submit', 'Publish', 'เผยแพร่'];
+      for (let attempt = 0; attempt < 8 && !submitted; attempt++) {
+        if (attempt > 0) await this.delay(attempt < 4 ? 1500 : 2500);
+        const result = await page.evaluate((postTexts) => {
           const dialogs = document.querySelectorAll('[role="dialog"]');
           let postDialog = null;
           for (const dialog of dialogs) {
             const dt = dialog.textContent || '';
-            if (dt.includes('สร้างโพสต์') || dt.includes('Create post') || dt.includes('Create Post')) {
+            if (dt.includes('สร้างโพสต์') || dt.includes('Create post') || dt.includes('Create Post') || dt.includes('โพสต์ใน')) {
               postDialog = dialog;
               break;
             }
           }
-          if (!postDialog) postDialog = document.querySelector('[role="dialog"]');
-          if (!postDialog) return false;
+          if (!postDialog) {
+            // Fallback: pick first non-notification dialog
+            for (const d of dialogs) {
+              const txt = (d.textContent || '').toLowerCase();
+              if (txt.includes('notification') || txt.includes('การแจ้งเตือน')) continue;
+              postDialog = d;
+              break;
+            }
+          }
+          if (!postDialog) return { found: false, debug: 'no dialog found' };
 
           const buttons = postDialog.querySelectorAll('[role="button"], button');
+          const debugBtns = [];
+          let postBtn = null;
           for (const btn of buttons) {
             const text = btn.textContent?.trim() || '';
             const ariaLabel = btn.getAttribute('aria-label') || '';
-            if (text === 'โพสต์' || text === 'Post' || ariaLabel === 'โพสต์' || ariaLabel === 'Post') {
+            const isDisabled = (btn.getAttribute('aria-disabled') === 'true') || btn.disabled;
+            // Collect debug info for first 20 buttons
+            if (debugBtns.length < 20) debugBtns.push({ text: text.slice(0, 30), ariaLabel: ariaLabel.slice(0, 30), disabled: isDisabled });
+            // Check exact match first
+            if (postTexts.includes(text) || postTexts.includes(ariaLabel)) {
+              if (!isDisabled) { postBtn = btn; break; }
+            }
+          }
+          if (!postBtn) {
+            // Fuzzy fallback: look for buttons containing post text
+            for (const btn of buttons) {
+              const text = (btn.textContent?.trim() || '').toLowerCase();
+              const ariaLabel = (btn.getAttribute('aria-label') || '').toLowerCase();
               const isDisabled = (btn.getAttribute('aria-disabled') === 'true') || btn.disabled;
-              if (!isDisabled) {
-                btn.click();
-                return true;
+              if (!isDisabled && (text.includes('โพสต์') || text.includes('post') || ariaLabel.includes('โพสต์') || ariaLabel.includes('post'))) {
+                postBtn = btn;
+                break;
               }
             }
           }
-          return false;
-        });
-        if (!submitted && attempt < 4) {
-          console.log(`   ⏳ Post button not ready, waiting... (${attempt + 1}/5)`);
+          if (postBtn) {
+            postBtn.click();
+            return { found: true, clicked: true };
+          }
+          return { found: false, debug: `${buttons.length} buttons`, samples: debugBtns.slice(0, 5) };
+        }, POST_TEXTS);
+
+        if (result.clicked) {
+          submitted = true;
+        } else if (attempt < 7) {
+          console.log(`   ⏳ Post button not ready (${attempt + 1}/8): ${result.debug}`, result.samples ? JSON.stringify(result.samples) : '');
         }
       }
       if (!submitted) throw new Error('Failed to submit — Post button disabled or not found');

@@ -309,6 +309,70 @@ export default function createAdminRoutes({ adminAuth, auth, sessionManager, aut
     }
   });
 
+  // Admin: create a new license key (SECURITY: only via backend with service_role key)
+  router.post('/admin/create-license', ...adminAuth, async (req, res) => {
+    try {
+      const { licenseKey, package: pkg, maxDevices, expiresAt, ownerName, ownerContact, note } = req.body;
+      if (!licenseKey || !pkg) return res.status(400).json({ success: false, error: 'licenseKey and package required' });
+      if (!['free', 'agent', 'elite'].includes(pkg)) return res.status(400).json({ success: false, error: 'Invalid package' });
+
+      const { createClient } = await import('@supabase/supabase-js');
+      const supa = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+      const { data, error } = await supa.from('license_keys').insert({
+        license_key: licenseKey, package: pkg, max_devices: maxDevices || 1,
+        expires_at: expiresAt, is_active: true, owner_name: ownerName || null,
+        owner_contact: ownerContact || null, note: note || null,
+      }).select().single();
+      if (error) throw error;
+
+      console.log(`🔑 [Admin] License ${licenseKey} (${pkg}) created by ${req.userEmail}`);
+      res.json({ success: true, license: data });
+    } catch (error) {
+      console.error('Create license error:', error.message);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Admin: get ALL licenses (SECURITY: only via backend with service_role key)
+  router.get('/admin/all-licenses', ...adminAuth, async (req, res) => {
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supa = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+      const { data, error } = await supa.from('license_keys').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      res.json({ success: true, licenses: data || [] });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Admin: update a license key (expiry, max_fb_sessions, etc.)
+  router.post('/admin/update-license', ...adminAuth, async (req, res) => {
+    try {
+      const { licenseId, updates } = req.body;
+      if (!licenseId || !updates) return res.status(400).json({ success: false, error: 'licenseId and updates required' });
+
+      // Whitelist allowed fields
+      const allowed = ['expires_at', 'is_active', 'max_fb_sessions', 'max_devices', 'package', 'owner_name', 'note'];
+      const safeUpdates = {};
+      for (const [k, v] of Object.entries(updates)) {
+        if (allowed.includes(k)) safeUpdates[k] = v;
+      }
+      if (Object.keys(safeUpdates).length === 0) return res.status(400).json({ success: false, error: 'No valid fields to update' });
+
+      const { createClient } = await import('@supabase/supabase-js');
+      const supa = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+      const { data, error } = await supa.from('license_keys').update(safeUpdates).eq('id', licenseId).select().single();
+      if (error) throw error;
+
+      console.log(`✏️ [Admin] License ${licenseId} updated by ${req.userEmail}: ${JSON.stringify(safeUpdates)}`);
+      res.json({ success: true, license: data });
+    } catch (error) {
+      console.error('Update license error:', error.message);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // Admin: delete a license key
   router.post('/admin/delete-license', ...adminAuth, async (req, res) => {
     try {

@@ -646,16 +646,13 @@ export default function AdminDashboard() {
     const fetchLicenses = async () => {
         setIsLoading(true);
         try {
-            // Get licenses
-            const { data: licensesData, error } = await supabase
-                .from('license_keys')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
+            // SECURITY: Use backend API (service_role key) instead of frontend Supabase client
+            const res = await apiFetch('/api/admin/all-licenses');
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error || 'Failed to fetch licenses');
 
             // Process data
-            const processedLicenses = (licensesData || []);
+            const processedLicenses = (json.licenses || []);
 
             setLicenses(processedLicenses);
 
@@ -712,18 +709,21 @@ export default function AdminDashboard() {
             const expiresAt = new Date();
             expiresAt.setDate(expiresAt.getDate() + effectiveDays);
 
-            const { error } = await supabase.from('license_keys').insert({
-                license_key: licenseKey,
-                package: newLicense.package,
-                max_devices: fbSessionLimits[newLicense.package as keyof typeof fbSessionLimits],
-                expires_at: expiresAt.toISOString(),
-                is_active: true,
-                owner_name: newLicense.ownerName,
-                owner_contact: newLicense.ownerContact,
-                note: newLicense.note
+            // SECURITY: Use backend API instead of frontend Supabase client
+            const res = await apiFetch('/api/admin/create-license', {
+                method: 'POST',
+                body: JSON.stringify({
+                    licenseKey,
+                    package: newLicense.package,
+                    maxDevices: fbSessionLimits[newLicense.package as keyof typeof fbSessionLimits],
+                    expiresAt: expiresAt.toISOString(),
+                    ownerName: newLicense.ownerName,
+                    ownerContact: newLicense.ownerContact,
+                    note: newLicense.note,
+                }),
             });
-
-            if (error) throw error;
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || 'Create failed');
 
             toast.success(`สร้าง License สำเร็จ (${effectiveDays} วัน)`);
             setShowCreateModal(false);
@@ -785,12 +785,13 @@ export default function AdminDashboard() {
                 newExpiry = new Date(baseDate.getTime() + days * 24 * 60 * 60 * 1000);
             }
 
-            const { error } = await supabase
-                .from('license_keys')
-                .update({ expires_at: newExpiry.toISOString(), is_active: true })
-                .eq('id', id);
-
-            if (error) throw error;
+            // SECURITY: Use backend API instead of frontend Supabase client
+            const resp = await apiFetch('/api/admin/update-license', {
+                method: 'POST',
+                body: JSON.stringify({ licenseId: id, updates: { expires_at: newExpiry.toISOString(), is_active: true } }),
+            });
+            const result = await resp.json();
+            if (!result.success) throw new Error(result.error || 'Update failed');
 
             const msg = specificDate
                 ? `ตั้งวันหมดอายุเป็น ${specificDate.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })} สำเร็จ`
@@ -805,11 +806,13 @@ export default function AdminDashboard() {
     const updateFbSessions = async (id: string, newValue: number) => {
         if (newValue < 1 || newValue > 10) return;
         try {
-            const { error } = await supabase
-                .from('license_keys')
-                .update({ max_fb_sessions: newValue })
-                .eq('id', id);
-            if (error) throw error;
+            // SECURITY: Use backend API instead of frontend Supabase client
+            const resp = await apiFetch('/api/admin/update-license', {
+                method: 'POST',
+                body: JSON.stringify({ licenseId: id, updates: { max_fb_sessions: newValue } }),
+            });
+            const result = await resp.json();
+            if (!result.success) throw new Error(result.error || 'Update failed');
             setLicenses(prev => prev.map(l => l.id === id ? { ...l, max_fb_sessions: newValue } : l));
             toast.success(t.admin.updateFbSessions);
         } catch {

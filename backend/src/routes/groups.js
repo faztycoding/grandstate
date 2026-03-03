@@ -145,17 +145,20 @@ export default function createGroupRoutes({ auth, sessionManager }) {
         ];
         const isBlacklisted = (text) => blacklist.some(b => text === b || text.startsWith(b + ' '));
 
-        // ======= FIND GROUP NAME =======
+        // ======= FIND GROUP NAME (6 strategies) =======
+        // Strategy 1: og:title meta tag
         const ogTitle = document.querySelector('meta[property="og:title"]');
         if (ogTitle) {
           const ogText = ogTitle.getAttribute('content')?.trim() || '';
           if (ogText && ogText.length > 2 && !isBlacklisted(ogText)) name = ogText;
         }
+        // Strategy 2: document.title
         if (!name) {
           const title = document.title || '';
           if (title.includes('|')) { const c = title.split('|')[0].trim(); if (c && c.length > 2 && !isBlacklisted(c)) name = c; }
           else if (title.includes('-')) { const c = title.split('-')[0].trim(); if (c && c.length > 2 && !isBlacklisted(c)) name = c; }
         }
+        // Strategy 3: h1 heading (Facebook SPA renders group name in h1)
         if (!name) {
           const h1Elements = document.querySelectorAll('h1');
           for (const h1 of h1Elements) {
@@ -164,11 +167,42 @@ export default function createGroupRoutes({ auth, sessionManager }) {
             if (text && text.length > 2 && !isBlacklisted(text)) { name = text; break; }
           }
         }
+        // Strategy 4: aria-label on group links
         if (!name) {
           const groupLinks = document.querySelectorAll('a[href*="/groups/"]');
           for (const link of groupLinks) {
             const ariaLabel = link.getAttribute('aria-label');
             if (ariaLabel && ariaLabel.length > 5 && !isBlacklisted(ariaLabel)) { name = ariaLabel; break; }
+          }
+        }
+        // Strategy 5: h2 in main area / heading links
+        if (!name) {
+          const headingEls = document.querySelectorAll('a[role="link"] h2, h2 a[role="link"], [role="main"] h2');
+          for (const el of headingEls) {
+            const t = (el.textContent || el.closest('a')?.textContent || '').trim();
+            if (t.length >= 3 && t.length < 200 && !isBlacklisted(t)) { name = t; break; }
+          }
+        }
+        // Strategy 6: JSON-LD structured data
+        if (!name) {
+          const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+          for (const s of scripts) {
+            try { const d = JSON.parse(s.textContent); if (d.name && !isBlacklisted(d.name)) { name = d.name; break; } } catch {}
+          }
+        }
+        // Strategy 7: First large visible heading in [role="main"]
+        if (!name) {
+          const mainEl = document.querySelector('[role="main"]');
+          if (mainEl) {
+            const headings = mainEl.querySelectorAll('h1, h2, span[dir="auto"]');
+            for (const h of headings) {
+              const t = h.textContent?.trim() || '';
+              const rect = h.getBoundingClientRect();
+              if (t.length >= 3 && t.length < 200 && rect.width > 100 && rect.height > 15 &&
+                  !isBlacklisted(t) && !t.includes('สมาชิก') && !t.includes('member') && !t.includes('โพสต์') && !t.includes('post')) {
+                name = t; break;
+              }
+            }
           }
         }
 

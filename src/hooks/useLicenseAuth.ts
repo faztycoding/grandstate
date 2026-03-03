@@ -7,6 +7,26 @@ import { isAdminEmail } from '@/lib/config';
 const LICENSE_KEY_REGEX = /^GS[A-Z0-9]{3}-[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{5}$/;
 const STORAGE_KEY = 'gstate_license';
 const LICENSE_CACHE_KEY = 'gstate_license_cache';
+const AUTH_UID_KEY = 'gstate_auth_uid';
+
+// All user-scoped localStorage keys that must be cleared on sign-out
+// to prevent data leaking between different users in the same browser
+const USER_SCOPED_KEYS = [
+    STORAGE_KEY,
+    LICENSE_CACHE_KEY,
+    AUTH_UID_KEY,
+    'userPackage',
+    'profile_name',
+    'profile_display_name',
+    'profile_email',
+    'profile_line_id',
+    'profile_avatar',
+    'fb_connected',
+    'fb_user_name',
+    'fb_user_profilePic',
+    'grandstate_is_new_user',
+    'isLoggedIn',
+];
 
 // ── Types ──
 export interface LicenseInfo {
@@ -32,11 +52,17 @@ export interface AuthResult {
 }
 
 // ── Helpers ──
-function getCachedLicense(): LicenseInfo | null {
+function getCachedLicense(currentUserId?: string): LicenseInfo | null {
     try {
         const cached = localStorage.getItem(LICENSE_CACHE_KEY);
         if (!cached) return null;
         const parsed = JSON.parse(cached);
+        // If we know the current user, reject cache from a different user
+        if (currentUserId && parsed._userId && parsed._userId !== currentUserId) {
+            console.log('[Auth] Cached license belongs to a different user — ignoring');
+            localStorage.removeItem(LICENSE_CACHE_KEY);
+            return null;
+        }
         if (parsed && parsed.licenseKey && parsed.package) {
             const expires = new Date(parsed.expiresAt);
             // Return even if expired — UI needs it for expired popup
@@ -44,6 +70,13 @@ function getCachedLicense(): LicenseInfo | null {
         }
     } catch { /* ignore */ }
     return null;
+}
+
+/** Clear all user-scoped localStorage keys */
+function clearUserScopedStorage() {
+    for (const key of USER_SCOPED_KEYS) {
+        localStorage.removeItem(key);
+    }
 }
 
 // ── Package limits ──
@@ -99,6 +132,15 @@ export function LicenseAuthProvider({ children }: { children: ReactNode }) {
                 console.log('[Auth] init: session =', session ? `user=${session.user?.email}` : 'null');
 
                 if (session?.user) {
+                    // ── Detect user switch: clear stale data from previous user ──
+                    const prevUid = localStorage.getItem(AUTH_UID_KEY);
+                    if (prevUid && prevUid !== session.user.id) {
+                        console.log('[Auth] User switch detected — clearing stale localStorage');
+                        clearUserScopedStorage();
+                        if (mounted) setLicense(null);
+                    }
+                    localStorage.setItem(AUTH_UID_KEY, session.user.id);
+
                     if (mounted) {
                         setUser(session.user);
                         setIsLoading(false); // Unblock UI immediately — license checks continue in background
@@ -226,10 +268,11 @@ export function LicenseAuthProvider({ children }: { children: ReactNode }) {
     }, []);
 
     // ── 4. Sign Out ──
-    // Keep license key + cache in localStorage so re-login doesn't require re-entering key
+    // Clear all user-scoped localStorage to prevent data leaking to the next user
     const signOut = useCallback(async () => {
         setLicense(null);
         setUser(null);
+        clearUserScopedStorage();
         await supabase.auth.signOut();
     }, []);
 
@@ -317,9 +360,11 @@ export function LicenseAuthProvider({ children }: { children: ReactNode }) {
                 ownerName: licenseData.owner_name,
             };
 
+            // Store license + embed userId for cross-user cache validation
+            const { data: { user: authUserForCache } } = await supabase.auth.getUser();
             localStorage.setItem(STORAGE_KEY, normalizedKey);
             localStorage.setItem('userPackage', licenseData.package);
-            localStorage.setItem(LICENSE_CACHE_KEY, JSON.stringify(licenseInfo));
+            localStorage.setItem(LICENSE_CACHE_KEY, JSON.stringify({ ...licenseInfo, _userId: authUserForCache?.id }));
             setLicense(licenseInfo);
 
             return { valid: true, license: licenseInfo };

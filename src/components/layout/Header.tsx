@@ -358,8 +358,10 @@ export function Header({ title, subtitle }: HeaderProps) {
                 <DropdownMenuItem
                   className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-red-600 dark:text-red-400 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/20"
                   onClick={() => {
-                    // Clear all auth data including license
+                    // Clear all auth data including license + cache
                     localStorage.removeItem('gstate_license');
+                    localStorage.removeItem('gstate_license_cache');
+                    localStorage.removeItem('gstate_auth_uid');
                     localStorage.removeItem('isLoggedIn');
                     localStorage.removeItem('userPackage');
                     localStorage.removeItem('fb_connected');
@@ -370,6 +372,7 @@ export function Header({ title, subtitle }: HeaderProps) {
                     localStorage.removeItem('profile_email');
                     localStorage.removeItem('profile_line_id');
                     localStorage.removeItem('profile_avatar');
+                    localStorage.removeItem('grandstate_is_new_user');
                     window.location.href = '/auth?logout=true';
                   }}
                 >

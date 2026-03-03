@@ -422,9 +422,58 @@ export default function createGroupRoutes({ auth, sessionManager }) {
               const info = await page.evaluate(() => {
                 let name = '';
                 let memberCount = 0;
+
+                // Strategy 1: og:title meta tag
                 const ogTitle = document.querySelector('meta[property="og:title"]');
                 if (ogTitle) name = ogTitle.getAttribute('content')?.trim() || '';
+
+                // Strategy 2: document.title
                 if (!name) { const title = document.title || ''; if (title.includes('|')) name = title.split('|')[0].trim(); else if (title.includes('-')) name = title.split('-')[0].trim(); }
+
+                // Strategy 3: h1 heading (Facebook SPA renders group name in h1)
+                if (!name) {
+                  const h1s = document.querySelectorAll('h1');
+                  for (const h1 of h1s) {
+                    const t = h1.textContent?.trim() || '';
+                    if (t.length >= 3 && t.length < 200 && !t.includes('Facebook') && !t.includes('เข้าสู่ระบบ') && !t.includes('Log')) {
+                      name = t; break;
+                    }
+                  }
+                }
+
+                // Strategy 4: aria-label on main heading link
+                if (!name) {
+                  const headingLinks = document.querySelectorAll('a[role="link"] h2, h2 a[role="link"], [role="main"] h2');
+                  for (const el of headingLinks) {
+                    const t = (el.textContent || el.closest('a')?.textContent || '').trim();
+                    if (t.length >= 3 && t.length < 200) { name = t; break; }
+                  }
+                }
+
+                // Strategy 5: Structured data / JSON-LD
+                if (!name) {
+                  const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+                  for (const s of scripts) {
+                    try { const d = JSON.parse(s.textContent); if (d.name) { name = d.name; break; } } catch {}
+                  }
+                }
+
+                // Strategy 6: First large visible heading in main content
+                if (!name) {
+                  const mainEl = document.querySelector('[role="main"]');
+                  if (mainEl) {
+                    const headings = mainEl.querySelectorAll('h1, h2, span[dir="auto"]');
+                    for (const h of headings) {
+                      const t = h.textContent?.trim() || '';
+                      const rect = h.getBoundingClientRect();
+                      if (t.length >= 3 && t.length < 200 && rect.width > 100 && rect.height > 15 &&
+                          !t.includes('สมาชิก') && !t.includes('member') && !t.includes('โพสต์') && !t.includes('post')) {
+                        name = t; break;
+                      }
+                    }
+                  }
+                }
+
                 if (name) name = name.replace(/^\(\d+\)\s*/, '').trim();
 
                 const bodyText = document.body.innerText;

@@ -3,7 +3,6 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import path from 'path';
 import { authMiddleware } from './middleware/auth.js';
 import { sessionManager } from './services/userSessionManager.js';
 import { automationQueue } from './services/automationQueue.js';
@@ -90,13 +89,13 @@ app.set('trust proxy', 1);
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 
 // CORS — lock to allowed origins
-const ALLOWED_ORIGINS = [
+const ALLOWED_ORIGINS = [...new Set([
   ...(process.env.FRONTEND_URL || 'http://localhost:8080').split(',').map(s => s.trim()),
   'https://grandstate.io',
   'https://www.grandstate.io',
   'http://localhost:8080',
   'http://localhost:5173',
-];
+])];
 
 app.use(cors({
   origin: (origin, callback) => {

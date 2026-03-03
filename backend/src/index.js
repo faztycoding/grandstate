@@ -61,6 +61,20 @@ function validateBody(body, schema) {
   return errors.length ? errors : null;
 }
 
+// Sanitize error messages — prevent leaking internal details to clients
+function safeErrorMessage(err, fallback = 'Internal server error') {
+  if (!err) return fallback;
+  const msg = typeof err === 'string' ? err : err.message || fallback;
+  // Block common internal detail patterns from reaching the client
+  const blockedPatterns = [/supabase/i, /postgres/i, /ECONNREFUSED/i, /ETIMEDOUT/i, /stack/i, /node_modules/i, /at\s+\w+\s+\(/i];
+  if (blockedPatterns.some(p => p.test(msg))) {
+    console.error('[Sanitized error]', msg);
+    return fallback;
+  }
+  // Truncate overly long messages
+  return msg.length > 200 ? msg.substring(0, 200) + '...' : msg;
+}
+
 // Admin-only middleware — must be used AFTER authMiddleware
 function adminOnly(req, res, next) {
   if (!isAdminEmail(req.userEmail)) {
@@ -226,7 +240,7 @@ app.post('/api/maps/resolve-url', async (req, res) => {
 // ============================================
 // MOUNT ROUTE MODULES
 // ============================================
-const deps = { auth, adminAuth, sessionManager, automationQueue, ADMIN_EMAILS, validateBody, generateDisplayId, resolveUserPackage, isAdminEmail };
+const deps = { auth, adminAuth, sessionManager, automationQueue, ADMIN_EMAILS, validateBody, generateDisplayId, resolveUserPackage, isAdminEmail, safeErrorMessage };
 
 app.use('/api', createUserRoutes(deps));
 app.use('/api', createPostingRoutes(deps));

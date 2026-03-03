@@ -22,6 +22,7 @@ import { isAdminEmail } from '@/lib/config';
 import { ProfileDialog } from '@/components/profile/ProfileDialog';
 import { useMobileSidebar } from '@/components/layout/Sidebar';
 import { NotificationBell } from '@/components/layout/NotificationBell';
+import { supabase } from '@/lib/supabase';
 
 const PKG_THEME = {
   admin: {
@@ -357,7 +358,10 @@ export function Header({ title, subtitle }: HeaderProps) {
 
                 <DropdownMenuItem
                   className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-red-600 dark:text-red-400 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/20"
-                  onClick={() => {
+                  onClick={async () => {
+                    // SECURITY: Sign out from Supabase FIRST to clear internal session (IndexedDB)
+                    // Without this, the old user's session persists and the next user inherits their rank
+                    try { await supabase.auth.signOut(); } catch { /* continue anyway */ }
                     // Clear all auth data including license + cache
                     localStorage.removeItem('gstate_license');
                     localStorage.removeItem('gstate_license_cache');

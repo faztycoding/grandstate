@@ -114,11 +114,13 @@ const LicenseAuthContext = createContext<LicenseAuthContextValue | null>(null);
 //  Provider: runs auth logic ONCE for entire app
 // ══════════════════════════════════════════
 export function LicenseAuthProvider({ children }: { children: ReactNode }) {
-    const cachedLicense = getCachedLicense();
+    // SECURITY: Never trust cached license as initial state — always start null
+    // The init() function will validate and set the correct license after verifying the user
     const [user, setUser] = useState<User | null>(null);
-    const [license, setLicense] = useState<LicenseInfo | null>(cachedLicense);
+    const [license, setLicense] = useState<LicenseInfo | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isValidating, setIsValidating] = useState(false);
+    const prevUserIdRef = React.useRef<string | null>(null);
 
     // ── 1. Initialize: check Supabase Auth session + license ──
     useEffect(() => {
@@ -175,7 +177,7 @@ export function LicenseAuthProvider({ children }: { children: ReactNode }) {
                     // No session — clear everything
                     if (mounted) {
                         setUser(null);
-                        if (!cachedLicense) setLicense(null);
+                        setLicense(null);
                         setIsLoading(false);
                     }
                 }
@@ -191,12 +193,22 @@ export function LicenseAuthProvider({ children }: { children: ReactNode }) {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (_event, session) => {
                 if (mounted) {
+                    const newUserId = session?.user?.id || null;
+                    const prevUserId = prevUserIdRef.current;
+
+                    // SECURITY: Detect user switch — clear stale license from previous user
+                    if (newUserId && prevUserId && newUserId !== prevUserId) {
+                        console.log('[Auth] User switch detected in onAuthStateChange — clearing old license');
+                        clearUserScopedStorage();
+                        setLicense(null);
+                    }
+                    prevUserIdRef.current = newUserId;
+
                     setUser(session?.user ?? null);
                     if (session?.user) {
                         setIsLoading(false); // Unblock UI immediately on sign-in
                     } else {
                         setLicense(null);
-                        // Keep license key + cache so re-login auto-restores license
                     }
                 }
             }
@@ -237,6 +249,10 @@ export function LicenseAuthProvider({ children }: { children: ReactNode }) {
     // ── 3. Sign In (Email + Password) ──
     const signIn = useCallback(async (email: string, password: string): Promise<AuthResult> => {
         try {
+            // SECURITY: Clear previous user's license data BEFORE signing in new user
+            // This prevents the old user's elite rank from persisting in React state
+            setLicense(null);
+            clearUserScopedStorage();
             console.log('[Auth] signIn attempt:', email);
             const signInPromise = supabase.auth.signInWithPassword({ email, password });
             const timeoutPromise = new Promise<never>((_, reject) =>

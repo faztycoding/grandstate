@@ -86,8 +86,12 @@ const ALLOWED_ORIGINS = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow server-to-server requests (no origin) only from same host
-    if (!origin) return callback(null, true); // TODO: restrict in production
+    // In production, reject requests with no Origin header (server-to-server / curl)
+    // Exception: health check and same-host requests are handled separately
+    if (!origin) {
+      // Only allow no-origin for internal health checks (same server)
+      return callback(null, false);
+    }
     if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
     callback(new Error('Not allowed by CORS'));
   },
@@ -103,7 +107,8 @@ const apiLimiter = rateLimit({
   message: { success: false, error: 'Too many requests, please try again later' },
   skip: (req) => {
     const skipPaths = ['/session/active-users', '/session/presence', '/group-automation/status', '/marketplace-automation/status', '/group-automation/queue-status', '/health-check', '/worker-slots'];
-    return skipPaths.some(p => req.path.includes(p));
+    // Use exact path match (endsWith) to prevent bypass via substring injection
+    return skipPaths.some(p => req.path === p || req.path.endsWith(p));
   },
 });
 app.use('/api/', apiLimiter);

@@ -112,7 +112,7 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
 
 // Rate limiting
 const apiLimiter = rateLimit({

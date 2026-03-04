@@ -4174,7 +4174,58 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
         typed = await this.humanLikeCaptionInput(page, caption);
       }
       if (!typed) throw new Error('Failed to type caption after 3 attempts');
-      await this.delay(1000);
+      await this.delay(1500);
+
+      // ── Step 4.5: Verify Post button is enabled — if not, force re-type via keyboard ──
+      const postBtnEnabled = await page.evaluate(() => {
+        const dialogs = document.querySelectorAll('[role="dialog"]');
+        for (const d of dialogs) {
+          const txt = (d.textContent || '').toLowerCase();
+          if (txt.includes('notification') || txt.includes('การแจ้งเตือน')) continue;
+          const btns = d.querySelectorAll('[role="button"], button');
+          for (const btn of btns) {
+            const t = (btn.textContent?.trim() || '').toLowerCase();
+            const a = (btn.getAttribute('aria-label') || '').toLowerCase();
+            const disabled = btn.getAttribute('aria-disabled') === 'true' || btn.disabled;
+            if ((t.includes('โพสต์') || t.includes('post') || a.includes('โพสต์') || a.includes('post')) && !disabled) {
+              return true;
+            }
+          }
+        }
+        return false;
+      });
+
+      if (!postBtnEnabled) {
+        console.log('⚠️ Post button still disabled after caption input — forcing keyboard.type() re-entry...');
+        // Clear editor completely with Ctrl+A → Delete, then re-type
+        await page.evaluate(() => {
+          const dialogs = document.querySelectorAll('[role="dialog"]');
+          for (const d of dialogs) {
+            const txt = (d.textContent || '').toLowerCase();
+            if (txt.includes('notification') || txt.includes('การแจ้งเตือน')) continue;
+            const editors = d.querySelectorAll('[contenteditable="true"][role="textbox"]');
+            for (const editor of editors) {
+              const ariaLabel = editor.getAttribute('aria-label') || '';
+              if (ariaLabel.includes('แสดงความคิดเห็น') || ariaLabel.includes('comment')) continue;
+              editor.focus();
+              editor.innerHTML = '';
+              return true;
+            }
+          }
+          return false;
+        });
+        await this.delay(300);
+        await page.keyboard.down('Control');
+        await page.keyboard.press('a');
+        await page.keyboard.up('Control');
+        await this.delay(200);
+        await page.keyboard.press('Backspace');
+        await this.delay(500);
+        // Type using Puppeteer keyboard — this ALWAYS triggers React events
+        await page.keyboard.type(caption, { delay: 8 });
+        console.log(`⌨️ Force re-typed ${caption.length} chars via keyboard.type()`);
+        await this.delay(1500);
+      }
 
       // ── Step 5: Submit post (wait for button to be enabled, then click) ──
       // Random human-like pause before submitting (1-3s) — ดูเหมือนคนอ่านทบทวนก่อนกดโพสต์
@@ -4276,8 +4327,8 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
             console.log(`   ⏳ Post button not ready (${attempt + 1}/10): ${result.debug}`, result.samples ? JSON.stringify(result.samples) : '');
           }
 
-          // At attempt 5: if button exists but disabled, re-type caption as last resort
-          if (attempt === 4) {
+          // At attempt 3: if button exists but disabled, re-type caption via keyboard
+          if (attempt === 2) {
             const hasDisabledBtn = await page.evaluate((postTexts) => {
               const dialogs = document.querySelectorAll('[role="dialog"]');
               for (const d of dialogs) {

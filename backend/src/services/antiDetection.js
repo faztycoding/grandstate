@@ -576,24 +576,33 @@ export function mutateImageBuffer(buffer, index = 0) {
     }
   }
   
-  // ── 2. Pixel-Level Noise Injection ──
-  // Modify scattered bytes in the image data portion (after headers)
-  // This changes the file hash while being visually imperceptible
-  const dataStart = Math.min(Math.floor(mutated.length * 0.15), 2000);
-  const dataEnd = mutated.length - 2;
-  const noiseSeed = Date.now() + index * 31337;
-  
-  // Modify ~0.5-1% of bytes by ±1
-  const noiseRate = 0.005 + Math.random() * 0.005;
-  const noiseCount = Math.floor((dataEnd - dataStart) * noiseRate);
-  
-  for (let i = 0; i < noiseCount; i++) {
-    // Pseudo-random position
-    const pos = dataStart + Math.floor(((Math.sin(noiseSeed + i * 7.919) + 1) / 2) * (dataEnd - dataStart));
-    if (pos >= 0 && pos < mutated.length) {
-      // ±1 shift (invisible in compressed images)
-      const shift = (i % 2 === 0) ? 1 : -1;
-      mutated[pos] = Math.max(0, Math.min(255, mutated[pos] + shift));
+  // ── 2. DQT (Quantization Table) Micro-Tweak ──
+  // Safely modify quantization values by ±1 to subtly change decoded pixels
+  // DQT lives in the header (marker 0xFFDB) — modifying it is SAFE unlike
+  // raw compressed data which corrupts the Huffman stream
+  if (mutated[0] === 0xFF && mutated[1] === 0xD8) {
+    let off = 2;
+    while (off < mutated.length - 4) {
+      if (mutated[off] === 0xFF && mutated[off + 1] === 0xDB) {
+        // Found DQT segment
+        const segLen = (mutated[off + 2] << 8) | mutated[off + 3];
+        // Tweak a few quantization values by ±1 (visually imperceptible)
+        const tweakCount = Math.min(8, segLen - 3);
+        for (let t = 0; t < tweakCount; t++) {
+          const tPos = off + 5 + Math.floor(Math.random() * (segLen - 3));
+          if (tPos < mutated.length && mutated[tPos] > 1 && mutated[tPos] < 254) {
+            mutated[tPos] += (Math.random() > 0.5) ? 1 : -1;
+          }
+        }
+        off += 2 + segLen;
+        continue;
+      }
+      if (mutated[off] === 0xFF && mutated[off + 1] === 0xDA) break; // SOS — stop
+      if (mutated[off] === 0xFF) {
+        if (mutated[off + 1] === 0xD8 || mutated[off + 1] === 0xD9) { off += 2; continue; }
+        const len = (mutated[off + 2] << 8) | mutated[off + 3];
+        off += 2 + (len > 0 ? len : 2);
+      } else { off++; }
     }
   }
   

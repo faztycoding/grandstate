@@ -4706,18 +4706,28 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
         }
       }
 
-      // Check login
-      const isLoggedIn = await this.checkLogin();
+      // Check login — retry with browser re-init if first check fails
+      let isLoggedIn = await this.checkLogin();
       if (!isLoggedIn) {
-        console.log('⚠️ Not logged in to Facebook');
+        console.log('⚠️ Not logged in — trying browser restart with fresh profile...');
+        this.addLog('⚠️ Login check failed — restarting browser...', 'warn');
+        try {
+          if (this.browser) { try { await this.browser.close(); } catch {} this.browser = null; this.page = null; }
+          await this.initialize(browser);
+          isLoggedIn = await this.checkLogin();
+        } catch (reinitErr) {
+          console.error('❌ Browser restart failed:', reinitErr.message);
+          this.addLog(`❌ Browser restart failed: ${reinitErr.message}`, 'error');
+        }
+      }
+      if (!isLoggedIn) {
+        console.log('⚠️ Still not logged in to Facebook after retry');
+        this.tasks.forEach(t => { t.status = 'failed'; t.message = 'ยังไม่ได้ Login Facebook'; });
         this.isRunning = false;
         this.isPaused = false;
-        this.tasks = [];
-        this.currentStep = 0;
-        this.totalSteps = 0;
         this.endTime = Date.now();
-        this.addLog('❌ ยังไม่ได้ Login Facebook', 'error');
-        return { success: false, error: 'ยังไม่ได้ Login', errorType: 'login_required', message: 'กรุณา Login Facebook ในหน้าต่างที่เปิดอยู่', tasks: [] };
+        this.addLog('❌ ยังไม่ได้ Login Facebook — กรุณา Login ก่อนเริ่ม Automation', 'error');
+        return { success: false, error: 'ยังไม่ได้ Login', errorType: 'login_required', message: 'กรุณา Login Facebook ในหน้าต่างที่เปิดอยู่', tasks: this.tasks };
       }
 
       await this.handleNotificationPermission();

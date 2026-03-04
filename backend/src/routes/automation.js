@@ -41,12 +41,11 @@ export default function createAutomationRoutes({ auth, sessionManager, automatio
       // SECURITY: Resolve actual package from DB, never trust frontend
       const userPackage = await resolveUserPackage(req.userId);
 
-      // Switch to the correct FB session slot if specified
-      if (typeof fbSlot === 'number' && fbSlot >= 0) {
-        req.groupWorker.setProfileSlot(fbSlot);
-        sessionManager.setActiveSlot(req.userId, fbSlot);
-        console.log(`🔗 [Automation] Using FB session slot ${fbSlot}`);
-      }
+      // Always ensure correct FB session slot (with cookies) — use explicit fbSlot or activeSlot fallback
+      const effectiveSlot = (typeof fbSlot === 'number' && fbSlot >= 0) ? fbSlot : (sessionManager.getActiveSlot(req.userId) ?? 0);
+      req.groupWorker.setProfileSlot(effectiveSlot);
+      sessionManager.setActiveSlot(req.userId, effectiveSlot);
+      console.log(`🔗 [Automation] Using FB session slot ${effectiveSlot}`);
 
       if (groups.length === 0) {
         return res.status(400).json({ success: false, error: 'At least one group is required' });
@@ -253,6 +252,10 @@ export default function createAutomationRoutes({ auth, sessionManager, automatio
 
       // SECURITY: Resolve actual package from DB
       const userPackage = await resolveUserPackage(req.userId);
+
+      // Always ensure correct FB session slot (with cookies)
+      const effectiveSlot = sessionManager.getActiveSlot(req.userId) ?? 0;
+      req.groupWorker.setProfileSlot(effectiveSlot);
 
       const packageLimits = { free: 10, agent: 300, elite: 750 };
       const limit = packageLimits[userPackage] || 10;

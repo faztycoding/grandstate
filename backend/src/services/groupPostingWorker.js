@@ -2691,6 +2691,12 @@ export class GroupPostingWorker {
     const isVPS = process.platform === 'linux';
     const isHeadless = process.env.HEADLESS === 'true';
 
+    // On VPS: ensure DISPLAY is set so Chrome opens on VNC desktop (default :1)
+    if (isVPS && !isHeadless && !process.env.DISPLAY) {
+      process.env.DISPLAY = ':1';
+      console.log('📺 Auto-set DISPLAY=:1 for VPS Chrome visibility (VNC)');
+    }
+
     // Per-user profile directory
     const appProfileDir = this.userDataDir;
     if (!fs.existsSync(appProfileDir)) {
@@ -5051,7 +5057,8 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
         };
 
         // Launch initial concurrent workers with Gaussian-staggered starts
-        const workers = [];
+        // Track active promises with a Set so we can properly remove settled ones
+        const activeWorkers = new Set();
         for (let w = 0; w < CONCURRENT && nextIdx < batchTasks.length; w++) {
           if (!this.isRunning) break;
           if (w > 0) {
@@ -5059,45 +5066,21 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
             await this.delay(stagger);
           }
           const idx = nextIdx++;
-          workers.push(processGroup(idx));
+          const p = processGroup(idx).then(() => { activeWorkers.delete(p); }).catch(() => { activeWorkers.delete(p); });
+          activeWorkers.add(p);
         }
 
         // Sliding window: as each finishes, start the next
         while (completedCount < batchTasks.length && this.isRunning) {
           // Wait for any worker to finish
-          if (workers.length > 0) {
+          if (activeWorkers.size > 0) {
             try {
-              // Use Promise.allSettled to catch errors without crashing
-              const settled = await Promise.race(
-                workers.filter(Boolean).map((w, i) =>
-                  w.then(result => ({ status: 'fulfilled', result, index: i }))
-                    .catch(error => ({ status: 'rejected', error, index: i }))
-                )
-              );
-              // If rejected, log but continue - the processGroup handles its own errors
-              if (settled.status === 'rejected') {
-                console.log(`   ⚠️ Worker ${settled.index} rejected:`, settled.error?.message || 'Unknown error');
-              }
+              await Promise.race(activeWorkers);
             } catch (raceError) {
-              // Race itself failed - log and continue
+              // Individual errors are handled inside processGroup
               console.log('   ⚠️ Promise.race error:', raceError.message);
             }
           }
-
-          // Rebuild workers array - remove settled promises
-          const stillPending = [];
-          for (const w of workers) {
-            if (w) {
-              // Check if promise is still pending by racing with a microtask
-              const isPending = await Promise.race([
-                w.then(() => false),
-                Promise.resolve(true)
-              ]);
-              if (isPending) stillPending.push(w);
-            }
-          }
-          workers.length = 0;
-          workers.push(...stillPending);
 
           // Launch new workers for remaining tasks
           while (activeTabs.size < CONCURRENT && nextIdx < batchTasks.length && this.isRunning) {
@@ -5105,11 +5088,12 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
             const stagger = gaussianDelay(900, 300, 400, 1800); // Gaussian: mostly 0.6-1.2s
             await this.delay(stagger);
             const idx = nextIdx++;
-            workers.push(processGroup(idx));
+            const p = processGroup(idx).then(() => { activeWorkers.delete(p); }).catch(() => { activeWorkers.delete(p); });
+            activeWorkers.add(p);
           }
 
           // If no more to launch but still active, wait for all remaining
-          if (nextIdx >= batchTasks.length && activeTabs.size > 0) {
+          if (nextIdx >= batchTasks.length && activeWorkers.size > 0) {
             await this.delay(500);
           }
 

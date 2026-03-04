@@ -174,6 +174,12 @@ export class MarketplaceWorker {
     const isVPS = process.platform === 'linux';
     const isHeadless = process.env.HEADLESS === 'true';
 
+    // On VPS: ensure DISPLAY is set so Chrome opens on VNC desktop (default :1)
+    if (isVPS && !isHeadless && !process.env.DISPLAY) {
+      process.env.DISPLAY = ':1';
+      console.log('📺 Auto-set DISPLAY=:1 for VPS Chrome visibility (VNC)');
+    }
+
     // Per-user marketplace profile directory
     const appProfileDir = path.join(process.cwd(), 'profiles', this.userId, 'marketplace-profile');
     if (!fs.existsSync(appProfileDir)) {

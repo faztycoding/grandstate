@@ -163,11 +163,12 @@ export function useAutomationMonitor() {
 
   // ── Initial check on mount — detect running/completed automation ──
   // Reconnects automatically after browser close, page refresh, or logout+login
+  // Retries after 3s if first check fails (auth token might not be ready yet)
   useEffect(() => {
     if (initialCheckDone.current) return;
     initialCheckDone.current = true;
 
-    const checkExisting = async () => {
+    const checkExisting = async (retryCount = 0): Promise<void> => {
       // Prioritize the mode we saved (faster reconnect)
       const savedMode = localStorage.getItem(LS_AUTOMATION_MODE) as 'group' | 'marketplace' | null;
       const modesToCheck: Array<'group' | 'marketplace'> = savedMode
@@ -225,8 +226,14 @@ export function useAutomationMonitor() {
         } catch { /* silent */ }
       }
 
-      // No running or completed automation found — clear stale localStorage
+      // No running or completed automation found
       if (localStorage.getItem(LS_POPUP_ACTIVE) === 'true') {
+        if (retryCount < 2) {
+          // Auth token might not be ready yet — retry after delay
+          setTimeout(() => checkExisting(retryCount + 1), 3000);
+          return;
+        }
+        // All retries exhausted — clear stale localStorage
         localStorage.removeItem(LS_POPUP_ACTIVE);
         localStorage.removeItem(LS_AUTOMATION_MODE);
         setShowPopup(false);

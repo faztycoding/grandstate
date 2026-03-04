@@ -18,6 +18,11 @@ const FB_NAME_BLACKLIST = [
   'messenger', 'watch', 'marketplace', 'notifications', 'การแจ้งเตือน',
   'หน้าหลัก', 'home', 'แชท', 'chat', 'สร้าง', 'create', 'เมนู', 'menu',
   'groups', 'กลุ่ม', 'reels', 'stories', 'gaming', 'video',
+  'ค้นหาเพื่อน', 'find friends', 'เพิ่มลงในสตอรี่', 'add to story',
+  'แก้ไขโปรไฟล์', 'edit profile', 'เพิ่มเพื่อน', 'add friend',
+  'คนที่คุณอาจรู้จัก', 'people you may know', 'ดูทั้งหมด', 'see all',
+  'รูปภาพ', 'photos', 'วิดีโอ', 'videos', 'เช็คอิน', 'check-ins',
+  'เกี่ยวกับ', 'about', 'friends', 'เพื่อน', 'เสร็จสิ้น', 'done',
 ];
 function isValidFbName(n) {
   if (!n || n.length < 2 || n.length > 60) return false;
@@ -62,14 +67,28 @@ async function scrapeFbUserInfo(page) {
       const meTitle = await page.title().catch(() => '');
       console.log(`🔍 [/me/] URL: ${meUrl} | Title: "${meTitle}"`);
 
-      // Strategy 1: Facebook's profile name from h1 (actual FB DOM: <h1 dir="auto">ชื่อ</h1>)
+      // Strategy 1: Page title (MOST RELIABLE — Facebook always sets title to "Name | Facebook")
+      if (!name && meTitle) {
+        const cleaned = meTitle.replace(/^\(\d+\)\s*/, '');
+        let candidate = '';
+        if (cleaned.includes(' | ')) candidate = cleaned.split(' | ')[0].trim();
+        else if (cleaned.includes(' - ')) candidate = cleaned.split(' - ')[0].trim();
+        if (isValidFbName(candidate)) { name = candidate; console.log(`✅ [/me/] Got name from title: "${name}"`); }
+      }
+
+      // Strategy 2: og:title meta tag
       if (!name) {
-        const spanName = await page.evaluate(() => {
+        const ogName = await page.evaluate(() => { const og = document.querySelector('meta[property="og:title"]'); return og?.getAttribute('content')?.trim() || ''; }).catch(() => '');
+        if (isValidFbName(ogName)) { name = ogName; console.log(`✅ [/me/] Got name from og:title: "${name}"`); }
+      }
+
+      // Strategy 3: Profile name heading (h1 on profile page)
+      if (!name) {
+        const h1Name = await page.evaluate(() => {
           const selectors = [
-            'h1[dir="auto"]',                              // FB profile name h1 (actual DOM)
-            'h1 span',                                     // Profile page h1 > span
-            'span.x1lliihq.x6ikm8r.x10wlt62.x1n2onr6',   // FB's profile name span class
-            '[data-pagelet="ProfileActions"] h1',           // Profile actions header
+            'h1[dir="auto"]',
+            'h1 span',
+            '[data-pagelet="ProfileActions"] h1',
           ];
           for (const sel of selectors) {
             const els = document.querySelectorAll(sel);
@@ -80,25 +99,26 @@ async function scrapeFbUserInfo(page) {
           }
           return '';
         }).catch(() => '');
-        if (isValidFbName(spanName)) { name = spanName; console.log(`✅ [/me/] Got name from h1: "${name}"`); }
+        if (isValidFbName(h1Name)) { name = h1Name; console.log(`✅ [/me/] Got name from h1: "${name}"`); }
       }
 
-      // Strategy 2: Page title
-      if (!name && meTitle) {
-        const cleaned = meTitle.replace(/^\(\d+\)\s*/, '');
-        let candidate = '';
-        if (cleaned.includes(' | ')) candidate = cleaned.split(' | ')[0].trim();
-        else if (cleaned.includes(' - ')) candidate = cleaned.split(' - ')[0].trim();
-        if (isValidFbName(candidate)) { name = candidate; console.log(`✅ [/me/] Got name from title: "${name}"`); }
-      }
-
-      // Strategy 3: og:title meta tag
+      // Strategy 4: Profile name div[role="button"][tabindex="0"] near profile area
       if (!name) {
-        const ogName = await page.evaluate(() => { const og = document.querySelector('meta[property="og:title"]'); return og?.getAttribute('content')?.trim() || ''; }).catch(() => '');
-        if (isValidFbName(ogName)) { name = ogName; console.log(`✅ [/me/] Got name from og:title: "${name}"`); }
+        const divName = await page.evaluate(() => {
+          const divs = document.querySelectorAll('div[role="button"][tabindex="0"]');
+          for (const div of divs) {
+            const text = (div.textContent || '').replace(/\u00a0/g, ' ').trim();
+            if (text.length >= 2 && text.length < 60) {
+              const rect = div.getBoundingClientRect();
+              if (rect.top > 100 && rect.top < 500 && rect.width > 50) return text;
+            }
+          }
+          return '';
+        }).catch(() => '');
+        if (isValidFbName(divName)) { name = divName; console.log(`✅ [/me/] Got name from div[role=button]: "${name}"`); }
       }
 
-      // Strategy 4: URL-based name (facebook.com/username → decode)
+      // Strategy 5: URL-based name (facebook.com/username → decode)
       if (!name && meUrl.includes('facebook.com/') && !meUrl.includes('/me/') && !meUrl.includes('/login')) {
         const urlPath = new URL(meUrl).pathname.replace(/^\//, '').replace(/\/$/, '');
         if (urlPath && urlPath.length >= 2 && !urlPath.includes('/') && !urlPath.startsWith('profile.php')) {

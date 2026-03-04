@@ -2849,7 +2849,8 @@ export class GroupPostingWorker {
     }
   }
 
-  // Quick login check — does NOT navigate, just checks current page state
+  // Quick login check — does NOT navigate, does NOT click anything
+  // Safe to call during scraping without disrupting page state
   async checkLoginQuick() {
     try {
       if (!this.browser || !this.browser.isConnected() || !this.page) return false;
@@ -2865,13 +2866,12 @@ export class GroupPostingWorker {
           if (document.querySelector('button[name="login"]')) return 'login_form';
           if (document.querySelector('#m_login_email')) return 'login_form';
           if (document.querySelector('form[action*="login"]')) return 'login_form';
-          // Check for "Continue as" / "ดำเนินการต่อ" page
+          // Detect "Continue as" page — but do NOT click (read-only check)
           const btns = document.querySelectorAll('[role="button"], button, a, div[tabindex="0"]');
           for (const btn of btns) {
             const text = (btn.textContent || '').trim();
             if (text === 'ดำเนินการต่อ' || text === 'Continue' || text === 'Log Into') {
-              btn.click();
-              return 'continue_clicked';
+              return 'continue_page';
             }
           }
           // Check title for explicit login keywords (but NOT just 'facebook' — homepage also has that title)
@@ -2879,11 +2879,9 @@ export class GroupPostingWorker {
           if (title.includes('log in') || title.includes('เข้าสู่ระบบ')) return 'login_page';
           return 'logged_in';
         }).catch(() => 'error');
-        if (result === 'continue_clicked') {
-          await this.delay(4000);
-          return true;
-        }
-        return result === 'logged_in';
+        // "continue_page" means cookies exist but user needs to click Continue
+        // We consider this as "logged in" since cookies are valid — checkLogin() will handle the click
+        return result === 'logged_in' || result === 'continue_page';
       }
       return false;
     } catch (error) {

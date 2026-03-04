@@ -465,42 +465,68 @@ export default function createGroupRoutes({ auth, sessionManager }) {
                 let name = '';
                 let memberCount = 0;
 
+                const blacklist = [
+                  'การแจ้งเตือน', 'แชท', 'Chat', 'Notifications', 'Messenger',
+                  'Facebook', 'หน้าหลัก', 'Home', 'Watch', 'Marketplace',
+                  'สร้าง', 'Create', 'เมนู', 'Menu',
+                  'Groups', 'กลุ่ม', 'Group', 'กลุ่มของคุณ', 'Your groups',
+                  'เข้าร่วมกลุ่ม', 'Join group', 'ค้นพบ', 'Discover',
+                ];
+                const isBlacklisted = (text) => blacklist.some(b => text === b || text.startsWith(b + ' '));
+
                 // Strategy 1: og:title meta tag
                 const ogTitle = document.querySelector('meta[property="og:title"]');
-                if (ogTitle) name = ogTitle.getAttribute('content')?.trim() || '';
+                if (ogTitle) {
+                  const ogText = ogTitle.getAttribute('content')?.trim() || '';
+                  if (ogText && ogText.length > 2 && !isBlacklisted(ogText)) name = ogText;
+                }
 
                 // Strategy 2: document.title
-                if (!name) { const title = document.title || ''; if (title.includes('|')) name = title.split('|')[0].trim(); else if (title.includes('-')) name = title.split('-')[0].trim(); }
+                if (!name) {
+                  const title = document.title || '';
+                  if (title.includes('|')) { const c = title.split('|')[0].trim(); if (c && c.length > 2 && !isBlacklisted(c)) name = c; }
+                  else if (title.includes('-')) { const c = title.split('-')[0].trim(); if (c && c.length > 2 && !isBlacklisted(c)) name = c; }
+                }
 
                 // Strategy 3: h1 heading (Facebook SPA renders group name in h1)
                 if (!name) {
                   const h1s = document.querySelectorAll('h1');
                   for (const h1 of h1s) {
-                    const t = h1.textContent?.trim() || '';
-                    if (t.length >= 3 && t.length < 200 && !t.includes('Facebook') && !t.includes('เข้าสู่ระบบ') && !t.includes('Log')) {
+                    const span = h1.querySelector('span');
+                    const t = span ? (span.textContent?.trim() || '') : (h1.textContent?.trim() || '');
+                    if (t.length >= 3 && t.length < 200 && !isBlacklisted(t)) {
                       name = t; break;
                     }
                   }
                 }
 
-                // Strategy 4: aria-label on main heading link
+                // Strategy 4: aria-label on group links
+                if (!name) {
+                  const groupLinks = document.querySelectorAll('a[href*="/groups/"]');
+                  for (const link of groupLinks) {
+                    const ariaLabel = link.getAttribute('aria-label');
+                    if (ariaLabel && ariaLabel.length > 5 && !isBlacklisted(ariaLabel)) { name = ariaLabel; break; }
+                  }
+                }
+
+                // Strategy 5: h2 in main area / heading links
                 if (!name) {
                   const headingLinks = document.querySelectorAll('a[role="link"] h2, h2 a[role="link"], [role="main"] h2');
                   for (const el of headingLinks) {
                     const t = (el.textContent || el.closest('a')?.textContent || '').trim();
-                    if (t.length >= 3 && t.length < 200) { name = t; break; }
+                    if (t.length >= 3 && t.length < 200 && !isBlacklisted(t)) { name = t; break; }
                   }
                 }
 
-                // Strategy 5: Structured data / JSON-LD
+                // Strategy 6: Structured data / JSON-LD
                 if (!name) {
                   const scripts = document.querySelectorAll('script[type="application/ld+json"]');
                   for (const s of scripts) {
-                    try { const d = JSON.parse(s.textContent); if (d.name) { name = d.name; break; } } catch {}
+                    try { const d = JSON.parse(s.textContent); if (d.name && !isBlacklisted(d.name)) { name = d.name; break; } } catch {}
                   }
                 }
 
-                // Strategy 6: First large visible heading in main content
+                // Strategy 7: First large visible heading in main content
                 if (!name) {
                   const mainEl = document.querySelector('[role="main"]');
                   if (mainEl) {
@@ -509,7 +535,7 @@ export default function createGroupRoutes({ auth, sessionManager }) {
                       const t = h.textContent?.trim() || '';
                       const rect = h.getBoundingClientRect();
                       if (t.length >= 3 && t.length < 200 && rect.width > 100 && rect.height > 15 &&
-                          !t.includes('สมาชิก') && !t.includes('member') && !t.includes('โพสต์') && !t.includes('post')) {
+                          !isBlacklisted(t) && !t.includes('สมาชิก') && !t.includes('member') && !t.includes('โพสต์') && !t.includes('post')) {
                         name = t; break;
                       }
                     }
@@ -547,16 +573,43 @@ export default function createGroupRoutes({ auth, sessionManager }) {
                 };
                 const spans = document.querySelectorAll('span');
                 const todayLabels = ['โพสต์ใหม่ในวันนี้', 'โพสต์ใหม่วันนี้', 'โพสต์วันนี้', 'new posts today', 'new post today'];
-                const monthLabels = ['โพสต์ในเดือนที่ผ่านมา', 'โพสต์เมื่อเดือนที่แล้ว', 'โพสต์ต่อเดือน', 'โพสต์/เดือน', 'posts in the last month', 'posts last month', 'in the last month'];
+                const monthLabels = ['โพสต์ในเดือนที่ผ่านมา', 'โพสต์เมื่อเดือนที่แล้ว', 'โพสต์ต่อเดือน', 'โพสต์/เดือน', 'โพสต์ในช่วง 30 วันที่ผ่านมา', 'posts in the last month', 'posts last month', 'posts/month', 'in the last month'];
+                const findPrev = (el) => {
+                  let prev = el.previousElementSibling;
+                  if (!prev && el.parentElement) prev = el.parentElement.previousElementSibling;
+                  if (!prev && el.parentElement?.parentElement) {
+                    const parent = el.parentElement.parentElement;
+                    const children = Array.from(parent.children);
+                    const idx = children.indexOf(el.parentElement);
+                    if (idx > 0) prev = children[idx - 1];
+                  }
+                  return prev ? (prev.textContent?.trim() || '') : '';
+                };
                 spans.forEach(span => {
                   const t = (span.textContent?.trim() || '').toLowerCase();
-                  const findPrev = (el) => { let p = el.previousElementSibling; if (!p && el.parentElement) p = el.parentElement.previousElementSibling; return p ? (p.textContent?.trim() || '') : ''; };
                   if (postsToday === undefined && todayLabels.some(l => t.includes(l.toLowerCase()))) { const v = parseCompact(findPrev(span)); if (v !== undefined) postsToday = v; }
                   if (postsLastMonth === undefined && monthLabels.some(l => t.includes(l.toLowerCase()))) { const v = parseCompact(findPrev(span)); if (v !== undefined) postsLastMonth = v; }
                 });
+                // Fallback: bodyText regex
                 if (postsToday === undefined) { const m = bodyText.match(/([\d.,]+\s*(?:[KkMm]|พัน|หมื่น|แสน|ล้าน)?)\s*โพสต์(?:ใหม่)?(?:ใน)?วันนี้/); if (m) postsToday = parseCompact(m[1]); }
+                if (postsToday === undefined) { const m = bodyText.match(/([\d.,]+\s*(?:[KkMm])?)\s*new\s*posts?\s*today/i); if (m) postsToday = parseCompact(m[1]); }
                 if (postsLastMonth === undefined) { const m = bodyText.match(/([\d.,]+\s*(?:[KkMm]|พัน|หมื่น|แสน|ล้าน)?)\s*(?:โพสต์)?(?:ใน)?เดือนที่ผ่านมา/); if (m) postsLastMonth = parseCompact(m[1]); }
                 if (postsLastMonth === undefined) { const m = bodyText.match(/([\d.,]+\s*(?:[KkMm])?)\s*in the last month/i); if (m) postsLastMonth = parseCompact(m[1]); }
+                if (postsLastMonth === undefined) { const m = bodyText.match(/([\d.,]+\s*(?:[KkMm])?)\s*posts?\s*\/\s*month/i); if (m) postsLastMonth = parseCompact(m[1]); }
+                // Fallback: line-based extraction (number on one line, label on next)
+                if (postsToday === undefined || postsLastMonth === undefined) {
+                  const lines = bodyText.split(/\n/).map(l => l.trim()).filter(l => l.length > 0);
+                  for (let li = 0; li < lines.length - 1; li++) {
+                    const numLine = lines[li];
+                    const labelLine = lines[li + 1].toLowerCase();
+                    if (postsToday === undefined && (labelLine.includes('โพสต์ใหม่') && labelLine.includes('วันนี้') || labelLine.includes('new post') && labelLine.includes('today'))) {
+                      const val = parseCompact(numLine); if (typeof val === 'number') postsToday = val;
+                    }
+                    if (postsLastMonth === undefined && (labelLine.includes('โพสต์') && (labelLine.includes('เดือน') || labelLine.includes('30 วัน')) || labelLine.includes('post') && (labelLine.includes('month') || labelLine.includes('30 day')))) {
+                      const val = parseCompact(numLine); if (typeof val === 'number') postsLastMonth = val;
+                    }
+                  }
+                }
                 return { name, memberCount, postsToday, postsLastMonth };
               });
 

@@ -122,10 +122,27 @@ async function scrapeFbUserInfo(page) {
       }
     }
 
-    // Extract profile pic
+    // Extract profile pic — prioritize actual profile photo over cover/other images
     profilePic = await page.evaluate(() => {
+      // Strategy 1: og:image meta tag (Facebook sets this to the profile pic on /me/)
+      const ogImg = document.querySelector('meta[property="og:image"]');
+      if (ogImg) {
+        const url = ogImg.getAttribute('content') || '';
+        if (url.includes('scontent') || url.includes('fbcdn')) return url;
+      }
+      // Strategy 2: Profile photo link's SVG image (usually inside a[aria-label] with profile pic)
+      const profileLinks = document.querySelectorAll('a[aria-label*="profile"], a[aria-label*="โปรไฟล์"], [data-pagelet="ProfileActions"] image, svg image');
+      for (const el of profileLinks) {
+        const img = el.tagName === 'image' ? el : el.querySelector('image');
+        if (img) {
+          const href = img.getAttribute('xlink:href') || img.getAttribute('href') || '';
+          if (href.includes('scontent') || href.includes('fbcdn')) return href;
+        }
+      }
+      // Strategy 3: First SVG image with scontent (common FB profile pic render)
       const svgImgs = document.querySelectorAll('image');
       for (const img of svgImgs) { const href = img.getAttribute('xlink:href') || img.getAttribute('href') || ''; if (href.includes('scontent')) return href; }
+      // Strategy 4: img tags with scontent
       const imgs = document.querySelectorAll('img[src*="scontent"]');
       for (const img of imgs) { const src = img.getAttribute('src') || ''; if (src.includes('scontent')) return src; }
       return '';

@@ -42,6 +42,7 @@ export function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll } = useNotifications();
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<NotificationCategory | 'all'>('all');
+  const [selectedNotif, setSelectedNotif] = useState<AppNotification | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -65,6 +66,7 @@ export function NotificationBell() {
   }, {} as Record<string, number>);
 
   return (
+    <>
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
@@ -172,7 +174,7 @@ export function NotificationBell() {
                   return (
                     <button
                       key={n.id}
-                      onClick={() => markAsRead(n.id)}
+                      onClick={() => { markAsRead(n.id); setSelectedNotif(n); }}
                       className={cn(
                         'w-full text-left px-4 py-3 border-b border-border/40 hover:bg-muted/40 transition-colors',
                         !n.read && 'bg-accent/[0.04]'
@@ -225,5 +227,83 @@ export function NotificationBell() {
         )}
       </AnimatePresence>
     </div>
+
+    {/* ═══ Notification Detail Modal ═══ */}
+    <AnimatePresence>
+      {selectedNotif && (() => {
+        const cat = categoryMeta[selectedNotif.category] || categoryMeta.general;
+        const CatIcon = cat.icon;
+        const { relative, full } = formatTimestamp(selectedNotif.timestamp);
+        const typeBorder = selectedNotif.type === 'error' ? 'border-red-500/30' : selectedNotif.type === 'warning' ? 'border-amber-500/30' : 'border-[hsl(var(--accent)/0.25)]';
+        const typeGlow = selectedNotif.type === 'error' ? 'shadow-red-500/10' : selectedNotif.type === 'warning' ? 'shadow-amber-500/10' : 'shadow-[hsl(var(--accent)/0.08)]';
+        return (
+          <motion.div
+            key="notif-modal-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => setSelectedNotif(null)}
+          >
+            <motion.div
+              key="notif-modal"
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              className={cn(
+                'w-full max-w-md rounded-2xl border bg-card shadow-2xl overflow-hidden',
+                typeBorder, typeGlow
+              )}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="px-5 pt-5 pb-3 border-b border-border/50 bg-gradient-to-r from-card to-muted/20">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', 'bg-accent/10')}>
+                      <CatIcon className={cn('w-5 h-5', cat.color)} />
+                    </div>
+                    <div>
+                      <span className={cn('text-[10px] font-bold uppercase tracking-wider', cat.color)}>{cat.label}</span>
+                      <h3 className="text-sm font-bold text-foreground mt-0.5 leading-tight">{selectedNotif.title}</h3>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setSelectedNotif(null)}
+                    className="p-1.5 rounded-lg hover:bg-muted transition-colors -mt-1 -mr-1"
+                  >
+                    <X className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="px-5 py-4">
+                <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap">
+                  {selectedNotif.message}
+                </p>
+              </div>
+
+              {/* Footer */}
+              <div className="px-5 py-3 border-t border-border/50 bg-muted/20 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                  <span>{relative}</span>
+                  <span className="text-muted-foreground/30">|</span>
+                  <span className="font-mono text-muted-foreground/60">{full}</span>
+                </div>
+                <button
+                  onClick={() => setSelectedNotif(null)}
+                  className="text-xs font-semibold px-4 py-1.5 rounded-lg bg-accent/10 text-accent hover:bg-accent/20 transition-colors border border-accent/20"
+                >
+                  ปิด
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        );
+      })()}
+    </AnimatePresence>
+    </>
   );
 }

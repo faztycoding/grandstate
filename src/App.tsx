@@ -11,6 +11,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AdminRoute } from "@/components/AdminRoute";
 import { CookieConsent } from "@/components/CookieConsent";
+import { AutomationMonitorProvider } from "@/components/layout/DashboardLayout";
 import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
 
@@ -58,6 +59,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <AutomationMonitorProvider>
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center flex-col gap-4"><div className="w-10 h-10 border-4 border-accent border-t-transparent rounded-full animate-spin" /><p className="text-sm text-muted-foreground animate-pulse">Loading...</p></div>}>
             <Routes>
               {/* Public routes */}
@@ -90,6 +92,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
             </Suspense>
+            </AutomationMonitorProvider>
           </BrowserRouter>
           <CookieConsent />
         </TooltipProvider>

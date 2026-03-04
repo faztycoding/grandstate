@@ -10,11 +10,21 @@ import { useAutomationMonitor } from '@/hooks/useAutomationMonitor';
 import { TaskProgressPopup } from '@/components/automation/TaskProgressPopup';
 import { useFacebookConnection } from '@/hooks/useFacebookConnection';
 
-// Global automation context so Automation page can notify when automation starts
+// Global automation context — Provider lives in App.tsx so ALL pages can access it
 type AutomationMonitorReturn = ReturnType<typeof useAutomationMonitor>;
 const AutomationMonitorContext = createContext<AutomationMonitorReturn | null>(null);
 export function useGlobalAutomation() {
   return useContext(AutomationMonitorContext);
+}
+
+// Standalone provider — wrap this around routes in App.tsx
+export function AutomationMonitorProvider({ children }: { children: ReactNode }) {
+  const automationMonitor = useAutomationMonitor();
+  return (
+    <AutomationMonitorContext.Provider value={automationMonitor}>
+      {children}
+    </AutomationMonitorContext.Provider>
+  );
 }
 
 interface DashboardLayoutProps {
@@ -27,7 +37,7 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
   const location = useLocation();
   const { license, user: authUser } = useLicenseAuth();
   const [showExpiredPopup, setShowExpiredPopup] = useState(false);
-  const automationMonitor = useAutomationMonitor();
+  const automationMonitor = useGlobalAutomation();
   const { user: fbUser, sessions: fbSessions, activeSlot } = useFacebookConnection();
 
   // Derive FB user for popup
@@ -50,7 +60,6 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
   }, [license]);
 
   return (
-    <AutomationMonitorContext.Provider value={automationMonitor}>
     <MobileSidebarProvider>
       <div className="min-h-screen bg-background relative overflow-hidden">
         {/* ── Grand$tate Estate Background ── */}
@@ -147,7 +156,7 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
           </main>
         </div>
         {/* Global Automation Progress Popup — persists across all pages */}
-        {automationMonitor.showPopup && (
+        {automationMonitor?.showPopup && (
           <TaskProgressPopup
             isRunning={automationMonitor.state.isRunning}
             isPaused={automationMonitor.state.isPaused}
@@ -172,6 +181,5 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
         )}
       </div>
     </MobileSidebarProvider>
-    </AutomationMonitorContext.Provider>
   );
 }

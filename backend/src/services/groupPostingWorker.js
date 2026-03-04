@@ -3577,107 +3577,99 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
       console.log(`⌨️ Typed ${caption.length} chars (~${estimatedTime}s) with ${typoCount} typo corrections`);
 
     } else {
-      // ── PASTE MODE: Insert all text at once (like copy-paste) ──
-      // Gaussian pre-paste delay (human switching from copy to paste)
+      // ── PASTE MODE: Copy to clipboard via temp textarea → Ctrl+V into editor ──
+      // This is the ONLY reliable method for Facebook's React editor.
+      // execCommand('insertText') causes double-insertion on React editors.
       await this.delay(gaussianDelay(350, 150, 150, 700));
 
-      const pasted = await page.evaluate((text) => {
-        // Helper: find the correct textbox in the post dialog
-        function findEditor() {
-          const dialogs = document.querySelectorAll('[role="dialog"]');
-          let postDialog = null;
-          for (const dialog of dialogs) {
-            const dt = dialog.textContent || '';
-            if (dt.includes('สร้างโพสต์') || dt.includes('Create post') || dt.includes('Create Post') || dt.includes('โพสต์ใน')) {
-              postDialog = dialog;
-              break;
-            }
-          }
-          if (!postDialog) {
-            for (const d of dialogs) {
-              const txt = (d.textContent || '').toLowerCase();
-              if (txt.includes('notification') || txt.includes('การแจ้งเตือน')) continue;
-              postDialog = d;
-              break;
-            }
-          }
-          if (!postDialog) return null;
-          const textboxes = postDialog.querySelectorAll('[contenteditable="true"][role="textbox"]');
-          for (const tb of textboxes) {
-            const ariaLabel = tb.getAttribute('aria-label') || '';
-            if (ariaLabel.includes('แสดงความคิดเห็น') || ariaLabel.includes('comment')) continue;
-            return tb;
-          }
-          return postDialog.querySelector('[contenteditable="true"][role="textbox"]') || postDialog.querySelector('[role="textbox"]');
-        }
-
-        // Helper: notify React that content changed (WITHOUT re-inserting text)
-        function notifyReact(el) {
-          el.dispatchEvent(new Event('input', { bubbles: true }));
-          el.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-
-        const editor = findEditor();
-        if (!editor) return { ok: false, err: 'no editor found' };
-        editor.focus();
-
-        // Try execCommand first (inserts text directly)
-        const execOk = document.execCommand('insertText', false, text);
-        notifyReact(editor);
-
-        // Verify text was actually inserted
-        const editorText = editor.innerText || editor.textContent || '';
-        if (editorText.length >= Math.min(text.length * 0.5, 10)) {
-          return { ok: true, method: 'execCommand', len: editorText.length };
-        }
-
-        // execCommand failed — try DataTransfer paste simulation
-        try {
-          editor.innerHTML = '';
-          editor.focus();
-          const dt = new DataTransfer();
-          dt.setData('text/plain', text);
-          const pasteEvent = new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: dt });
-          editor.dispatchEvent(pasteEvent);
-          notifyReact(editor);
-          const afterPaste = editor.innerText || editor.textContent || '';
-          if (afterPaste.length >= Math.min(text.length * 0.5, 10)) {
-            return { ok: true, method: 'clipboard-paste', len: afterPaste.length };
-          }
-        } catch {}
-
-        // Last resort: direct innerHTML
-        try {
-          const lines = text.split('\n');
-          editor.innerHTML = lines.map(l => `<p>${l || '<br>'}</p>`).join('');
-          notifyReact(editor);
-          const afterHtml = editor.innerText || editor.textContent || '';
-          if (afterHtml.length > 0) {
-            return { ok: true, method: 'innerHTML', len: afterHtml.length };
-          }
-        } catch {}
-
-        return { ok: false, err: 'all paste methods failed', editorLen: (editor.innerText || '').length };
+      // Step A: Copy caption text to clipboard via a hidden textarea + Ctrl+C
+      await page.evaluate((text) => {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
       }, caption);
+      await this.delay(200);
 
-      if (pasted.ok) {
-        console.log(`📋 Pasted ${caption.length} chars (method: ${pasted.method}, verified: ${pasted.len} chars)`);
-      } else {
-        // All in-browser paste methods failed → fallback to Puppeteer keyboard.type()
-        console.log(`⚠️ Paste failed (${pasted.err}), falling back to keyboard.type()...`);
-        // Re-focus the editor
-        await page.evaluate(() => {
-          const dialogs = document.querySelectorAll('[role="dialog"]');
-          for (const dialog of dialogs) {
-            const dt = dialog.textContent || '';
-            if (dt.includes('notification') || dt.includes('การแจ้งเตือน')) continue;
-            const tb = dialog.querySelector('[contenteditable="true"][role="textbox"]');
-            if (tb) { tb.focus(); tb.innerHTML = ''; return; }
+      // Step B: Focus the editor in the post dialog
+      const focused = await page.evaluate(() => {
+        const dialogs = document.querySelectorAll('[role="dialog"]');
+        for (const dialog of dialogs) {
+          const dt = dialog.textContent || '';
+          if (dt.includes('สร้างโพสต์') || dt.includes('Create post') || dt.includes('Create Post') || dt.includes('โพสต์ใน')) {
+            const editors = dialog.querySelectorAll('[contenteditable="true"][role="textbox"]');
+            for (const editor of editors) {
+              const ariaLabel = editor.getAttribute('aria-label') || '';
+              if (ariaLabel.includes('แสดงความคิดเห็น') || ariaLabel.includes('comment')) continue;
+              editor.focus();
+              return true;
+            }
           }
-        });
+        }
+        // Fallback: any dialog with textbox
+        for (const d of dialogs) {
+          const txt = (d.textContent || '').toLowerCase();
+          if (txt.includes('notification') || txt.includes('การแจ้งเตือน')) continue;
+          const tb = d.querySelector('[contenteditable="true"][role="textbox"]');
+          if (tb) { tb.focus(); return true; }
+        }
+        return false;
+      });
+
+      if (!focused) {
+        console.log('⚠️ Could not focus editor for paste — falling back to keyboard.type()');
         await this.delay(300);
-        await page.keyboard.type(caption, { delay: 10 });
+        await page.keyboard.type(caption, { delay: 8 });
         console.log(`⌨️ Typed ${caption.length} chars via keyboard.type() fallback`);
+      } else {
+        // Step C: Ctrl+V to paste from clipboard
+        await this.delay(200);
+        await page.keyboard.down('Control');
+        await page.keyboard.press('v');
+        await page.keyboard.up('Control');
+        await this.delay(1000);
+
+        // Step D: Verify paste worked — check editor content length
+        const editorLen = await page.evaluate(() => {
+          const dialogs = document.querySelectorAll('[role="dialog"]');
+          for (const d of dialogs) {
+            const txt = (d.textContent || '').toLowerCase();
+            if (txt.includes('notification') || txt.includes('การแจ้งเตือน')) continue;
+            const editors = d.querySelectorAll('[contenteditable="true"][role="textbox"]');
+            for (const editor of editors) {
+              const ariaLabel = editor.getAttribute('aria-label') || '';
+              if (ariaLabel.includes('แสดงความคิดเห็น') || ariaLabel.includes('comment')) continue;
+              return (editor.innerText || '').length;
+            }
+          }
+          return 0;
+        });
+
+        if (editorLen >= Math.min(caption.length * 0.3, 10)) {
+          // Check for duplication — if editor has >1.5x the expected text, it pasted twice
+          if (editorLen > caption.length * 1.5) {
+            console.log(`⚠️ Paste duplicated (${editorLen} chars vs expected ${caption.length}) — clearing and using keyboard.type()`);
+            await page.keyboard.down('Control');
+            await page.keyboard.press('a');
+            await page.keyboard.up('Control');
+            await this.delay(200);
+            await page.keyboard.press('Backspace');
+            await this.delay(500);
+            await page.keyboard.type(caption, { delay: 8 });
+            console.log(`⌨️ Re-typed ${caption.length} chars via keyboard.type()`);
+          } else {
+            console.log(`📋 Pasted ${editorLen} chars via Ctrl+V (expected ${caption.length})`);
+          }
+        } else {
+          // Ctrl+V didn't work — fallback to keyboard.type()
+          console.log(`⚠️ Ctrl+V paste failed (${editorLen} chars) — using keyboard.type()`);
+          await page.keyboard.type(caption, { delay: 8 });
+          console.log(`⌨️ Typed ${caption.length} chars via keyboard.type() fallback`);
+        }
       }
     }
 
@@ -3693,8 +3685,8 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
           const ariaLabel = editor.getAttribute('aria-label') || '';
           if (ariaLabel.includes('แสดงความคิดเห็น') || ariaLabel.includes('comment')) continue;
           const text = editor.innerText || editor.textContent || '';
-          // Dispatch events one more time to ensure React picks up
-          editor.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
+          // Nudge React to recognize content (DO NOT use insertText — causes duplication)
+          editor.dispatchEvent(new Event('input', { bubbles: true }));
           editor.dispatchEvent(new Event('change', { bubbles: true }));
           return { hasContent: text.length > 0, len: text.length };
         }

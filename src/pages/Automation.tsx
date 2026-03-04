@@ -1191,7 +1191,7 @@ export default function Automation() {
                     </Badge>
                   ) : !automation.isRunning && (
                     <Badge className="text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
-                      {healthResult.stats.postsToday} โพสต์วันนี้
+                      {healthResult.stats.successToday} โพสต์วันนี้
                     </Badge>
                   )}
                 </div>
@@ -1208,7 +1208,7 @@ export default function Automation() {
                     <motion.div
                       className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500"
                       initial={{ width: 0 }}
-                      animate={{ width: `${Math.min((healthResult.stats.postsToday / Math.max(getPackageLimits(userPackage).postsPerDay, 1)) * 100, 100)}%` }}
+                      animate={{ width: `${Math.min((healthResult.stats.successToday / Math.max(getPackageLimits(userPackage).postsPerDay, 1)) * 100, 100)}%` }}
                       transition={{ duration: 0.8 }}
                     />
                   )}
@@ -1229,9 +1229,10 @@ export default function Automation() {
                     </>
                   ) : (
                     <>
-                      <span className="text-emerald-400 font-mono">{healthResult.stats.postsToday} สำเร็จ</span>
+                      <span className="text-emerald-400 font-mono">{healthResult.stats.successToday} สำเร็จ</span>
+                      {healthResult.stats.failedToday > 0 && <span className="text-red-400 font-mono">{healthResult.stats.failedToday} ล้มเหลว</span>}
                       <span className="text-cyan-400 font-mono">{healthResult.stats.postsThisHour} /ชม.</span>
-                      <span className="text-muted-foreground font-mono">{Math.round((healthResult.stats.postsToday / Math.max(getPackageLimits(userPackage).postsPerDay, 1)) * 100)}%</span>
+                      <span className="text-muted-foreground font-mono">{Math.round((healthResult.stats.successToday / Math.max(getPackageLimits(userPackage).postsPerDay, 1)) * 100)}%</span>
                     </>
                   )}
                 </div>

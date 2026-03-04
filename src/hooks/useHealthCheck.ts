@@ -26,6 +26,8 @@ export interface HealthCheckResult {
   recommendations: string[];
   stats: {
     postsToday: number;
+    successToday: number;
+    failedToday: number;
     postsThisHour: number;
     postsThisWeek: number;
     avgDelayMinutes: number;
@@ -210,6 +212,8 @@ function calculateFromBackend(d: BackendData): HealthCheckResult {
     recommendations,
     stats: {
       postsToday: d.postsToday,
+      successToday: d.successToday || 0,
+      failedToday: d.failedToday || 0,
       postsThisHour: d.postsThisHour,
       postsThisWeek: d.postsThisWeek,
       avgDelayMinutes: d.avgDelayMinutes >= 0 ? d.avgDelayMinutes : 999,
@@ -233,7 +237,7 @@ const DEFAULT_RESULT: HealthCheckResult = {
   })),
   recommendations: ['allGood'],
   stats: {
-    postsToday: 0, postsThisHour: 0, postsThisWeek: 0,
+    postsToday: 0, successToday: 0, failedToday: 0, postsThisHour: 0, postsThisWeek: 0,
     avgDelayMinutes: 999, uniqueCaptions: 0, totalCaptions: 0,
     longestSessionMinutes: 0, accountAgeDays: 0,
   },

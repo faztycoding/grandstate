@@ -150,6 +150,13 @@ export function TaskProgressPopup({
     useEffect(() => { sessionStorage.setItem('taskPopup_minimized', String(isMinimized)); }, [isMinimized]);
     useEffect(() => { sessionStorage.setItem('taskPopup_expanded', String(isExpanded)); }, [isExpanded]);
 
+    // Force EXPAND when automation starts — never open minimized on fresh start
+    useEffect(() => {
+        if (isRunning && isMinimized) {
+            setIsMinimized(false);
+        }
+    }, [isRunning]);
+
     useEffect(() => { setCountdown(queueEstimate || 0); }, [queueEstimate]);
 
     useEffect(() => {

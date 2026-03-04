@@ -13,7 +13,12 @@ import path from 'path';
  */
 
 // Helper: scrape FB user info from current page
-const FB_NAME_BLACKLIST = ['facebook', 'log in', 'log into', 'sign up', 'เข้าสู่ระบบ', 'สมัครสมาชิก', 'messenger', 'watch', 'marketplace'];
+const FB_NAME_BLACKLIST = [
+  'facebook', 'log in', 'log into', 'sign up', 'เข้าสู่ระบบ', 'สมัครสมาชิก',
+  'messenger', 'watch', 'marketplace', 'notifications', 'การแจ้งเตือน',
+  'หน้าหลัก', 'home', 'แชท', 'chat', 'สร้าง', 'create', 'เมนู', 'menu',
+  'groups', 'กลุ่ม', 'reels', 'stories', 'gaming', 'video',
+];
 function isValidFbName(n) {
   if (!n || n.length < 2 || n.length > 60) return false;
   const lower = n.toLowerCase().trim();

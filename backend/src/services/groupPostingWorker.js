@@ -3611,10 +3611,9 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
           return postDialog.querySelector('[contenteditable="true"][role="textbox"]') || postDialog.querySelector('[role="textbox"]');
         }
 
-        // Helper: dispatch React-compatible input events
-        function dispatchReactEvents(el, text) {
-          try { el.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'insertText', data: text })); } catch {}
-          el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
+        // Helper: notify React that content changed (WITHOUT re-inserting text)
+        function notifyReact(el) {
+          el.dispatchEvent(new Event('input', { bubbles: true }));
           el.dispatchEvent(new Event('change', { bubbles: true }));
         }
 
@@ -3622,17 +3621,17 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
         if (!editor) return { ok: false, err: 'no editor found' };
         editor.focus();
 
-        // Try execCommand first (still works in some browsers)
+        // Try execCommand first (inserts text directly)
         const execOk = document.execCommand('insertText', false, text);
-        dispatchReactEvents(editor, text);
+        notifyReact(editor);
 
         // Verify text was actually inserted
         const editorText = editor.innerText || editor.textContent || '';
         if (editorText.length >= Math.min(text.length * 0.5, 10)) {
-          return { ok: true, method: execOk ? 'execCommand' : 'execCommand+events', len: editorText.length };
+          return { ok: true, method: 'execCommand', len: editorText.length };
         }
 
-        // execCommand failed silently — try DataTransfer paste simulation
+        // execCommand failed — try DataTransfer paste simulation
         try {
           editor.innerHTML = '';
           editor.focus();
@@ -3640,18 +3639,18 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
           dt.setData('text/plain', text);
           const pasteEvent = new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: dt });
           editor.dispatchEvent(pasteEvent);
-          dispatchReactEvents(editor, text);
+          notifyReact(editor);
           const afterPaste = editor.innerText || editor.textContent || '';
           if (afterPaste.length >= Math.min(text.length * 0.5, 10)) {
             return { ok: true, method: 'clipboard-paste', len: afterPaste.length };
           }
         } catch {}
 
-        // Last resort: direct innerHTML + events
+        // Last resort: direct innerHTML
         try {
           const lines = text.split('\n');
           editor.innerHTML = lines.map(l => `<p>${l || '<br>'}</p>`).join('');
-          dispatchReactEvents(editor, text);
+          notifyReact(editor);
           const afterHtml = editor.innerText || editor.textContent || '';
           if (afterHtml.length > 0) {
             return { ok: true, method: 'innerHTML', len: afterHtml.length };
@@ -4172,8 +4171,15 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
       let typed = false;
       for (let attempt = 0; attempt < 3 && !typed; attempt++) {
         if (attempt > 0) {
-          console.log(`   🔁 Caption retry ${attempt}/2...`);
-          await this.delay(1000);
+          console.log(`   🔁 Caption retry ${attempt}/2 — clearing editor first...`);
+          await this.delay(500);
+          // Clear editor via keyboard before retry (more reliable than innerHTML)
+          await page.keyboard.down('Control');
+          await page.keyboard.press('a');
+          await page.keyboard.up('Control');
+          await this.delay(200);
+          await page.keyboard.press('Backspace');
+          await this.delay(500);
         }
         typed = await this.humanLikeCaptionInput(page, caption);
       }
@@ -4200,9 +4206,8 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
       });
 
       if (!postBtnEnabled) {
-        console.log('⚠️ Post button still disabled after caption input — forcing keyboard.type() re-entry...');
-        // Clear editor completely with Ctrl+A → Delete, then re-type
-        await page.evaluate(() => {
+        // Check if editor already has text (caption might be there but React needs a nudge)
+        const editorHasText = await page.evaluate(() => {
           const dialogs = document.querySelectorAll('[role="dialog"]');
           for (const d of dialogs) {
             const txt = (d.textContent || '').toLowerCase();
@@ -4211,24 +4216,31 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
             for (const editor of editors) {
               const ariaLabel = editor.getAttribute('aria-label') || '';
               if (ariaLabel.includes('แสดงความคิดเห็น') || ariaLabel.includes('comment')) continue;
-              editor.focus();
-              editor.innerHTML = '';
-              return true;
+              return (editor.innerText || '').length;
             }
           }
-          return false;
+          return 0;
         });
-        await this.delay(300);
-        await page.keyboard.down('Control');
-        await page.keyboard.press('a');
-        await page.keyboard.up('Control');
-        await this.delay(200);
-        await page.keyboard.press('Backspace');
-        await this.delay(500);
-        // Type using Puppeteer keyboard — this ALWAYS triggers React events
-        await page.keyboard.type(caption, { delay: 8 });
-        console.log(`⌨️ Force re-typed ${caption.length} chars via keyboard.type()`);
-        await this.delay(1500);
+
+        if (editorHasText > 10) {
+          // Text exists — just nudge React by pressing Space then Backspace
+          console.log(`⚠️ Post button disabled but editor has ${editorHasText} chars — nudging React...`);
+          await page.keyboard.press('Space');
+          await this.delay(200);
+          await page.keyboard.press('Backspace');
+          await this.delay(1500);
+        } else {
+          console.log('⚠️ Post button disabled & editor empty — re-typing via keyboard...');
+          await page.keyboard.down('Control');
+          await page.keyboard.press('a');
+          await page.keyboard.up('Control');
+          await this.delay(200);
+          await page.keyboard.press('Backspace');
+          await this.delay(500);
+          await page.keyboard.type(caption, { delay: 8 });
+          console.log(`⌨️ Force re-typed ${caption.length} chars via keyboard.type()`);
+          await this.delay(1500);
+        }
       }
 
       // ── Step 5: Submit post (wait for button to be enabled, then click) ──
@@ -4351,9 +4363,8 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
             }, POST_TEXTS);
 
             if (hasDisabledBtn) {
-              console.log('🔄 Post button found but disabled — re-typing caption via keyboard.type()...');
-              // Clear editor and re-type
-              await page.evaluate(() => {
+              // Check if editor already has text — nudge React instead of re-typing
+              const edLen = await page.evaluate(() => {
                 const dialogs = document.querySelectorAll('[role="dialog"]');
                 for (const d of dialogs) {
                   const txt = (d.textContent || '').toLowerCase();
@@ -4363,17 +4374,27 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
                     const ariaLabel = editor.getAttribute('aria-label') || '';
                     if (ariaLabel.includes('แสดงความคิดเห็น') || ariaLabel.includes('comment')) continue;
                     editor.focus();
-                    // Select all and delete
-                    const sel = window.getSelection();
-                    sel.selectAllChildren(editor);
-                    return;
+                    return (editor.innerText || '').length;
                   }
                 }
+                return 0;
               });
-              await page.keyboard.press('Backspace');
-              await this.delay(500);
-              await page.keyboard.type(caption, { delay: 12 });
-              console.log(`⌨️ Re-typed ${caption.length} chars — waiting for Post button to enable...`);
+              if (edLen > 10) {
+                console.log(`🔄 Post button disabled but editor has ${edLen} chars — nudging React...`);
+                await page.keyboard.press('Space');
+                await this.delay(200);
+                await page.keyboard.press('Backspace');
+              } else {
+                console.log('🔄 Post button disabled & editor empty — re-typing...');
+                await page.keyboard.down('Control');
+                await page.keyboard.press('a');
+                await page.keyboard.up('Control');
+                await this.delay(200);
+                await page.keyboard.press('Backspace');
+                await this.delay(500);
+                await page.keyboard.type(caption, { delay: 12 });
+                console.log(`⌨️ Re-typed ${caption.length} chars`);
+              }
               await this.delay(2000);
             }
           }

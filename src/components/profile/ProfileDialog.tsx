@@ -7,6 +7,7 @@ import {
     Crown,
     Star,
     Rocket,
+    Shield,
     CreditCard,
     LogOut,
     Trash2,
@@ -38,7 +39,7 @@ import { useLicenseAuth } from '@/hooks/useLicenseAuth';
 import { useFacebookConnection } from '@/hooks/useFacebookConnection';
 import { PACKAGE_LIMITS } from '@/hooks/usePackageLimits';
 import { supabase } from '@/lib/supabase';
-import { apiFetch } from '@/lib/config';
+import { apiFetch, isAdminEmail } from '@/lib/config';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { LevelUpEffect } from './LevelUpEffect';
@@ -46,6 +47,14 @@ import { ExpiredLicensePopup } from './ExpiredLicensePopup';
 
 
 const packageInfo = {
+    admin: {
+        name: 'Admin',
+        icon: Shield,
+        color: 'text-red-600',
+        bgColor: 'bg-red-100',
+        gradient: 'from-red-600 to-rose-500',
+        limit: 9999
+    },
     free: {
         name: 'Rookie',
         icon: Rocket,
@@ -107,11 +116,13 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const pkg = packageInfo[currentPackage as keyof typeof packageInfo] || packageInfo.free;
+    const isAdmin = isAdminEmail(authUser?.email);
+    const pkgKey = isAdmin ? 'admin' : currentPackage;
+    const pkg = packageInfo[pkgKey as keyof typeof packageInfo] || packageInfo.free;
     const PkgIcon = pkg.icon;
     const limit = pkg.limit;
 
-    const isRookie = !license || currentPackage === 'free';
+    const isRookie = !isAdmin && (!license || currentPackage === 'free');
     const hasLicense = !!license;
 
     useEffect(() => {
@@ -358,7 +369,7 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
 
                                 <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 border-none backdrop-blur-md shadow-sm text-xs">
                                     <PkgIcon className="w-3 h-3 mr-1" />
-                                    {pkg.name} | {currentPackage.toUpperCase()}
+                                    {pkg.name} | {isAdmin ? 'ADMIN' : currentPackage.toUpperCase()}
                                 </Badge>
                                 {authUser?.email && (
                                     <p className="text-white/70 text-xs mt-1 truncate">{authUser.email}</p>

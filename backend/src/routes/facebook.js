@@ -43,15 +43,82 @@ async function scrapeFbUserInfo(page) {
       return { name: '', profilePic: '' };
     }
 
-    // Extract name from page title
-    if (pageTitle) {
+    // ── ALWAYS navigate to /me/ profile page first (most reliable) ──
+    console.log('🔍 [scrapeFbUserInfo] Navigating to /me/ for accurate profile scrape...');
+    try {
+      await page.goto('https://www.facebook.com/me/', { waitUntil: 'networkidle2', timeout: 20000 });
+      await new Promise(r => setTimeout(r, 4000));
+
+      const meIsLogin = await page.evaluate(() => {
+        return !!(document.querySelector('input[name="email"]') || document.querySelector('input[name="pass"]'));
+      }).catch(() => false);
+
+      if (meIsLogin) {
+        console.log('⚠️ [/me/] Login page — not logged in');
+        return { name: '', profilePic: '' };
+      }
+
+      const meUrl = page.url();
+      const meTitle = await page.title().catch(() => '');
+      console.log(`🔍 [/me/] URL: ${meUrl} | Title: "${meTitle}"`);
+
+      // Strategy 1: Facebook's profile name span (class-based selector)
+      if (!name) {
+        const spanName = await page.evaluate(() => {
+          // Facebook uses these specific class combinations for the profile display name
+          const selectors = [
+            'h1 span',                                   // Profile page h1
+            'span.x1lliihq.x6ikm8r.x10wlt62.x1n2onr6', // FB's profile name span class
+            '[data-pagelet="ProfileActions"] h1',         // Profile actions header
+          ];
+          for (const sel of selectors) {
+            const els = document.querySelectorAll(sel);
+            for (const el of els) {
+              const text = el.textContent?.trim() || '';
+              if (text.length >= 2 && text.length < 60) return text;
+            }
+          }
+          return '';
+        }).catch(() => '');
+        if (isValidFbName(spanName)) { name = spanName; console.log(`✅ [/me/] Got name from span/h1: "${name}"`); }
+      }
+
+      // Strategy 2: Page title
+      if (!name && meTitle) {
+        const cleaned = meTitle.replace(/^\(\d+\)\s*/, '');
+        let candidate = '';
+        if (cleaned.includes(' | ')) candidate = cleaned.split(' | ')[0].trim();
+        else if (cleaned.includes(' - ')) candidate = cleaned.split(' - ')[0].trim();
+        if (isValidFbName(candidate)) { name = candidate; console.log(`✅ [/me/] Got name from title: "${name}"`); }
+      }
+
+      // Strategy 3: og:title meta tag
+      if (!name) {
+        const ogName = await page.evaluate(() => { const og = document.querySelector('meta[property="og:title"]'); return og?.getAttribute('content')?.trim() || ''; }).catch(() => '');
+        if (isValidFbName(ogName)) { name = ogName; console.log(`✅ [/me/] Got name from og:title: "${name}"`); }
+      }
+
+      // Strategy 4: URL-based name (facebook.com/username → decode)
+      if (!name && meUrl.includes('facebook.com/') && !meUrl.includes('/me/') && !meUrl.includes('/login')) {
+        const urlPath = new URL(meUrl).pathname.replace(/^\//, '').replace(/\/$/, '');
+        if (urlPath && urlPath.length >= 2 && !urlPath.includes('/') && !urlPath.startsWith('profile.php')) {
+          const decoded = decodeURIComponent(urlPath).replace(/\./g, ' ');
+          if (isValidFbName(decoded)) { name = decoded; console.log(`✅ [/me/] Got name from URL path: "${name}"`); }
+        }
+      }
+    } catch (navErr) {
+      console.log(`⚠️ [/me/] Navigation failed: ${navErr.message}`);
+    }
+
+    // Fallback: try current page title if /me/ failed
+    if (!name && pageTitle) {
       const cleaned = pageTitle.replace(/^\(\d+\)\s*/, '');
       let candidate = '';
       if (cleaned.includes(' | ')) candidate = cleaned.split(' | ')[0].trim();
       else if (cleaned.includes(' - ')) candidate = cleaned.split(' - ')[0].trim();
       if (isValidFbName(candidate)) {
         name = candidate;
-        console.log(`✅ [scrapeFbUserInfo] Got name from page title: "${name}"`);
+        console.log(`✅ [scrapeFbUserInfo] Got name from original page title: "${name}"`);
       }
     }
 
@@ -64,54 +131,6 @@ async function scrapeFbUserInfo(page) {
       return '';
     }).catch(() => '');
 
-    // If no name, navigate to /me/ profile page
-    if (!name) {
-      console.log('🔍 [scrapeFbUserInfo] No name from current page, trying /me/...');
-      try {
-        await page.goto('https://www.facebook.com/me/', { waitUntil: 'networkidle2', timeout: 20000 });
-        await new Promise(r => setTimeout(r, 4000));
-
-        const meTitle = await page.title().catch(() => '');
-        console.log(`🔍 [/me/] URL: ${page.url()} | Title: "${meTitle}"`);
-
-        const meIsLogin = await page.evaluate(() => {
-          return !!(document.querySelector('input[name="email"]') || document.querySelector('input[name="pass"]'));
-        }).catch(() => false);
-
-        if (meIsLogin) {
-          console.log('⚠️ [/me/] Still on login page — not logged in');
-          return { name: '', profilePic: '' };
-        }
-
-        if (meTitle) {
-          const cleaned = meTitle.replace(/^\(\d+\)\s*/, '');
-          let candidate = '';
-          if (cleaned.includes(' | ')) candidate = cleaned.split(' | ')[0].trim();
-          else if (cleaned.includes(' - ')) candidate = cleaned.split(' - ')[0].trim();
-          if (isValidFbName(candidate)) { name = candidate; console.log(`✅ [/me/] Got name from title: "${name}"`); }
-        }
-
-        if (!name) {
-          const h1Text = await page.evaluate(() => { const h1 = document.querySelector('h1'); return h1?.textContent?.trim() || ''; }).catch(() => '');
-          if (isValidFbName(h1Text)) { name = h1Text; console.log(`✅ [/me/] Got name from h1: "${name}"`); }
-        }
-
-        if (!name) {
-          const ogName = await page.evaluate(() => { const og = document.querySelector('meta[property="og:title"]'); return og?.getAttribute('content')?.trim() || ''; }).catch(() => '');
-          if (isValidFbName(ogName)) { name = ogName; console.log(`✅ [/me/] Got name from og:title: "${name}"`); }
-        }
-
-        if (!profilePic) {
-          profilePic = await page.evaluate(() => {
-            const svgImgs = document.querySelectorAll('image');
-            for (const img of svgImgs) { const href = img.getAttribute('xlink:href') || img.getAttribute('href') || ''; if (href.includes('scontent')) return href; }
-            const imgs = document.querySelectorAll('img[src*="scontent"]');
-            for (const img of imgs) { const src = img.getAttribute('src') || ''; if (src.includes('scontent')) return src; }
-            return '';
-          }).catch(() => '');
-        }
-      } catch (e) { console.log('⚠️ [/me/] Navigation error:', e.message); }
-    }
   } catch (e) { console.log('⚠️ scrapeFbUserInfo error:', e.message); }
 
   console.log(`👤 [FB Profile] Name: "${name}" | Pic: ${profilePic ? 'YES' : 'NO'}`);

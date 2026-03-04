@@ -36,6 +36,10 @@ export default function createGroupRoutes({ auth, sessionManager }) {
         return res.status(400).json({ success: false, error: 'Invalid Facebook group URL' });
       }
 
+      // Ensure browser uses the correct FB session slot (with cookies)
+      const activeSlot = sessionManager.getActiveSlot(req.userId) ?? 0;
+      req.groupWorker.setProfileSlot(activeSlot);
+
       // Initialize browser if needed
       if (!req.groupWorker.browser || !req.groupWorker.browser.isConnected()) {
         if (!sessionManager.canStartBrowser()) {
@@ -417,6 +421,10 @@ export default function createGroupRoutes({ auth, sessionManager }) {
       const supaUrl = process.env.SUPABASE_URL;
       const serviceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
       const groupWorker = req.groupWorker;
+
+      // Ensure correct FB session slot (with cookies)
+      const activeSlot = sessionManager.getActiveSlot(req.userId) ?? 0;
+      groupWorker.setProfileSlot(activeSlot);
 
       (async () => {
         try {

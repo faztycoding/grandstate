@@ -3578,55 +3578,131 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
       await this.delay(gaussianDelay(350, 150, 150, 700));
 
       const pasted = await page.evaluate((text) => {
-        const editor = document.activeElement;
-        if (editor && (editor.getAttribute('contenteditable') === 'true' || editor.getAttribute('role') === 'textbox')) {
-          document.execCommand('insertText', false, text);
-          editor.dispatchEvent(new Event('input', { bubbles: true }));
-          editor.dispatchEvent(new Event('change', { bubbles: true }));
-          return true;
-        }
-        // Fallback: find editor in dialog again
-        const dialog = document.querySelector('[role="dialog"]');
-        if (dialog) {
-          const tb = dialog.querySelector('[contenteditable="true"][role="textbox"]');
-          if (tb) {
-            tb.focus();
-            document.execCommand('insertText', false, text);
-            tb.dispatchEvent(new Event('input', { bubbles: true }));
-            return true;
+        // Helper: find the correct textbox in the post dialog
+        function findEditor() {
+          const dialogs = document.querySelectorAll('[role="dialog"]');
+          let postDialog = null;
+          for (const dialog of dialogs) {
+            const dt = dialog.textContent || '';
+            if (dt.includes('สร้างโพสต์') || dt.includes('Create post') || dt.includes('Create Post') || dt.includes('โพสต์ใน')) {
+              postDialog = dialog;
+              break;
+            }
           }
+          if (!postDialog) {
+            for (const d of dialogs) {
+              const txt = (d.textContent || '').toLowerCase();
+              if (txt.includes('notification') || txt.includes('การแจ้งเตือน')) continue;
+              postDialog = d;
+              break;
+            }
+          }
+          if (!postDialog) return null;
+          const textboxes = postDialog.querySelectorAll('[contenteditable="true"][role="textbox"]');
+          for (const tb of textboxes) {
+            const ariaLabel = tb.getAttribute('aria-label') || '';
+            if (ariaLabel.includes('แสดงความคิดเห็น') || ariaLabel.includes('comment')) continue;
+            return tb;
+          }
+          return postDialog.querySelector('[contenteditable="true"][role="textbox"]') || postDialog.querySelector('[role="textbox"]');
         }
-        return false;
+
+        // Helper: dispatch React-compatible input events
+        function dispatchReactEvents(el, text) {
+          try { el.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'insertText', data: text })); } catch {}
+          el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        const editor = findEditor();
+        if (!editor) return { ok: false, err: 'no editor found' };
+        editor.focus();
+
+        // Try execCommand first (still works in some browsers)
+        const execOk = document.execCommand('insertText', false, text);
+        dispatchReactEvents(editor, text);
+
+        // Verify text was actually inserted
+        const editorText = editor.innerText || editor.textContent || '';
+        if (editorText.length >= Math.min(text.length * 0.5, 10)) {
+          return { ok: true, method: execOk ? 'execCommand' : 'execCommand+events', len: editorText.length };
+        }
+
+        // execCommand failed silently — try DataTransfer paste simulation
+        try {
+          editor.innerHTML = '';
+          editor.focus();
+          const dt = new DataTransfer();
+          dt.setData('text/plain', text);
+          const pasteEvent = new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: dt });
+          editor.dispatchEvent(pasteEvent);
+          dispatchReactEvents(editor, text);
+          const afterPaste = editor.innerText || editor.textContent || '';
+          if (afterPaste.length >= Math.min(text.length * 0.5, 10)) {
+            return { ok: true, method: 'clipboard-paste', len: afterPaste.length };
+          }
+        } catch {}
+
+        // Last resort: direct innerHTML + events
+        try {
+          const lines = text.split('\n');
+          editor.innerHTML = lines.map(l => `<p>${l || '<br>'}</p>`).join('');
+          dispatchReactEvents(editor, text);
+          const afterHtml = editor.innerText || editor.textContent || '';
+          if (afterHtml.length > 0) {
+            return { ok: true, method: 'innerHTML', len: afterHtml.length };
+          }
+        } catch {}
+
+        return { ok: false, err: 'all paste methods failed', editorLen: (editor.innerText || '').length };
       }, caption);
 
-      if (!pasted) {
-        console.log('⚠️ Paste fallback failed, retrying with execCommand...');
-        await page.evaluate((text) => {
-          const dialog = document.querySelector('[role="dialog"]');
-          if (!dialog) return;
-          const textboxes = dialog.querySelectorAll('[contenteditable="true"][role="textbox"]');
-          for (const editor of textboxes) {
-            const ariaLabel = editor.getAttribute('aria-label') || '';
-            if (ariaLabel.includes('แสดงความคิดเห็น') || ariaLabel.includes('comment')) continue;
-            editor.focus();
-            document.execCommand('insertText', false, text);
-            editor.dispatchEvent(new Event('input', { bubbles: true }));
-            return;
+      if (pasted.ok) {
+        console.log(`📋 Pasted ${caption.length} chars (method: ${pasted.method}, verified: ${pasted.len} chars)`);
+      } else {
+        // All in-browser paste methods failed → fallback to Puppeteer keyboard.type()
+        console.log(`⚠️ Paste failed (${pasted.err}), falling back to keyboard.type()...`);
+        // Re-focus the editor
+        await page.evaluate(() => {
+          const dialogs = document.querySelectorAll('[role="dialog"]');
+          for (const dialog of dialogs) {
+            const dt = dialog.textContent || '';
+            if (dt.includes('notification') || dt.includes('การแจ้งเตือน')) continue;
+            const tb = dialog.querySelector('[contenteditable="true"][role="textbox"]');
+            if (tb) { tb.focus(); tb.innerHTML = ''; return; }
           }
-        }, caption);
+        });
+        await this.delay(300);
+        await page.keyboard.type(caption, { delay: 10 });
+        console.log(`⌨️ Typed ${caption.length} chars via keyboard.type() fallback`);
       }
-
-      console.log(`📋 Pasted ${caption.length} chars`);
     }
 
-    // Final: ensure Facebook registers the content
-    await page.evaluate(() => {
-      const editor = document.activeElement;
-      if (editor && (editor.getAttribute('contenteditable') === 'true' || editor.getAttribute('role') === 'textbox')) {
-        editor.dispatchEvent(new Event('input', { bubbles: true }));
-        editor.dispatchEvent(new Event('change', { bubbles: true }));
+    // Final: verify text is actually in the editor (critical for Post button to enable)
+    await this.delay(500);
+    const verification = await page.evaluate(() => {
+      const dialogs = document.querySelectorAll('[role="dialog"]');
+      for (const dialog of dialogs) {
+        const dt = (dialog.textContent || '').toLowerCase();
+        if (dt.includes('notification') || dt.includes('การแจ้งเตือน')) continue;
+        const editors = dialog.querySelectorAll('[contenteditable="true"][role="textbox"]');
+        for (const editor of editors) {
+          const ariaLabel = editor.getAttribute('aria-label') || '';
+          if (ariaLabel.includes('แสดงความคิดเห็น') || ariaLabel.includes('comment')) continue;
+          const text = editor.innerText || editor.textContent || '';
+          // Dispatch events one more time to ensure React picks up
+          editor.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
+          editor.dispatchEvent(new Event('change', { bubbles: true }));
+          return { hasContent: text.length > 0, len: text.length };
+        }
       }
+      return { hasContent: false, len: 0 };
     });
+    if (!verification.hasContent) {
+      console.log('⚠️ Caption verification: editor appears empty — Post button may stay disabled');
+    } else {
+      console.log(`✅ Caption verified: ${verification.len} chars in editor`);
+    }
 
     return true;
   }
@@ -4195,8 +4271,57 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
               submitted = true;
             }
           }
-        } else if (attempt < 9) {
-          console.log(`   ⏳ Post button not ready (${attempt + 1}/10): ${result.debug}`, result.samples ? JSON.stringify(result.samples) : '');
+        } else {
+          if (attempt < 9) {
+            console.log(`   ⏳ Post button not ready (${attempt + 1}/10): ${result.debug}`, result.samples ? JSON.stringify(result.samples) : '');
+          }
+
+          // At attempt 5: if button exists but disabled, re-type caption as last resort
+          if (attempt === 4) {
+            const hasDisabledBtn = await page.evaluate((postTexts) => {
+              const dialogs = document.querySelectorAll('[role="dialog"]');
+              for (const d of dialogs) {
+                const txt = (d.textContent || '').toLowerCase();
+                if (txt.includes('notification') || txt.includes('การแจ้งเตือน')) continue;
+                const btns = d.querySelectorAll('[role="button"], button');
+                for (const btn of btns) {
+                  const t = (btn.textContent?.trim() || '').toLowerCase();
+                  const a = (btn.getAttribute('aria-label') || '').toLowerCase();
+                  if (t.includes('โพสต์') || t.includes('post') || a.includes('โพสต์') || a.includes('post')) {
+                    return true;
+                  }
+                }
+              }
+              return false;
+            }, POST_TEXTS);
+
+            if (hasDisabledBtn) {
+              console.log('🔄 Post button found but disabled — re-typing caption via keyboard.type()...');
+              // Clear editor and re-type
+              await page.evaluate(() => {
+                const dialogs = document.querySelectorAll('[role="dialog"]');
+                for (const d of dialogs) {
+                  const txt = (d.textContent || '').toLowerCase();
+                  if (txt.includes('notification') || txt.includes('การแจ้งเตือน')) continue;
+                  const editors = d.querySelectorAll('[contenteditable="true"][role="textbox"]');
+                  for (const editor of editors) {
+                    const ariaLabel = editor.getAttribute('aria-label') || '';
+                    if (ariaLabel.includes('แสดงความคิดเห็น') || ariaLabel.includes('comment')) continue;
+                    editor.focus();
+                    // Select all and delete
+                    const sel = window.getSelection();
+                    sel.selectAllChildren(editor);
+                    return;
+                  }
+                }
+              });
+              await page.keyboard.press('Backspace');
+              await this.delay(500);
+              await page.keyboard.type(caption, { delay: 12 });
+              console.log(`⌨️ Re-typed ${caption.length} chars — waiting for Post button to enable...`);
+              await this.delay(2000);
+            }
+          }
         }
       }
       if (!submitted) throw new Error('Failed to submit — Post button disabled or not found');

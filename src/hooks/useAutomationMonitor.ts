@@ -52,14 +52,19 @@ const INITIAL_STATE: AutomationMonitorState = {
   queueRunningJobs: null,
 };
 
+// localStorage keys for persistence across browser close/logout
+const LS_POPUP_ACTIVE = 'gs_automation_popup_active';
+const LS_AUTOMATION_MODE = 'gs_automation_mode';
+
 /**
  * Global automation monitor — polls backend for running/completed automation.
  * Lives in DashboardLayout so the popup persists across page navigation.
  * Backend continues running even if user closes browser — this hook reconnects.
+ * State is persisted to localStorage so popup survives refresh/logout/close.
  */
 export function useAutomationMonitor() {
   const [state, setState] = useState<AutomationMonitorState>(INITIAL_STATE);
-  const [showPopup, setShowPopup] = useState(false);
+  const [showPopup, setShowPopup] = useState(() => localStorage.getItem(LS_POPUP_ACTIVE) === 'true');
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const queuePollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const initialCheckDone = useRef(false);
@@ -147,13 +152,29 @@ export function useAutomationMonitor() {
     }, 5000);
   }, [startPolling]);
 
-  // ── Initial check on mount — detect running automation ──
+  // ── Persist popup state to localStorage ──
+  useEffect(() => {
+    localStorage.setItem(LS_POPUP_ACTIVE, String(showPopup));
+  }, [showPopup]);
+
+  useEffect(() => {
+    if (state.mode) localStorage.setItem(LS_AUTOMATION_MODE, state.mode);
+  }, [state.mode]);
+
+  // ── Initial check on mount — detect running/completed automation ──
+  // Reconnects automatically after browser close, page refresh, or logout+login
   useEffect(() => {
     if (initialCheckDone.current) return;
     initialCheckDone.current = true;
 
     const checkExisting = async () => {
-      for (const mode of ['marketplace', 'group'] as const) {
+      // Prioritize the mode we saved (faster reconnect)
+      const savedMode = localStorage.getItem(LS_AUTOMATION_MODE) as 'group' | 'marketplace' | null;
+      const modesToCheck: Array<'group' | 'marketplace'> = savedMode
+        ? [savedMode, ...(savedMode === 'group' ? ['marketplace'] as const : ['group'] as const)]
+        : ['group', 'marketplace'];
+
+      for (const mode of modesToCheck) {
         try {
           const res = await apiFetch(getStatusPath(mode));
           if (!res.ok) continue;
@@ -202,6 +223,13 @@ export function useAutomationMonitor() {
             }
           }
         } catch { /* silent */ }
+      }
+
+      // No running or completed automation found — clear stale localStorage
+      if (localStorage.getItem(LS_POPUP_ACTIVE) === 'true') {
+        localStorage.removeItem(LS_POPUP_ACTIVE);
+        localStorage.removeItem(LS_AUTOMATION_MODE);
+        setShowPopup(false);
       }
     };
 
@@ -259,9 +287,13 @@ export function useAutomationMonitor() {
   }, [state.mode]);
 
   const dismissPopup = useCallback(() => {
+    // Prevent dismiss while automation is still running
+    if (state.isRunning) return;
     setShowPopup(false);
     setState(INITIAL_STATE);
-  }, []);
+    localStorage.removeItem(LS_POPUP_ACTIVE);
+    localStorage.removeItem(LS_AUTOMATION_MODE);
+  }, [state.isRunning]);
 
   // ── Called by Automation page when user starts a new automation ──
   const notifyStarted = useCallback((mode: 'group' | 'marketplace', initialData?: Partial<AutomationMonitorState>, shouldPoll = false) => {

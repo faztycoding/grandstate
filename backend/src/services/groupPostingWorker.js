@@ -4534,20 +4534,32 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
     const tempDir = path.join(process.cwd(), 'temp');
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
 
+    // Helper: detect actual image format from buffer bytes
+    const detectExt = (buf) => {
+      if (buf[0] === 0xFF && buf[1] === 0xD8) return '.jpg';
+      if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) return '.png';
+      if (buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46) return '.webp';
+      if (buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46) return '.gif';
+      return '.jpg'; // fallback
+    };
+
     const rawPaths = [];
     for (let i = 0; i < images.length; i++) {
       const image = images[i];
       if (image.startsWith('data:')) {
         const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
-        const filePath = path.join(tempDir, `img_raw_${Date.now()}_${i}.jpg`);
-        fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
+        const buf = Buffer.from(base64Data, 'base64');
+        const ext = detectExt(buf);
+        const filePath = path.join(tempDir, `img_raw_${Date.now()}_${i}${ext}`);
+        fs.writeFileSync(filePath, buf);
         rawPaths.push(filePath);
       } else if (image.startsWith('http')) {
         try {
           const response = await fetch(image);
-          const buffer = Buffer.from(await response.arrayBuffer());
-          const filePath = path.join(tempDir, `img_raw_${Date.now()}_${i}.jpg`);
-          fs.writeFileSync(filePath, buffer);
+          const buf = Buffer.from(await response.arrayBuffer());
+          const ext = detectExt(buf);
+          const filePath = path.join(tempDir, `img_raw_${Date.now()}_${i}${ext}`);
+          fs.writeFileSync(filePath, buf);
           rawPaths.push(filePath);
         } catch (e) { console.log(`⚠️ Failed to download: ${image}`); }
       } else if (fs.existsSync(image)) {
@@ -4555,19 +4567,17 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
       }
     }
 
-    // ── Module 4: Image Hash Breaking ──
-    // Mutate each image (pixel noise + EXIF scrub + unique tag) so every copy has unique hash
-    // This prevents Facebook's duplicate content detection across groups
+    // ── Module 4: Image Hash Breaking (JPEG only, safe comment insertion) ──
     const mutatedPaths = [];
     for (let i = 0; i < rawPaths.length; i++) {
-      const mutatedPath = path.join(tempDir, `img_mutated_${Date.now()}_${i}.jpg`);
+      const ext = path.extname(rawPaths[i]) || '.jpg';
+      const mutatedPath = path.join(tempDir, `img_mutated_${Date.now()}_${i}${ext}`);
       const ok = mutateImageFile(rawPaths[i], mutatedPath, i);
       mutatedPaths.push(ok ? mutatedPath : rawPaths[i]);
     }
 
     if (mutatedPaths.length > 0) {
-      console.log(`🖼️ Prepared ${mutatedPaths.length} image files (hash-broken via pixel noise + EXIF scrub)`);
-      // Cleanup temp files after 5 minutes
+      console.log(`🖼️ Prepared ${mutatedPaths.length} image files (hash-broken via JPEG comment segment)`);
       setTimeout(() => {
         for (const fp of [...rawPaths, ...mutatedPaths]) {
           if (fp.includes('temp')) { try { fs.unlinkSync(fp); } catch (e) { } }

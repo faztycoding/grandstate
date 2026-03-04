@@ -539,96 +539,52 @@ export async function preClickBehavior(page, x, y) {
 // ─────────────────────────────────────────────
 
 /**
- * Mutate image file to break perceptual hash — pixel shift + EXIF scrub + color shift
- * Works with raw JPEG/PNG buffers without external dependencies
+ * Mutate image file to break file hash — SAFE approach
+ * Only modifies confirmed JPEG files by inserting a comment segment
+ * Non-JPEG files (PNG, WebP, etc.) are returned UNCHANGED to prevent corruption
  */
 export function mutateImageBuffer(buffer, index = 0) {
-  // Create a copy to avoid mutating original
-  const mutated = Buffer.from(buffer);
-  
-  // ── 1. EXIF / Metadata Scrubbing ──
-  // For JPEG: Find and zero out EXIF data (APP1 marker = 0xFFE1)
-  if (mutated[0] === 0xFF && mutated[1] === 0xD8) {
-    // JPEG format
-    let offset = 2;
-    while (offset < mutated.length - 4) {
-      if (mutated[offset] === 0xFF) {
-        const marker = mutated[offset + 1];
-        // APP1 (EXIF) = 0xE1, APP2 = 0xE2, ... APP13 = 0xED
-        if (marker >= 0xE1 && marker <= 0xED) {
-          const segLen = (mutated[offset + 2] << 8) | mutated[offset + 3];
-          // Zero out metadata content (keep marker + length)
-          for (let i = offset + 4; i < offset + 2 + segLen && i < mutated.length; i++) {
-            mutated[i] = 0x00;
-          }
-          offset += 2 + segLen;
-          continue;
-        }
-        // SOS marker = start of scan data — stop processing headers
-        if (marker === 0xDA) break;
-        if (marker === 0xD8 || marker === 0xD9) { offset += 2; continue; }
-        // Skip other segments
-        const len = (mutated[offset + 2] << 8) | mutated[offset + 3];
-        offset += 2 + (len > 0 ? len : 2);
-        continue;
-      }
-      offset++;
-    }
+  const isJPEG = buffer.length > 4 && buffer[0] === 0xFF && buffer[1] === 0xD8;
+
+  // ── Non-JPEG: return original unchanged — DO NOT touch PNG/WebP/other formats ──
+  if (!isJPEG) {
+    console.log(`🖼️ [mutation] Non-JPEG image (${buffer.length} bytes) — skipping mutation`);
+    return buffer;
   }
-  
-  // ── 2. DQT (Quantization Table) Micro-Tweak ──
-  // Safely modify quantization values by ±1 to subtly change decoded pixels
-  // DQT lives in the header (marker 0xFFDB) — modifying it is SAFE unlike
-  // raw compressed data which corrupts the Huffman stream
-  if (mutated[0] === 0xFF && mutated[1] === 0xD8) {
-    let off = 2;
-    while (off < mutated.length - 4) {
-      if (mutated[off] === 0xFF && mutated[off + 1] === 0xDB) {
-        // Found DQT segment
-        const segLen = (mutated[off + 2] << 8) | mutated[off + 3];
-        // Tweak a few quantization values by ±1 (visually imperceptible)
-        const tweakCount = Math.min(8, segLen - 3);
-        for (let t = 0; t < tweakCount; t++) {
-          const tPos = off + 5 + Math.floor(Math.random() * (segLen - 3));
-          if (tPos < mutated.length && mutated[tPos] > 1 && mutated[tPos] < 254) {
-            mutated[tPos] += (Math.random() > 0.5) ? 1 : -1;
-          }
-        }
-        off += 2 + segLen;
-        continue;
-      }
-      if (mutated[off] === 0xFF && mutated[off + 1] === 0xDA) break; // SOS — stop
-      if (mutated[off] === 0xFF) {
-        if (mutated[off + 1] === 0xD8 || mutated[off + 1] === 0xD9) { off += 2; continue; }
-        const len = (mutated[off + 2] << 8) | mutated[off + 3];
-        off += 2 + (len > 0 ? len : 2);
-      } else { off++; }
-    }
-  }
-  
-  // ── 3. Inject unique JPEG Comment segment (0xFF 0xFE) before EOI ──
-  // Inserting a valid JPEG comment segment changes the file hash 100%
-  // while keeping the file structure valid (unlike appending after EOI which breaks readers)
+
+  // ── JPEG: insert a unique Comment segment (0xFF 0xFE) before EOI ──
+  // This is the ONLY safe mutation: it adds a valid JPEG segment that changes
+  // the file hash 100% without altering any image data or structure
   const commentStr = `gs:${Date.now().toString(36)}:${index}:${Math.random().toString(36).slice(2, 8)}`;
   const commentData = Buffer.from(commentStr, 'utf8');
-  const commentLen = commentData.length + 2; // +2 for the length field itself
+  const commentLen = commentData.length + 2;
   const commentSegment = Buffer.alloc(4 + commentData.length);
-  commentSegment[0] = 0xFF; // JPEG marker
+  commentSegment[0] = 0xFF;
   commentSegment[1] = 0xFE; // COM marker
-  commentSegment[2] = (commentLen >> 8) & 0xFF; // length high byte
-  commentSegment[3] = commentLen & 0xFF;        // length low byte
+  commentSegment[2] = (commentLen >> 8) & 0xFF;
+  commentSegment[3] = commentLen & 0xFF;
   commentData.copy(commentSegment, 4);
 
-  // Find EOI marker (0xFF 0xD9) and insert comment before it
+  // Find the LAST EOI marker (0xFF 0xD9) and insert comment before it
   let eoiIndex = -1;
-  for (let i = mutated.length - 2; i >= 0; i--) {
-    if (mutated[i] === 0xFF && mutated[i + 1] === 0xD9) { eoiIndex = i; break; }
+  for (let i = buffer.length - 2; i >= 0; i--) {
+    if (buffer[i] === 0xFF && buffer[i + 1] === 0xD9) { eoiIndex = i; break; }
   }
-  if (eoiIndex >= 0) {
-    return Buffer.concat([mutated.slice(0, eoiIndex), commentSegment, mutated.slice(eoiIndex)]);
+
+  if (eoiIndex > 0) {
+    const result = Buffer.concat([buffer.slice(0, eoiIndex), commentSegment, buffer.slice(eoiIndex)]);
+    // Verify output is still valid JPEG (starts with SOI, ends with EOI)
+    if (result[0] === 0xFF && result[1] === 0xD8 &&
+        result[result.length - 2] === 0xFF && result[result.length - 1] === 0xD9) {
+      return result;
+    }
+    console.log('⚠️ [mutation] JPEG validation failed after comment insert — returning original');
+    return buffer;
   }
-  // Fallback: file has no EOI (non-JPEG or truncated) — just append comment segment
-  return Buffer.concat([mutated, commentSegment]);
+
+  // No EOI found — file might be truncated, return as-is
+  console.log('⚠️ [mutation] No JPEG EOI found — returning original');
+  return buffer;
 }
 
 /**

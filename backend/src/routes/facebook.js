@@ -62,14 +62,14 @@ async function scrapeFbUserInfo(page) {
       const meTitle = await page.title().catch(() => '');
       console.log(`🔍 [/me/] URL: ${meUrl} | Title: "${meTitle}"`);
 
-      // Strategy 1: Facebook's profile name span (class-based selector)
+      // Strategy 1: Facebook's profile name from h1 (actual FB DOM: <h1 dir="auto">ชื่อ</h1>)
       if (!name) {
         const spanName = await page.evaluate(() => {
-          // Facebook uses these specific class combinations for the profile display name
           const selectors = [
-            'h1 span',                                   // Profile page h1
-            'span.x1lliihq.x6ikm8r.x10wlt62.x1n2onr6', // FB's profile name span class
-            '[data-pagelet="ProfileActions"] h1',         // Profile actions header
+            'h1[dir="auto"]',                              // FB profile name h1 (actual DOM)
+            'h1 span',                                     // Profile page h1 > span
+            'span.x1lliihq.x6ikm8r.x10wlt62.x1n2onr6',   // FB's profile name span class
+            '[data-pagelet="ProfileActions"] h1',           // Profile actions header
           ];
           for (const sel of selectors) {
             const els = document.querySelectorAll(sel);
@@ -80,7 +80,7 @@ async function scrapeFbUserInfo(page) {
           }
           return '';
         }).catch(() => '');
-        if (isValidFbName(spanName)) { name = spanName; console.log(`✅ [/me/] Got name from span/h1: "${name}"`); }
+        if (isValidFbName(spanName)) { name = spanName; console.log(`✅ [/me/] Got name from h1: "${name}"`); }
       }
 
       // Strategy 2: Page title
@@ -139,12 +139,12 @@ async function scrapeFbUserInfo(page) {
           if (href.includes('scontent') || href.includes('fbcdn')) return href;
         }
       }
-      // Strategy 3: First SVG image with scontent (common FB profile pic render)
+      // Strategy 3: First SVG <image> with scontent or fbcdn (actual FB DOM: <image xlink:href="...fbcdn.net/...">)
       const svgImgs = document.querySelectorAll('image');
-      for (const img of svgImgs) { const href = img.getAttribute('xlink:href') || img.getAttribute('href') || ''; if (href.includes('scontent')) return href; }
-      // Strategy 4: img tags with scontent
-      const imgs = document.querySelectorAll('img[src*="scontent"]');
-      for (const img of imgs) { const src = img.getAttribute('src') || ''; if (src.includes('scontent')) return src; }
+      for (const img of svgImgs) { const href = img.getAttribute('xlink:href') || img.getAttribute('href') || ''; if (href.includes('scontent') || href.includes('fbcdn')) return href; }
+      // Strategy 4: img tags with scontent or fbcdn
+      const imgs = document.querySelectorAll('img');
+      for (const img of imgs) { const src = img.getAttribute('src') || ''; if (src.includes('scontent') || src.includes('fbcdn')) return src; }
       return '';
     }).catch(() => '');
 

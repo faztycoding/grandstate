@@ -36,25 +36,36 @@ function groupToDb(group: Partial<FacebookGroup>, userId: string): Record<string
   };
 }
 
+const GROUPS_CACHE_KEY = 'groups_cache';
+
 export function useSupabaseGroups() {
-  const [groups, setGroups] = useState<FacebookGroup[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Load cached data immediately (no loading flash)
+  const [groups, setGroups] = useState<FacebookGroup[]>(() => {
+    try {
+      const cached = localStorage.getItem(GROUPS_CACHE_KEY);
+      if (cached) return JSON.parse(cached);
+    } catch {}
+    return [];
+  });
+  const [loading, setLoading] = useState(() => {
+    try { return !localStorage.getItem(GROUPS_CACHE_KEY); } catch { return true; }
+  });
   const [error, setError] = useState<string | null>(null);
 
   // Fetch all groups for current user
   const fetchGroups = useCallback(async () => {
     try {
-      setLoading(true);
       setError(null);
-      const { data: { user } } = await supabase.auth.getUser();
+      // Use getSession() (cached, ~0ms) instead of getUser() (network, ~500ms+)
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
 
       if (!user) {
-        // Fallback to localStorage if not logged in
         const stored = localStorage.getItem('facebookGroups');
         if (stored) {
-          const parsed = JSON.parse(stored);
-          setGroups(parsed);
+          setGroups(JSON.parse(stored));
         }
+        setLoading(false);
         return;
       }
 
@@ -66,7 +77,10 @@ export function useSupabaseGroups() {
 
       if (fetchError) throw fetchError;
 
-      setGroups((data || []).map(dbToGroup));
+      const mapped = (data || []).map(dbToGroup);
+      setGroups(mapped);
+      // Cache for instant load next time
+      try { localStorage.setItem(GROUPS_CACHE_KEY, JSON.stringify(mapped)); } catch {}
     } catch (err: any) {
       setError(err.message);
       console.error('[Groups] Fetch error:', err.message, err.code, err.details);
@@ -271,23 +285,22 @@ export function useSupabaseGroups() {
   const activeGroups = groups.filter(g => g.isActive);
   const inactiveGroups = groups.filter(g => !g.isActive);
 
-  // Fetch on mount + auth changes (debounced to avoid excessive calls)
+  // Fetch on mount + auth changes (debounced, skip duplicate on mount)
   useEffect(() => {
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    let mounted = true;
 
-    // Initial fetch
     fetchGroups();
 
-    // Listen for auth changes (debounced)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      // Only re-fetch on meaningful auth events, not token refreshes
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
+      if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
         if (debounceTimer) clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => fetchGroups(), 300);
+        debounceTimer = setTimeout(() => { if (mounted) fetchGroups(); }, 300);
       }
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
       if (debounceTimer) clearTimeout(debounceTimer);
     };

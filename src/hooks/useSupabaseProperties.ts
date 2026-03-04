@@ -53,16 +53,29 @@ function propertyToDb(property: Partial<Property>, userId: string): Record<strin
   };
 }
 
+const CACHE_KEY = 'properties_cache';
+
 export function useSupabaseProperties() {
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Load cached data immediately (no loading flash)
+  const [properties, setProperties] = useState<Property[]>(() => {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) return JSON.parse(cached);
+    } catch {}
+    return [];
+  });
+  const [loading, setLoading] = useState(() => {
+    // If we have cached data, don't show skeleton
+    try { return !localStorage.getItem(CACHE_KEY); } catch { return true; }
+  });
   const [error, setError] = useState<string | null>(null);
 
   // Fetch all properties for current user
   const fetchProperties = useCallback(async () => {
     try {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
+      // Use getSession() (cached, ~0ms) instead of getUser() (network, ~500ms+)
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
       
       if (!user) {
         // Fallback to localStorage if not logged in
@@ -70,6 +83,7 @@ export function useSupabaseProperties() {
         if (stored) {
           setProperties(JSON.parse(stored));
         }
+        setLoading(false);
         return;
       }
 
@@ -81,7 +95,10 @@ export function useSupabaseProperties() {
 
       if (error) throw error;
 
-      setProperties((data || []).map(dbToProperty));
+      const mapped = (data || []).map(dbToProperty);
+      setProperties(mapped);
+      // Cache for instant load next time
+      try { localStorage.setItem(CACHE_KEY, JSON.stringify(mapped)); } catch {}
     } catch (err: any) {
       setError(err.message);
       console.error('Error fetching properties:', err);
@@ -226,18 +243,23 @@ export function useSupabaseProperties() {
     }
   }, []);
 
-  // Fetch on mount + auth changes (debounced to avoid excessive calls)
+  // Fetch on mount + auth changes (debounced, skip duplicate on mount)
   useEffect(() => {
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    let mounted = true;
     
     fetchProperties();
     
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event) => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => fetchProperties(), 300);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      // Only refetch on meaningful auth events, not the initial SIGNED_IN
+      if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => { if (mounted) fetchProperties(); }, 300);
+      }
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
       if (debounceTimer) clearTimeout(debounceTimer);
     };

@@ -4636,7 +4636,7 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
 
   // Start automation for multiple groups — dynamic batch sizes, posts in parallel
   async startAutomation(config) {
-    const { property, groups, caption, captions, captionAssignments, images, delayMinutes, delaySeconds, captionStyle = 'friendly', browser = 'chrome', userPackage = 'free' } = config;
+    const { property, groups, caption, captions, captionAssignments, images, delayMinutes, delaySeconds, captionStyle = 'friendly', browser = 'chrome', userPackage = 'free', fbCredentials, expectedFbName, autoReloginFn } = config;
 
     // Reset if stuck in running state
     if (this.isRunning) {
@@ -4706,28 +4706,143 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
         }
       }
 
-      // Check login — retry with browser re-init if first check fails
+      // ── Auto-login flow: ensure FB is logged in with the correct account ──
+      this.addLog('🔐 ตรวจสอบ Facebook Login...', 'info');
       let isLoggedIn = await this.checkLogin();
-      if (!isLoggedIn) {
-        console.log('⚠️ Not logged in — trying browser restart with fresh profile...');
-        this.addLog('⚠️ Login check failed — restarting browser...', 'warn');
-        try {
-          if (this.browser) { try { await this.browser.close(); } catch {} this.browser = null; this.page = null; }
-          await this.initialize(browser);
-          isLoggedIn = await this.checkLogin();
-        } catch (reinitErr) {
-          console.error('❌ Browser restart failed:', reinitErr.message);
-          this.addLog(`❌ Browser restart failed: ${reinitErr.message}`, 'error');
+
+      if (isLoggedIn && expectedFbName) {
+        // Logged in — but verify it's the correct account
+        const currentName = await this.page.evaluate(() => {
+          // Try to get current user name from Facebook profile link
+          const profileLink = document.querySelector('a[href*="/me/"], a[aria-label*="โปรไฟล์"], a[aria-label*="Profile"]');
+          if (profileLink) return (profileLink.getAttribute('aria-label') || profileLink.textContent || '').trim();
+          // Fallback: check page for user name indicators
+          const nameEl = document.querySelector('[data-pagelet="ProfileBrowser"] h1, [role="banner"] a[href*="/me/"]');
+          return nameEl ? nameEl.textContent?.trim() : null;
+        }).catch(() => null);
+
+        if (currentName && expectedFbName && !currentName.includes(expectedFbName) && !expectedFbName.includes(currentName)) {
+          console.log(`⚠️ Wrong FB account: "${currentName}" vs expected "${expectedFbName}" — switching...`);
+          this.addLog(`⚠️ บัญชีไม่ตรง: "${currentName}" → กำลัง switch เป็น "${expectedFbName}"...`, 'warn');
+          // Need to switch account — treat as not logged in
+          isLoggedIn = false;
+        } else {
+          console.log(`✅ Correct FB account: ${currentName || expectedFbName}`);
+          this.addLog(`✅ Facebook Login ถูกต้อง: ${currentName || expectedFbName}`, 'info');
         }
       }
+
       if (!isLoggedIn) {
-        console.log('⚠️ Still not logged in to Facebook after retry');
-        this.tasks.forEach(t => { t.status = 'failed'; t.message = 'ยังไม่ได้ Login Facebook'; });
+        // Attempt auto-login using stored credentials
+        if (autoReloginFn) {
+          console.log('🔑 Attempting auto-login with stored credentials...');
+          this.addLog(`🔑 กำลัง Login Facebook อัตโนมัติ${expectedFbName ? ` (${expectedFbName})` : ''}...`, 'info');
+          try {
+            // Re-init browser if needed for fresh session
+            if (!this.browser || !this.browser.isConnected()) {
+              await this.initialize(browser);
+            }
+            const reloginOk = await autoReloginFn(this);
+            if (reloginOk) {
+              isLoggedIn = true;
+              console.log('✅ Auto-login successful!');
+              this.addLog('✅ Login Facebook สำเร็จ!', 'success');
+            } else {
+              console.log('❌ Auto-login failed — credentials may be invalid');
+              this.addLog('❌ Login Facebook ไม่สำเร็จ — รหัสผ่านอาจไม่ถูกต้อง', 'error');
+            }
+          } catch (loginErr) {
+            console.error('❌ Auto-login error:', loginErr.message);
+            this.addLog(`❌ Auto-login error: ${loginErr.message}`, 'error');
+          }
+        } else if (fbCredentials?.email && fbCredentials?.password) {
+          // Fallback: direct login without sessionManager helper
+          console.log('🔑 Auto-login fallback: direct credential login...');
+          this.addLog('🔑 กำลัง Login Facebook...', 'info');
+          try {
+            if (!this.browser || !this.browser.isConnected()) {
+              await this.initialize(browser);
+            }
+            await this.page.goto('https://www.facebook.com/', { waitUntil: 'networkidle2', timeout: 30000 });
+            await this.delay(3000);
+
+            // Handle "ดำเนินการต่อ" (Continue) button
+            const clickedContinue = await this.page.evaluate(() => {
+              const btns = document.querySelectorAll('[role="button"], button, a, div[tabindex="0"]');
+              for (const btn of btns) {
+                const text = (btn.textContent || '').trim();
+                if (text === 'ดำเนินการต่อ' || text === 'Continue') { btn.click(); return true; }
+              }
+              return false;
+            }).catch(() => false);
+
+            if (clickedContinue) {
+              console.log('🔑 Clicked "ดำเนินการต่อ" on profile chooser');
+              this.addLog('🔑 กด "ดำเนินการต่อ" — ใช้บัญชีเดิม', 'info');
+              await this.delay(5000);
+              isLoggedIn = true;
+            } else {
+              // Fill login form
+              const emailField = await this.page.$('input[name="email"], #email');
+              if (emailField) {
+                await emailField.click({ clickCount: 3 });
+                await emailField.type(fbCredentials.email, { delay: 50 });
+              }
+              const passField = await this.page.$('input[name="pass"], #pass');
+              if (passField) {
+                await passField.click({ clickCount: 3 });
+                await passField.type(fbCredentials.password, { delay: 50 });
+              }
+              const loginBtn = await this.page.$('button[name="login"], button[type="submit"]');
+              if (loginBtn) await loginBtn.click();
+              else await this.page.keyboard.press('Enter');
+
+              await this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {});
+              await this.delay(3000);
+
+              // Post-login: handle "ดำเนินการต่อ"
+              await this.page.evaluate(() => {
+                const btns = document.querySelectorAll('[role="button"], button, a, div[tabindex="0"]');
+                for (const btn of btns) {
+                  const text = (btn.textContent || '').trim();
+                  if (text === 'ดำเนินการต่อ' || text === 'Continue') { btn.click(); return; }
+                }
+              }).catch(() => {});
+              await this.delay(3000);
+
+              isLoggedIn = await this.checkLogin();
+              if (isLoggedIn) {
+                this.addLog('✅ Login Facebook สำเร็จ!', 'success');
+              } else {
+                this.addLog('❌ Login Facebook ไม่สำเร็จ', 'error');
+              }
+            }
+          } catch (directLoginErr) {
+            console.error('❌ Direct login error:', directLoginErr.message);
+            this.addLog(`❌ Login error: ${directLoginErr.message}`, 'error');
+          }
+        } else {
+          // No credentials available — try browser restart as last resort
+          console.log('⚠️ No FB credentials — trying browser restart...');
+          this.addLog('⚠️ ไม่มีข้อมูล Login — restart browser...', 'warn');
+          try {
+            if (this.browser) { try { await this.browser.close(); } catch {} this.browser = null; this.page = null; }
+            await this.initialize(browser);
+            isLoggedIn = await this.checkLogin();
+          } catch (reinitErr) {
+            this.addLog(`❌ Browser restart failed: ${reinitErr.message}`, 'error');
+          }
+        }
+      }
+
+      if (!isLoggedIn) {
+        console.log('❌ Cannot login to Facebook — aborting automation');
+        this.tasks.forEach(t => { t.status = 'failed'; t.message = 'ไม่สามารถ Login Facebook ได้'; });
         this.isRunning = false;
         this.isPaused = false;
         this.endTime = Date.now();
-        this.addLog('❌ ยังไม่ได้ Login Facebook — กรุณา Login ก่อนเริ่ม Automation', 'error');
-        return { success: false, error: 'ยังไม่ได้ Login', errorType: 'login_required', message: 'กรุณา Login Facebook ในหน้าต่างที่เปิดอยู่', tasks: this.tasks };
+        this.addLog('❌ ไม่สามารถ Login Facebook ได้ — กรุณาตรวจสอบ Email/Password ในหน้าเชื่อมต่อ', 'error');
+        return { success: false, error: 'ไม่สามารถ Login Facebook ได้', errorType: 'login_required', message: 'กรุณาตรวจสอบ Email/Password', tasks: this.tasks };
       }
 
       await this.handleNotificationPermission();

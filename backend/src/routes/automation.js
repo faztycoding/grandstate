@@ -94,10 +94,23 @@ export default function createAutomationRoutes({ auth, sessionManager, automatio
         captionAssignments[g.id] = generatedCaptions[idx];
       });
 
+      // Load FB credentials for auto-login
+      const fbCreds = sessionManager.loadFbCredentials(req.userId, effectiveSlot);
+      const fbSessions = sessionManager.getFbSessions(req.userId) || [];
+      const expectedFbName = fbSessions[effectiveSlot]?.name || null;
+
       const automationConfig = {
         property, groups, caption: generatedCaptions[0], captions: generatedCaptions, captionAssignments,
         images: images || property.images || [], delayMinutes: delayMinutes || undefined, delaySeconds: delaySeconds || undefined,
         captionStyle, browser: browser || 'chrome', userPackage: userPackage || 'free',
+        // Auto-login: pass credentials + expected account name + relogin helper
+        fbCredentials: fbCreds ? { email: fbCreds.email, password: fbCreds.password } : null,
+        expectedFbName,
+        autoReloginFn: async (worker) => {
+          if (!fbCreds?.email || !fbCreds?.password) return false;
+          const shortId = req.userId.substring(0, 8);
+          return sessionManager._autoReloginFb(worker, fbCreds.email, fbCreds.password, shortId);
+        },
       };
 
       // Use queue system

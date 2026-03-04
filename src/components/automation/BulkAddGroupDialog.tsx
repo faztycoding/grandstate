@@ -25,6 +25,7 @@ import {
   AlertCircle,
   Trash2,
   Globe,
+  Search,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -319,6 +320,36 @@ export function BulkAddGroupDialog({
                   placeholder="https://facebook.com/groups/..."
                   className="flex-1"
                 />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    if (!singleUrl.trim() || !singleUrl.includes('facebook.com/groups')) {
+                      toast.error('กรุณาใส่ URL กลุ่ม Facebook ก่อน');
+                      return;
+                    }
+                    setIsFetchingSingle(true);
+                    const info = await fetchGroupInfo(singleUrl);
+                    setIsFetchingSingle(false);
+                    if (info && info.name) {
+                      if (!singleName) setSingleName(info.name);
+                      toast.success(`พบกลุ่ม: ${info.name}`, {
+                        description: `สมาชิก: ${(info.memberCount || 0).toLocaleString()} คน`,
+                      });
+                    } else {
+                      toast.error('ดึงข้อมูลไม่ได้ — ลองอีกครั้งหรือใส่ชื่อเอง');
+                    }
+                  }}
+                  disabled={isFetchingSingle || !singleUrl.trim()}
+                  className="shrink-0"
+                >
+                  {isFetchingSingle ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Search className="w-4 h-4" />
+                  )}
+                  <span className="ml-1.5 text-xs">ดึงข้อมูล</span>
+                </Button>
               </div>
               <p className="text-[10px] text-muted-foreground">
                 กด "ดึงข้อมูล" เพื่อดึงชื่อกลุ่มและจำนวนสมาชิกอัตโนมัติ (ต้องเปิด Backend)

@@ -3685,8 +3685,9 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
           const ariaLabel = editor.getAttribute('aria-label') || '';
           if (ariaLabel.includes('แสดงความคิดเห็น') || ariaLabel.includes('comment')) continue;
           const text = editor.innerText || editor.textContent || '';
-          // Nudge React to recognize content (DO NOT use insertText — causes duplication)
-          editor.dispatchEvent(new Event('input', { bubbles: true }));
+          // Nudge React/Lexical to recognize content — must use InputEvent, not generic Event
+          editor.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true, inputType: 'insertText' }));
+          editor.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true, inputType: 'insertText', data: ' ' }));
           editor.dispatchEvent(new Event('change', { bubbles: true }));
           return { hasContent: text.length > 0, len: text.length };
         }
@@ -4215,11 +4216,49 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
         });
 
         if (editorHasText > 10) {
-          // Text exists — just nudge React by pressing Space then Backspace
+          // Text exists — mouse-click editor to ensure focus, then nudge React/Lexical
           console.log(`⚠️ Post button disabled but editor has ${editorHasText} chars — nudging React...`);
+          // Try mouse click on editor to re-focus
+          try {
+            const editorBox = await page.evaluate(() => {
+              const dialogs = document.querySelectorAll('[role="dialog"]');
+              for (const d of dialogs) {
+                const txt = (d.textContent || '').toLowerCase();
+                if (txt.includes('notification') || txt.includes('การแจ้งเตือน')) continue;
+                const editors = d.querySelectorAll('[contenteditable="true"][role="textbox"]');
+                for (const editor of editors) {
+                  const ariaLabel = editor.getAttribute('aria-label') || '';
+                  if (ariaLabel.includes('แสดงความคิดเห็น') || ariaLabel.includes('comment')) continue;
+                  const rect = editor.getBoundingClientRect();
+                  return { x: rect.x + rect.width / 2, y: Math.min(rect.y + 20, rect.y + rect.height - 5) };
+                }
+              }
+              return null;
+            });
+            if (editorBox && editorBox.x > 0 && editorBox.y > 0) {
+              await page.mouse.click(editorBox.x, editorBox.y);
+              await this.delay(200);
+            }
+          } catch (e) { /* ignore */ }
+          await page.keyboard.press('End');
+          await this.delay(100);
           await page.keyboard.press('Space');
           await this.delay(200);
           await page.keyboard.press('Backspace');
+          // Also dispatch InputEvent so Lexical registers the change
+          await page.evaluate(() => {
+            const dialogs = document.querySelectorAll('[role="dialog"]');
+            for (const d of dialogs) {
+              const txt = (d.textContent || '').toLowerCase();
+              if (txt.includes('notification') || txt.includes('การแจ้งเตือน')) continue;
+              const editors = d.querySelectorAll('[contenteditable="true"][role="textbox"]');
+              for (const editor of editors) {
+                const ariaLabel = editor.getAttribute('aria-label') || '';
+                if (ariaLabel.includes('แสดงความคิดเห็น') || ariaLabel.includes('comment')) continue;
+                editor.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true, inputType: 'insertText' }));
+              }
+            }
+          });
           await this.delay(1500);
         } else {
           console.log('⚠️ Post button disabled & editor empty — re-typing via keyboard...');
@@ -4373,9 +4412,25 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
               });
               if (edLen > 10) {
                 console.log(`🔄 Post button disabled but editor has ${edLen} chars — nudging React...`);
+                await page.keyboard.press('End');
+                await this.delay(100);
                 await page.keyboard.press('Space');
                 await this.delay(200);
                 await page.keyboard.press('Backspace');
+                // Fire InputEvent so Lexical registers the keystroke
+                await page.evaluate(() => {
+                  const dialogs = document.querySelectorAll('[role="dialog"]');
+                  for (const d of dialogs) {
+                    const txt = (d.textContent || '').toLowerCase();
+                    if (txt.includes('notification') || txt.includes('การแจ้งเตือน')) continue;
+                    const editors = d.querySelectorAll('[contenteditable="true"][role="textbox"]');
+                    for (const editor of editors) {
+                      const ariaLabel = editor.getAttribute('aria-label') || '';
+                      if (ariaLabel.includes('แสดงความคิดเห็น') || ariaLabel.includes('comment')) continue;
+                      editor.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true, inputType: 'insertText' }));
+                    }
+                  }
+                });
               } else {
                 console.log('🔄 Post button disabled & editor empty — re-typing...');
                 await page.keyboard.down('Control');
@@ -4389,6 +4444,56 @@ ${p._mapsLink ? `- Google Maps: ${p._mapsLink}` : ''}
               }
               await this.delay(2000);
             }
+          }
+
+          // At attempt 5: mouse-click editor to restore focus, then re-fire InputEvent
+          if (attempt === 4) {
+            console.log('🔄 Attempt 5: mouse-clicking editor to restore focus + re-firing InputEvent...');
+            try {
+              const editorBox = await page.evaluate(() => {
+                const dialogs = document.querySelectorAll('[role="dialog"]');
+                for (const d of dialogs) {
+                  const txt = (d.textContent || '').toLowerCase();
+                  if (txt.includes('notification') || txt.includes('การแจ้งเตือน')) continue;
+                  const editors = d.querySelectorAll('[contenteditable="true"][role="textbox"]');
+                  for (const editor of editors) {
+                    const ariaLabel = editor.getAttribute('aria-label') || '';
+                    if (ariaLabel.includes('แสดงความคิดเห็น') || ariaLabel.includes('comment')) continue;
+                    const rect = editor.getBoundingClientRect();
+                    if (rect.width > 0 && rect.height > 0) {
+                      return { x: rect.x + rect.width / 2, y: Math.min(rect.y + 20, rect.y + rect.height - 5) };
+                    }
+                  }
+                }
+                return null;
+              });
+              if (editorBox && editorBox.x > 0 && editorBox.y > 0) {
+                await page.mouse.click(editorBox.x, editorBox.y);
+                await this.delay(300);
+                await page.keyboard.press('End');
+                await this.delay(100);
+                await page.keyboard.press('Space');
+                await this.delay(150);
+                await page.keyboard.press('Backspace');
+                await this.delay(300);
+                await page.evaluate(() => {
+                  const dialogs = document.querySelectorAll('[role="dialog"]');
+                  for (const d of dialogs) {
+                    const txt = (d.textContent || '').toLowerCase();
+                    if (txt.includes('notification') || txt.includes('การแจ้งเตือน')) continue;
+                    const editors = d.querySelectorAll('[contenteditable="true"][role="textbox"]');
+                    for (const editor of editors) {
+                      const ariaLabel = editor.getAttribute('aria-label') || '';
+                      if (ariaLabel.includes('แสดงความคิดเห็น') || ariaLabel.includes('comment')) continue;
+                      editor.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true, inputType: 'insertText' }));
+                      editor.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true, inputType: 'insertText', data: ' ' }));
+                    }
+                  }
+                });
+                console.log('✅ Mouse-click + InputEvent fired at attempt 5');
+              }
+            } catch (e) { console.log('⚠️ Attempt 5 mouse recovery failed:', e.message); }
+            await this.delay(2000);
           }
         }
       }

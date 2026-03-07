@@ -9,8 +9,41 @@ import { Router } from 'express';
  * - GET  /notifications/poll
  * - DELETE /support-tickets/:id
  */
+const MAX_MEMBERS = 10;
+
 export default function createUserRoutes({ auth, sessionManager, ADMIN_EMAILS, generateDisplayId }) {
   const router = Router();
+
+  // Public: check if registration is still allowed (no auth required)
+  router.get('/auth/check-capacity', async (req, res) => {
+    try {
+      const supaUrl = process.env.SUPABASE_URL;
+      const serviceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+      if (!supaUrl || !serviceKey) {
+        return res.json({ allowed: true, current: 0, max: MAX_MEMBERS });
+      }
+      const r = await fetch(`${supaUrl}/rest/v1/users?select=id`, {
+        headers: {
+          'apikey': serviceKey,
+          'Authorization': `Bearer ${serviceKey}`,
+          'Prefer': 'count=exact',
+          'Range': '0-0',
+        },
+      });
+      const ct = r.headers.get('content-range');
+      let current = 0;
+      if (ct) {
+        current = parseInt(ct.split('/')[1] || '0', 10) || 0;
+      } else {
+        const d = await r.json();
+        current = Array.isArray(d) ? d.length : 0;
+      }
+      res.json({ allowed: current < MAX_MEMBERS, current, max: MAX_MEMBERS });
+    } catch (error) {
+      console.error('check-capacity error:', error.message);
+      res.json({ allowed: true, current: 0, max: MAX_MEMBERS });
+    }
+  });
 
   // Presence heartbeat (auth required)
   router.post('/session/presence', ...auth, (req, res) => {

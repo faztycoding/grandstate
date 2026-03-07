@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
-import { isAdminEmail } from '@/lib/config';
+import { isAdminEmail, API_BASE } from '@/lib/config';
 
 // ── Constants ──
 const LICENSE_KEY_REGEX = /^GS[A-Z0-9]{3}-[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{5}$/;
@@ -223,6 +223,17 @@ export function LicenseAuthProvider({ children }: { children: ReactNode }) {
     // ── 2. Sign Up (Email + Password) ──
     const signUp = useCallback(async (email: string, password: string, fullName?: string, displayName?: string): Promise<AuthResult> => {
         try {
+            // Check member capacity before allowing registration
+            try {
+                const capacityRes = await fetch(`${API_BASE}/api/auth/check-capacity`);
+                if (capacityRes.ok) {
+                    const capacity = await capacityRes.json();
+                    if (!capacity.allowed) {
+                        return { success: false, error: `ระบบมีสมาชิกเต็มแล้ว (${capacity.current}/${capacity.max} คน) — กรุณาติดต่อผู้ดูแลระบบ` };
+                    }
+                }
+            } catch { /* non-critical — allow signup if capacity check fails */ }
+
             const { data, error } = await supabase.auth.signUp({
                 email,
                 password,
